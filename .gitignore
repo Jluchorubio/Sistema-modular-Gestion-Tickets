@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.npm
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker overrides
+docker-compose.override.yml
+
+# Uploads / storage
+apps/backend/uploads/
+
+# Test coverage
+coverage/
+
+# TypeScript incremental compilation
+*.tsbuildinfo
