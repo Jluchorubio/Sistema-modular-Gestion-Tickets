@@ -335,6 +335,61 @@ COMMENT ON TABLE auth.token_revocation_list IS
     'Lista de JWT revocados. jti = JWT ID único del token.
      expires_at permite limpiar entradas de tokens que ya habrían expirado.';
 
+-- ── MFA settings ────────────────────────────────────────────────────────────
+-- TOTP (Google Authenticator) + Email OTP (Resend). Intervalo 17.5 días.
+
+CREATE TABLE IF NOT EXISTS auth.mfa_settings (
+    id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                     UUID        NOT NULL UNIQUE,
+    totp_secret                 TEXT        NULL,
+    totp_enabled                BOOLEAN     NOT NULL DEFAULT false,
+    totp_last_verified_at       TIMESTAMPTZ NULL,
+    email_otp_enabled           BOOLEAN     NOT NULL DEFAULT false,
+    email_otp_last_verified_at  TIMESTAMPTZ NULL,
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_mfa_user_id ON auth.mfa_settings(user_id);
+
+COMMENT ON TABLE auth.mfa_settings IS
+    'Configuración MFA por usuario. TOTP (speakeasy) y Email OTP (Resend).
+     Intervalo de re-verificación: 17.5 días.';
+
+-- ── Password resets ──────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS auth.password_resets (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID        NOT NULL,
+    token_hash  TEXT        NOT NULL,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used_at     TIMESTAMPTZ NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pw_reset_lookup
+    ON auth.password_resets(token_hash) WHERE used_at IS NULL;
+
+COMMENT ON TABLE auth.password_resets IS
+    'Tokens de recuperación de contraseña. token_hash = SHA-256 del token raw. TTL 1h.';
+
+-- ── Email OTP codes ──────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS auth.email_otp (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID        NOT NULL,
+    code_hash   TEXT        NOT NULL,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used_at     TIMESTAMPTZ NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_otp_lookup
+    ON auth.email_otp(user_id, expires_at) WHERE used_at IS NULL;
+
+COMMENT ON TABLE auth.email_otp IS
+    'Códigos OTP enviados por email (Resend). code_hash = SHA-256 del código de 6 dígitos. TTL 10 min.';
+
 -- ============================================================================
 -- PARTE 6: SCHEMA users
 -- Perfiles y preferencias. SIN credenciales ni tokens.

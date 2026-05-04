@@ -142,7 +142,12 @@ export class AuthService {
       if (msSince > MFA_INTERVAL_DAYS * 24 * 60 * 60 * 1000) return { type: 'totp' };
     }
 
-    if (s.email_otp_enabled) return { type: 'email_otp' };
+    if (s.email_otp_enabled) {
+      const lastOtp: Date | null = s.email_otp_last_verified_at;
+      if (!lastOtp) return { type: 'email_otp' };
+      const msSince = Date.now() - new Date(lastOtp).getTime();
+      if (msSince > MFA_INTERVAL_DAYS * 24 * 60 * 60 * 1000) return { type: 'email_otp' };
+    }
 
     return { type: null };
   }
@@ -345,7 +350,9 @@ export class AuthService {
     const rows = await this.db.query<any[]>(
       `SELECT p.id, p.first_name, p.last_name, p.display_email, p.avatar_url,
               p.is_superadmin, c.email, c.last_login_at,
-              COALESCE(m.totp_enabled, false) AS mfa_enabled
+              (COALESCE(m.totp_enabled, false) OR COALESCE(m.email_otp_enabled, false)) AS mfa_enabled,
+              COALESCE(m.totp_enabled, false)      AS totp_enabled,
+              COALESCE(m.email_otp_enabled, false) AS email_otp_enabled
        FROM   users.profiles   p
        JOIN   auth.credentials c ON c.user_id = p.id
        LEFT JOIN auth.mfa_settings m ON m.user_id = p.id
@@ -360,7 +367,9 @@ export class AuthService {
       name:         `${u.first_name} ${u.last_name}`.trim(),
       avatar_url:   u.avatar_url,
       is_superadmin: u.is_superadmin,
-      mfa_enabled:  u.mfa_enabled,
+      mfa_enabled:       u.mfa_enabled,
+      totp_enabled:      u.totp_enabled,
+      email_otp_enabled: u.email_otp_enabled,
       last_login_at: u.last_login_at,
     };
   }
@@ -407,6 +416,14 @@ export class AuthService {
     if (!rows[0]) throw new UnauthorizedException('Código inválido o expirado');
 
     await this.db.query(`UPDATE auth.email_otp SET used_at = now() WHERE id = $1`, [rows[0].id]);
+
+    // Registrar timestamp para el intervalo de 17.5 días
+    await this.db.query(
+      `INSERT INTO auth.mfa_settings (user_id, email_otp_enabled, email_otp_last_verified_at)
+       VALUES ($1, true, now())
+       ON CONFLICT (user_id) DO UPDATE SET email_otp_last_verified_at = now()`,
+      [payload.sub],
+    );
 
     const [user] = await this.db.query<any[]>(
       `SELECT p.first_name, p.last_name, p.is_superadmin, c.email
