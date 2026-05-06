@@ -5,6 +5,7 @@ import {
   MaxLength,
   IsOptional,
   IsBoolean,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -38,4 +39,9 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   is_superadmin?: boolean;
+
+  @ApiPropertyOptional({ description: 'UUID del rol global (config.global_roles)' })
+  @IsOptional()
+  @IsUUID()
+  global_role_id?: string;
 }

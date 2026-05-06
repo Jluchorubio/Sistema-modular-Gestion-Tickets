@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsBoolean,
   IsUrl,
+  IsUUID,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -40,4 +41,9 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   is_superadmin?: boolean;
+
+  @ApiPropertyOptional({ description: 'UUID del rol global (config.global_roles)' })
+  @IsOptional()
+  @IsUUID()
+  global_role_id?: string;
 }

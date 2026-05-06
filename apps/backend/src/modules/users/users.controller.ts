@@ -124,6 +124,44 @@ export class UsersController {
     return this.service.deleteUser(req.user.sub, id);
   }
 
+  // ─── Roles globales ──────────────────────────────────────────────────────────
+
+  @Get('global-roles')
+  @ApiOperation({ summary: 'Listar roles globales del sistema.' })
+  listGlobalRoles() {
+    return this.service.listGlobalRoles();
+  }
+
+  @Post('global-roles')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Crear nuevo rol global. Solo superadmin.' })
+  createGlobalRole(@Body() body: { name: string; description?: string }) {
+    return this.service.createGlobalRole(body.name, body.description);
+  }
+
+  @Delete('global-roles/:id')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Desactivar rol global. Solo superadmin.' })
+  deleteGlobalRole(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.deleteGlobalRole(id);
+  }
+
+  // ─── Asignación masiva por módulo ────────────────────────────────────────────
+
+  @Post('module/:moduleId/bulk-assign')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Asignar rol a múltiples usuarios en un módulo.' })
+  bulkAssign(
+    @Req() req: any,
+    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Body() body: { user_ids: string[]; role_id: string },
+  ) {
+    return this.service.bulkAssignModuleRole(req.user.sub, body.user_ids, moduleId, body.role_id);
+  }
+
   // ─── Roles por módulo ────────────────────────────────────────────────────────
 
   @Get(':id/roles')

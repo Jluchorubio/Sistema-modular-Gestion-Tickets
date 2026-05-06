@@ -3,234 +3,760 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Módulos — Tickets System</title>
+  <title>Dashboard — Tickets System</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      min-height: 100vh;
+      background: #0f172a; color: #e2e8f0;
+      min-height: 100vh; display: flex; flex-direction: column;
     }
-    /* ── Header ── */
+
+    /* ══ HEADER ══ */
     .header {
-      background: #1e293b;
-      border-bottom: 1px solid #334155;
-      padding: 0 32px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      background: #1e293b; border-bottom: 1px solid #334155;
+      padding: 0 20px; height: 56px; display: flex;
+      align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50; flex-shrink: 0;
     }
-    .logo { font-size: 16px; font-weight: 700; color: #e2e8f0; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 15px; font-weight: 700; color: #e2e8f0; }
     .logo span { color: #6366f1; }
-    .user-area { display: flex; align-items: center; gap: 12px; }
+    .user-area { display: flex; align-items: center; gap: 10px; }
     .avatar {
-      width: 34px; height: 34px; border-radius: 50%;
+      width: 32px; height: 32px; border-radius: 50%;
       background: #6366f1; display: flex; align-items: center;
-      justify-content: center; font-weight: 700; font-size: 14px; cursor: pointer;
+      justify-content: center; font-weight: 700; font-size: 13px;
+      overflow: hidden;
     }
-    .user-name { font-size: 14px; color: #cbd5e1; }
+    .avatar img { width: 32px; height: 32px; object-fit: cover; }
+    .user-name { font-size: 13px; color: #cbd5e1; }
     .btn-logout {
-      padding: 6px 14px; background: transparent;
+      padding: 5px 12px; background: transparent;
       border: 1px solid #475569; border-radius: 6px;
-      color: #94a3b8; font-size: 13px; cursor: pointer;
-      transition: all .15s;
+      color: #94a3b8; font-size: 12px; cursor: pointer; transition: all .15s;
     }
     .btn-logout:hover { border-color: #ef4444; color: #ef4444; }
-    /* ── Body ── */
-    .main { padding: 40px 32px; max-width: 1100px; margin: 0 auto; }
-    .welcome { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
-    .sub { color: #64748b; font-size: 14px; margin-bottom: 36px; }
+
+    /* ══ FORCE 2FA OVERLAY ══ */
+    .force-mfa-overlay {
+      display: none; position: fixed; inset: 0;
+      background: #0a0f1e; z-index: 500;
+      align-items: center; justify-content: center;
+    }
+    .force-mfa-overlay.active { display: flex; }
+    .force-mfa-card {
+      background: #1e293b; border: 1px solid #4f46e5;
+      border-radius: 18px; padding: 44px 40px; width: 420px;
+      max-width: 95vw; text-align: center;
+      box-shadow: 0 0 60px rgba(99,102,241,.25);
+    }
+    .force-mfa-icon { font-size: 52px; margin-bottom: 16px; }
+    .force-mfa-title { font-size: 21px; font-weight: 700; color: #e2e8f0; margin-bottom: 10px; }
+    .force-mfa-desc {
+      font-size: 13px; color: #94a3b8; margin-bottom: 28px; line-height: 1.7;
+    }
+    .force-qr-wrap { margin-bottom: 22px; min-height: 60px;
+      display: flex; align-items: center; justify-content: center; }
+    .force-qr-wrap img { border-radius: 8px; }
+    .mfa-input {
+      width: 100%; padding: 12px 14px; background: #0f172a;
+      border: 1px solid #334155; border-radius: 8px; color: #e2e8f0;
+      font-size: 24px; text-align: center; letter-spacing: .35em;
+      margin-bottom: 14px; outline: none; transition: border-color .15s;
+    }
+    .mfa-input:focus { border-color: #6366f1; }
+
+    /* ══ LAYOUT ══ */
+    .body-wrap { display: flex; flex: 1; overflow: hidden; }
+
+    /* ══ SIDEBAR ══ */
+    .sidebar {
+      width: 220px; background: #1e293b; border-right: 1px solid #334155;
+      display: flex; flex-direction: column;
+      transition: width .2s ease; overflow: hidden; flex-shrink: 0;
+    }
+    .sidebar.collapsed { width: 52px; }
+    .sidebar.hidden { display: none; }
+
+    .sidebar-toggle {
+      display: flex; align-items: center; justify-content: flex-end;
+      padding: 10px 10px 6px; border-bottom: 1px solid #1e3a5f;
+    }
+    .toggle-btn {
+      background: none; border: none; color: #475569;
+      cursor: pointer; padding: 4px 6px; border-radius: 6px;
+      font-size: 15px; line-height: 1; transition: color .15s;
+    }
+    .toggle-btn:hover { color: #94a3b8; background: #334155; }
+
+    .sidebar-section-label {
+      font-size: 10px; font-weight: 600; color: #475569;
+      text-transform: uppercase; letter-spacing: .08em;
+      padding: 14px 14px 6px; white-space: nowrap; overflow: hidden;
+    }
+    .sidebar.collapsed .sidebar-section-label { display: none; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; cursor: pointer;
+      font-size: 13px; font-weight: 500; color: #94a3b8;
+      transition: background .15s, color .15s; white-space: nowrap;
+      margin: 1px 6px; border-radius: 8px;
+    }
+    .nav-item:hover { background: #334155; color: #e2e8f0; }
+    .nav-item.active { background: #312e81; color: #c7d2fe; }
+    .nav-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+    .nav-label { overflow: hidden; }
+    .sidebar.collapsed .nav-label { display: none; }
+    .sidebar.collapsed .nav-item { justify-content: center; padding: 8px 6px; margin: 1px 4px; }
+
+    .sidebar-bottom { margin-top: auto; padding: 10px 6px; border-top: 1px solid #334155; }
+
+    /* ══ MAIN ══ */
+    .main { flex: 1; overflow-y: auto; padding: 32px; }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ══ MODULES VIEW ══ */
+    .welcome { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .sub { color: #64748b; font-size: 13px; margin-bottom: 28px; }
     .section-title {
-      font-size: 12px; font-weight: 600; color: #64748b;
-      text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px;
+      font-size: 11px; font-weight: 600; color: #64748b;
+      text-transform: uppercase; letter-spacing: .08em; margin-bottom: 14px;
     }
     .modules-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
     }
     .module-card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 24px;
-      cursor: pointer;
-      transition: border-color .2s, transform .15s;
-      position: relative;
-      overflow: hidden;
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 12px; padding: 22px; cursor: pointer;
+      transition: border-color .2s, transform .15s; position: relative; overflow: hidden;
     }
-    .module-card:hover {
-      border-color: #6366f1;
-      transform: translateY(-2px);
-    }
+    .module-card:hover { border-color: #6366f1; transform: translateY(-2px); }
     .module-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, #6366f1, #8b5cf6);
-      opacity: 0;
-      transition: opacity .2s;
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      opacity: 0; transition: opacity .2s;
     }
     .module-card:hover::before { opacity: 1; }
     .module-icon {
-      width: 44px; height: 44px; border-radius: 10px;
+      width: 48px; height: 48px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 22px; margin-bottom: 16px;
+      font-size: 22px; margin-bottom: 14px; overflow: hidden; flex-shrink: 0;
     }
-    .icon-helpdesk  { background: #1e3a5f; }
-    .icon-inventory { background: #1a3a2a; }
-    .icon-custom    { background: #2d1f3d; }
-    .module-name { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-    .module-desc { font-size: 13px; color: #64748b; line-height: 1.5; min-height: 38px; }
+    .module-icon img { width: 48px; height: 48px; object-fit: cover; border-radius: 10px; }
+    .icon-tickets    { background: #1e3a5f; }
+    .icon-inventario { background: #1a3a2a; }
+    .icon-crm        { background: #2d1f3d; }
+    .icon-rrhh       { background: #1c2a1c; }
+    .icon-custom     { background: #2d1f3d; }
+    .module-name { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
+    .module-desc { font-size: 12px; color: #64748b; line-height: 1.5; min-height: 34px; }
     .module-type {
-      display: inline-block; margin-top: 14px; padding: 3px 10px;
-      border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: .05em;
+      display: inline-block; margin-top: 12px; padding: 3px 8px;
+      border-radius: 20px; font-size: 10px; font-weight: 600; text-transform: uppercase;
     }
-    .type-helpdesk  { background: #1e3a5f; color: #93c5fd; }
-    .type-inventory { background: #1a3a2a; color: #6ee7b7; }
-    .type-custom    { background: #2d1f3d; color: #c4b5fd; }
-    .badge-coming {
-      position: absolute; top: 14px; right: 14px;
-      font-size: 10px; font-weight: 600; background: #374151; color: #9ca3af;
-      padding: 2px 8px; border-radius: 4px; text-transform: uppercase;
+    .type-tickets    { background: #1e3a5f; color: #93c5fd; }
+    .type-inventario { background: #1a3a2a; color: #6ee7b7; }
+    .type-crm        { background: #2d1f3d; color: #c4b5fd; }
+    .type-rrhh       { background: #1c2a1c; color: #86efac; }
+    .type-custom     { background: #2d1f3d; color: #c4b5fd; }
+    .type-helpdesk   { background: #1e3a5f; color: #93c5fd; }
+    .type-inventory  { background: #1a3a2a; color: #6ee7b7; }
+
+    /* ══ ADMIN SHARED ══ */
+    .view-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px;
     }
-    /* ── States ── */
-    .loading, .empty {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      min-height: 200px; color: #475569; gap: 12px;
+    .view-title { font-size: 18px; font-weight: 600; }
+    .view-count { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+    .btn-primary {
+      padding: 8px 16px; background: #6366f1; color: #fff;
+      border: none; border-radius: 8px; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: opacity .15s;
     }
+    .btn-primary:hover { opacity: .88; }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-secondary {
+      padding: 8px 14px; background: transparent; color: #94a3b8;
+      border: 1px solid #334155; border-radius: 8px; font-size: 13px;
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-secondary:hover { border-color: #475569; color: #e2e8f0; }
+    .btn-sm {
+      padding: 4px 10px; border: none; border-radius: 6px;
+      font-size: 11px; font-weight: 500; cursor: pointer; transition: all .15s;
+    }
+    .btn-edit   { background: #1e3a5f; color: #93c5fd; }
+    .btn-edit:hover { background: #1e4a7a; }
+    .btn-toggle-off { background: #422006; color: #fb923c; }
+    .btn-toggle-off:hover { background: #5a2d0a; }
+    .btn-toggle-on  { background: #064e3b; color: #6ee7b7; }
+    .btn-toggle-on:hover  { background: #065f46; }
+    .btn-danger { background: #450a0a; color: #fca5a5; }
+    .btn-danger:hover { background: #5c1010; }
+
+    /* ══ FILTER ROW ══ */
+    .filter-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+    .search-bar {
+      flex: 1; min-width: 200px; max-width: 340px; padding: 8px 14px;
+      background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      color: #e2e8f0; font-size: 13px; outline: none; transition: border-color .15s;
+    }
+    .search-bar:focus { border-color: #6366f1; }
+    .search-bar::placeholder { color: #475569; }
+    .filter-select {
+      padding: 8px 12px; background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; color: #e2e8f0; font-size: 12px; outline: none; cursor: pointer;
+      transition: border-color .15s;
+    }
+    .filter-select:focus { border-color: #6366f1; }
+
+    /* ══ TABLE ══ */
+    .table-wrap {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 12px; overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left; padding: 10px 16px;
+      font-size: 10px; font-weight: 600; color: #64748b;
+      text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: 1px solid #334155; background: #162032;
+    }
+    td { padding: 11px 16px; border-bottom: 1px solid #1e293b; font-size: 13px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1a2840; }
+    .actions-cell { display: flex; gap: 6px; justify-content: flex-end; }
+
+    .user-cell { display: flex; align-items: center; gap: 10px; }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%; background: #312e81;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #c7d2fe; flex-shrink: 0; overflow: hidden;
+    }
+    .user-avatar img { width: 32px; height: 32px; object-fit: cover; }
+    .user-name-cell { font-weight: 500; color: #e2e8f0; }
+    .user-login { font-size: 11px; color: #475569; margin-top: 1px; }
+
+    .badge {
+      display: inline-flex; align-items: center; padding: 2px 8px;
+      border-radius: 4px; font-size: 11px; font-weight: 500;
+    }
+    .badge-active   { background: #064e3b; color: #6ee7b7; }
+    .badge-inactive { background: #450a0a; color: #fca5a5; }
+    .badge-super    { background: #312e81; color: #c7d2fe; }
+    .badge-role     { background: #1e293b; color: #94a3b8; border: 1px solid #334155; margin: 1px; }
+    .badge-global   { background: #1e3a5f; color: #93c5fd; }
+    .roles-wrap { display: flex; flex-wrap: wrap; gap: 2px; }
+
+    .empty-row td { text-align: center; padding: 40px; color: #475569; font-size: 13px; }
+
+    /* ══ PAGINATION ══ */
+    .pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; flex-wrap: wrap; gap: 8px; }
+    .pagination-info { font-size: 12px; color: #475569; }
+    .pagination-btns { display: flex; gap: 8px; align-items: center; }
+    .pagination-limit { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 6px; }
+
+    /* ══ SPINNER ══ */
+    .spinner-wrap { display: flex; align-items: center; justify-content: center; padding: 48px; }
     .spinner {
-      width: 32px; height: 32px; border: 3px solid #334155;
-      border-top-color: #6366f1; border-radius: 50%;
-      animation: spin .7s linear infinite;
+      width: 28px; height: 28px; border: 3px solid #334155;
+      border-top-color: #6366f1; border-radius: 50%; animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    /* ── MFA Setup banner ── */
-    .mfa-banner {
-      display: none;
-      background: #1c1917;
-      border: 1px solid #78350f;
-      border-radius: 10px;
-      padding: 16px 20px;
-      margin-bottom: 24px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
+
+    /* ══ MODULE DETAIL ══ */
+    .breadcrumb {
+      font-size: 12px; color: #64748b; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 6px;
     }
-    .mfa-banner-text { flex: 1; font-size: 14px; color: #fbbf24; }
-    .mfa-banner-text strong { display: block; margin-bottom: 2px; }
-    .mfa-banner-text span { font-size: 12px; color: #92400e; }
-    .btn-setup-mfa {
-      padding: 8px 16px; background: #d97706; border: none;
-      border-radius: 8px; color: #fff; font-size: 13px;
-      font-weight: 600; cursor: pointer; white-space: nowrap;
+    .breadcrumb a { color: #64748b; cursor: pointer; text-decoration: none; }
+    .breadcrumb a:hover { color: #94a3b8; }
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 22px; }
+    .stat-card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px 20px;
     }
-    .btn-setup-mfa:hover { background: #b45309; }
-    /* ── MFA Modal ── */
+    .stat-label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+    .stat-value { font-size: 22px; font-weight: 700; }
+
+    .role-pill {
+      display: inline-flex; align-items: center; padding: 2px 8px;
+      border-radius: 20px; font-size: 11px; font-weight: 500; margin: 1px;
+    }
+    .role-admin   { background: #312e81; color: #c7d2fe; }
+    .role-jefe    { background: #2d1f3d; color: #d8b4fe; }
+    .role-tecnico { background: #1e3a5f; color: #93c5fd; }
+    .role-usuario { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+
+    .avail-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .avail-on  { background: #22c55e; }
+    .avail-off { background: #f59e0b; }
+
+    /* ══ GLOBAL ROLES VIEW ══ */
+    .roles-admin-list { display: flex; flex-direction: column; gap: 6px; }
+    .role-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .role-row-name { font-size: 14px; font-weight: 600; color: #e2e8f0; }
+    .role-row-desc { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .btn-icon-danger {
+      padding: 4px 10px; background: none; border: 1px solid #334155;
+      border-radius: 6px; color: #94a3b8; font-size: 11px; cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-icon-danger:hover { border-color: #ef4444; color: #ef4444; }
+
+    /* ══ MODAL ══ */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.6); z-index: 100;
+      background: rgba(0,0,0,.65); z-index: 200;
       align-items: center; justify-content: center;
     }
     .modal-overlay.open { display: flex; }
     .modal {
       background: #1e293b; border: 1px solid #334155;
-      border-radius: 14px; padding: 32px; width: 360px;
+      border-radius: 14px; padding: 28px; width: 440px; max-width: 95vw;
+      max-height: 90vh; overflow-y: auto;
     }
-    .modal h2 { font-size: 18px; margin-bottom: 8px; }
-    .modal p { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
-    .qr-wrap { text-align: center; margin-bottom: 20px; }
-    .qr-wrap img { border-radius: 8px; }
-    .modal input {
-      width: 100%; padding: 10px 14px; background: #0f172a;
-      border: 1px solid #334155; border-radius: 8px; color: #e2e8f0;
-      font-size: 18px; text-align: center; letter-spacing: .3em;
-      margin-bottom: 12px; outline: none;
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px;
     }
-    .modal input:focus { border-color: #6366f1; }
-    .btn-confirm {
-      width: 100%; padding: 11px; background: #6366f1; color: #fff;
-      border: none; border-radius: 8px; font-size: 14px;
-      font-weight: 600; cursor: pointer;
-    }
-    .btn-confirm:hover { opacity: .88; }
+    .modal-title { font-size: 16px; font-weight: 600; }
     .modal-close {
-      float: right; background: transparent; border: none;
-      color: #64748b; font-size: 20px; cursor: pointer; margin-top: -8px;
+      background: none; border: none; color: #475569;
+      cursor: pointer; font-size: 22px; line-height: 1; padding: 0 4px;
     }
+    .modal-close:hover { color: #94a3b8; }
+
+    label { display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 5px; margin-top: 14px; }
+    label:first-of-type { margin-top: 0; }
+    input[type="text"], input[type="email"], input[type="password"], input[type="url"], select, textarea {
+      width: 100%; padding: 9px 13px; background: #0f172a;
+      border: 1px solid #334155; border-radius: 8px; color: #e2e8f0;
+      font-size: 13px; outline: none; transition: border-color .15s;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #6366f1; }
+    textarea { resize: vertical; min-height: 72px; }
+    .input-hint { font-size: 11px; color: #475569; margin-top: 4px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .toggle-wrap { display: flex; align-items: center; gap: 10px; margin-top: 14px; cursor: pointer; }
+    .toggle { width: 38px; height: 22px; background: #334155; border-radius: 11px; position: relative; transition: background .2s; flex-shrink: 0; }
+    .toggle.on { background: #6366f1; }
+    .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: left .2s; }
+    .toggle.on::after { left: 19px; }
+    .toggle-label { font-size: 13px; color: #94a3b8; margin-top: 0; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
+    .modal-actions button { flex: 1; padding: 9px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; }
+    .modal-actions .act-cancel { background: #334155; color: #94a3b8; }
+    .modal-actions .act-cancel:hover { background: #475569; }
+    .modal-actions .act-confirm { background: #6366f1; color: #fff; }
+    .modal-actions .act-confirm:hover { opacity: .88; }
+    .modal-actions .act-confirm:disabled { opacity: .4; cursor: not-allowed; }
+    .modal-actions .act-danger { background: #7f1d1d; color: #fca5a5; }
+    .modal-actions .act-danger:hover { background: #991b1b; }
+
+    .msg-ok  { background: #064e3b; color: #6ee7b7; border-radius: 8px; padding: 9px 13px; font-size: 13px; margin-top: 12px; }
+    .msg-err { background: #450a0a; color: #fca5a5; border-radius: 8px; padding: 9px 13px; font-size: 13px; margin-top: 12px; }
+
+    /* ══ MFA MODAL ══ */
+    .qr-wrap { text-align: center; margin-bottom: 18px; }
+    .qr-wrap img { border-radius: 8px; }
+    .btn-confirm { width: 100%; padding: 10px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-confirm:hover { opacity: .88; }
+
+    /* ══ BULK ASSIGN MODAL ══ */
+    .user-checkbox-list { max-height: 220px; overflow-y: auto; background: #0f172a;
+      border: 1px solid #334155; border-radius: 8px; padding: 6px; margin-top: 6px; }
+    .user-checkbox-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: 6px; cursor: pointer; transition: background .12s;
+    }
+    .user-checkbox-item:hover { background: #1e293b; }
+    .user-checkbox-item input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: #6366f1; }
+    .user-checkbox-item label { margin: 0; font-size: 13px; color: #e2e8f0; cursor: pointer; font-weight: 400; }
   </style>
 </head>
 <body>
 
-<!-- Header -->
+<!-- ════ FORCE 2FA OVERLAY ════ -->
+<div class="force-mfa-overlay" id="force-mfa-overlay">
+  <div class="force-mfa-card">
+    <div class="force-mfa-icon">🔐</div>
+    <div class="force-mfa-title">Verificación en 2 pasos requerida</div>
+    <p class="force-mfa-desc">
+      Para acceder al sistema debes activar la verificación en 2 pasos.<br>
+      Escanea el código QR con <strong style="color:#e2e8f0">Google Authenticator</strong> y confirma con el código.
+    </p>
+    <div class="force-qr-wrap" id="force-qr-wrap">
+      <div class="spinner"></div>
+    </div>
+    <p id="force-secret-hint" style="font-size:11px;color:#475569;margin-bottom:16px;display:none"></p>
+    <input class="mfa-input" type="text" id="force-totp-input" placeholder="000000" maxlength="6"
+      inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+    <button class="btn-confirm" onclick="confirmForce2FA()">Activar y acceder</button>
+    <p id="force-mfa-msg" style="text-align:center;margin-top:10px;font-size:13px;min-height:18px;"></p>
+    <div style="margin-top:18px">
+      <button onclick="doLogout()" style="background:none;border:none;color:#475569;font-size:12px;cursor:pointer;text-decoration:underline">
+        Cerrar sesión
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ HEADER ════ -->
 <header class="header">
-  <div class="logo">🎫 Tickets <span>System</span></div>
+  <div class="header-left">
+    <div class="logo">🎫 Tickets <span>System</span></div>
+  </div>
   <div class="user-area">
-    <div class="avatar" id="avatar-letter">?</div>
+    <div class="avatar" id="header-avatar"><span id="avatar-letter">?</span></div>
     <span class="user-name" id="header-name">Cargando...</span>
     <button class="btn-logout" onclick="doLogout()">Salir</button>
   </div>
 </header>
 
-<!-- MFA Setup Banner -->
-<div class="main">
-  <div class="mfa-banner" id="mfa-banner" style="display:none">
-    <span style="font-size:24px">🔐</span>
-    <div class="mfa-banner-text">
-      <strong>Configura verificación en 2 pasos</strong>
-      <span>Protege tu cuenta con Google Authenticator. Solo se solicita cada 2 semanas y media.</span>
-    </div>
-    <button class="btn-setup-mfa" onclick="openMfaModal()">Configurar ahora</button>
-  </div>
+<!-- ════ BODY ════ -->
+<div class="body-wrap">
 
-  <div class="welcome" id="welcome-text">Hola 👋</div>
-  <p class="sub">Selecciona el módulo al que deseas acceder</p>
-
-  <div class="section-title">Módulos disponibles</div>
-  <div class="modules-grid" id="modules-grid">
-    <div class="loading">
-      <div class="spinner"></div>
-      <span>Cargando módulos...</span>
+  <!-- ── SIDEBAR (only for superadmin) ── -->
+  <aside class="sidebar hidden" id="sidebar">
+    <div class="sidebar-toggle">
+      <button class="toggle-btn" onclick="toggleSidebar()" id="toggle-btn" title="Colapsar">◀</button>
     </div>
-  </div>
+
+    <div class="sidebar-section-label">Panel global</div>
+
+    <div class="nav-item active" id="nav-modules" onclick="showView('modules')">
+      <span class="nav-icon">🧩</span>
+      <span class="nav-label">Módulos</span>
+    </div>
+    <div class="nav-item" id="nav-users" onclick="showView('users')">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Usuarios</span>
+    </div>
+    <div class="nav-item" id="nav-roles" onclick="showView('roles')">
+      <span class="nav-icon">🏷️</span>
+      <span class="nav-label">Roles Globales</span>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="nav-item" style="color:#ef4444" onclick="doLogout()">
+        <span class="nav-icon">🚪</span>
+        <span class="nav-label">Cerrar sesión</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- ═══ VIEW: MÓDULOS ═══ -->
+    <div class="view active" id="view-modules">
+      <div class="welcome" id="welcome-text">Hola 👋</div>
+      <p class="sub">Selecciona el módulo al que deseas acceder</p>
+      <div class="section-title">Módulos disponibles</div>
+      <div class="modules-grid" id="modules-grid">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ VIEW: USUARIOS ═══ -->
+    <div class="view" id="view-users">
+      <div class="view-header">
+        <div>
+          <div class="view-title">Usuarios</div>
+          <div class="view-count" id="users-count">—</div>
+        </div>
+        <button class="btn-primary" onclick="openCreateUser()">+ Crear usuario</button>
+      </div>
+
+      <div class="filter-row">
+        <input class="search-bar" id="users-search" placeholder="Buscar por nombre o email…"
+          oninput="debounceSearch()" style="margin-bottom:0">
+        <select class="filter-select" id="filter-status" onchange="applyFilters()">
+          <option value="">Estado: Todos</option>
+          <option value="true">Activos</option>
+          <option value="false">Inactivos</option>
+        </select>
+        <select class="filter-select" id="filter-superadmin" onchange="applyFilters()">
+          <option value="">Tipo: Todos</option>
+          <option value="true">Superadmin</option>
+          <option value="false">Usuarios</option>
+        </select>
+        <select class="filter-select" id="filter-limit" onchange="applyLimitChange()">
+          <option value="10">10 / pág</option>
+          <option value="20" selected>20 / pág</option>
+          <option value="50">50 / pág</option>
+        </select>
+      </div>
+
+      <div id="users-table-wrap">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+
+      <div class="pagination" id="users-pagination" style="display:none">
+        <span class="pagination-info" id="users-page-info"></span>
+        <div class="pagination-btns">
+          <button class="btn-secondary" id="btn-prev" onclick="usersPage(-1)">← Anterior</button>
+          <button class="btn-secondary" id="btn-next" onclick="usersPage(+1)">Siguiente →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VIEW: ROLES GLOBALES ═══ -->
+    <div class="view" id="view-roles">
+      <div class="view-header">
+        <div>
+          <div class="view-title">Roles Globales</div>
+          <div class="view-count" id="roles-count">—</div>
+        </div>
+        <button class="btn-primary" onclick="openCreateGlobalRole()">+ Crear rol</button>
+      </div>
+      <div id="roles-list-wrap">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ VIEW: MÓDULO DETALLE ═══ -->
+    <div class="view" id="view-module-detail">
+      <div class="breadcrumb">
+        <a onclick="showView('modules')">Módulos</a>
+        <span>›</span>
+        <span id="detail-module-name">—</span>
+      </div>
+
+      <div class="view-header">
+        <div>
+          <div class="view-title" id="detail-title">—</div>
+          <div class="view-count" id="detail-slug" style="font-family:monospace;font-size:12px;color:#475569"></div>
+        </div>
+        <button class="btn-primary" id="btn-bulk-assign" onclick="openBulkAssign()" style="display:none">
+          + Asignar usuarios
+        </button>
+      </div>
+
+      <div class="stats-row" id="detail-stats">
+        <div class="stat-card"><div class="stat-label">Miembros</div><div class="stat-value" id="stat-members">—</div></div>
+        <div class="stat-card"><div class="stat-label">Técnicos</div><div class="stat-value" id="stat-techs">—</div></div>
+        <div class="stat-card"><div class="stat-label">Administradores</div><div class="stat-value" id="stat-admins">—</div></div>
+      </div>
+
+      <div class="section-title" style="margin-bottom:12px">Miembros y roles</div>
+      <div id="detail-members-wrap">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
-<!-- MFA Setup Modal -->
+<!-- ════ MODAL: MFA SETUP ════ -->
 <div class="modal-overlay" id="mfa-modal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeMfaModal()">×</button>
-    <h2>Verificación en 2 pasos</h2>
-    <p>Escanea el código QR con <strong>Google Authenticator</strong> y luego ingresa el código de 6 dígitos para confirmar.</p>
-    <div class="qr-wrap" id="qr-wrap">
-      <div class="spinner" style="margin:0 auto"></div>
+  <div class="modal" style="width:360px">
+    <div class="modal-header">
+      <div class="modal-title">Verificación en 2 pasos</div>
+      <button class="modal-close" onclick="closeMfaModal()">×</button>
     </div>
-    <input type="text" id="totp-input" placeholder="000000" maxlength="6" inputmode="numeric"
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:18px">
+      Escanea el QR con <strong style="color:#e2e8f0">Google Authenticator</strong> y confirma con el código.
+    </p>
+    <div class="qr-wrap" id="qr-wrap"><div class="spinner" style="margin:0 auto"></div></div>
+    <input class="mfa-input" type="text" id="totp-input" placeholder="000000" maxlength="6" inputmode="numeric"
       oninput="this.value=this.value.replace(/\D/g,'')">
     <button class="btn-confirm" onclick="confirmMfa()">Activar 2FA</button>
     <p id="mfa-msg" style="text-align:center;margin-top:10px;font-size:13px;"></p>
   </div>
 </div>
 
+<!-- ════ MODAL: CREAR / EDITAR USUARIO ════ -->
+<div class="modal-overlay" id="user-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="user-modal-title">Crear usuario</div>
+      <button class="modal-close" onclick="closeUserModal()">×</button>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label>Nombre</label>
+        <input type="text" id="u-first" placeholder="Juan" required>
+      </div>
+      <div>
+        <label>Apellido</label>
+        <input type="text" id="u-last" placeholder="García" required>
+      </div>
+    </div>
+
+    <div id="u-email-wrap">
+      <label>Correo electrónico</label>
+      <input type="email" id="u-email" placeholder="juan@empresa.com">
+    </div>
+
+    <div id="u-password-wrap">
+      <label>Contraseña</label>
+      <input type="password" id="u-password" placeholder="Mínimo 8 caracteres">
+    </div>
+
+    <label>Teléfono (opcional)</label>
+    <input type="text" id="u-phone" placeholder="+573001234567">
+
+    <label>Rol Global</label>
+    <select id="u-global-role">
+      <option value="">Cargando roles…</option>
+    </select>
+
+    <div class="toggle-wrap" onclick="toggleSuperadmin()">
+      <div class="toggle" id="toggle-superadmin"></div>
+      <span class="toggle-label">Superadmin</span>
+    </div>
+
+    <div id="user-modal-msg"></div>
+
+    <div class="modal-actions">
+      <button class="act-cancel" onclick="closeUserModal()">Cancelar</button>
+      <button class="act-confirm" id="user-modal-btn" onclick="submitUserModal()">Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: CONFIRMAR ELIMINAR ════ -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="width:380px">
+    <div class="modal-header">
+      <div class="modal-title">Eliminar usuario</div>
+      <button class="modal-close" onclick="closeConfirm()">×</button>
+    </div>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:6px">
+      ¿Eliminar a <strong id="confirm-name" style="color:#e2e8f0"></strong>?
+    </p>
+    <p style="font-size:12px;color:#64748b;margin-bottom:22px">Esta acción revocará todas sus sesiones activas.</p>
+    <div class="modal-actions">
+      <button class="act-cancel" onclick="closeConfirm()">Cancelar</button>
+      <button class="act-danger" id="btn-confirm-delete" onclick="execDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: CREAR MÓDULO ════ -->
+<div class="modal-overlay" id="module-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Crear módulo</div>
+      <button class="modal-close" onclick="closeModuleModal()">×</button>
+    </div>
+
+    <label>Nombre del módulo</label>
+    <input type="text" id="m-name" placeholder="Ej: Helpdesk TI" oninput="previewSlug()">
+    <p class="input-hint" id="m-slug-preview" style="font-family:monospace"></p>
+
+    <label>Tipo</label>
+    <select id="m-type">
+      <option value="tickets">Tickets / Helpdesk</option>
+      <option value="inventario">Inventario</option>
+      <option value="crm">CRM</option>
+      <option value="rrhh">Recursos Humanos</option>
+      <option value="custom">Personalizado</option>
+    </select>
+
+    <label>Descripción (opcional)</label>
+    <textarea id="m-desc" placeholder="Descripción del módulo…"></textarea>
+
+    <label>URL de imagen (opcional)</label>
+    <input type="url" id="m-image" placeholder="https://ejemplo.com/imagen.png">
+
+    <div id="module-modal-msg"></div>
+
+    <div class="modal-actions">
+      <button class="act-cancel" onclick="closeModuleModal()">Cancelar</button>
+      <button class="act-confirm" id="module-modal-btn" onclick="submitModuleModal()">Crear módulo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: CREAR ROL GLOBAL ════ -->
+<div class="modal-overlay" id="global-role-modal">
+  <div class="modal" style="width:380px">
+    <div class="modal-header">
+      <div class="modal-title">Crear rol global</div>
+      <button class="modal-close" onclick="closeGlobalRoleModal()">×</button>
+    </div>
+    <label>Nombre del rol</label>
+    <input type="text" id="gr-name" placeholder="Ej: coordinador">
+    <p class="input-hint">Se guardará en minúsculas con guiones bajos.</p>
+    <label>Descripción (opcional)</label>
+    <input type="text" id="gr-desc" placeholder="Descripción del rol">
+    <div id="global-role-modal-msg"></div>
+    <div class="modal-actions">
+      <button class="act-cancel" onclick="closeGlobalRoleModal()">Cancelar</button>
+      <button class="act-confirm" id="global-role-modal-btn" onclick="submitGlobalRole()">Crear rol</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: ASIGNAR USUARIOS A MÓDULO ════ -->
+<div class="modal-overlay" id="bulk-assign-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Asignar usuarios al módulo</div>
+      <button class="modal-close" onclick="closeBulkAssign()">×</button>
+    </div>
+
+    <label>Rol a asignar</label>
+    <select id="ba-role-select">
+      <option value="">Cargando roles del módulo…</option>
+    </select>
+
+    <label>Usuarios</label>
+    <input type="text" id="ba-search" placeholder="Buscar usuario…"
+      oninput="filterBulkUsers(this.value)" style="margin-bottom:6px">
+    <div class="user-checkbox-list" id="ba-user-list">
+      <div class="spinner-wrap" style="padding:20px"><div class="spinner"></div></div>
+    </div>
+
+    <div id="bulk-assign-msg"></div>
+
+    <div class="modal-actions">
+      <button class="act-cancel" onclick="closeBulkAssign()">Cancelar</button>
+      <button class="act-confirm" id="bulk-assign-btn" onclick="submitBulkAssign()">Asignar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SCRIPT ════ -->
 <script>
   const API = 'http://localhost:3001/api/v1';
-  let accessToken = null;
+  let accessToken  = null;
   let refreshToken = null;
 
-  const MODULE_ICONS = {
-    helpdesk:  { emoji: '🎫', cls: 'icon-helpdesk',  typeCls: 'type-helpdesk' },
-    inventory: { emoji: '📦', cls: 'icon-inventory', typeCls: 'type-inventory' },
-    custom:    { emoji: '⚙️',  cls: 'icon-custom',   typeCls: 'type-custom' },
-  };
+  // ── State ───────────────────────────────────────────────────────────────────
+  let currentUser        = null;
+  let usersCurrentPage   = 1;
+  let usersLimit         = 20;
+  let usersTotal         = 0;
+  let usersPages         = 1;
+  let usersSearchVal     = '';
+  let usersStatusFilter  = '';
+  let usersSuperFilter   = '';
+  let searchDebounce     = null;
+  let editingUserId      = null;
+  let deletingUserId     = null;
+  let isSuperadminToggle = false;
+  let globalRolesCache   = [];
+  let currentModuleId    = null;
+  let bulkAllUsers       = [];
 
-  // ── Init ──────────────────────────────────────────────────────────────────
-
+  // ── Init ────────────────────────────────────────────────────────────────────
   (async function init() {
-    // 1. Token from URL hash (Google OAuth callback)
     const hash = new URLSearchParams(window.location.hash.slice(1));
     if (hash.get('access_token')) {
       accessToken  = hash.get('access_token');
@@ -239,127 +765,797 @@
       localStorage.setItem('refresh_token', refreshToken ?? '');
       window.history.replaceState(null, '', window.location.pathname);
     } else {
-      // 2. Token from localStorage (previous email/password login)
       accessToken  = localStorage.getItem('access_token');
       refreshToken = localStorage.getItem('refresh_token');
     }
-
-    if (!accessToken) {
-      window.location.href = 'test-auth.html';
-      return;
-    }
-
-    await Promise.all([loadUser(), loadModules()]);
+    if (!accessToken) { window.location.href = 'test-auth.html'; return; }
+    await loadUser();
   })();
 
-  // ── Load user ────────────────────────────────────────────────────────────
+  // ── Sidebar toggle ──────────────────────────────────────────────────────────
+  function toggleSidebar() {
+    const sb  = document.getElementById('sidebar');
+    const btn = document.getElementById('toggle-btn');
+    sb.classList.toggle('collapsed');
+    btn.textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
+    btn.title       = sb.classList.contains('collapsed') ? 'Expandir' : 'Colapsar';
+  }
+
+  // ── View switcher ────────────────────────────────────────────────────────────
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    document.getElementById('view-' + name)?.classList.add('active');
+    const navEl = document.getElementById('nav-' + name);
+    if (navEl) navEl.classList.add('active');
+
+    if (name === 'users')   loadUsers();
+    if (name === 'modules') loadModules();
+    if (name === 'roles')   loadGlobalRoles();
+  }
+
+  // ══════════════════════════════════════════════════
+  // USER / AUTH SECTION
+  // ══════════════════════════════════════════════════
 
   async function loadUser() {
     try {
       const res  = await authFetch(`${API}/auth/me`);
-      const user = await res.json();
       if (!res.ok) { handleUnauth(); return; }
+      const user = await res.json();
+      currentUser = user;
 
+      // Update header
       const name = user.name || user.email;
       document.getElementById('header-name').textContent = name;
-      document.getElementById('avatar-letter').textContent = name[0].toUpperCase();
       document.getElementById('welcome-text').textContent = `Hola, ${user.name?.split(' ')[0] ?? 'Usuario'} 👋`;
 
-      if (!user.mfa_enabled) {
-        document.getElementById('mfa-banner').style.display = 'flex';
+      const avatarEl = document.getElementById('header-avatar');
+      if (user.avatar_url) {
+        avatarEl.innerHTML = `<img src="${escHtml(user.avatar_url)}" onerror="this.parentElement.innerHTML='<span>${escHtml(name[0].toUpperCase())}</span>'">`;
+      } else {
+        avatarEl.innerHTML = `<span>${escHtml(name[0].toUpperCase())}</span>`;
       }
+
+      // Sidebar: only for superadmin
+      if (user.is_superadmin) {
+        document.getElementById('sidebar').classList.remove('hidden');
+      }
+
+      // Enforce 2FA: block access until enabled
+      if (!user.mfa_enabled) {
+        await showForce2FA();
+        return; // don't load modules until 2FA is confirmed
+      }
+
+      // Load modules after 2FA check passes
+      await loadModules();
+
     } catch { handleUnauth(); }
   }
 
-  // ── Load modules ─────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════
+  // FORCE 2FA FLOW
+  // ══════════════════════════════════════════════════
+
+  async function showForce2FA() {
+    document.getElementById('force-mfa-overlay').classList.add('active');
+    document.getElementById('force-qr-wrap').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('force-secret-hint').style.display = 'none';
+    document.getElementById('force-mfa-msg').textContent = '';
+    document.getElementById('force-totp-input').value = '';
+
+    try {
+      const res  = await authFetch(`${API}/auth/mfa/setup`);
+      const data = await res.json();
+      document.getElementById('force-qr-wrap').innerHTML =
+        `<img src="${data.qr_code}" width="175" height="175" alt="QR Code" style="border-radius:8px">`;
+      const hint = document.getElementById('force-secret-hint');
+      hint.textContent = `Clave manual: ${data.secret}`;
+      hint.style.display = 'block';
+      document.getElementById('force-totp-input').focus();
+    } catch {
+      document.getElementById('force-qr-wrap').innerHTML =
+        '<p style="color:#ef4444;font-size:13px">Error cargando QR. Recarga la página.</p>';
+    }
+  }
+
+  async function confirmForce2FA() {
+    const code = document.getElementById('force-totp-input').value;
+    const msg  = document.getElementById('force-mfa-msg');
+    if (code.length !== 6) {
+      msg.style.color = '#ef4444'; msg.textContent = 'Ingresa 6 dígitos'; return;
+    }
+    try {
+      const res  = await authFetch(`${API}/auth/mfa/enable`, { method: 'POST', body: JSON.stringify({ code }) });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.style.color = '#ef4444'; msg.textContent = data.message ?? 'Código incorrecto'; return;
+      }
+      msg.style.color = '#6ee7b7'; msg.textContent = '✓ 2FA activado. Accediendo…';
+      setTimeout(async () => {
+        document.getElementById('force-mfa-overlay').classList.remove('active');
+        // Refresh user data with mfa_enabled now true
+        const r = await authFetch(`${API}/auth/me`);
+        if (r.ok) currentUser = await r.json();
+        await loadModules();
+      }, 900);
+    } catch {
+      msg.style.color = '#ef4444'; msg.textContent = 'Error de red';
+    }
+  }
+
+  // ══════════════════════════════════════════════════
+  // MODULES SECTION
+  // ══════════════════════════════════════════════════
+
+  const MODULE_ICONS = {
+    tickets:    { emoji: '🎫', cls: 'icon-tickets',    typeCls: 'type-tickets' },
+    inventario: { emoji: '📦', cls: 'icon-inventario', typeCls: 'type-inventario' },
+    crm:        { emoji: '🤝', cls: 'icon-crm',        typeCls: 'type-crm' },
+    rrhh:       { emoji: '👤', cls: 'icon-rrhh',       typeCls: 'type-rrhh' },
+    custom:     { emoji: '⚙️',  cls: 'icon-custom',    typeCls: 'type-custom' },
+    helpdesk:   { emoji: '🎫', cls: 'icon-tickets',    typeCls: 'type-helpdesk' },
+    inventory:  { emoji: '📦', cls: 'icon-inventario', typeCls: 'type-inventory' },
+  };
 
   async function loadModules() {
     try {
-      const res = await authFetch(`${API}/system-modules`);
-      if (!res.ok) { renderError(); return; }
-      const modules = await res.json();
-      renderModules(modules);
-    } catch { renderError(); }
+      const res  = await authFetch(`${API}/system-modules`);
+      if (!res.ok) { renderModulesError(); return; }
+      const list = await res.json();
+      renderModules(list);
+    } catch { renderModulesError(); }
   }
 
   function renderModules(list) {
     const grid = document.getElementById('modules-grid');
+    const isSuperAdmin = currentUser?.is_superadmin;
+
     if (!list.length) {
-      grid.innerHTML = '<div class="empty"><span>No hay módulos disponibles</span></div>';
+      grid.innerHTML = `<div style="color:#475569;padding:40px;grid-column:1/-1;text-align:center">
+        ${isSuperAdmin
+          ? 'No hay módulos. <span style="color:#6366f1;cursor:pointer" onclick="openModuleModal()">Crear el primero</span>'
+          : 'No tienes módulos asignados.'}
+      </div>`;
       return;
     }
-    grid.innerHTML = list.map(m => {
+
+    const cards = list.map(m => {
       const ic = MODULE_ICONS[m.type] ?? MODULE_ICONS.custom;
+      const iconHtml = m.image_url
+        ? `<div class="module-icon"><img src="${escHtml(m.image_url)}" onerror="this.parentElement.innerHTML='${ic.emoji}';this.parentElement.className='module-icon ${ic.cls}'" alt="${escHtml(m.name)}"></div>`
+        : `<div class="module-icon ${ic.cls}">${ic.emoji}</div>`;
       return `
-        <div class="module-card" onclick="enterModule('${m.id}', '${m.slug}')">
-          <span class="badge-coming">Próximamente</span>
-          <div class="module-icon ${ic.cls}">${ic.emoji}</div>
-          <div class="module-name">${m.name}</div>
-          <div class="module-desc">${m.description ?? 'Módulo de gestión'}</div>
-          <span class="module-type ${ic.typeCls}">${m.type}</span>
+        <div class="module-card" onclick="enterModule('${m.id}', '${escHtml(m.name)}', '${escHtml(m.slug)}')">
+          ${iconHtml}
+          <div class="module-name">${escHtml(m.name)}</div>
+          <div class="module-desc">${escHtml(m.description ?? '')}</div>
+          <span class="module-type ${ic.typeCls}">${escHtml(m.type)}</span>
         </div>`;
     }).join('');
+
+    const createCard = isSuperAdmin
+      ? `<div class="module-card" onclick="openModuleModal()"
+           style="border-style:dashed;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:140px;color:#475569">
+           <span style="font-size:28px">+</span>
+           <span style="font-size:13px">Crear módulo</span>
+         </div>`
+      : '';
+
+    grid.innerHTML = cards + createCard;
   }
 
-  function renderError() {
+  function renderModulesError() {
     document.getElementById('modules-grid').innerHTML =
-      '<div class="empty"><span>Error cargando módulos</span></div>';
+      '<div style="color:#475569;padding:40px">Error cargando módulos</div>';
   }
 
-  function enterModule(id, slug) {
-    // Placeholder — en implementación real navega al módulo
-    alert(`Módulo "${slug}" — implementación próxima.\nID: ${id}`);
+  async function enterModule(id, name, slug) {
+    currentModuleId = id;
+    document.getElementById('detail-module-name').textContent = name;
+    document.getElementById('detail-title').textContent = name;
+    document.getElementById('detail-slug').textContent = slug;
+    document.getElementById('detail-members-wrap').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+    document.getElementById('stat-members').textContent = '—';
+    document.getElementById('stat-techs').textContent   = '—';
+    document.getElementById('stat-admins').textContent  = '—';
+
+    // Show bulk-assign button only for superadmin
+    document.getElementById('btn-bulk-assign').style.display =
+      currentUser?.is_superadmin ? '' : 'none';
+
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('view-module-detail').classList.add('active');
+
+    try {
+      const res     = await authFetch(`${API}/users/module/${id}`);
+      if (!res.ok) throw new Error();
+      const members = await res.json();
+      renderModuleDetail(members);
+    } catch {
+      document.getElementById('detail-members-wrap').innerHTML =
+        '<div style="color:#ef4444;padding:20px;font-size:13px">Error cargando miembros</div>';
+    }
   }
 
-  // ── MFA Setup ────────────────────────────────────────────────────────────
+  function renderModuleDetail(members) {
+    const techs  = members.filter(m => m.roles?.some(r => r.role === 'tecnico' || r.role === 'jefe_tecnico'));
+    const admins = members.filter(m => m.roles?.some(r => r.role === 'admin_modulo'));
+
+    document.getElementById('stat-members').textContent = members.length;
+    document.getElementById('stat-techs').textContent   = techs.length;
+    document.getElementById('stat-admins').textContent  = admins.length;
+
+    if (!members.length) {
+      document.getElementById('detail-members-wrap').innerHTML =
+        `<div style="color:#475569;padding:40px;text-align:center;font-size:13px">
+          Sin miembros en este módulo.
+          ${currentUser?.is_superadmin ? '<span style="color:#6366f1;cursor:pointer" onclick="openBulkAssign()">Asignar usuarios</span>' : ''}
+        </div>`;
+      return;
+    }
+
+    const roleClass = { admin_modulo: 'role-admin', jefe_tecnico: 'role-jefe', tecnico: 'role-tecnico', usuario: 'role-usuario' };
+
+    document.getElementById('detail-members-wrap').innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Usuario</th><th>Email</th><th>Roles</th><th>Disponibilidad</th>
+          </tr></thead>
+          <tbody>${members.map(m => `
+            <tr>
+              <td>
+                <div class="user-cell">
+                  <div class="user-avatar">${m.avatar_url
+                    ? `<img src="${escHtml(m.avatar_url)}" onerror="this.parentElement.textContent='${escHtml((m.first_name[0] ?? '?').toUpperCase())}'">`
+                    : escHtml((m.first_name[0] ?? '?').toUpperCase())}
+                  </div>
+                  <div class="user-name-cell">${escHtml(m.first_name)} ${escHtml(m.last_name)}</div>
+                </div>
+              </td>
+              <td style="color:#64748b">${escHtml(m.email)}</td>
+              <td>${(m.roles ?? []).map(r => `<span class="role-pill ${roleClass[r.role] ?? 'role-usuario'}">${escHtml(r.role)}</span>`).join('')}</td>
+              <td>${m.is_available === undefined
+                ? '<span style="color:#475569">—</span>'
+                : m.is_available
+                  ? '<span class="avail-dot avail-on"></span><span style="color:#22c55e;font-size:12px">Disponible</span>'
+                  : `<span class="avail-dot avail-off"></span><span style="color:#f59e0b;font-size:12px">No disponible${m.unavailability_reason ? ' · ' + escHtml(m.unavailability_reason) : ''}</span>`
+              }</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ══════════════════════════════════════════════════
+  // USERS CRUD SECTION
+  // ══════════════════════════════════════════════════
+
+  function applyFilters() {
+    usersStatusFilter  = document.getElementById('filter-status').value;
+    usersSuperFilter   = document.getElementById('filter-superadmin').value;
+    usersCurrentPage = 1;
+    loadUsers();
+  }
+
+  function applyLimitChange() {
+    usersLimit = parseInt(document.getElementById('filter-limit').value, 10);
+    usersCurrentPage = 1;
+    loadUsers();
+  }
+
+  async function loadUsers() {
+    document.getElementById('users-table-wrap').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+    document.getElementById('users-pagination').style.display = 'none';
+
+    const params = new URLSearchParams({ page: usersCurrentPage, limit: usersLimit });
+    if (usersSearchVal)    params.set('search',       usersSearchVal);
+    if (usersStatusFilter) params.set('is_active',    usersStatusFilter);
+    if (usersSuperFilter)  params.set('is_superadmin', usersSuperFilter);
+
+    try {
+      const res  = await authFetch(`${API}/users?${params}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      usersTotal = data.meta.total;
+      usersPages = data.meta.pages;
+      renderUsersTable(data.data);
+      renderUsersPagination();
+      document.getElementById('users-count').textContent =
+        `${usersTotal} usuario${usersTotal !== 1 ? 's' : ''}`;
+    } catch {
+      document.getElementById('users-table-wrap').innerHTML =
+        '<div style="color:#ef4444;padding:20px;font-size:13px">Error cargando usuarios</div>';
+    }
+  }
+
+  function renderUsersTable(list) {
+    if (!list.length) {
+      document.getElementById('users-table-wrap').innerHTML = `
+        <div class="table-wrap"><table><thead><tr>
+          <th>Usuario</th><th>Email</th><th>Rol Global</th><th>Módulos / Roles</th><th>Estado</th><th style="text-align:right">Acciones</th>
+        </tr></thead><tbody>
+          <tr class="empty-row"><td colspan="6">${usersSearchVal ? 'Sin resultados' : 'No hay usuarios aún'}</td></tr>
+        </tbody></table></div>`;
+      return;
+    }
+
+    document.getElementById('users-table-wrap').innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Usuario</th><th>Email</th><th>Rol Global</th><th>Módulos / Roles</th><th>Estado</th><th style="text-align:right">Acciones</th>
+          </tr></thead>
+          <tbody>${list.map(u => {
+            const avatarHtml = u.avatar_url
+              ? `<div class="user-avatar"><img src="${escHtml(u.avatar_url)}" onerror="this.parentElement.textContent='${escHtml((u.first_name[0] ?? '?').toUpperCase())}'" alt=""></div>`
+              : `<div class="user-avatar">${escHtml((u.first_name[0] ?? '?').toUpperCase())}</div>`;
+
+            return `
+            <tr>
+              <td>
+                <div class="user-cell">
+                  ${avatarHtml}
+                  <div>
+                    <div class="user-name-cell">
+                      ${escHtml(u.first_name)} ${escHtml(u.last_name)}
+                      ${u.is_superadmin ? '<span class="badge badge-super" style="margin-left:6px">Superadmin</span>' : ''}
+                    </div>
+                    <div class="user-login">${u.last_login_at ? 'Último acceso: ' + fmtDate(u.last_login_at) : 'Sin accesos'}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="color:#64748b">${escHtml(u.email)}</td>
+              <td>
+                ${u.global_role
+                  ? `<span class="badge badge-global">${escHtml(u.global_role)}</span>`
+                  : '<span style="color:#475569;font-size:11px">usuario</span>'}
+              </td>
+              <td>
+                <div class="roles-wrap">
+                  ${(u.roles ?? []).slice(0, 3).map(r => `<span class="badge badge-role">${escHtml(r.module)} · ${escHtml(r.role)}</span>`).join('')}
+                  ${(u.roles?.length ?? 0) > 3 ? `<span class="badge badge-role">+${u.roles.length - 3} más</span>` : ''}
+                  ${!(u.roles?.length) ? '<span style="color:#475569;font-size:11px">—</span>' : ''}
+                </div>
+              </td>
+              <td><span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Activo' : 'Inactivo'}</span></td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn-sm btn-edit" onclick="openEditUser(${JSON.stringify(JSON.stringify(u))})">Editar</button>
+                  <button class="btn-sm ${u.is_active ? 'btn-toggle-off' : 'btn-toggle-on'}"
+                    onclick="toggleUserActive('${u.id}', ${u.is_active})">
+                    ${u.is_active ? 'Desactivar' : 'Activar'}
+                  </button>
+                  <button class="btn-sm btn-danger" onclick="openConfirmDelete('${u.id}', '${escHtml(u.first_name)} ${escHtml(u.last_name)}')">Eliminar</button>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function renderUsersPagination() {
+    const pag = document.getElementById('users-pagination');
+    if (usersPages <= 1) { pag.style.display = 'none'; return; }
+    pag.style.display = 'flex';
+    document.getElementById('users-page-info').textContent = `Página ${usersCurrentPage} de ${usersPages} (${usersTotal} total)`;
+    document.getElementById('btn-prev').disabled = usersCurrentPage === 1;
+    document.getElementById('btn-next').disabled = usersCurrentPage === usersPages;
+  }
+
+  function usersPage(delta) {
+    usersCurrentPage = Math.max(1, Math.min(usersPages, usersCurrentPage + delta));
+    loadUsers();
+  }
+
+  function debounceSearch() {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+      usersSearchVal   = document.getElementById('users-search').value.trim();
+      usersCurrentPage = 1;
+      loadUsers();
+    }, 350);
+  }
+
+  // ── Global roles dropdown helper ──────────────────────────────────────────
+
+  async function loadGlobalRolesIntoSelect(selectId, selectedId) {
+    if (!globalRolesCache.length) {
+      try {
+        const res = await authFetch(`${API}/users/global-roles`);
+        if (res.ok) globalRolesCache = await res.json();
+      } catch (_) {}
+    }
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = '<option value="">— Sin rol global —</option>' +
+      globalRolesCache.map(r =>
+        `<option value="${r.id}" ${r.id === selectedId ? 'selected' : ''}>${escHtml(r.name)}</option>`
+      ).join('');
+  }
+
+  // ── Create / Edit user modal ──────────────────────────────────────────────
+
+  async function openCreateUser() {
+    editingUserId = null;
+    isSuperadminToggle = false;
+    document.getElementById('user-modal-title').textContent = 'Crear usuario';
+    document.getElementById('user-modal-btn').textContent   = 'Crear usuario';
+    document.getElementById('u-email-wrap').style.display    = '';
+    document.getElementById('u-password-wrap').style.display = '';
+    document.getElementById('u-first').value   = '';
+    document.getElementById('u-last').value    = '';
+    document.getElementById('u-email').value   = '';
+    document.getElementById('u-password').value = '';
+    document.getElementById('u-phone').value   = '';
+    document.getElementById('toggle-superadmin').classList.remove('on');
+    document.getElementById('user-modal-msg').innerHTML = '';
+    document.getElementById('user-modal').classList.add('open');
+    await loadGlobalRolesIntoSelect('u-global-role', null);
+  }
+
+  async function openEditUser(jsonStr) {
+    const u = JSON.parse(jsonStr);
+    editingUserId = u.id;
+    isSuperadminToggle = u.is_superadmin;
+    document.getElementById('user-modal-title').textContent  = 'Editar usuario';
+    document.getElementById('user-modal-btn').textContent    = 'Guardar cambios';
+    document.getElementById('u-email-wrap').style.display    = 'none';
+    document.getElementById('u-password-wrap').style.display = 'none';
+    document.getElementById('u-first').value = u.first_name;
+    document.getElementById('u-last').value  = u.last_name;
+    document.getElementById('u-phone').value = u.phone ?? '';
+    const tog = document.getElementById('toggle-superadmin');
+    isSuperadminToggle ? tog.classList.add('on') : tog.classList.remove('on');
+    document.getElementById('user-modal-msg').innerHTML = '';
+    document.getElementById('user-modal').classList.add('open');
+    await loadGlobalRolesIntoSelect('u-global-role', u.global_role_id);
+  }
+
+  function closeUserModal() { document.getElementById('user-modal').classList.remove('open'); }
+
+  function toggleSuperadmin() {
+    isSuperadminToggle = !isSuperadminToggle;
+    const tog = document.getElementById('toggle-superadmin');
+    isSuperadminToggle ? tog.classList.add('on') : tog.classList.remove('on');
+  }
+
+  async function submitUserModal() {
+    const btn = document.getElementById('user-modal-btn');
+    const msg = document.getElementById('user-modal-msg');
+    msg.innerHTML = '';
+    btn.disabled  = true;
+
+    const first          = document.getElementById('u-first').value.trim();
+    const last           = document.getElementById('u-last').value.trim();
+    const phone          = document.getElementById('u-phone').value.trim();
+    const global_role_id = document.getElementById('u-global-role').value || undefined;
+
+    if (!first || !last) {
+      msg.innerHTML = '<div class="msg-err">Nombre y apellido son requeridos</div>';
+      btn.disabled = false; return;
+    }
+
+    try {
+      if (editingUserId) {
+        const body = { first_name: first, last_name: last, is_superadmin: isSuperadminToggle };
+        if (phone)          body.phone          = phone;
+        if (global_role_id) body.global_role_id = global_role_id;
+        const res = await authFetch(`${API}/users/${editingUserId}`, {
+          method: 'PATCH', body: JSON.stringify(body),
+        });
+        if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+      } else {
+        const email    = document.getElementById('u-email').value.trim();
+        const password = document.getElementById('u-password').value;
+        if (!email || !password) {
+          msg.innerHTML = '<div class="msg-err">Email y contraseña son requeridos</div>';
+          btn.disabled = false; return;
+        }
+        if (password.length < 8) {
+          msg.innerHTML = '<div class="msg-err">Contraseña mínimo 8 caracteres</div>';
+          btn.disabled = false; return;
+        }
+        const body = { first_name: first, last_name: last, email, password, is_superadmin: isSuperadminToggle };
+        if (phone)          body.phone          = phone;
+        if (global_role_id) body.global_role_id = global_role_id;
+        const res = await authFetch(`${API}/users`, { method: 'POST', body: JSON.stringify(body) });
+        if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+      }
+      msg.innerHTML = '<div class="msg-ok">✓ Guardado correctamente</div>';
+      setTimeout(() => { closeUserModal(); loadUsers(); }, 800);
+    } catch (e) {
+      msg.innerHTML = `<div class="msg-err">${escHtml(e.message ?? 'Error al guardar')}</div>`;
+    } finally { btn.disabled = false; }
+  }
+
+  // ── Toggle active ─────────────────────────────────────────────────────────
+
+  async function toggleUserActive(id, currentlyActive) {
+    try {
+      const res = await authFetch(`${API}/users/${id}`, {
+        method: 'PATCH', body: JSON.stringify({ is_active: !currentlyActive }),
+      });
+      if (!res.ok) throw new Error();
+      loadUsers();
+    } catch { alert('Error al actualizar el estado del usuario'); }
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  function openConfirmDelete(id, name) {
+    deletingUserId = id;
+    document.getElementById('confirm-name').textContent = name;
+    document.getElementById('confirm-modal').classList.add('open');
+  }
+  function closeConfirm() { document.getElementById('confirm-modal').classList.remove('open'); }
+
+  async function execDelete() {
+    const btn = document.getElementById('btn-confirm-delete');
+    btn.disabled = true;
+    try {
+      const res = await authFetch(`${API}/users/${deletingUserId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      closeConfirm();
+      loadUsers();
+    } catch { alert('Error al eliminar el usuario'); }
+    finally { btn.disabled = false; }
+  }
+
+  // ══════════════════════════════════════════════════
+  // GLOBAL ROLES VIEW
+  // ══════════════════════════════════════════════════
+
+  async function loadGlobalRoles() {
+    document.getElementById('roles-list-wrap').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+    try {
+      const res = await authFetch(`${API}/users/global-roles`);
+      if (!res.ok) throw new Error();
+      const list = await res.json();
+      globalRolesCache = list;
+      renderGlobalRoles(list);
+      document.getElementById('roles-count').textContent = `${list.length} rol${list.length !== 1 ? 'es' : ''}`;
+    } catch {
+      document.getElementById('roles-list-wrap').innerHTML =
+        '<div style="color:#ef4444;padding:20px;font-size:13px">Error cargando roles</div>';
+    }
+  }
+
+  function renderGlobalRoles(list) {
+    if (!list.length) {
+      document.getElementById('roles-list-wrap').innerHTML =
+        '<div style="color:#475569;padding:40px;text-align:center">No hay roles globales aún.</div>';
+      return;
+    }
+    document.getElementById('roles-list-wrap').innerHTML = `
+      <div class="roles-admin-list">
+        ${list.map(r => `
+          <div class="role-row">
+            <div>
+              <div class="role-row-name">${escHtml(r.name)}</div>
+              ${r.description ? `<div class="role-row-desc">${escHtml(r.description)}</div>` : ''}
+            </div>
+            <button class="btn-icon-danger" onclick="deleteGlobalRole('${r.id}', '${escHtml(r.name)}')">
+              Desactivar
+            </button>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  function openCreateGlobalRole() {
+    document.getElementById('gr-name').value = '';
+    document.getElementById('gr-desc').value = '';
+    document.getElementById('global-role-modal-msg').innerHTML = '';
+    document.getElementById('global-role-modal').classList.add('open');
+  }
+  function closeGlobalRoleModal() { document.getElementById('global-role-modal').classList.remove('open'); }
+
+  async function submitGlobalRole() {
+    const btn  = document.getElementById('global-role-modal-btn');
+    const msg  = document.getElementById('global-role-modal-msg');
+    const name = document.getElementById('gr-name').value.trim();
+    const desc = document.getElementById('gr-desc').value.trim();
+    if (!name) { msg.innerHTML = '<div class="msg-err">El nombre es requerido</div>'; return; }
+
+    btn.disabled = true;
+    try {
+      const res = await authFetch(`${API}/users/global-roles`, {
+        method: 'POST', body: JSON.stringify({ name, description: desc || undefined }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+      msg.innerHTML = '<div class="msg-ok">✓ Rol creado</div>';
+      globalRolesCache = []; // invalidate cache
+      setTimeout(() => { closeGlobalRoleModal(); loadGlobalRoles(); }, 700);
+    } catch (e) {
+      msg.innerHTML = `<div class="msg-err">${escHtml(e.message ?? 'Error')}</div>`;
+    } finally { btn.disabled = false; }
+  }
+
+  async function deleteGlobalRole(id, name) {
+    if (!confirm(`¿Desactivar el rol "${name}"? Los usuarios que lo tienen no serán afectados de inmediato.`)) return;
+    try {
+      const res = await authFetch(`${API}/users/global-roles/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      globalRolesCache = [];
+      loadGlobalRoles();
+    } catch { alert('Error al desactivar el rol'); }
+  }
+
+  // ══════════════════════════════════════════════════
+  // MODULE CREATE MODAL
+  // ══════════════════════════════════════════════════
+
+  function openModuleModal() {
+    document.getElementById('m-name').value  = '';
+    document.getElementById('m-desc').value  = '';
+    document.getElementById('m-image').value = '';
+    document.getElementById('m-type').value  = 'tickets';
+    document.getElementById('m-slug-preview').textContent = '';
+    document.getElementById('module-modal-msg').innerHTML = '';
+    document.getElementById('module-modal').classList.add('open');
+  }
+  function closeModuleModal() { document.getElementById('module-modal').classList.remove('open'); }
+
+  function previewSlug() {
+    const name = document.getElementById('m-name').value;
+    const slug = name.toLowerCase()
+      .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    document.getElementById('m-slug-preview').textContent = slug ? `Slug: ${slug}` : '';
+  }
+
+  async function submitModuleModal() {
+    const btn  = document.getElementById('module-modal-btn');
+    const msg  = document.getElementById('module-modal-msg');
+    msg.innerHTML = '';
+    btn.disabled  = true;
+
+    const name      = document.getElementById('m-name').value.trim();
+    const desc      = document.getElementById('m-desc').value.trim();
+    const type      = document.getElementById('m-type').value;
+    const image_url = document.getElementById('m-image').value.trim();
+
+    if (!name) {
+      msg.innerHTML = '<div class="msg-err">El nombre es requerido</div>';
+      btn.disabled = false; return;
+    }
+
+    try {
+      const body = { name, type };
+      if (desc)      body.description = desc;
+      if (image_url) body.image_url   = image_url;
+      const res = await authFetch(`${API}/system-modules`, { method: 'POST', body: JSON.stringify(body) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+      msg.innerHTML = '<div class="msg-ok">✓ Módulo creado</div>';
+      setTimeout(() => { closeModuleModal(); loadModules(); }, 700);
+    } catch (e) {
+      msg.innerHTML = `<div class="msg-err">${escHtml(e.message ?? 'Error al crear')}</div>`;
+    } finally { btn.disabled = false; }
+  }
+
+  // ══════════════════════════════════════════════════
+  // BULK ASSIGN MODAL
+  // ══════════════════════════════════════════════════
+
+  async function openBulkAssign() {
+    document.getElementById('ba-role-select').innerHTML = '<option value="">Cargando…</option>';
+    document.getElementById('ba-user-list').innerHTML   = '<div class="spinner-wrap" style="padding:20px"><div class="spinner"></div></div>';
+    document.getElementById('ba-search').value          = '';
+    document.getElementById('bulk-assign-msg').innerHTML = '';
+    document.getElementById('bulk-assign-modal').classList.add('open');
+
+    // Load module roles and all users in parallel
+    const [rolesRes, usersRes] = await Promise.all([
+      authFetch(`${API}/system-modules/${currentModuleId}/roles`),
+      authFetch(`${API}/users?limit=100`),
+    ]);
+
+    if (rolesRes.ok) {
+      const roles = await rolesRes.json();
+      document.getElementById('ba-role-select').innerHTML =
+        '<option value="">— Seleccionar rol —</option>' +
+        roles.map(r => `<option value="${r.id}">${escHtml(r.name)}</option>`).join('');
+    }
+
+    if (usersRes.ok) {
+      const data = await usersRes.json();
+      bulkAllUsers = data.data ?? [];
+      renderBulkUserList(bulkAllUsers);
+    }
+  }
+  function closeBulkAssign() { document.getElementById('bulk-assign-modal').classList.remove('open'); }
+
+  function renderBulkUserList(list) {
+    const wrap = document.getElementById('ba-user-list');
+    if (!list.length) {
+      wrap.innerHTML = '<div style="padding:14px;color:#475569;font-size:13px">Sin usuarios</div>';
+      return;
+    }
+    wrap.innerHTML = list.map(u => `
+      <div class="user-checkbox-item">
+        <input type="checkbox" id="ba-u-${u.id}" value="${u.id}">
+        <label for="ba-u-${u.id}">${escHtml(u.first_name)} ${escHtml(u.last_name)} <span style="color:#475569">(${escHtml(u.email)})</span></label>
+      </div>`).join('');
+  }
+
+  function filterBulkUsers(q) {
+    const lower = q.toLowerCase();
+    const filtered = lower
+      ? bulkAllUsers.filter(u =>
+          `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(lower))
+      : bulkAllUsers;
+    renderBulkUserList(filtered);
+  }
+
+  async function submitBulkAssign() {
+    const btn    = document.getElementById('bulk-assign-btn');
+    const msg    = document.getElementById('bulk-assign-msg');
+    const roleId = document.getElementById('ba-role-select').value;
+    msg.innerHTML = '';
+
+    if (!roleId) { msg.innerHTML = '<div class="msg-err">Selecciona un rol</div>'; return; }
+
+    const checkedIds = [...document.querySelectorAll('#ba-user-list input[type="checkbox"]:checked')]
+      .map(cb => cb.value);
+    if (!checkedIds.length) { msg.innerHTML = '<div class="msg-err">Selecciona al menos un usuario</div>'; return; }
+
+    btn.disabled = true;
+    try {
+      const res = await authFetch(`${API}/users/module/${currentModuleId}/bulk-assign`, {
+        method: 'POST',
+        body: JSON.stringify({ user_ids: checkedIds, role_id: roleId }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+      const result = await res.json();
+      msg.innerHTML = `<div class="msg-ok">✓ ${result.assigned} usuario${result.assigned !== 1 ? 's' : ''} asignado${result.assigned !== 1 ? 's' : ''}</div>`;
+      setTimeout(async () => {
+        closeBulkAssign();
+        const r = await authFetch(`${API}/users/module/${currentModuleId}`);
+        if (r.ok) renderModuleDetail(await r.json());
+      }, 900);
+    } catch (e) {
+      msg.innerHTML = `<div class="msg-err">${escHtml(e.message ?? 'Error')}</div>`;
+    } finally { btn.disabled = false; }
+  }
+
+  // ══════════════════════════════════════════════════
+  // MFA SETUP MODAL (secondary, for already-logged-in users who want to re-setup)
+  // ══════════════════════════════════════════════════
 
   async function openMfaModal() {
     document.getElementById('mfa-modal').classList.add('open');
     document.getElementById('totp-input').value = '';
     document.getElementById('mfa-msg').textContent = '';
-
     const res  = await authFetch(`${API}/auth/mfa/setup`);
     const data = await res.json();
-
     document.getElementById('qr-wrap').innerHTML =
-      `<img src="${data.qr_code}" width="180" height="180" alt="QR Code">
-       <p style="font-size:11px;color:#475569;margin-top:8px">
-         Clave manual: <code style="color:#94a3b8">${data.secret}</code>
-       </p>`;
+      `<img src="${data.qr_code}" width="175" height="175" alt="QR Code">
+       <p style="font-size:11px;color:#475569;margin-top:8px">Clave manual: <code style="color:#94a3b8">${data.secret}</code></p>`;
     document.getElementById('totp-input').focus();
   }
-
-  function closeMfaModal() {
-    document.getElementById('mfa-modal').classList.remove('open');
-  }
+  function closeMfaModal() { document.getElementById('mfa-modal').classList.remove('open'); }
 
   async function confirmMfa() {
     const code = document.getElementById('totp-input').value;
     const msg  = document.getElementById('mfa-msg');
     if (code.length !== 6) { msg.style.color = '#ef4444'; msg.textContent = 'Ingresa 6 dígitos'; return; }
-
     try {
-      const res  = await authFetch(`${API}/auth/mfa/enable`, {
-        method: 'POST',
-        body: JSON.stringify({ code }),
-      });
+      const res  = await authFetch(`${API}/auth/mfa/enable`, { method: 'POST', body: JSON.stringify({ code }) });
       const data = await res.json();
-      if (!res.ok) {
-        msg.style.color = '#ef4444';
-        msg.textContent = data.message ?? 'Código incorrecto';
-        return;
-      }
+      if (!res.ok) { msg.style.color = '#ef4444'; msg.textContent = data.message ?? 'Código incorrecto'; return; }
       msg.style.color = '#6ee7b7';
-      msg.textContent = '✓ 2FA activado correctamente';
-      document.getElementById('mfa-banner').style.display = 'none';
+      msg.textContent = '✓ 2FA activado';
       setTimeout(closeMfaModal, 1500);
-    } catch {
-      msg.style.color = '#ef4444';
-      msg.textContent = 'Error de red';
-    }
+    } catch { msg.style.color = '#ef4444'; msg.textContent = 'Error de red'; }
   }
 
-  // ── Auth helpers ─────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════
+  // AUTH HELPERS
+  // ══════════════════════════════════════════════════
 
   async function authFetch(url, options = {}) {
     return fetch(url, {
@@ -375,8 +1571,7 @@
   async function doLogout() {
     try {
       await authFetch(`${API}/auth/logout`, {
-        method: 'POST',
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }),
       });
     } catch (_) {}
     localStorage.removeItem('access_token');
@@ -389,7 +1584,20 @@
     localStorage.removeItem('refresh_token');
     window.location.href = 'test-auth.html';
   }
-</script>
 
+  // ══════════════════════════════════════════════════
+  // UTILS
+  // ══════════════════════════════════════════════════
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' });
+  }
+</script>
 </body>
 </html>

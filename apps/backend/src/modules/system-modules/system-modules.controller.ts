@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { SystemModulesService } from './system-modules.service';
@@ -11,13 +11,18 @@ export class SystemModulesController {
   constructor(private readonly service: SystemModulesService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Req() req: any) {
+    return this.service.findAll(req.user.sub);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
+  }
+
+  @Get(':id/roles')
+  getModuleRoles(@Param('id') id: string) {
+    return this.service.getModuleRoles(id);
   }
 
   @Post()

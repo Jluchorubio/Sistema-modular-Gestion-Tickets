@@ -50,10 +50,12 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
     const [profile] = await this.db.query<{ id: string }[]>(
-      `INSERT INTO users.profiles (first_name, last_name, phone, is_superadmin)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users.profiles (first_name, last_name, phone, is_superadmin, global_role_id)
+       VALUES ($1, $2, $3, $4,
+         COALESCE($5::uuid, (SELECT id FROM config.global_roles WHERE name = 'usuario'))
+       )
        RETURNING id`,
-      [dto.first_name, dto.last_name, dto.phone ?? null, dto.is_superadmin ?? false],
+      [dto.first_name, dto.last_name, dto.phone ?? null, dto.is_superadmin ?? false, dto.global_role_id ?? null],
     );
 
     await this.db.query(
@@ -118,10 +120,28 @@ export class UsersService {
               p.is_active,
               p.created_at,
               c.email,
-              c.last_login_at
+              c.last_login_at,
+              p.global_role_id,
+              gr.name AS global_role,
+              COALESCE(
+                json_agg(
+                  json_build_object(
+                    'module_id', umr.module_id,
+                    'module',    m.name,
+                    'role_id',   umr.role_id,
+                    'role',      mr.name
+                  )
+                ) FILTER (WHERE umr.id IS NOT NULL),
+                '[]'
+              ) AS roles
        FROM   users.profiles    p
-       JOIN   auth.credentials  c ON c.user_id = p.id
+       JOIN   auth.credentials  c  ON c.user_id   = p.id
+       LEFT JOIN config.global_roles gr ON gr.id  = p.global_role_id
+       LEFT JOIN modules.user_module_roles umr ON umr.user_id = p.id AND umr.is_active = true
+       LEFT JOIN modules.modules           m   ON m.id        = umr.module_id
+       LEFT JOIN modules.module_roles      mr  ON mr.id       = umr.role_id
        WHERE  ${where}
+       GROUP  BY p.id, c.email, c.last_login_at, gr.id, gr.name
        ORDER  BY p.created_at DESC
        LIMIT  $${limitIdx} OFFSET $${offsetIdx}`,
       params,
@@ -155,6 +175,8 @@ export class UsersService {
               p.updated_at,
               c.email,
               c.last_login_at,
+              p.global_role_id,
+              gr.name AS global_role,
               COALESCE(
                 json_agg(
                   json_build_object(
@@ -170,11 +192,12 @@ export class UsersService {
               ) AS roles
        FROM   users.profiles         p
        JOIN   auth.credentials       c   ON c.user_id   = p.id
+       LEFT JOIN config.global_roles gr  ON gr.id       = p.global_role_id
        LEFT JOIN modules.user_module_roles umr ON umr.user_id  = p.id AND umr.is_active = true
        LEFT JOIN modules.modules          m   ON m.id         = umr.module_id
        LEFT JOIN modules.module_roles     mr  ON mr.id        = umr.role_id
        WHERE  p.id = $1 AND p.deleted_at IS NULL
-       GROUP  BY p.id, c.email, c.last_login_at`,
+       GROUP  BY p.id, c.email, c.last_login_at, gr.id, gr.name`,
       [id],
     );
 
@@ -206,12 +229,13 @@ export class UsersService {
       fields.push(`${col} = $${params.length}`);
     };
 
-    if (dto.first_name  !== undefined) add('first_name',  dto.first_name);
-    if (dto.last_name   !== undefined) add('last_name',   dto.last_name);
-    if (dto.phone       !== undefined) add('phone',       dto.phone);
-    if (dto.avatar_url  !== undefined) add('avatar_url',  dto.avatar_url);
-    if (dto.is_active   !== undefined) add('is_active',   dto.is_active);
+    if (dto.first_name    !== undefined) add('first_name',    dto.first_name);
+    if (dto.last_name     !== undefined) add('last_name',     dto.last_name);
+    if (dto.phone         !== undefined) add('phone',         dto.phone);
+    if (dto.avatar_url    !== undefined) add('avatar_url',    dto.avatar_url);
+    if (dto.is_active     !== undefined) add('is_active',     dto.is_active);
     if (dto.is_superadmin !== undefined) add('is_superadmin', dto.is_superadmin);
+    if (dto.global_role_id !== undefined) add('global_role_id', dto.global_role_id);
 
     if (fields.length === 0) throw new BadRequestException('Sin campos para actualizar');
 
@@ -546,6 +570,102 @@ export class UsersService {
        ORDER  BY p.first_name, p.last_name`,
       [moduleId],
     );
+  }
+
+  // ─── Roles globales ──────────────────────────────────────────────────────────
+
+  async listGlobalRoles() {
+    return this.db.query<any[]>(
+      `SELECT id, name, description, is_active, created_at
+       FROM config.global_roles
+       WHERE is_active = true
+       ORDER BY name`,
+    );
+  }
+
+  async createGlobalRole(name: string, description?: string) {
+    const normalized = (name ?? '').trim().toLowerCase().replace(/\s+/g, '_');
+    if (!normalized) throw new BadRequestException('name es requerido');
+
+    const [existing] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM config.global_roles WHERE name = $1`,
+      [normalized],
+    );
+    if (existing) throw new ConflictException(`Rol global '${normalized}' ya existe`);
+
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO config.global_roles (name, description) VALUES ($1, $2) RETURNING *`,
+      [normalized, description ?? null],
+    );
+    return row;
+  }
+
+  async deleteGlobalRole(id: string) {
+    const [role] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM config.global_roles WHERE id = $1 AND is_active = true`,
+      [id],
+    );
+    if (!role) throw new NotFoundException(`Rol global ${id} no encontrado`);
+
+    await this.db.query(
+      `UPDATE config.global_roles SET is_active = false WHERE id = $1`,
+      [id],
+    );
+    return { ok: true };
+  }
+
+  // ─── Asignación masiva de roles por módulo ────────────────────────────────────
+
+  async bulkAssignModuleRole(actorId: string, userIds: string[], moduleId: string, roleId: string) {
+    await this.assertModuleExists(moduleId);
+    await this.assertActorCanManageModule(actorId, moduleId);
+
+    // Verify the role belongs to the module
+    const [role] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM modules.module_roles WHERE id = $1 AND module_id = $2 AND is_active = true`,
+      [roleId, moduleId],
+    );
+    if (!role) throw new NotFoundException(`Rol ${roleId} no existe en módulo ${moduleId}`);
+
+    const results: { userId: string; ok: boolean; error?: string }[] = [];
+
+    for (const userId of userIds) {
+      try {
+        await this.assertUserExists(userId);
+        const [existing] = await this.db.query<{ id: string; is_active: boolean }[]>(
+          `SELECT id, is_active FROM modules.user_module_roles
+           WHERE user_id = $1 AND module_id = $2 AND role_id = $3`,
+          [userId, moduleId, roleId],
+        );
+
+        if (existing) {
+          if (!existing.is_active) {
+            await this.db.query(
+              `UPDATE modules.user_module_roles
+               SET is_active = true, assigned_by = $1, assigned_at = now()
+               WHERE id = $2`,
+              [actorId, existing.id],
+            );
+          }
+        } else {
+          await this.db.query(
+            `INSERT INTO modules.user_module_roles (user_id, module_id, role_id, assigned_by)
+             VALUES ($1, $2, $3, $4)`,
+            [userId, moduleId, roleId, actorId],
+          );
+        }
+        results.push({ userId, ok: true });
+      } catch (e: any) {
+        results.push({ userId, ok: false, error: e.message });
+      }
+    }
+
+    this.logger.log(`Bulk-assign rol ${roleId} en módulo ${moduleId}: ${results.filter(r => r.ok).length}/${userIds.length} ok`);
+    return {
+      assigned: results.filter(r => r.ok).length,
+      errors:   results.filter(r => !r.ok),
+      results,
+    };
   }
 
   // ─── Helpers privados ────────────────────────────────────────────────────────
