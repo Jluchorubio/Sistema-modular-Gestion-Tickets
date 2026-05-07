@@ -100,30 +100,6 @@ export class UsersController {
     return this.service.getUsersByModule(moduleId);
   }
 
-  @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
-  @ApiOperation({ summary: 'Ver usuario por ID.' })
-  getOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.getUser(id);
-  }
-
-  @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
-  @ApiOperation({ summary: 'Actualizar usuario.' })
-  update(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
-    return this.service.updateUser(req.user.sub, id, dto);
-  }
-
-  @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin')
-  @ApiOperation({ summary: 'Soft-delete usuario. Solo superadmin.' })
-  remove(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
-    return this.service.deleteUser(req.user.sub, id);
-  }
-
   // ─── Roles globales ──────────────────────────────────────────────────────────
 
   @Get('global-roles')
@@ -160,6 +136,30 @@ export class UsersController {
     @Body() body: { user_ids: string[]; role_id: string },
   ) {
     return this.service.bulkAssignModuleRole(req.user.sub, body.user_ids, moduleId, body.role_id);
+  }
+
+  @Get(':id')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Ver usuario por ID.' })
+  getOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.getUser(id);
+  }
+
+  @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Actualizar usuario.' })
+  update(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
+    return this.service.updateUser(req.user.sub, id, dto);
+  }
+
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Soft-delete usuario. Solo superadmin.' })
+  remove(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.deleteUser(req.user.sub, id);
   }
 
   // ─── Roles por módulo ────────────────────────────────────────────────────────

@@ -38,35 +38,6 @@
     }
     .btn-logout:hover { border-color: #ef4444; color: #ef4444; }
 
-    /* ══ FORCE 2FA OVERLAY ══ */
-    .force-mfa-overlay {
-      display: none; position: fixed; inset: 0;
-      background: #0a0f1e; z-index: 500;
-      align-items: center; justify-content: center;
-    }
-    .force-mfa-overlay.active { display: flex; }
-    .force-mfa-card {
-      background: #1e293b; border: 1px solid #4f46e5;
-      border-radius: 18px; padding: 44px 40px; width: 420px;
-      max-width: 95vw; text-align: center;
-      box-shadow: 0 0 60px rgba(99,102,241,.25);
-    }
-    .force-mfa-icon { font-size: 52px; margin-bottom: 16px; }
-    .force-mfa-title { font-size: 21px; font-weight: 700; color: #e2e8f0; margin-bottom: 10px; }
-    .force-mfa-desc {
-      font-size: 13px; color: #94a3b8; margin-bottom: 28px; line-height: 1.7;
-    }
-    .force-qr-wrap { margin-bottom: 22px; min-height: 60px;
-      display: flex; align-items: center; justify-content: center; }
-    .force-qr-wrap img { border-radius: 8px; }
-    .mfa-input {
-      width: 100%; padding: 12px 14px; background: #0f172a;
-      border: 1px solid #334155; border-radius: 8px; color: #e2e8f0;
-      font-size: 24px; text-align: center; letter-spacing: .35em;
-      margin-bottom: 14px; outline: none; transition: border-color .15s;
-    }
-    .mfa-input:focus { border-color: #6366f1; }
-
     /* ══ LAYOUT ══ */
     .body-wrap { display: flex; flex: 1; overflow: hidden; }
 
@@ -387,31 +358,6 @@
   </style>
 </head>
 <body>
-
-<!-- ════ FORCE 2FA OVERLAY ════ -->
-<div class="force-mfa-overlay" id="force-mfa-overlay">
-  <div class="force-mfa-card">
-    <div class="force-mfa-icon">🔐</div>
-    <div class="force-mfa-title">Verificación en 2 pasos requerida</div>
-    <p class="force-mfa-desc">
-      Para acceder al sistema debes activar la verificación en 2 pasos.<br>
-      Escanea el código QR con <strong style="color:#e2e8f0">Google Authenticator</strong> y confirma con el código.
-    </p>
-    <div class="force-qr-wrap" id="force-qr-wrap">
-      <div class="spinner"></div>
-    </div>
-    <p id="force-secret-hint" style="font-size:11px;color:#475569;margin-bottom:16px;display:none"></p>
-    <input class="mfa-input" type="text" id="force-totp-input" placeholder="000000" maxlength="6"
-      inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
-    <button class="btn-confirm" onclick="confirmForce2FA()">Activar y acceder</button>
-    <p id="force-mfa-msg" style="text-align:center;margin-top:10px;font-size:13px;min-height:18px;"></p>
-    <div style="margin-top:18px">
-      <button onclick="doLogout()" style="background:none;border:none;color:#475569;font-size:12px;cursor:pointer;text-decoration:underline">
-        Cerrar sesión
-      </button>
-    </div>
-  </div>
-</div>
 
 <!-- ════ HEADER ════ -->
 <header class="header">
@@ -823,68 +769,11 @@
         document.getElementById('sidebar').classList.remove('hidden');
       }
 
-      // Enforce 2FA: block access until enabled
-      if (!user.mfa_enabled) {
-        await showForce2FA();
-        return; // don't load modules until 2FA is confirmed
-      }
-
-      // Load modules after 2FA check passes
       await loadModules();
 
     } catch { handleUnauth(); }
   }
 
-  // ══════════════════════════════════════════════════
-  // FORCE 2FA FLOW
-  // ══════════════════════════════════════════════════
-
-  async function showForce2FA() {
-    document.getElementById('force-mfa-overlay').classList.add('active');
-    document.getElementById('force-qr-wrap').innerHTML = '<div class="spinner"></div>';
-    document.getElementById('force-secret-hint').style.display = 'none';
-    document.getElementById('force-mfa-msg').textContent = '';
-    document.getElementById('force-totp-input').value = '';
-
-    try {
-      const res  = await authFetch(`${API}/auth/mfa/setup`);
-      const data = await res.json();
-      document.getElementById('force-qr-wrap').innerHTML =
-        `<img src="${data.qr_code}" width="175" height="175" alt="QR Code" style="border-radius:8px">`;
-      const hint = document.getElementById('force-secret-hint');
-      hint.textContent = `Clave manual: ${data.secret}`;
-      hint.style.display = 'block';
-      document.getElementById('force-totp-input').focus();
-    } catch {
-      document.getElementById('force-qr-wrap').innerHTML =
-        '<p style="color:#ef4444;font-size:13px">Error cargando QR. Recarga la página.</p>';
-    }
-  }
-
-  async function confirmForce2FA() {
-    const code = document.getElementById('force-totp-input').value;
-    const msg  = document.getElementById('force-mfa-msg');
-    if (code.length !== 6) {
-      msg.style.color = '#ef4444'; msg.textContent = 'Ingresa 6 dígitos'; return;
-    }
-    try {
-      const res  = await authFetch(`${API}/auth/mfa/enable`, { method: 'POST', body: JSON.stringify({ code }) });
-      const data = await res.json();
-      if (!res.ok) {
-        msg.style.color = '#ef4444'; msg.textContent = data.message ?? 'Código incorrecto'; return;
-      }
-      msg.style.color = '#6ee7b7'; msg.textContent = '✓ 2FA activado. Accediendo…';
-      setTimeout(async () => {
-        document.getElementById('force-mfa-overlay').classList.remove('active');
-        // Refresh user data with mfa_enabled now true
-        const r = await authFetch(`${API}/auth/me`);
-        if (r.ok) currentUser = await r.json();
-        await loadModules();
-      }, 900);
-    } catch {
-      msg.style.color = '#ef4444'; msg.textContent = 'Error de red';
-    }
-  }
 
   // ══════════════════════════════════════════════════
   // MODULES SECTION

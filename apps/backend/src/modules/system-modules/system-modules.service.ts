@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
@@ -87,5 +87,55 @@ export class SystemModulesService {
       [name, finalSlug, description ?? null, type ?? 'custom', image_url ?? null],
     );
     return rows[0];
+  }
+
+  async updateModule(id: string, dto: Record<string, unknown>) {
+    const { name, description, type, image_url } = dto as any;
+    const fields: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (name !== undefined) {
+      const slug = String(name).toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+      let finalSlug = slug;
+      let counter = 1;
+      while (true) {
+        const [conflict] = await this.db.query<{ id: string }[]>(
+          `SELECT id FROM modules.modules WHERE slug = $1 AND id != $2 AND deleted_at IS NULL`,
+          [finalSlug, id],
+        );
+        if (!conflict) break;
+        finalSlug = `${slug}-${counter++}`;
+      }
+      fields.push(`name = $${idx++}`); values.push(name);
+      fields.push(`slug = $${idx++}`); values.push(finalSlug);
+    }
+    if (description !== undefined) { fields.push(`description = $${idx++}`); values.push(description); }
+    if (type !== undefined) { fields.push(`type = $${idx++}`); values.push(type); }
+    if (image_url !== undefined) { fields.push(`image_url = $${idx++}`); values.push(image_url); }
+
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+
+    values.push(id);
+    const rows = await this.db.query<any[]>(
+      `UPDATE modules.modules SET ${fields.join(', ')}
+       WHERE id = $${idx} AND deleted_at IS NULL RETURNING *`,
+      values,
+    );
+    if (!rows[0]) throw new NotFoundException(`Módulo ${id} no encontrado`);
+    return rows[0];
+  }
+
+  async deleteModule(id: string) {
+    const result = await this.db.query(
+      `UPDATE modules.modules SET deleted_at = now(), is_active = false
+       WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    return { ok: true };
   }
 }

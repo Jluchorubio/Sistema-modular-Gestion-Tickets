@@ -25,7 +25,6 @@
       font-size: 14px; margin-bottom: 16px; outline: none; transition: border-color .15s;
     }
     input:focus { border-color: #6366f1; }
-    /* ── Password wrapper ── */
     .pw-wrap { position: relative; margin-bottom: 16px; }
     .pw-wrap input { margin-bottom: 0; padding-right: 44px; }
     .pw-toggle {
@@ -49,6 +48,10 @@
       background: transparent; border: 1px solid #334155 !important;
       color: #94a3b8; margin-top: 8px;
     }
+    .btn-resend {
+      background: transparent; border: 1px solid #334155 !important;
+      color: #6366f1; margin-top: 8px; font-size: 13px;
+    }
     .divider {
       display: flex; align-items: center; gap: 12px;
       margin: 16px 0; color: #475569; font-size: 12px;
@@ -65,7 +68,6 @@
       display: inline-block; padding: 2px 8px; border-radius: 4px;
       font-size: 11px; font-weight: 600; margin-bottom: 10px;
     }
-    .tag-mfa  { background: #312e81; color: #c7d2fe; }
     .tag-otp  { background: #0c2442; color: #93c5fd; }
     .tag-err  { background: #450a0a; color: #fca5a5; }
     .tag-ok   { background: #064e3b; color: #6ee7b7; }
@@ -78,16 +80,21 @@
     .msg { font-size: 13px; margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; }
     .msg-err  { background: #450a0a; color: #fca5a5; }
     .msg-ok   { background: #064e3b; color: #6ee7b7; }
-    /* OTP digit boxes */
+    .msg-warn { background: #422006; color: #fbbf24; }
     .otp-wrap {
-      display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;
+      display: flex; gap: 8px; justify-content: center; margin-bottom: 16px;
     }
     .otp-wrap input {
       width: 46px; height: 56px; text-align: center; font-size: 22px;
       font-weight: 700; letter-spacing: 0; padding: 0; margin-bottom: 0;
       border-radius: 10px;
     }
-    #login-section, #mfa-section, #otp-section, #forgot-section, #reset-section, #result-section { display: none; }
+    .otp-countdown {
+      font-size: 12px; color: #94a3b8; text-align: center;
+      margin-bottom: 12px; font-variant-numeric: tabular-nums;
+    }
+    .otp-countdown.expiring { color: #f87171; }
+    #login-section, #otp-section, #forgot-section, #reset-section, #result-section { display: none; }
   </style>
 </head>
 <body>
@@ -122,26 +129,13 @@
     </button>
   </div>
 
-  <!-- ── MFA TOTP ── -->
-  <div id="mfa-section">
-    <div class="tag tag-mfa">🔐 Google Authenticator</div>
-    <p style="font-size:13px;color:#94a3b8;margin-bottom:16px;">
-      Abre <strong>Google Authenticator</strong> e ingresa el código de 6 dígitos.
-    </p>
-    <label>Código TOTP</label>
-    <input type="text" id="totp-code" placeholder="000000" maxlength="6" inputmode="numeric"
-      oninput="this.value=this.value.replace(/\D/g,'')"
-      onkeydown="if(event.key==='Enter')doVerifyMfa()">
-    <button class="btn-primary" onclick="doVerifyMfa()">Verificar</button>
-    <button class="btn-back" onclick="show('login-section')">← Volver</button>
-  </div>
-
   <!-- ── EMAIL OTP ── -->
   <div id="otp-section">
     <div class="tag tag-otp">📧 Verificación por email</div>
-    <p style="font-size:13px;color:#94a3b8;margin:10px 0 20px;">
-      Te enviamos un código de 6 dígitos a tu correo. Válido 10 minutos.
+    <p style="font-size:13px;color:#94a3b8;margin:10px 0 16px;">
+      Te enviamos un código de 6 dígitos a tu correo.
     </p>
+    <div id="otp-countdown" class="otp-countdown"></div>
     <div class="otp-wrap">
       <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="otp-0">
       <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="otp-1">
@@ -150,9 +144,11 @@
       <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="otp-4">
       <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" id="otp-5">
     </div>
+    <div id="otp-attempts" style="margin-bottom:8px"></div>
+    <div id="otp-lockout" style="display:none;margin-bottom:8px"></div>
     <div id="otp-msg"></div>
     <button class="btn-primary" id="btn-otp" onclick="doVerifyOtp()">Verificar código</button>
-    <button class="btn-back" style="font-size:12px" onclick="doResendOtp()">Reenviar código</button>
+    <button class="btn-resend" id="btn-resend" onclick="doResendOtp()">Reenviar código</button>
     <button class="btn-back" onclick="show('login-section')">← Volver al inicio</button>
   </div>
 
@@ -200,16 +196,22 @@
 
 <script>
   const API = 'http://localhost:3001/api/v1';
-  let mfaToken  = null;
   let otpToken  = null;
   let resetToken = null;
-  let pendingEmail = null;
+  let attemptsRemaining = 3;
 
-  const SECTIONS = ['login-section','mfa-section','otp-section','forgot-section','reset-section','result-section'];
+  // Countdown timer
+  let countdownInterval = null;
+  let countdownSeconds = 0;
+
+  // Resend cooldown
+  let resendInterval = null;
+  let resendCooldownSecs = 0;
+
+  const SECTIONS = ['login-section','otp-section','forgot-section','reset-section','result-section'];
   const SUB_TEXTS = {
     'forgot-section': 'Recuperar acceso',
     'reset-section':  'Nueva contraseña',
-    'mfa-section':    'Verificación requerida',
     'otp-section':    'Código enviado a tu correo',
   };
 
@@ -273,6 +275,80 @@
     document.getElementById('otp-0').focus();
   }
 
+  // ── Countdown timer ─────────────────────────────────────────────────────
+
+  function startCountdown(seconds = 600) {
+    clearInterval(countdownInterval);
+    countdownSeconds = seconds;
+    updateCountdownDisplay();
+    countdownInterval = setInterval(() => {
+      countdownSeconds--;
+      updateCountdownDisplay();
+      if (countdownSeconds <= 0) {
+        clearInterval(countdownInterval);
+        const el = document.getElementById('otp-countdown');
+        el.textContent = 'Código expirado. Solicita uno nuevo.';
+        el.classList.add('expiring');
+        document.getElementById('btn-otp').disabled = true;
+      }
+    }, 1000);
+  }
+
+  function updateCountdownDisplay() {
+    const el = document.getElementById('otp-countdown');
+    const min = Math.floor(countdownSeconds / 60).toString().padStart(2, '0');
+    const sec = (countdownSeconds % 60).toString().padStart(2, '0');
+    el.textContent = `Código válido por: ${min}:${sec}`;
+    el.classList.toggle('expiring', countdownSeconds <= 60);
+  }
+
+  function stopCountdown() {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+
+  // ── Resend cooldown ──────────────────────────────────────────────────────
+
+  function startResendCooldown(seconds = 60) {
+    resendCooldownSecs = seconds;
+    const btn = document.getElementById('btn-resend');
+    btn.disabled = true;
+    clearInterval(resendInterval);
+    resendInterval = setInterval(() => {
+      resendCooldownSecs--;
+      if (resendCooldownSecs <= 0) {
+        clearInterval(resendInterval);
+        btn.disabled = false;
+        btn.textContent = 'Reenviar código';
+      } else {
+        btn.textContent = `Reenviar código (${resendCooldownSecs}s)`;
+      }
+    }, 1000);
+  }
+
+  // ── Attempt tracker ──────────────────────────────────────────────────────
+
+  function updateAttemptsDisplay() {
+    const el = document.getElementById('otp-attempts');
+    if (attemptsRemaining < 3) {
+      const plural = attemptsRemaining !== 1 ? 's' : '';
+      el.innerHTML = `<div class="msg msg-warn">⚠️ Te quedan <strong>${attemptsRemaining}</strong> intento${plural}</div>`;
+    } else {
+      el.innerHTML = '';
+    }
+  }
+
+  function showLockout(lockedUntil) {
+    stopCountdown();
+    const lockEl = document.getElementById('otp-lockout');
+    lockEl.style.display = 'block';
+    const time = lockedUntil ? new Date(lockedUntil).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : '';
+    lockEl.innerHTML = `<div class="msg msg-err">🔒 Cuenta bloqueada temporalmente${time ? ` hasta las ${time}` : ''}. Demasiados intentos fallidos.</div>`;
+    document.getElementById('btn-otp').disabled = true;
+    document.getElementById('btn-resend').disabled = true;
+    document.getElementById('otp-attempts').innerHTML = '';
+  }
+
   // ── Redirect helpers ────────────────────────────────────────────────────
 
   function goToModules(data) {
@@ -287,49 +363,36 @@
     setLoading('btn-login', true);
     try {
       const emailVal = document.getElementById('email').value;
-      const res  = await fetch(`${API}/auth/login`, {
+      const res = await fetch(`${API}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailVal, password: document.getElementById('password').value }),
       });
       const data = await res.json();
-      if (!res.ok) { showErr(data); return; }
-
-      if (data.requires_mfa) {
-        if (data.mfa_type === 'email_otp') {
-          otpToken = data.otp_token;
-          pendingEmail = emailVal;
-          clearOtpBoxes();
-          document.getElementById('otp-msg').innerHTML = '';
-          show('otp-section');
+      if (!res.ok) {
+        if (data.locked_until) {
+          document.getElementById('result-pre').textContent = data.message ?? 'Cuenta bloqueada temporalmente.';
+          show('result-section');
         } else {
-          mfaToken = data.mfa_token;
-          document.getElementById('totp-code').value = '';
-          document.getElementById('totp-code').focus();
-          show('mfa-section');
+          showErr(data);
         }
+        return;
+      }
+      if (data.requires_mfa && data.mfa_type === 'email_otp') {
+        otpToken = data.otp_token;
+        attemptsRemaining = 3;
+        clearOtpBoxes();
+        document.getElementById('otp-msg').innerHTML = '';
+        document.getElementById('otp-lockout').style.display = 'none';
+        updateAttemptsDisplay();
+        startCountdown(600);
+        startResendCooldown(60);
+        show('otp-section');
         return;
       }
       goToModules(data);
     } catch (e) { showErr({ error: e.message }); }
     finally { setLoading('btn-login', false); }
-  }
-
-  // ── MFA TOTP verify ─────────────────────────────────────────────────────
-
-  async function doVerifyMfa() {
-    const code = document.getElementById('totp-code').value;
-    if (code.length !== 6) return;
-    try {
-      const res  = await fetch(`${API}/auth/mfa/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mfaToken}` },
-        body: JSON.stringify({ code }),
-      });
-      const data = await res.json();
-      if (!res.ok) { showErr(data); return; }
-      goToModules(data);
-    } catch (e) { showErr({ error: e.message }); }
   }
 
   // ── Email OTP verify ────────────────────────────────────────────────────
@@ -343,41 +406,62 @@
     }
     setLoading('btn-otp', true);
     try {
-      const res  = await fetch(`${API}/auth/otp/verify`, {
+      const res = await fetch(`${API}/auth/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${otpToken}` },
         body: JSON.stringify({ code }),
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.locked) {
+          showLockout(data.locked_until);
+          return;
+        }
+        if (data.attempts_remaining !== undefined) {
+          attemptsRemaining = data.attempts_remaining;
+          updateAttemptsDisplay();
+        }
         msg.innerHTML = `<div class="msg msg-err">${data.message ?? 'Código inválido o expirado'}</div>`;
         clearOtpBoxes();
         return;
       }
+      stopCountdown();
       goToModules(data);
     } catch (e) {
       msg.innerHTML = `<div class="msg msg-err">Error de red: ${e.message}</div>`;
     } finally { setLoading('btn-otp', false); }
   }
 
+  // ── Resend OTP ──────────────────────────────────────────────────────────
+
   async function doResendOtp() {
-    if (!pendingEmail) return;
+    if (!otpToken) return;
+    const msg = document.getElementById('otp-msg');
     try {
-      const res = await fetch(`${API}/auth/login`, {
+      const res = await fetch(`${API}/auth/otp/resend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: pendingEmail,
-          password: document.getElementById('password').value,
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${otpToken}` },
       });
       const data = await res.json();
-      if (data.otp_token) {
-        otpToken = data.otp_token;
-        clearOtpBoxes();
-        document.getElementById('otp-msg').innerHTML = '<div class="msg msg-ok">✓ Código reenviado a tu correo</div>';
+      if (!res.ok) {
+        if (data.locked) {
+          showLockout(data.locked_until);
+        } else {
+          msg.innerHTML = `<div class="msg msg-err">${data.message ?? 'Error al reenviar'}</div>`;
+        }
+        return;
       }
-    } catch (_) {}
+      otpToken = data.otp_token;
+      attemptsRemaining = 3;
+      updateAttemptsDisplay();
+      clearOtpBoxes();
+      document.getElementById('otp-lockout').style.display = 'none';
+      msg.innerHTML = '<div class="msg msg-ok">✓ Código reenviado a tu correo</div>';
+      startCountdown(600);
+      startResendCooldown(60);
+    } catch (e) {
+      msg.innerHTML = `<div class="msg msg-err">Error de red: ${e.message}</div>`;
+    }
   }
 
   // ── Google OAuth ────────────────────────────────────────────────────────
@@ -392,7 +476,7 @@
     setLoading('btn-forgot', true);
     const msg = document.getElementById('forgot-msg');
     try {
-      const res  = await fetch(`${API}/auth/password/forgot`, {
+      const res = await fetch(`${API}/auth/password/forgot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: document.getElementById('forgot-email').value }),
@@ -424,7 +508,7 @@
       setLoading('btn-reset', false); return;
     }
     try {
-      const res  = await fetch(`${API}/auth/password/reset`, {
+      const res = await fetch(`${API}/auth/password/reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: resetToken, new_password: newPwd }),
@@ -452,14 +536,21 @@
     initOtpBoxes();
     const params = new URLSearchParams(window.location.search);
     resetToken = params.get('reset_token');
+    const errorMsg = params.get('error');
+
     if (resetToken) {
       window.history.replaceState(null, '', window.location.pathname);
       show('reset-section');
+    } else if (errorMsg) {
+      window.history.replaceState(null, '', window.location.pathname);
+      document.getElementById('result-pre').textContent = decodeURIComponent(errorMsg);
+      show('result-section');
     } else {
       show('login-section');
     }
+
     const token = localStorage.getItem('access_token');
-    if (token && !resetToken) {
+    if (token && !resetToken && !errorMsg) {
       window.location.href = 'modules-test.html';
     }
   })();

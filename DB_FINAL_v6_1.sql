@@ -1,6 +1,16 @@
 -- ============================================================================
 -- SISTEMA MODULAR DE GESTIÓN DE TICKETS — v6.1 SINGLE-TENANT
--- PostgreSQL 15+ | Generado: 2026-04-30
+-- PostgreSQL 15+ | Generado: 2026-04-30 | Actualizado: 2026-05-06
+-- ============================================================================
+-- CHANGELOG v6.1-patch-1 (2026-05-06 — integrado desde DB_PATCH_2.sql)
+-- ============================================================================
+-- ADD-1  : config.global_roles — catálogo de roles globales (PARTE 7.5).
+--          Roles: usuario, tecnico, supervisor, admin. Idempotente (ON CONFLICT).
+-- ADD-2  : users.profiles.global_role_id UUID NULL FK → config.global_roles.id.
+--          FK añadida post-creación de profiles vía ALTER TABLE (orden PG).
+--          Todos los usuarios nuevos sin rol explícito reciben 'usuario' por defecto.
+--          Superadmins reciben 'admin' en seeds.
+-- ADD-3  : modules.modules.image_url TEXT NULL — URL de imagen del módulo.
 -- ============================================================================
 -- CHANGELOG v6.0 (10 fixes from architectural audit)
 -- ============================================================================
@@ -234,14 +244,16 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS auth.credentials (
-    id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id       UUID         NOT NULL UNIQUE,
-    email         VARCHAR(255) NOT NULL UNIQUE,
-    password_hash TEXT         NOT NULL,
-    is_active     BOOLEAN      NOT NULL DEFAULT true,
-    last_login_at TIMESTAMPTZ  NULL,
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
+    id                     UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                UUID         NOT NULL UNIQUE,
+    email                  VARCHAR(255) NOT NULL UNIQUE,
+    password_hash          TEXT         NOT NULL,
+    is_active              BOOLEAN      NOT NULL DEFAULT true,
+    last_login_at          TIMESTAMPTZ  NULL,
+    failed_login_attempts  INTEGER      NOT NULL DEFAULT 0,   -- intentos fallidos de contraseña
+    login_locked_until     TIMESTAMPTZ  NULL,                 -- bloqueo temporal (OTP o contraseña)
+    created_at             TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at             TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_auth_credentials_email   ON auth.credentials(email);
@@ -418,17 +430,24 @@ COMMENT ON TABLE users.organizations IS
      No usar como discriminador de aislamiento multi-tenant.';
 
 CREATE TABLE IF NOT EXISTS users.profiles (
-    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    first_name      VARCHAR(100) NOT NULL,
-    last_name       VARCHAR(100) NOT NULL,
-    display_email   VARCHAR(255) NULL,
-    phone           VARCHAR(30)  NULL,
-    avatar_url      TEXT         NULL,
-    is_superadmin   BOOLEAN      NOT NULL DEFAULT false,
-    is_active       BOOLEAN      NOT NULL DEFAULT true,
-    deleted_at      TIMESTAMPTZ  NULL,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
+    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    first_name       VARCHAR(100) NOT NULL,
+    last_name        VARCHAR(100) NOT NULL,
+    username         VARCHAR(100) NULL,       -- login alternativo (email OR username)
+    display_email    VARCHAR(255) NULL,
+    phone            VARCHAR(30)  NULL,
+    avatar_url       TEXT         NULL,
+    address          TEXT         NULL,       -- dirección de residencia
+    job_title        VARCHAR(150) NULL,       -- cargo
+    department       VARCHAR(150) NULL,       -- área/departamento
+    primary_sede     VARCHAR(200) NULL,       -- sede principal
+    profile_complete BOOLEAN      NOT NULL DEFAULT false,  -- perfil obligatorio completo
+    is_superadmin    BOOLEAN      NOT NULL DEFAULT false,
+    is_active        BOOLEAN      NOT NULL DEFAULT true,
+    deleted_at       TIMESTAMPTZ  NULL,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    global_role_id   UUID         NULL        -- FK: REFERENCES config.global_roles(id) — añadida vía ALTER TABLE en PARTE 7.5
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_profiles_active
@@ -437,6 +456,8 @@ CREATE INDEX IF NOT EXISTS idx_users_profiles_deleted
     ON users.profiles(deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_profiles_superadmin
     ON users.profiles(is_superadmin) WHERE is_superadmin = true AND deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_profiles_username
+    ON users.profiles(username) WHERE username IS NOT NULL AND deleted_at IS NULL;
 
 DO $$ BEGIN
     CREATE TRIGGER trg_users_profiles_updated_at
@@ -446,7 +467,8 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 COMMENT ON TABLE users.profiles IS
     'Perfiles de usuario. id = mismo UUID que auth.credentials.user_id.
-     is_superadmin = rol global que supera todos los roles de módulo.
+     is_superadmin = flag de acceso total (supera todos los roles de módulo).
+     global_role_id = rol visual global (FK → config.global_roles, añadida en PARTE 7.5).
      NO contiene password_hash ni tokens.';
 
 CREATE TABLE IF NOT EXISTS users.preferences (
@@ -536,21 +558,62 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================================
+-- PARTE 7.5: config.global_roles — Catálogo de roles globales del sistema
+-- Roles transversales a todos los módulos. Asignados a users.profiles.
+-- La FK users.profiles.global_role_id → config.global_roles.id se añade aquí
+-- porque config.global_roles se define después de users.profiles (orden PG).
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS config.global_roles (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT        NULL,
+    is_active   BOOLEAN     NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+DO $$ BEGIN
+    CREATE TRIGGER trg_config_global_roles_updated_at
+        BEFORE UPDATE ON config.global_roles
+        FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+COMMENT ON TABLE config.global_roles IS
+    'Catálogo de roles globales del sistema (ej: usuario, tecnico, supervisor, admin).
+     Asignado a users.profiles.global_role_id. Diferente de modules.module_roles
+     (roles por módulo). El campo is_superadmin en profiles sigue siendo el flag
+     de acceso total — global_role es solo para UI y clasificación.';
+
+-- FK lógica users.profiles → config.global_roles
+-- Se añade aquí porque config.global_roles se crea después de users.profiles
+DO $$ BEGIN
+    ALTER TABLE users.profiles
+        ADD CONSTRAINT fk_profiles_global_role
+        FOREIGN KEY (global_role_id) REFERENCES config.global_roles(id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE INDEX IF NOT EXISTS idx_profiles_global_role
+    ON users.profiles(global_role_id);
+
+-- ============================================================================
 -- PARTE 8: SCHEMA modules
 -- Módulos, ubicaciones, ambientes, categorías, roles.
 -- FK cross-schema PROHIBIDAS. FK internas del mismo schema: normales.
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS modules.modules (
-    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    name        VARCHAR(100) NOT NULL,
-    slug        VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT         NULL,
-    type        VARCHAR(50)  NOT NULL,
-    is_active   BOOLEAN      NOT NULL DEFAULT true,
-    deleted_at  TIMESTAMPTZ  NULL,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
+    id                      UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    name                    VARCHAR(100) NOT NULL,
+    slug                    VARCHAR(100) NOT NULL UNIQUE,
+    description             TEXT         NULL,
+    type                    VARCHAR(50)  NOT NULL,
+    image_url               TEXT         NULL,
+    is_active               BOOLEAN      NOT NULL DEFAULT true,
+    deleted_at              TIMESTAMPTZ  NULL,
+    scheduled_hard_delete_at TIMESTAMPTZ NULL,   -- hard delete automático 90 días tras soft-delete
+    created_at              TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at              TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_modules_active
@@ -3213,11 +3276,20 @@ VALUES ('00000000-0000-0000-0000-000000000001',
         'Mi Empresa', 'mi-empresa', 'America/Bogota', 'es')
 ON CONFLICT (id) DO NOTHING;
 
+-- Roles globales del sistema (deben existir antes de insertar usuarios)
+INSERT INTO config.global_roles (name, description) VALUES
+    ('usuario',    'Usuario estándar del sistema'),
+    ('tecnico',    'Técnico con acceso a módulos asignados'),
+    ('supervisor', 'Supervisor de módulos'),
+    ('admin',      'Administrador de módulos')
+ON CONFLICT (name) DO NOTHING;
+
 -- Usuario superadmin por defecto
-INSERT INTO users.profiles (id, first_name, last_name, is_superadmin, is_active)
+INSERT INTO users.profiles (id, first_name, last_name, is_superadmin, is_active, global_role_id)
 VALUES ('00000000-0000-0000-0000-000000000001',
-        'Admin', 'Sistema', true, true)
-ON CONFLICT (id) DO NOTHING;
+        'Admin', 'Sistema', true, true,
+        (SELECT id FROM config.global_roles WHERE name = 'admin'))
+ON CONFLICT (id) DO UPDATE SET global_role_id = EXCLUDED.global_role_id;
 
 -- Preferencias del superadmin
 INSERT INTO users.preferences (user_id, language, timezone)
@@ -3421,6 +3493,46 @@ COMMENT ON SCHEMA audit IS
 --     'UPDATE tickets.ticket_approvals
 --      SET status = ''expired''
 --      WHERE status = ''pending'' AND expires_at < now()');
+
+-- ============================================================================
+-- PARTE 26: PATCH v6.1-patch-3 (2026-05-06 — Contexto del proyecto: perfil obligatorio)
+-- Basado en CONTEXTO DEL PROYECTO.txt
+-- ============================================================================
+
+-- users.profiles: campos obligatorios de perfil + username para login dual
+ALTER TABLE users.profiles ADD COLUMN IF NOT EXISTS username         VARCHAR(100) NULL;
+ALTER TABLE users.profiles ADD COLUMN IF NOT EXISTS address          TEXT         NULL;
+ALTER TABLE users.profiles ADD COLUMN IF NOT EXISTS job_title        VARCHAR(150) NULL;
+ALTER TABLE users.profiles ADD COLUMN IF NOT EXISTS department       VARCHAR(150) NULL;
+ALTER TABLE users.profiles ADD COLUMN IF NOT EXISTS primary_sede     VARCHAR(200) NULL;
+ALTER TABLE users.profiles ADD COLUMN IF NOT EXISTS profile_complete BOOLEAN      NOT NULL DEFAULT false;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_profiles_username
+    ON users.profiles(username) WHERE username IS NOT NULL AND deleted_at IS NULL;
+
+-- Usuarios existentes ya tienen perfil completo (no bloquear acceso en migración)
+UPDATE users.profiles SET profile_complete = true WHERE deleted_at IS NULL;
+
+-- auth.credentials: contador de intentos fallidos de contraseña
+ALTER TABLE auth.credentials ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER NOT NULL DEFAULT 0;
+
+-- modules.modules: timestamp para hard-delete automático (90 días tras soft-delete)
+ALTER TABLE modules.modules ADD COLUMN IF NOT EXISTS scheduled_hard_delete_at TIMESTAMPTZ NULL;
+
+-- ============================================================================
+-- PARTE 26.5: PATCH v6.1-patch-2 (2026-05-06 — Auth email OTP obligatorio)
+-- Agrega columnas necesarias para el flujo de OTP unificado:
+-- - auth.email_otp.attempts: contador de intentos fallidos por OTP
+-- - auth.credentials.login_locked_until: timestamp de bloqueo temporal
+-- ============================================================================
+
+ALTER TABLE auth.email_otp ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
+COMMENT ON COLUMN auth.email_otp.attempts IS
+    'Intentos fallidos sobre este OTP. Máx 3 — al superarse se invalida el OTP y bloquea la cuenta 15 min.';
+
+ALTER TABLE auth.credentials ADD COLUMN IF NOT EXISTS login_locked_until TIMESTAMPTZ NULL;
+COMMENT ON COLUMN auth.credentials.login_locked_until IS
+    'Bloqueo temporal por demasiados intentos OTP fallidos. NULL = sin bloqueo.';
 
 -- ============================================================================
 -- FIN DEL SCRIPT — v6.1 SINGLE-TENANT (VERSIÓN FINAL DEPLOYABLE)
