@@ -39,6 +39,15 @@
     .logo { font-size: 15px; font-weight: 700; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
     .logo span { color: #6366f1; }
     .header-right { display: flex; align-items: center; gap: 8px; }
+    .header-calendar-btn {
+      align-items: center; justify-content: center;
+      height: 34px; padding: 0 14px; border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, .18);
+      background: rgba(15, 23, 42, .45); color: #c9d7e6;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: background .16s, border-color .16s, color .16s;
+    }
+    .header-calendar-btn:hover { background: #102f3d; border-color: rgba(45, 91, 111, .65); color: #fff; }
 
     /* Profile trigger */
     .profile-menu-wrap { position: relative; }
@@ -574,62 +583,388 @@
     }
 
     /* ══ PROFILE VIEW ══ */
-    .profile-page { max-width: 780px; }
-    .profile-hero {
-      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
-      padding: 28px; display: flex; align-items: center; gap: 24px; margin-bottom: 24px;
+    .profile-page {
+      max-width: 1280px; color: #d7dee8;
+      animation: profileFade .24s ease both;
     }
+    @keyframes profileFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .profile-shell {
+      display: grid; grid-template-columns: minmax(270px, 330px) minmax(0, 1fr);
+      gap: 28px; align-items: start;
+    }
+    .profile-left {
+      position: sticky; top: 82px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .profile-card {
+      background: linear-gradient(180deg, #151c29 0%, #111827 100%);
+      border: 1px solid #263348; border-radius: 16px;
+      box-shadow: 0 22px 60px rgba(0, 0, 0, .24);
+    }
+    .profile-identity-card { padding: 20px; }
+    .profile-avatar-wrap { position: relative; width: 192px; height: 192px; margin: 2px auto 18px; }
     .profile-avatar-lg {
-      width: 80px; height: 80px; border-radius: 50%; background: #312e81;
+      width: 192px; height: 192px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 20%, #4f46e5, #142335 72%);
       display: flex; align-items: center; justify-content: center;
-      font-size: 28px; font-weight: 700; color: #c7d2fe; flex-shrink: 0; overflow: hidden;
+      font-size: 62px; font-weight: 800; color: #eef2ff; flex-shrink: 0; overflow: hidden;
+      border: 3px solid #263348; box-shadow: 0 18px 46px rgba(0,0,0,.32);
+      cursor: pointer;
     }
-    .profile-avatar-lg img { width: 80px; height: 80px; object-fit: cover; }
-    .profile-hero-info { flex: 1; min-width: 0; }
-    .profile-hero-name { font-size: 20px; font-weight: 700; color: #e2e8f0; }
-    .profile-hero-username { font-size: 13px; color: #64748b; margin-top: 2px; }
-    .profile-hero-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-    .profile-section {
-      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
-      padding: 24px; margin-bottom: 16px;
+    .profile-avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar-edit-chip {
+      position: absolute; right: 10px; bottom: 16px; width: 38px; height: 38px;
+      display: grid; place-items: center; border-radius: 50%;
+      color: #dbeafe; background: #0b1220; border: 1px solid #334155;
+      box-shadow: 0 12px 26px rgba(0,0,0,.35); cursor: pointer;
+      transition: transform .16s, border-color .16s;
     }
-    .profile-section-title {
-      font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;
-      letter-spacing: .08em; margin-bottom: 18px; padding-bottom: 10px;
-      border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 8px;
+    .profile-avatar-wrap:hover .avatar-edit-chip { transform: translateY(-2px); border-color: #60a5fa; }
+    .avatar-menu {
+      display: none; position: absolute; left: 50%; bottom: -134px; transform: translateX(-50%);
+      width: 190px; padding: 7px; border-radius: 12px;
+      background: rgba(11, 18, 32, .96); border: 1px solid #334155;
+      box-shadow: 0 22px 50px rgba(0,0,0,.45); z-index: 20;
+      backdrop-filter: blur(14px);
     }
+    .avatar-menu.open { display: block; animation: profileFade .16s ease both; }
+    .avatar-menu button {
+      width: 100%; display: flex; align-items: center; gap: 9px; padding: 8px 10px;
+      color: #cbd5e1; background: transparent; border: 0; border-radius: 8px;
+      font-size: 12px; font-weight: 650; cursor: pointer; text-align: left;
+    }
+    .avatar-menu button:hover { background: #162235; color: #fff; }
+    .avatar-menu .danger { color: #fca5a5; }
+    .profile-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .profile-hero-name { font-size: 24px; line-height: 1.1; font-weight: 800; color: #f8fafc; }
+    .profile-hero-username { font-size: 14px; color: #8da0b8; margin-top: 5px; }
+    .profile-hero-badges { display: flex; gap: 7px; flex-wrap: wrap; margin: 12px 0; }
+    .profile-status-list { display: grid; gap: 9px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #243147; }
+    .profile-meta-line { display: flex; align-items: flex-start; gap: 9px; color: #a8b6c8; font-size: 13px; line-height: 1.35; }
+    .profile-meta-line svg { width: 15px; height: 15px; color: #6b85a5; flex: 0 0 auto; margin-top: 1px; }
+    .profile-action {
+      width: 100%; margin-top: 16px; height: 38px; border-radius: 9px;
+      border: 1px solid #2f81f7; color: #dbeafe; background: rgba(47, 129, 247, .08);
+      font-size: 13px; font-weight: 750; cursor: pointer; transition: background .16s, transform .16s;
+    }
+    .profile-action:hover { background: rgba(47,129,247,.16); transform: translateY(-1px); }
+    .profile-completion-banner {
+      display: none; margin-bottom: 18px; padding: 14px 16px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(146,64,14,.24), rgba(88,28,135,.16));
+      border: 1px solid rgba(251, 191, 36, .28); color: #fde68a; font-size: 13px;
+    }
+    .profile-completion-banner.show { display: block; }
+    .profile-right { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+    .profile-top-grid {
+      display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px;
+    }
+    .profile-stat-card {
+      min-height: 86px; padding: 14px; border-radius: 14px;
+      background: #111827; border: 1px solid #243147;
+    }
+    .profile-stat-label { color: #7f93ad; font-size: 11px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+    .profile-stat-value { color: #f8fafc; font-size: 22px; font-weight: 850; margin-top: 8px; }
+    .profile-stat-note { color: #64748b; font-size: 11px; margin-top: 2px; }
+    .profile-panel { padding: 18px; }
+    .profile-panel-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px;
+    }
+    .profile-panel-title { color: #f8fafc; font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+    .profile-panel-sub { color: #7f93ad; font-size: 12px; margin-top: 3px; }
+    .profile-link-btn {
+      background: transparent; border: 0; color: #58a6ff; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+    }
+    .profile-ticket-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .ticket-card {
+      min-height: 128px; padding: 15px; border-radius: 12px;
+      background: #0d131d; border: 1px solid #263348;
+      transition: transform .16s, border-color .16s, box-shadow .16s;
+    }
+    .ticket-card:hover { transform: translateY(-2px); border-color: #3b82f6; box-shadow: 0 16px 32px rgba(2,6,23,.22); }
+    .ticket-title-row { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+    .ticket-id { color: #58a6ff; font-weight: 800; font-size: 13px; }
+    .ticket-title { color: #e5edf7; font-weight: 750; font-size: 14px; margin-bottom: 9px; }
+    .ticket-meta { display: flex; flex-wrap: wrap; gap: 7px; color: #8da0b8; font-size: 12px; }
+    .profile-badge {
+      display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px;
+      border-radius: 999px; background: #182235; border: 1px solid #2a3a52;
+      color: #bdd1e8; font-size: 11px; font-weight: 750;
+    }
+    .profile-badge.ok { background: rgba(22, 101, 52, .18); color: #86efac; border-color: rgba(34,197,94,.28); }
+    .profile-badge.warn { background: rgba(146, 64, 14, .18); color: #fdba74; border-color: rgba(251,146,60,.28); }
+    .profile-badge.info { background: rgba(37, 99, 235, .18); color: #93c5fd; border-color: rgba(96,165,250,.28); }
+    .profile-badge.danger { background: rgba(127, 29, 29, .18); color: #fca5a5; border-color: rgba(248,113,113,.28); }
+    .activity-wrap { overflow-x: auto; padding-bottom: 4px; }
+    .activity-grid {
+      display: grid; grid-template-columns: repeat(26, 12px); grid-auto-flow: column;
+      grid-template-rows: repeat(7, 12px); gap: 4px; min-width: 420px;
+    }
+    .activity-cell {
+      width: 12px; height: 12px; border-radius: 3px; background: #182235; border: 1px solid rgba(148,163,184,.06);
+      position: relative;
+    }
+    .activity-cell[data-level="1"] { background: #123d2b; }
+    .activity-cell[data-level="2"] { background: #166534; }
+    .activity-cell[data-level="3"] { background: #22a447; }
+    .activity-cell[data-level="4"] { background: #45d264; }
+    .activity-cell:hover::after {
+      content: attr(data-tip); position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+      width: max-content; max-width: 230px; padding: 8px 10px; border-radius: 9px;
+      background: #020617; border: 1px solid #334155; color: #e2e8f0;
+      font-size: 11px; line-height: 1.35; z-index: 30; white-space: pre;
+      box-shadow: 0 16px 32px rgba(0,0,0,.35);
+    }
+    .activity-legend { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 12px; color: #7f93ad; font-size: 11px; }
+    .profile-columns { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: 18px; }
+    .calendar-list { display: grid; gap: 10px; }
+    .calendar-item {
+      display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 12px;
+      padding: 12px; border-radius: 12px; background: #0d131d; border: 1px solid #263348;
+    }
+    .calendar-date {
+      height: 48px; border-radius: 11px; background: #172033; color: #f8fafc;
+      display: grid; place-items: center; font-weight: 850;
+    }
+    .calendar-copy { min-width: 0; }
+    .calendar-title { color: #e5edf7; font-weight: 750; font-size: 13px; }
+    .calendar-meta { color: #7f93ad; font-size: 12px; margin-top: 4px; }
+    .location-card { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 14px; align-items: stretch; }
+    #profile-map {
+      height: 128px; border-radius: 12px; border: 1px solid #334155; overflow: hidden;
+      min-width: 0; background: #0d131d;
+    }
+    .geocode-hint { font-size: 11px; color: #7f93ad; margin-top: 9px; line-height: 1.4; }
+    .module-access-list, .security-list, .requests-list { display: grid; gap: 10px; }
+    .access-row, .security-row, .request-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 12px; border-radius: 12px; background: #0d131d; border: 1px solid #263348;
+    }
+    .row-title { color: #e5edf7; font-size: 13px; font-weight: 750; }
+    .row-sub { color: #7f93ad; font-size: 12px; margin-top: 3px; }
+    .profile-edit-accordion {
+      display: grid; grid-template-rows: 0fr; transition: grid-template-rows .28s ease;
+    }
+    .profile-edit-accordion.open { grid-template-rows: 1fr; }
+    .profile-edit-inner { overflow: hidden; }
+    .profile-edit-card { margin-top: 16px; padding: 16px; border-radius: 14px; background: #0d131d; border: 1px solid #263348; }
+    .profile-edit-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .profile-edit-tab {
+      height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #263348;
+      background: #111827; color: #9fb0c5; font-size: 12px; font-weight: 750; cursor: pointer;
+    }
+    .profile-edit-tab.active { color: #fff; border-color: #3b82f6; background: rgba(37,99,235,.18); }
+    .profile-edit-pane { display: none; }
+    .profile-edit-pane.active { display: block; animation: profileFade .18s ease both; }
     .profile-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .profile-field { display: flex; flex-direction: column; gap: 5px; }
+    .profile-field { display: flex; flex-direction: column; gap: 6px; }
     .profile-field.full { grid-column: 1 / -1; }
     .profile-field label {
-      font-size: 11px; font-weight: 600; color: #64748b;
+      font-size: 11px; font-weight: 750; color: #7f93ad;
       text-transform: uppercase; letter-spacing: .06em; margin: 0;
     }
-    .profile-field input, .profile-field select {
-      padding: 9px 13px; background: #0f172a; border: 1px solid #334155;
-      border-radius: 8px; color: #e2e8f0; font-size: 13px; outline: none;
-      transition: border-color .15s; font-family: inherit;
+    .profile-field input, .profile-field select, .profile-field textarea {
+      padding: 10px 12px; background: #080f1c; border: 1px solid #263348;
+      border-radius: 9px; color: #e2e8f0; font-size: 13px; outline: none;
+      transition: border-color .15s, box-shadow .15s; font-family: inherit;
     }
-    .profile-field input:focus, .profile-field select:focus { border-color: #6366f1; }
-    .profile-field input::placeholder { color: #475569; }
-    .profile-save-row { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+    .profile-field textarea { min-height: 84px; resize: vertical; }
+    .profile-field input:focus, .profile-field select:focus, .profile-field textarea:focus {
+      border-color: #2f81f7; box-shadow: 0 0 0 3px rgba(47,129,247,.12);
+    }
+    .profile-field input::placeholder, .profile-field textarea::placeholder { color: #4b5f78; }
+    .profile-save-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
     .btn-save-profile {
-      padding: 9px 20px; background: #6366f1; color: #fff;
-      border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
-      cursor: pointer; transition: opacity .15s;
+      padding: 9px 16px; background: #2f6fed; color: #fff;
+      border: none; border-radius: 9px; font-size: 13px; font-weight: 750;
+      cursor: pointer; transition: opacity .15s, transform .15s;
     }
-    .btn-save-profile:hover { opacity: .88; }
+    .btn-save-profile:hover { opacity: .92; transform: translateY(-1px); }
+    .btn-save-profile.secondary { background:#111827;color:#9fb0c5;border:1px solid #334155; }
     .btn-save-profile:disabled { opacity: .4; cursor: not-allowed; }
     .profile-save-msg { font-size: 13px; }
-    .profile-save-ok  { color: #6ee7b7; }
-    .profile-save-err { color: #f87171; }
-
-    /* Map container */
-    #profile-map {
-      height: 220px; border-radius: 10px; margin-top: 14px;
-      border: 1px solid #334155; overflow: hidden;
+    .profile-save-ok  { color: #86efac; }
+    .profile-save-err { color: #fca5a5; }
+    .profile-empty {
+      padding: 22px; border-radius: 12px; background: #0d131d; border: 1px dashed #2b3950;
+      color: #7f93ad; font-size: 13px; text-align: center;
     }
-    .geocode-hint { font-size: 11px; color: #475569; margin-top: 6px; }
+    .avatar-lightbox {
+      display: none; position: fixed; inset: 0; z-index: 400; place-items: center;
+      background: rgba(2,6,23,.72); backdrop-filter: blur(8px);
+    }
+    .avatar-lightbox.open { display: grid; }
+    .avatar-lightbox-content {
+      max-width: min(420px, 86vw); max-height: 82vh; border-radius: 24px; overflow: hidden;
+      background: #0b1220; border: 1px solid #334155; box-shadow: 0 30px 80px rgba(0,0,0,.55);
+    }
+    .avatar-lightbox-content img { display: block; width: 100%; height: auto; }
+    @media (max-width: 1080px) {
+      .profile-shell, .profile-columns { grid-template-columns: 1fr; }
+      .profile-left { position: static; }
+      .profile-top-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 720px) {
+      .profile-avatar-wrap { width: 150px; height: 150px; }
+      .profile-avatar-lg { width: 150px; height: 150px; font-size: 48px; }
+      .profile-ticket-grid, .profile-field-grid, .location-card { grid-template-columns: 1fr; }
+      .profile-top-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .profile-identity-card { text-align: center; }
+      .profile-title-row { justify-content: center; }
+      .profile-meta-line { justify-content: center; }
+    }
+
+    /* Profile palette refresh: premium SaaS, low-border, high clarity */
+    .main:has(#view-profile.active) {
+      background: #eef3f7;
+      color: #102635;
+      min-height: calc(100vh - 56px);
+    }
+    .main:has(#view-profile.active) .profile-page {
+      color: #153141;
+    }
+    .profile-shell { grid-template-columns: minmax(290px, 335px) minmax(0, 1fr); gap: 34px; }
+    .profile-left { top: 76px; gap: 14px; }
+    .profile-card {
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(17, 46, 62, .045);
+      border-radius: 18px;
+      box-shadow: 0 24px 70px rgba(31, 49, 64, .09);
+    }
+    .profile-identity-card {
+      background: linear-gradient(180deg, #0b2f3d 0%, #082533 100%);
+      border: 0;
+      color: #f8fbfd;
+      box-shadow: 0 24px 70px rgba(8, 37, 51, .24);
+    }
+    .profile-avatar-lg {
+      background: radial-gradient(circle at 34% 22%, #5e6bff 0%, #263a84 38%, #092736 78%);
+      border: 0;
+      box-shadow: 0 20px 48px rgba(4, 18, 28, .3);
+    }
+    .avatar-edit-chip {
+      background: #0b2f3d;
+      border: 1px solid rgba(255,255,255,.28);
+      color: #dff7ff;
+      box-shadow: none;
+    }
+    .avatar-menu {
+      background: rgba(8, 37, 51, .98);
+      border: 0;
+      box-shadow: 0 24px 60px rgba(8, 37, 51, .28);
+    }
+    .profile-hero-name { color: #fff; letter-spacing: -.03em; }
+    .profile-hero-username { color: #9eb5c0; }
+    .profile-status-list {
+      border-top: 1px solid rgba(255,255,255,.12);
+      gap: 8px;
+    }
+    .profile-meta-line { color: #c7d5dd; font-size: 12px; }
+    .profile-meta-line svg { color: #8db1bf; }
+    .profile-action {
+      border: 1px solid rgba(95, 174, 255, .75);
+      color: #f8fbfd;
+      background: transparent;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+    }
+    .profile-action:hover { background: rgba(255,255,255,.08); }
+    .profile-completion-banner {
+      background: #fff7db;
+      border-color: rgba(209, 161, 38, .3);
+      color: #725111;
+      box-shadow: 0 14px 36px rgba(114, 81, 17, .08);
+    }
+    .profile-panel { padding: 20px; }
+    .profile-panel-title {
+      color: #102635;
+      font-size: 20px;
+      letter-spacing: -.035em;
+    }
+    .profile-panel-sub, .row-sub, .geocode-hint { color: #7a8d98; }
+    .profile-stat-card {
+      background: rgba(255,255,255,.86);
+      border: 0;
+      box-shadow: 0 16px 38px rgba(31,49,64,.07);
+    }
+    .profile-stat-label { color: #81929b; }
+    .profile-stat-value { color: #0b2f3d; }
+    .profile-badge {
+      background: rgba(11, 47, 61, .08);
+      border: 0;
+      color: #153141;
+    }
+    .profile-badge.ok { background: rgba(30, 186, 73, .14); color: #137130; border: 0; }
+    .profile-badge.warn { background: rgba(255, 99, 71, .14); color: #9b3728; border: 0; }
+    .profile-badge.info { background: rgba(33, 87, 110, .13); color: #0b3a4f; border: 0; }
+    .profile-badge.danger { background: rgba(220, 38, 38, .12); color: #991b1b; border: 0; }
+    .ticket-card, .access-row, .security-row, .request-row, .calendar-item, .profile-empty {
+      background: rgba(246, 249, 251, .8);
+      border: 0;
+      box-shadow: inset 0 0 0 1px rgba(17, 46, 62, .035);
+    }
+    .ticket-card:hover {
+      border-color: transparent;
+      box-shadow: 0 18px 44px rgba(31,49,64,.11);
+    }
+    .ticket-id, .profile-link-btn { color: #0b6484; }
+    .ticket-title, .row-title { color: #102635; }
+    .ticket-meta { color: #728793; }
+    .activity-cell { background: #dde7ed; border: 0; }
+    .activity-cell[data-level="1"] { background: #c6e7d0; }
+    .activity-cell[data-level="2"] { background: #8bd79e; }
+    .activity-cell[data-level="3"] { background: #42c664; }
+    .activity-cell[data-level="4"] { background: #17a846; }
+    .profile-edit-card {
+      margin-top: 14px;
+      padding: 14px;
+      background: rgba(255,255,255,.06);
+      border: 0;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+    .profile-left .profile-field-grid { grid-template-columns: 1fr; }
+    .profile-edit-tab {
+      background: rgba(255,255,255,.08);
+      border: 0;
+      color: #a9c0ca;
+    }
+    .profile-edit-tab.active {
+      color: #082533;
+      background: #fff;
+      border: 0;
+    }
+    .profile-field label { color: #9fb4bd; }
+    .profile-field input, .profile-field select, .profile-field textarea {
+      background: rgba(255,255,255,.93);
+      border: 0;
+      color: #102635;
+      box-shadow: inset 0 0 0 1px rgba(17, 46, 62, .07);
+    }
+    .profile-field input:focus, .profile-field select:focus, .profile-field textarea:focus {
+      border-color: transparent;
+      box-shadow: inset 0 0 0 1px #0b86b0, 0 0 0 4px rgba(11, 134, 176, .12);
+    }
+    .btn-save-profile {
+      background: #23c444;
+      color: #fff;
+      border-radius: 10px;
+    }
+    .profile-identity-card .btn-save-profile {
+      background: #23c444;
+    }
+    .profile-save-ok { color: #b8ffd0; }
+    .profile-save-err { color: #ffd0ca; }
+    #profile-map {
+      border: 0;
+      box-shadow: inset 0 0 0 1px rgba(17, 46, 62, .05);
+    }
+    .profile-identity-card .profile-panel-title,
+    .profile-identity-card .row-title,
+    .profile-identity-card .profile-panel-sub,
+    .profile-identity-card .row-sub {
+      color: inherit;
+    }
 
     /* ══ REQUESTS VIEW ══ */
     .request-card {
@@ -665,6 +1000,9 @@
     <div class="logo">🎫 Tickets <span>System</span></div>
   </div>
   <div class="header-right">
+    <button type="button" class="header-calendar-btn" id="header-calendar-btn" onclick="openOperationalCalendar()" style="display:none">
+      Calendario operativo
+    </button>
     <div class="profile-menu-wrap" id="profile-menu-wrap">
       <button class="profile-trigger" id="profile-trigger" onclick="toggleProfileMenu()" aria-expanded="false">
         <div class="avatar" id="header-avatar"><span id="avatar-letter">?</span></div>
@@ -860,128 +1198,167 @@
     <!-- ═══ VIEW: PERFIL ═══ -->
     <div class="view" id="view-profile">
       <div class="profile-page">
-        <!-- Hero -->
-        <div class="profile-hero">
-          <div class="profile-avatar-lg" id="prof-avatar-lg"><span id="prof-avatar-letter">?</span></div>
-          <div class="profile-hero-info">
-            <div class="profile-hero-name" id="prof-fullname">—</div>
-            <div class="profile-hero-username" id="prof-username-display">—</div>
-            <div class="profile-hero-badges" id="prof-badges"></div>
-          </div>
+        <div class="profile-completion-banner" id="profile-completion-banner">
+          Tu perfil es obligatorio para operar en el sistema. Completa celular, sede, ambiente/área, dirección y cargo para desbloquear módulos, tickets e información operativa.
         </div>
 
-        <!-- Personal info -->
-        <div class="profile-section">
-          <div class="profile-section-title">👤 Información personal</div>
-          <div class="profile-field-grid">
-            <div class="profile-field">
-              <label>Nombre</label>
-              <input type="text" id="pf-first" placeholder="Juan">
-            </div>
-            <div class="profile-field">
-              <label>Apellido</label>
-              <input type="text" id="pf-last" placeholder="García">
-            </div>
-            <div class="profile-field">
-              <label>Nombre de usuario</label>
-              <input type="text" id="pf-username" placeholder="juangarcia">
-            </div>
-            <div class="profile-field">
-              <label>Teléfono</label>
-              <input type="text" id="pf-phone" placeholder="+57 300 000 0000">
-            </div>
-          </div>
-          <div class="profile-save-row">
-            <button class="btn-save-profile" onclick="saveProfileSection('personal')">Guardar cambios</button>
-            <span class="profile-save-msg" id="msg-personal"></span>
-          </div>
-        </div>
-
-        <!-- Work info -->
-        <div class="profile-section">
-          <div class="profile-section-title">🏢 Información laboral</div>
-          <div class="profile-field-grid">
-            <div class="profile-field">
-              <label>Cargo</label>
-              <input type="text" id="pf-job" placeholder="Técnico Senior">
-            </div>
-            <div class="profile-field">
-              <label>Área / Departamento</label>
-              <input type="text" id="pf-dept" placeholder="Soporte TI">
-            </div>
-            <div class="profile-field full">
-              <label>Sede principal</label>
-              <input type="text" id="pf-sede" placeholder="Sede Norte">
-            </div>
-          </div>
-          <div class="profile-save-row">
-            <button class="btn-save-profile" onclick="saveProfileSection('work')">Guardar cambios</button>
-            <span class="profile-save-msg" id="msg-work"></span>
-          </div>
-        </div>
-
-        <!-- Location -->
-        <div class="profile-section">
-          <div class="profile-section-title">🌍 Ubicación</div>
-          <div class="profile-field-grid">
-            <div class="profile-field">
-              <label>País</label>
-              <select id="pf-country" onchange="onCountryChange()">
-                <option value="">Cargando países…</option>
-              </select>
-            </div>
-            <div class="profile-field">
-              <label>Ciudad</label>
-              <select id="pf-city" onchange="onCityChange()">
-                <option value="">— Selecciona país primero —</option>
-              </select>
-            </div>
-            <div class="profile-field full">
-              <label>Dirección completa</label>
-              <input type="text" id="pf-address" placeholder="Calle 123 # 45-67, Barrio, Ciudad" oninput="debounceGeocode()">
-            </div>
-          </div>
-          <p class="geocode-hint" id="geocode-status">El mapa se actualizará automáticamente al ingresar tu dirección.</p>
-          <div id="profile-map"></div>
-          <div class="profile-save-row">
-            <button class="btn-save-profile" onclick="saveProfileSection('location')">Guardar cambios</button>
-            <span class="profile-save-msg" id="msg-location"></span>
-          </div>
-        </div>
-
-        <!-- Security -->
-        <div class="profile-section">
-          <div class="profile-section-title">🔐 Seguridad</div>
-          <div id="pwd-change-wrap">
-            <button class="btn-save-profile" style="background:#334155;color:#94a3b8;border:1px solid #475569" onclick="togglePwdForm()">Cambiar contraseña</button>
-          </div>
-          <div id="pwd-form" style="display:none;margin-top:16px">
-            <div class="profile-field-grid">
-              <div class="profile-field full">
-                <label>Contraseña actual</label>
-                <input type="password" id="pf-pwd-current" placeholder="••••••••">
+        <div class="profile-shell">
+          <aside class="profile-left">
+            <section class="profile-card profile-identity-card">
+              <div class="profile-avatar-wrap">
+                <div class="profile-avatar-lg" id="prof-avatar-lg" onclick="toggleAvatarMenu(event)"><span id="prof-avatar-letter">?</span></div>
+                <button type="button" class="avatar-edit-chip" onclick="toggleAvatarMenu(event)" title="Opciones de foto" aria-label="Opciones de foto">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </button>
+                <div class="avatar-menu" id="avatar-menu">
+                  <button type="button" onclick="viewAvatarPhoto()">Ver foto</button>
+                  <button type="button" onclick="changeAvatarPhoto()">Cambiar foto</button>
+                  <button type="button" onclick="takeAvatarPhoto()">Tomar foto</button>
+                  <button type="button" class="danger" onclick="deleteAvatarPhoto()">Eliminar foto</button>
+                </div>
               </div>
-              <div class="profile-field">
-                <label>Nueva contraseña</label>
-                <input type="password" id="pf-pwd-new" placeholder="Mín. 8 caracteres">
+
+              <div class="profile-title-row">
+                <div>
+                  <div class="profile-hero-name" id="prof-fullname">—</div>
+                  <div class="profile-hero-username" id="prof-username-display">—</div>
+                </div>
               </div>
-              <div class="profile-field">
-                <label>Confirmar contraseña</label>
-                <input type="password" id="pf-pwd-confirm" placeholder="Repite la contraseña">
+              <div class="profile-hero-badges" id="prof-badges"></div>
+
+              <div class="profile-status-list">
+                <div class="profile-meta-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16v16H4z"/><path d="m22 6-10 7L2 6"/></svg><span id="prof-email">—</span></div>
+                <div class="profile-meta-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.16 8.81 19.8 19.8 0 0 1 .09 4.18 2 2 0 0 1 2.06 2h3a2 2 0 0 1 2 1.72c.12.86.31 1.7.57 2.5a2 2 0 0 1-.45 2.11L5.91 9.6a16 16 0 0 0 6.49 6.49l1.27-1.27a2 2 0 0 1 2.11-.45c.8.26 1.64.45 2.5.57A2 2 0 0 1 22 16.92Z"/></svg><span id="prof-phone-display">—</span></div>
+                <div class="profile-meta-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><span id="prof-address-display">—</span></div>
+                <div class="profile-meta-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><path d="M2 20h20"/><path d="M4 20V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12"/></svg><span id="prof-work-display">—</span></div>
               </div>
+              <button type="button" class="profile-action" onclick="toggleProfileEdit()">Editar perfil</button>
+              <div class="profile-edit-accordion" id="profile-edit-accordion">
+                <div class="profile-edit-inner">
+                  <div class="profile-edit-card">
+                    <div class="profile-edit-tabs">
+                      <button type="button" class="profile-edit-tab active" data-pane="personal" onclick="setProfileEditPane('personal')">Personal</button>
+                      <button type="button" class="profile-edit-tab" data-pane="work" onclick="setProfileEditPane('work')">Organización</button>
+                      <button type="button" class="profile-edit-tab" data-pane="security" onclick="setProfileEditPane('security')">Seguridad</button>
+                    </div>
+                    <div class="profile-edit-pane active" id="edit-pane-personal">
+                      <div class="profile-field-grid">
+                        <div class="profile-field"><label>Nombre</label><input type="text" id="pf-first" placeholder="Juan"></div>
+                        <div class="profile-field"><label>Apellido</label><input type="text" id="pf-last" placeholder="García"></div>
+                        <div class="profile-field"><label>Username</label><input type="text" id="pf-username" placeholder="juangarcia"></div>
+                        <div class="profile-field"><label>Fecha de nacimiento</label><input type="date" id="pf-birth"></div>
+                        <div class="profile-field"><label>Género</label><select id="pf-gender"><option value="">—</option><option>Femenino</option><option>Masculino</option><option>No binario</option><option>Prefiero no decir</option></select></div>
+                        <div class="profile-field"><label>Pronombres</label><input type="text" id="pf-pronouns" placeholder="ella, él, elle…"></div>
+                        <div class="profile-field full"><label>Dirección</label><input type="text" id="pf-address" placeholder="Calle 123 # 45-67, Barrio, Ciudad" oninput="debounceGeocode()"></div>
+                        <div class="profile-field full"><label>Biografía</label><textarea id="pf-bio" placeholder="Una breve descripción profesional"></textarea></div>
+                      </div>
+                      <div class="profile-save-row"><button class="btn-save-profile" onclick="saveProfileSection('personal')">Guardar cambios</button><span class="profile-save-msg" id="msg-personal"></span></div>
+                    </div>
+                    <div class="profile-edit-pane" id="edit-pane-work">
+                      <div class="profile-field-grid">
+                        <div class="profile-field"><label>Celular</label><input type="text" id="pf-phone" placeholder="+57 300 000 0000"></div>
+                        <div class="profile-field"><label>Cargo</label><input type="text" id="pf-job" placeholder="Técnico Senior"></div>
+                        <div class="profile-field"><label>Sede principal</label><input type="text" id="pf-sede" placeholder="Sede Norte"></div>
+                        <div class="profile-field"><label>Ambiente / área</label><input type="text" id="pf-dept" placeholder="Soporte TI"></div>
+                        <div class="profile-field"><label>País</label><select id="pf-country" onchange="onCountryChange()"><option value="">Cargando países…</option></select></div>
+                        <div class="profile-field"><label>Ciudad</label><select id="pf-city" onchange="onCityChange()"><option value="">— Selecciona país primero —</option></select></div>
+                      </div>
+                      <div class="profile-save-row"><button class="btn-save-profile" onclick="saveProfileSection('work')">Guardar cambios</button><span class="profile-save-msg" id="msg-work"></span></div>
+                    </div>
+                    <div class="profile-edit-pane" id="edit-pane-security">
+                      <div class="profile-field-grid">
+                        <div class="profile-field full"><label>Contraseña actual</label><input type="password" id="pf-pwd-current" placeholder="••••••••"></div>
+                        <div class="profile-field"><label>Nueva contraseña</label><input type="password" id="pf-pwd-new" placeholder="Mín. 8 caracteres"></div>
+                        <div class="profile-field"><label>Confirmar contraseña</label><input type="password" id="pf-pwd-confirm" placeholder="Repite la contraseña"></div>
+                      </div>
+                      <div class="profile-save-row"><button class="btn-save-profile" onclick="savePwd()">Cambiar contraseña</button><span class="profile-save-msg" id="msg-pwd"></span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="profile-card profile-panel">
+              <div class="profile-panel-head">
+                <div>
+                  <div class="profile-panel-title">Seguridad</div>
+                  <div class="profile-panel-sub">Cuenta, sesiones y 2FA</div>
+                </div>
+              </div>
+              <div class="security-list" id="profile-security-list"></div>
+            </section>
+
+            <section class="profile-card profile-panel">
+              <div class="profile-panel-head">
+                <div>
+                  <div class="profile-panel-title">Ubicación</div>
+                  <div class="profile-panel-sub">Residencia registrada</div>
+                </div>
+              </div>
+              <div class="location-card">
+                <div>
+                  <div class="row-title" id="profile-location-text">—</div>
+                  <div class="row-sub" id="profile-location-updated">Última actualización: —</div>
+                  <p class="geocode-hint" id="geocode-status">El mapa se actualizará automáticamente al editar tu dirección.</p>
+                </div>
+                <div id="profile-map"></div>
+              </div>
+            </section>
+          </aside>
+
+          <section class="profile-right">
+            <div class="profile-top-grid">
+              <div class="profile-stat-card"><div class="profile-stat-label">Abiertos</div><div class="profile-stat-value" id="stat-open">0</div><div class="profile-stat-note">tickets</div></div>
+              <div class="profile-stat-card"><div class="profile-stat-label">Cerrados</div><div class="profile-stat-value" id="stat-closed">0</div><div class="profile-stat-note">resueltos</div></div>
+              <div class="profile-stat-card"><div class="profile-stat-label">SLA OK</div><div class="profile-stat-value" id="stat-sla">—</div><div class="profile-stat-note">cumplimiento</div></div>
+              <div class="profile-stat-card"><div class="profile-stat-label">Promedio</div><div class="profile-stat-value" id="stat-avg">—</div><div class="profile-stat-note">tiempo</div></div>
+              <div class="profile-stat-card"><div class="profile-stat-label">Reprocesos</div><div class="profile-stat-value" id="stat-rework">0</div><div class="profile-stat-note">casos</div></div>
+              <div class="profile-stat-card"><div class="profile-stat-label">Satisfacción</div><div class="profile-stat-value" id="stat-sat">—</div><div class="profile-stat-note">CSAT</div></div>
+              <div class="profile-stat-card"><div class="profile-stat-label">Escalados</div><div class="profile-stat-value" id="stat-escalated">0</div><div class="profile-stat-note">tickets</div></div>
             </div>
-            <div class="profile-save-row">
-              <button class="btn-save-profile" onclick="savePwd()">Cambiar contraseña</button>
-              <button class="btn-save-profile" style="background:#334155;color:#94a3b8;border:1px solid #475569" onclick="togglePwdForm()">Cancelar</button>
-              <span class="profile-save-msg" id="msg-pwd"></span>
-            </div>
-          </div>
+
+            <section class="profile-card profile-panel">
+              <div class="profile-panel-head">
+                <div>
+                  <div class="profile-panel-title">Últimos tickets</div>
+                  <div class="profile-panel-sub">Los 6 casos más recientes enviados por ti</div>
+                </div>
+                <button type="button" class="profile-link-btn" onclick="showView('modules')">Ver todos mis tickets</button>
+              </div>
+              <div class="profile-ticket-grid" id="profile-ticket-list">
+                <div class="profile-empty">Cargando tickets…</div>
+              </div>
+            </section>
+
+            <section class="profile-card profile-panel">
+              <div class="profile-panel-head">
+                <div>
+                  <div class="profile-panel-title">Actividad operativa</div>
+                  <div class="profile-panel-sub">Tickets, solicitudes y acciones recientes</div>
+                </div>
+                <span class="profile-badge info" id="activity-year">2026</span>
+              </div>
+              <div class="activity-wrap"><div class="activity-grid" id="profile-activity-grid"></div></div>
+              <div class="activity-legend">Menos <span class="activity-cell"></span><span class="activity-cell" data-level="1"></span><span class="activity-cell" data-level="2"></span><span class="activity-cell" data-level="3"></span><span class="activity-cell" data-level="4"></span> Más</div>
+            </section>
+
+            <section class="profile-card profile-panel">
+              <div class="profile-panel-head">
+                <div>
+                  <div class="profile-panel-title">Solicitudes administrativas</div>
+                  <div class="profile-panel-sub">Cambio de rol, sede, permisos o acceso a módulos</div>
+                </div>
+                <button type="button" class="profile-link-btn" onclick="openCreateRequestModal()">Nueva solicitud</button>
+              </div>
+              <div class="requests-list" id="profile-requests-list"></div>
+            </section>
+          </section>
         </div>
 
-        <!-- Module roles (read-only) -->
-        <div class="profile-section" id="prof-roles-section" style="display:none">
-          <div class="profile-section-title">🧩 Acceso a módulos</div>
-          <div id="prof-roles-list"></div>
+        <div class="avatar-lightbox" id="avatar-lightbox" onclick="closeAvatarLightbox()">
+          <div class="avatar-lightbox-content" onclick="event.stopPropagation()">
+            <img id="avatar-lightbox-img" alt="Foto de perfil">
+          </div>
         </div>
       </div>
     </div>
@@ -1407,6 +1784,9 @@
 
   // ── View switcher ────────────────────────────────────────────────────────────
   function showView(name) {
+    if (currentUser && currentUser.profile_complete === false && name !== 'profile') {
+      name = 'profile';
+    }
     clearSelection();
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1433,11 +1813,6 @@
       if (!res.ok) { handleUnauth(); return; }
       const user = await res.json();
 
-      if (!user.profile_complete) {
-        window.location.href = 'profile-complete.html';
-        return;
-      }
-
       currentUser = user;
 
       // Update header
@@ -1449,6 +1824,7 @@
       // Header dropdown info
       document.getElementById('pd-fullname').textContent = user.name || '—';
       document.getElementById('pd-username-label').textContent = user.username ? `@${user.username}` : user.email;
+      updateHeaderCalendarButton(user);
 
       const avatarEl = document.getElementById('header-avatar');
       if (user.avatar_url) {
@@ -1464,9 +1840,26 @@
         document.body.classList.remove('sidebar-expanded');
       }
 
+      if (!user.profile_complete) {
+        window.location.href = 'profile-complete.html';
+        return;
+      }
+
       await loadModules();
 
     } catch { handleUnauth(); }
+  }
+
+  function updateHeaderCalendarButton(user) {
+    const btn = document.getElementById('header-calendar-btn');
+    if (!btn) return;
+    const roles = (user.roles ?? []).map(r => r.role);
+    const isAdmin = user.is_superadmin || roles.includes('admin_modulo');
+    const isLead = roles.includes('jefe_tecnico');
+    const isTech = roles.includes('tecnico');
+    const show = isAdmin || isLead || isTech;
+    btn.style.display = show ? 'inline-flex' : 'none';
+    btn.textContent = isAdmin ? 'Calendario administrativo' : isLead ? 'Calendario técnico' : 'Agenda técnica';
   }
 
 
@@ -2652,6 +3045,9 @@
   let profileMarker  = null;
   let countriesCache = [];
   let geocodeTimer   = null;
+  let profileAvatarUrl = '';
+  let profileRequestsCache = [];
+  let profileTicketsCache = [];
 
   async function loadProfileView() {
     try {
@@ -2660,61 +3056,323 @@
       const p = await res.json();
       renderProfileView(p);
       loadCountries();
+      loadProfileOperationalData();
     } catch {}
   }
 
   function renderProfileView(p) {
     const initial = `${p.first_name ?? '?'}`.charAt(0).toUpperCase();
+    const fullName = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || '—';
+    const extra = getProfileExtra();
+    profileAvatarUrl = p.avatar_url ?? '';
 
-    // Hero
+    // Identity
     const avatarEl = document.getElementById('prof-avatar-lg');
     if (p.avatar_url) {
       avatarEl.innerHTML = `<img src="${escHtml(p.avatar_url)}" onerror="this.parentElement.innerHTML='<span>${escHtml(initial)}</span>'">`;
     } else {
       avatarEl.innerHTML = `<span>${escHtml(initial)}</span>`;
     }
-    document.getElementById('prof-fullname').textContent = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || '—';
+    document.getElementById('prof-fullname').textContent = fullName;
     document.getElementById('prof-username-display').textContent = p.username ? `@${p.username}` : p.email;
+    document.getElementById('prof-email').textContent = p.email ?? '—';
+    document.getElementById('prof-phone-display').textContent = p.phone || 'Celular no registrado';
+    document.getElementById('prof-address-display').textContent = p.address || 'Dirección pendiente';
+    document.getElementById('prof-work-display').textContent =
+      [p.job_title, p.department, p.primary_sede].filter(Boolean).join(' · ') || 'Información laboral pendiente';
+    document.getElementById('profile-location-text').textContent = p.address || 'Dirección pendiente de registro';
+    document.getElementById('profile-location-updated').textContent =
+      `Última actualización: ${p.updated_at ? fmtDate(p.updated_at) : '—'}`;
 
     const badges = document.getElementById('prof-badges');
     badges.innerHTML = '';
     if (p.is_superadmin) {
-      badges.innerHTML += '<span class="badge badge-super">Superadmin</span>';
+      badges.innerHTML += '<span class="profile-badge info">Superadmin</span>';
     } else {
-      badges.innerHTML += '<span class="badge badge-global">Usuario</span>';
+      badges.innerHTML += '<span class="profile-badge">Usuario</span>';
     }
+    badges.innerHTML += `<span class="profile-badge ${p.is_active === false ? 'danger' : 'ok'}">${p.is_active === false ? 'Inactivo' : 'Activo'}</span>`;
+    badges.innerHTML += '<span class="profile-badge ok">En línea</span>';
     if (!p.profile_complete) {
-      badges.innerHTML += '<span class="badge" style="background:#78350f;color:#fde68a;font-size:10px">Perfil incompleto</span>';
+      badges.innerHTML += '<span class="profile-badge warn">Perfil incompleto</span>';
     }
+    document.getElementById('profile-completion-banner').classList.toggle('show', !isProfileOperational(p));
 
-    // Personal fields
+    // Editable fields
     document.getElementById('pf-first').value    = p.first_name ?? '';
     document.getElementById('pf-last').value     = p.last_name  ?? '';
     document.getElementById('pf-username').value = p.username   ?? '';
     document.getElementById('pf-phone').value    = p.phone      ?? '';
+    document.getElementById('pf-birth').value    = extra.birth  ?? '';
+    document.getElementById('pf-gender').value   = extra.gender ?? '';
+    document.getElementById('pf-pronouns').value = extra.pronouns ?? '';
+    document.getElementById('pf-bio').value      = extra.bio ?? '';
 
-    // Work fields
     document.getElementById('pf-job').value   = p.job_title    ?? '';
     document.getElementById('pf-dept').value  = p.department   ?? '';
     document.getElementById('pf-sede').value  = p.primary_sede ?? '';
-
-    // Location
     document.getElementById('pf-address').value = p.address ?? '';
 
-    // Module roles
-    const roles = p.roles ?? [];
-    if (roles.length) {
-      document.getElementById('prof-roles-section').style.display = '';
-      document.getElementById('prof-roles-list').innerHTML = roles.map(r =>
-        `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1e293b">
-          <span style="font-size:13px;color:#e2e8f0">${escHtml(r.module)}</span>
-          <span class="badge badge-role">${escHtml(r.role)}</span>
-        </div>`
-      ).join('');
-    }
+    renderProfileSecurity(p);
+    renderProfileCalendar(p);
 
     // Init map after DOM settles
     setTimeout(() => initProfileMap(p.address), 150);
+  }
+
+  function isProfileOperational(p) {
+    return !!(p.phone && p.primary_sede && p.department && p.address && p.job_title);
+  }
+
+  function getProfileExtra() {
+    try { return JSON.parse(localStorage.getItem('profile_extra') || '{}'); }
+    catch { return {}; }
+  }
+
+  function saveProfileExtra() {
+    const extra = {
+      birth: document.getElementById('pf-birth').value,
+      gender: document.getElementById('pf-gender').value,
+      pronouns: document.getElementById('pf-pronouns').value.trim(),
+      bio: document.getElementById('pf-bio').value.trim(),
+    };
+    localStorage.setItem('profile_extra', JSON.stringify(extra));
+  }
+
+  function toggleProfileEdit(force) {
+    const el = document.getElementById('profile-edit-accordion');
+    const open = force === undefined ? !el.classList.contains('open') : !!force;
+    el.classList.toggle('open', open);
+  }
+
+  function setProfileEditPane(name) {
+    document.querySelectorAll('.profile-edit-tab').forEach(t => t.classList.toggle('active', t.dataset.pane === name));
+    document.querySelectorAll('.profile-edit-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('edit-pane-' + name)?.classList.add('active');
+  }
+
+  function renderProfileSecurity(p) {
+    const list = document.getElementById('profile-security-list');
+    list.innerHTML = `
+      <div class="security-row">
+        <div><div class="row-title">Contraseña</div><div class="row-sub">Último cambio no disponible</div></div>
+        <button type="button" class="profile-link-btn" onclick="setProfileEditPane('security');toggleProfileEdit(true)">Cambiar</button>
+      </div>
+      <div class="security-row">
+        <div><div class="row-title">Autenticación 2FA</div><div class="row-sub">Protección adicional de la cuenta</div></div>
+        <button type="button" class="profile-link-btn" onclick="openMfaModal()">Configurar</button>
+      </div>
+      <div class="security-row">
+        <div><div class="row-title">Sesión actual</div><div class="row-sub">Navegador activo · token vigente</div></div>
+        <span class="profile-badge ok">Activa</span>
+      </div>
+      <div class="security-row">
+        <div><div class="row-title">Actividad sospechosa</div><div class="row-sub">Monitoreo futuro</div></div>
+        <span class="profile-badge">Sin alertas</span>
+      </div>`;
+  }
+
+  function renderProfileCalendar(p) {
+    const role = p.is_superadmin ? 'admin' : (p.roles?.[0]?.role ?? 'usuario');
+    const canUseCalendar = ['admin', 'superadmin', 'jefe_tecnico', 'tecnico', 'admin_modulo'].includes(role);
+    const btn = document.getElementById('header-calendar-btn');
+    if (!btn) return;
+    btn.style.display = canUseCalendar ? 'inline-flex' : 'none';
+    btn.textContent = role === 'admin' || role === 'admin_modulo'
+      ? 'Calendario administrativo'
+      : role === 'jefe_tecnico'
+        ? 'Calendario técnico'
+        : 'Agenda técnica';
+  }
+
+  function openOperationalCalendar() {
+    alert('Calendario operativo preparado como acceso de header. La funcionalidad la conectará el módulo correspondiente.');
+  }
+
+  async function loadProfileOperationalData() {
+    await Promise.all([loadProfileTickets(), loadProfileRequests()]);
+    renderProfileActivity();
+  }
+
+  async function loadProfileTickets() {
+    const wrap = document.getElementById('profile-ticket-list');
+    try {
+      const res = await authFetch(`${API}/tickets`);
+      const data = res.ok ? await res.json() : [];
+      const rows = Array.isArray(data) ? data : (data.data ?? []);
+      profileTicketsCache = rows.slice(0, 6);
+      renderProfileTickets(profileTicketsCache);
+      renderProfileStats(rows);
+    } catch {
+      profileTicketsCache = [];
+      wrap.innerHTML = '<div class="profile-empty">No fue posible cargar tickets en este momento.</div>';
+      renderProfileStats([]);
+    }
+  }
+
+  function renderProfileTickets(rows) {
+    const wrap = document.getElementById('profile-ticket-list');
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="profile-empty">Todavía no hay tickets registrados para este usuario.</div>';
+      return;
+    }
+    wrap.innerHTML = rows.slice(0, 6).map(t => {
+      const id = t.code || t.ticket_code || t.id || '—';
+      const status = t.status || 'abierto';
+      const priority = t.priority || t.prioridad || 'media';
+      return `<article class="ticket-card">
+        <div class="ticket-title-row">
+          <span class="ticket-id">#${escHtml(String(id).slice(0, 8))}</span>
+          <span class="profile-badge ${ticketStatusClass(status)}">${escHtml(status)}</span>
+        </div>
+        <div class="ticket-title">${escHtml(t.title || t.titulo || 'Ticket sin título')}</div>
+        <div class="ticket-meta">
+          <span>${escHtml(t.category || t.categoria || 'General')}</span>
+          <span>Prioridad ${escHtml(priority)}</span>
+          <span>${escHtml(t.assignee_name || t.technician || 'Sin técnico')}</span>
+          <span>${t.created_at ? fmtDate(t.created_at) : 'Sin fecha'}</span>
+          <span>SLA ${escHtml(t.sla_remaining || t.sla || '—')}</span>
+        </div>
+      </article>`;
+    }).join('');
+  }
+
+  function ticketStatusClass(status) {
+    const s = String(status || '').toLowerCase();
+    if (s.includes('cerr') || s.includes('done') || s.includes('resuelto')) return 'ok';
+    if (s.includes('vence') || s.includes('espera') || s.includes('pend')) return 'warn';
+    if (s.includes('crit') || s.includes('rework') || s.includes('rech')) return 'danger';
+    return 'info';
+  }
+
+  function renderProfileStats(rows) {
+    const open = rows.filter(t => !/cerr|done|resuelto|closed/i.test(String(t.status ?? ''))).length;
+    const closed = rows.length - open;
+    document.getElementById('stat-open').textContent = open;
+    document.getElementById('stat-closed').textContent = closed;
+    document.getElementById('stat-rework').textContent = rows.filter(t => /rework|repro/i.test(String(t.status ?? ''))).length;
+    document.getElementById('stat-escalated').textContent = rows.filter(t => t.escalated || /escal/i.test(String(t.status ?? ''))).length;
+    document.getElementById('stat-sla').textContent = rows.length ? '—' : '—';
+    document.getElementById('stat-avg').textContent = rows.length ? '—' : '—';
+    document.getElementById('stat-sat').textContent = rows.length ? '—' : '—';
+  }
+
+  async function loadProfileRequests() {
+    const wrap = document.getElementById('profile-requests-list');
+    try {
+      const res = await authFetch(`${API}/requests/me?limit=4`);
+      const data = res.ok ? await res.json() : { data: [] };
+      profileRequestsCache = data.data ?? [];
+      if (!profileRequestsCache.length) {
+        wrap.innerHTML = '<div class="profile-empty">No tienes solicitudes administrativas recientes.</div>';
+        return;
+      }
+      wrap.innerHTML = profileRequestsCache.map(r => `
+        <div class="request-row">
+          <div>
+            <div class="row-title">${escHtml(r.title)}</div>
+            <div class="row-sub">${escHtml(requestTypeLabel(r.type))} · ${r.created_at ? fmtDate(r.created_at) : '—'}</div>
+          </div>
+          <span class="profile-badge ${requestStatusClass(r.status)}">${escHtml(r.status)}</span>
+        </div>`).join('');
+    } catch {
+      wrap.innerHTML = '<div class="profile-empty">No fue posible cargar solicitudes.</div>';
+    }
+  }
+
+  function renderProfileActivity() {
+    const grid = document.getElementById('profile-activity-grid');
+    const today = new Date();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const events = new Map();
+    [...profileTicketsCache, ...profileRequestsCache].forEach(item => {
+      const d = item.created_at ? new Date(item.created_at) : null;
+      if (!d || Number.isNaN(d.getTime())) return;
+      const key = d.toISOString().slice(0, 10);
+      events.set(key, (events.get(key) || 0) + 1);
+    });
+    let html = '';
+    for (let i = 181; i >= 0; i--) {
+      const d = new Date(today.getTime() - i * dayMs);
+      const key = d.toISOString().slice(0, 10);
+      const count = events.get(key) || 0;
+      const level = count === 0 ? 0 : Math.min(4, count);
+      html += `<span class="activity-cell" data-level="${level}" data-tip="${count} acciones operativas&#10;Fecha: ${fmtDate(d.toISOString())}"></span>`;
+    }
+    grid.innerHTML = html;
+    document.getElementById('activity-year').textContent = String(today.getFullYear());
+  }
+
+  function requestTypeLabel(type) {
+    return {
+      role_change: 'Cambio de rol',
+      module_access: 'Acceso a módulo',
+      info_correction: 'Corrección de información',
+      sede_change: 'Cambio de sede',
+      permission_adjustment: 'Ajuste de permisos',
+      account_issue: 'Cuenta',
+      reactivation: 'Reactivación',
+      other: 'Otro',
+    }[type] ?? type ?? 'Solicitud';
+  }
+
+  function requestStatusClass(status) {
+    const s = String(status || '').toLowerCase();
+    if (s.includes('approved')) return 'ok';
+    if (s.includes('reject')) return 'danger';
+    if (s.includes('review')) return 'warn';
+    return 'info';
+  }
+
+  function toggleAvatarMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('avatar-menu');
+    menu.classList.toggle('open');
+    setTimeout(() => document.addEventListener('click', closeAvatarMenu, { once: true }), 0);
+  }
+
+  function closeAvatarMenu() {
+    document.getElementById('avatar-menu')?.classList.remove('open');
+  }
+
+  function viewAvatarPhoto() {
+    closeAvatarMenu();
+    if (!profileAvatarUrl) return;
+    document.getElementById('avatar-lightbox-img').src = profileAvatarUrl;
+    document.getElementById('avatar-lightbox').classList.add('open');
+  }
+
+  function closeAvatarLightbox() {
+    document.getElementById('avatar-lightbox').classList.remove('open');
+  }
+
+  async function changeAvatarPhoto() {
+    closeAvatarMenu();
+    const url = prompt('Pega la URL pública de la nueva foto de perfil');
+    if (!url) return;
+    await updateAvatarUrl(url.trim());
+  }
+
+  function takeAvatarPhoto() {
+    closeAvatarMenu();
+    alert('La captura con cámara queda preparada para una fase móvil/webcam.');
+  }
+
+  async function deleteAvatarPhoto() {
+    closeAvatarMenu();
+    if (!confirm('¿Eliminar tu foto de perfil?')) return;
+    await updateAvatarUrl('');
+  }
+
+  async function updateAvatarUrl(url) {
+    try {
+      const res = await authFetch(`${API}/users/me`, { method: 'PATCH', body: JSON.stringify({ avatar_url: url || null }) });
+      if (!res.ok) { const data = await res.json(); alert(data.message ?? 'No se pudo actualizar la foto'); return; }
+      loadProfileView();
+      loadUser();
+    } catch (e) {
+      alert(e.message ?? 'Error de red');
+    }
   }
 
   function initProfileMap(address) {
@@ -2810,20 +3468,22 @@
   }
 
   async function saveProfileSection(section) {
-    const msgId = { personal: 'msg-personal', work: 'msg-work', location: 'msg-location' }[section];
+    const msgId = { personal: 'msg-personal', work: 'msg-work', location: 'msg-personal' }[section];
     const msgEl = document.getElementById(msgId);
     msgEl.textContent = '';
 
     let body = {};
     if (section === 'personal') {
+      saveProfileExtra();
       body = {
         first_name: document.getElementById('pf-first').value.trim() || undefined,
         last_name:  document.getElementById('pf-last').value.trim()  || undefined,
-        phone:      document.getElementById('pf-phone').value.trim() || undefined,
         username:   document.getElementById('pf-username').value.trim() || undefined,
+        address:    document.getElementById('pf-address').value.trim() || undefined,
       };
     } else if (section === 'work') {
       body = {
+        phone:        document.getElementById('pf-phone').value.trim() || undefined,
         job_title:    document.getElementById('pf-job').value.trim()   || undefined,
         department:   document.getElementById('pf-dept').value.trim()  || undefined,
         primary_sede: document.getElementById('pf-sede').value.trim()  || undefined,
@@ -2842,9 +3502,24 @@
       const res  = await authFetch(`${API}/users/me`, { method: 'PATCH', body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? 'Error al guardar');
+      if (currentUser?.profile_complete === false && mandatoryProfileInputsComplete()) {
+        await authFetch(`${API}/users/me/complete-profile`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            phone: document.getElementById('pf-phone').value.trim(),
+            address: document.getElementById('pf-address').value.trim(),
+            primary_sede: document.getElementById('pf-sede').value.trim(),
+            department: document.getElementById('pf-dept').value.trim(),
+            job_title: document.getElementById('pf-job').value.trim(),
+            username: document.getElementById('pf-username').value.trim() || undefined,
+          }),
+        });
+      }
       msgEl.className = 'profile-save-msg profile-save-ok';
       msgEl.textContent = '✓ Guardado';
       currentUser = { ...currentUser, ...body };
+      const latestProfile = await authFetch(`${API}/users/me`);
+      if (latestProfile.ok) renderProfileView(await latestProfile.json());
       // Refresh hero
       const nameText = `${body.first_name ?? currentUser.first_name ?? ''} ${body.last_name ?? currentUser.last_name ?? ''}`.trim();
       if (nameText) document.getElementById('prof-fullname').textContent = nameText;
@@ -2859,6 +3534,11 @@
       msgEl.className = 'profile-save-msg profile-save-err';
       msgEl.textContent = e.message;
     }
+  }
+
+  function mandatoryProfileInputsComplete() {
+    return ['pf-phone', 'pf-address', 'pf-sede', 'pf-dept', 'pf-job']
+      .every(id => document.getElementById(id)?.value.trim().length >= 2);
   }
 
   function togglePwdForm() {

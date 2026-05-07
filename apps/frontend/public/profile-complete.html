@@ -3,146 +3,525 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Completar perfil — Tickets System</title>
+  <title>Configura tu perfil — Tickets System</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0f1a;
+      --surface:   #111827;
+      --surface2:  #1a2235;
+      --border:    #1e2d45;
+      --border2:   #253350;
+      --indigo:    #6366f1;
+      --indigo-lo: rgba(99,102,241,.12);
+      --indigo-md: rgba(99,102,241,.25);
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --muted2:    #94a3b8;
+      --danger:    #f87171;
+      --success:   #34d399;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f172a; color: #e2e8f0;
-      min-height: 100vh; display: flex;
-      align-items: center; justify-content: center; padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; overflow: hidden;
     }
-    .card {
-      background: #1e293b; border: 1px solid #334155;
-      border-radius: 12px; padding: 32px; width: 100%; max-width: 480px;
+
+    /* ══ LEFT PANEL ══════════════════════════════════════════════════ */
+    .left-panel {
+      width: 340px; flex-shrink: 0;
+      background: linear-gradient(160deg, #0d1526 0%, #0b1220 100%);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 40px 36px; position: relative; overflow: hidden;
     }
-    h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
-    .sub { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
-    .banner {
-      background: #1c1917; border: 1px solid #78350f;
-      border-radius: 8px; padding: 14px 16px; margin-bottom: 24px;
-      font-size: 13px; color: #fbbf24; line-height: 1.5;
+
+    .left-panel::before {
+      content: '';
+      position: absolute; top: -120px; left: -80px;
+      width: 360px; height: 360px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,.08) 0%, transparent 70%);
+      pointer-events: none;
     }
-    .banner strong { color: #f59e0b; }
-    label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
-    .required { color: #f87171; margin-left: 3px; }
-    input, select {
-      width: 100%; padding: 10px 14px; background: #0f172a;
-      border: 1px solid #334155; border-radius: 8px; color: #e2e8f0;
-      font-size: 14px; margin-bottom: 16px; outline: none; transition: border-color .15s;
+    .left-panel::after {
+      content: '';
+      position: absolute; bottom: -80px; right: -60px;
+      width: 260px; height: 260px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(16,185,129,.05) 0%, transparent 70%);
+      pointer-events: none;
     }
-    input:focus, select:focus { border-color: #6366f1; }
-    input.err { border-color: #f87171; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .row .field { display: flex; flex-direction: column; }
-    .row .field input, .row .field select { margin-bottom: 0; }
-    .field-mb { margin-bottom: 16px; }
-    button {
-      width: 100%; padding: 12px; border-radius: 8px; border: none;
-      font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s;
-      background: #6366f1; color: #fff;
+
+    .brand {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 52px;
     }
-    button:hover { opacity: .88; }
-    button:disabled { opacity: .4; cursor: not-allowed; }
-    .msg { font-size: 13px; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; }
-    .msg-err  { background: #450a0a; color: #fca5a5; }
-    .msg-ok   { background: #064e3b; color: #6ee7b7; }
-    .section-title {
-      font-size: 11px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: .08em; color: #475569; margin: 4px 0 16px;
-      padding-bottom: 8px; border-bottom: 1px solid #1e3a5f;
+    .brand-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: var(--indigo-lo); border: 1px solid var(--indigo-md);
+      display: flex; align-items: center; justify-content: center; font-size: 17px;
     }
-    .optional-badge {
-      display: inline-block; font-size: 10px; font-weight: 600;
-      background: #0f172a; border: 1px solid #334155;
-      border-radius: 4px; padding: 1px 6px; color: #64748b;
-      vertical-align: middle; margin-left: 6px;
+    .brand-name { font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -.01em; }
+
+    .left-headline { flex: 1; }
+    .left-headline h1 {
+      font-size: 24px; font-weight: 700; color: var(--text);
+      line-height: 1.25; margin-bottom: 14px; letter-spacing: -.02em;
     }
+    .left-headline h1 em { color: var(--indigo); font-style: normal; }
+    .left-headline p {
+      font-size: 13px; color: var(--muted2); line-height: 1.7; max-width: 260px;
+    }
+
+    /* ── Stepper ── */
+    .stepper {
+      margin: 40px 0; display: flex; flex-direction: column; gap: 0;
+    }
+    .step-item {
+      display: flex; align-items: flex-start; gap: 14px; position: relative;
+    }
+    .step-item:not(:last-child)::after {
+      content: '';
+      position: absolute; left: 15px; top: 32px;
+      width: 1px; height: 28px;
+      background: var(--border2); transition: background .4s;
+    }
+    .step-item.done:not(:last-child)::after { background: var(--indigo); }
+
+    .step-dot-wrap {
+      display: flex; flex-direction: column; align-items: center; flex-shrink: 0;
+      padding-bottom: 28px;
+    }
+    .step-dot {
+      width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      transition: all .35s cubic-bezier(.4,0,.2,1);
+      background: var(--surface); flex-shrink: 0;
+    }
+    .step-item.active .step-dot {
+      border-color: var(--indigo); color: var(--indigo);
+      background: var(--indigo-lo);
+      box-shadow: 0 0 0 4px var(--indigo-lo);
+    }
+    .step-item.done .step-dot {
+      border-color: var(--indigo); background: var(--indigo); color: #fff;
+    }
+    .step-info { padding-top: 4px; padding-bottom: 28px; }
+    .step-label {
+      font-size: 13px; font-weight: 600; color: var(--muted);
+      transition: color .3s;
+    }
+    .step-item.active .step-label { color: var(--text); }
+    .step-item.done  .step-label  { color: var(--muted2); }
+    .step-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Left footer ── */
+    .left-footer { margin-top: auto; padding-top: 24px; }
     .logout-link {
-      text-align: center; margin-top: 16px;
-      font-size: 12px; color: #475569; cursor: pointer;
+      background: none; border: none; color: var(--muted); font-size: 12px;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      padding: 0; transition: color .15s; text-align: left;
     }
-    .logout-link:hover { color: #94a3b8; text-decoration: underline; }
+    .logout-link:hover { color: var(--muted2); }
+    .logout-link svg { width: 14px; height: 14px; }
+
+    /* ══ RIGHT PANEL ═════════════════════════════════════════════════ */
+    .right-panel {
+      flex: 1; display: flex; align-items: flex-start; justify-content: center;
+      padding: 48px 48px 80px; overflow-y: auto;
+    }
+
+    .form-card {
+      width: 100%; max-width: 560px;
+      animation: slideUp .45s cubic-bezier(.4,0,.2,1) both;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Progress ── */
+    .progress-wrap { margin-bottom: 36px; }
+    .progress-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .progress-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .progress-pct   { font-size: 12px; font-weight: 700; color: var(--indigo); }
+    .progress-track {
+      height: 4px; background: var(--border); border-radius: 99px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      border-radius: 99px; transition: width .5s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ── Section ── */
+    .form-section { margin-bottom: 32px; }
+    .section-header {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+    }
+    .section-num {
+      font-size: 11px; font-weight: 800; color: var(--indigo);
+      letter-spacing: .06em; opacity: .7;
+    }
+    .section-title { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .section-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .section-divider { height: 1px; background: var(--border); margin: 8px 0 32px; }
+
+    /* ── Fields ── */
+    .field-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;
+    }
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    .field-label {
+      display: block; font-size: 12px; font-weight: 500; color: var(--muted2);
+      margin-bottom: 7px; letter-spacing: .01em;
+    }
+    .req { color: var(--danger); margin-left: 2px; }
+    .opt { font-size: 10px; font-weight: 600; color: var(--muted); background: var(--surface2);
+           border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px;
+           letter-spacing: .03em; margin-left: 6px; vertical-align: middle; }
+
+    .input-wrap { position: relative; }
+    .input-wrap .icon {
+      position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+      font-size: 15px; pointer-events: none; opacity: .5;
+      transition: opacity .2s;
+    }
+    .field-input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: 9px; color: var(--text); font-size: 14px;
+      outline: none; transition: border-color .2s, box-shadow .2s, background .2s;
+      font-family: inherit; appearance: none;
+    }
+    .field-input::placeholder { color: var(--muted); }
+    .field-input:hover { border-color: var(--border2); }
+    .field-input:focus {
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 3px var(--indigo-lo);
+      background: #141e35;
+    }
+    .field-input:focus + .icon,
+    .input-wrap:focus-within .icon { opacity: .9; }
+    .field-input.is-err { border-color: #f87171; box-shadow: 0 0 0 3px rgba(248,113,113,.1); }
+    .field-input.is-ok  { border-color: #34d399; }
+
+    .field-hint { display: block; font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+    .field-error { display: block; font-size: 11px; color: var(--danger); margin-top: 5px; min-height: 14px; }
+
+    /* ── Error banner ── */
+    .error-banner {
+      background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.25);
+      border-radius: 9px; padding: 12px 16px; font-size: 13px; color: #fca5a5;
+      margin-bottom: 20px; line-height: 1.5; display: none;
+    }
+
+    /* ── Submit button ── */
+    .submit-btn {
+      width: 100%; padding: 13px 24px;
+      background: var(--indigo); color: #fff;
+      border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: opacity .2s, transform .15s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      letter-spacing: -.01em;
+    }
+    .submit-btn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    .submit-btn:active:not(:disabled) { transform: translateY(0); }
+    .submit-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .submit-btn .spinner {
+      width: 17px; height: 17px; animation: spin .75s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .submit-btn.loading .spinner { display: block; }
+    .submit-btn.loading .btn-label { display: none; }
+
+    /* ── Success overlay ── */
+    .success-overlay {
+      display: none; flex-direction: column; align-items: center;
+      justify-content: center; text-align: center; padding: 60px 20px;
+      animation: fadeIn .4s ease both;
+    }
+    .success-overlay.show { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+
+    .success-ring {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(52,211,153,.1); border: 2px solid var(--success);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 24px;
+    }
+    .success-ring svg { width: 34px; height: 34px; }
+    .success-ring svg path { stroke-dasharray: 60; stroke-dashoffset: 60; animation: draw .5s .1s ease forwards; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+
+    .success-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .success-sub   { font-size: 14px; color: var(--muted2); line-height: 1.6; max-width: 300px; }
+    .success-dots  { display: flex; gap: 6px; margin-top: 28px; }
+    .success-dots span {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--indigo-md);
+      animation: pulse 1.2s ease infinite;
+    }
+    .success-dots span:nth-child(2) { animation-delay: .2s; }
+    .success-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes pulse { 0%,100% { opacity:.3; transform:scale(.8); } 50% { opacity:1; transform:scale(1.1); } }
+
+    /* ══ RESPONSIVE ════════════════════════════════════════════════════ */
+    @media (max-width: 900px) {
+      body { flex-direction: column; overflow: auto; }
+      .left-panel {
+        width: 100%; border-right: none; border-bottom: 1px solid var(--border);
+        padding: 28px 24px 24px;
+      }
+      .left-panel::before, .left-panel::after { display: none; }
+      .brand { margin-bottom: 24px; }
+      .stepper { flex-direction: row; overflow-x: auto; margin: 24px 0 16px; gap: 0; }
+      .step-item { flex-direction: column; align-items: center; flex-shrink: 0; }
+      .step-item:not(:last-child)::after {
+        left: auto; top: 15px; right: -50%; width: 100%; height: 1px;
+      }
+      .step-dot-wrap { padding-bottom: 0; padding-right: 40px; }
+      .step-info { padding-bottom: 0; padding-right: 40px; text-align: center; }
+      .left-headline { display: none; }
+      .left-footer { display: none; }
+      .right-panel { padding: 32px 20px 48px; }
+      .field-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-<div class="card">
-  <h1>🎫 Completa tu perfil</h1>
-  <p class="sub">Antes de continuar, necesitamos algunos datos organizacionales.</p>
 
-  <div class="banner">
-    ⚠️ <strong>Paso obligatorio.</strong> No podrás acceder al sistema hasta completar esta información.
-    Todos los campos marcados con <span style="color:#f87171">*</span> son requeridos.
+<!-- ══ LEFT PANEL ══════════════════════════════════════════ -->
+<div class="left-panel">
+  <div class="brand">
+    <div class="brand-icon">🎫</div>
+    <span class="brand-name">Tickets System</span>
   </div>
 
-  <div id="msg"></div>
+  <div class="left-headline">
+    <h1>Configura tu<br><em>perfil organizacional</em></h1>
+    <p>Necesitamos tu información para habilitar el acceso a módulos, tickets y comunicación interna de la empresa.</p>
+  </div>
 
-  <form id="profile-form" onsubmit="doSubmit(event)" novalidate>
-    <p class="section-title">Contacto</p>
-
-    <label>Teléfono celular <span class="required">*</span></label>
-    <input type="tel" id="phone" placeholder="+57 311 000 0000" autocomplete="tel">
-
-    <p class="section-title">Información organizacional</p>
-
-    <div class="row field-mb">
-      <div class="field">
-        <label>Cargo <span class="required">*</span></label>
-        <input type="text" id="job_title" placeholder="Técnico, Analista...">
+  <div class="stepper">
+    <div class="step-item active" id="step-1">
+      <div class="step-dot-wrap">
+        <div class="step-dot">01</div>
       </div>
-      <div class="field">
-        <label>Área / Departamento <span class="required">*</span></label>
-        <input type="text" id="department" placeholder="Soporte TI, Redes...">
+      <div class="step-info">
+        <div class="step-label">Contacto</div>
+        <div class="step-sub">Teléfono y usuario</div>
+      </div>
+    </div>
+    <div class="step-item" id="step-2">
+      <div class="step-dot-wrap">
+        <div class="step-dot">02</div>
+      </div>
+      <div class="step-info">
+        <div class="step-label">Organización</div>
+        <div class="step-sub">Cargo, área y sede</div>
+      </div>
+    </div>
+    <div class="step-item" id="step-3">
+      <div class="step-dot-wrap">
+        <div class="step-dot">03</div>
+      </div>
+      <div class="step-info">
+        <div class="step-label">Residencia</div>
+        <div class="step-sub">Dirección</div>
+      </div>
+    </div>
+    <div class="step-item" id="step-4">
+      <div class="step-dot-wrap">
+        <div class="step-dot">✓</div>
+      </div>
+      <div class="step-info">
+        <div class="step-label">Acceso activo</div>
+        <div class="step-sub">Listo para el sistema</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="left-footer">
+    <button class="logout-link" onclick="doLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Cerrar sesión
+    </button>
+  </div>
+</div>
+
+<!-- ══ RIGHT PANEL ═════════════════════════════════════════ -->
+<div class="right-panel">
+  <div class="form-card">
+
+    <!-- Success overlay -->
+    <div class="success-overlay" id="success-overlay">
+      <div class="success-ring">
+        <svg viewBox="0 0 52 52" fill="none">
+          <path d="M14 26L22 34L38 18" stroke="#34d399" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="success-title">¡Perfil completado!</div>
+      <div class="success-sub">Tu información ha sido guardada. Redirigiendo al dashboard...</div>
+      <div class="success-dots">
+        <span></span><span></span><span></span>
       </div>
     </div>
 
-    <label>Sede principal <span class="required">*</span></label>
-    <input type="text" id="primary_sede" placeholder="Sede Norte, Oficina Central...">
+    <!-- Progress -->
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-header">
+        <span class="progress-title">Progreso del perfil</span>
+        <span class="progress-pct" id="progress-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
 
-    <p class="section-title">Residencia</p>
+    <!-- Form -->
+    <form id="profile-form" onsubmit="doSubmit(event)" novalidate>
 
-    <label>Dirección de residencia <span class="required">*</span></label>
-    <input type="text" id="address" placeholder="Calle 123 # 45-67, Bogotá">
+      <!-- ── Sección 01: Contacto ── -->
+      <div class="form-section">
+        <div class="section-header">
+          <span class="section-num">01</span>
+          <div>
+            <div class="section-title">Información de contacto</div>
+            <div class="section-sub">Tu punto de contacto directo en la organización</div>
+          </div>
+        </div>
 
-    <p class="section-title">Acceso <span class="optional-badge">opcional</span></p>
+        <div class="field">
+          <label class="field-label" for="phone">Teléfono celular <span class="req">*</span></label>
+          <div class="input-wrap">
+            <input type="tel" id="phone" class="field-input" placeholder="+57 300 000 0000"
+                   autocomplete="tel" oninput="onInput()" inputmode="tel">
+            <span class="icon">📱</span>
+          </div>
+          <span class="field-error" id="err-phone"></span>
+        </div>
 
-    <label>Nombre de usuario
-      <span style="font-size:11px;color:#475569;font-weight:400"> — para iniciar sesión sin email</span>
-    </label>
-    <input type="text" id="username" placeholder="juan_perez (sin espacios)" autocomplete="username">
+        <div class="field">
+          <label class="field-label" for="username">
+            Nombre de usuario <span class="opt">opcional</span>
+          </label>
+          <div class="input-wrap">
+            <input type="text" id="username" class="field-input" placeholder="juan_perez"
+                   autocomplete="username" autocorrect="off" autocapitalize="none" oninput="onInput()">
+            <span class="icon">@</span>
+          </div>
+          <span class="field-hint">Para iniciar sesión sin usar tu email</span>
+          <span class="field-error" id="err-username"></span>
+        </div>
+      </div>
 
-    <button type="submit" id="btn-save">Guardar y continuar</button>
-  </form>
+      <div class="section-divider"></div>
 
-  <p class="logout-link" onclick="doLogout()">Cerrar sesión</p>
+      <!-- ── Sección 02: Organización ── -->
+      <div class="form-section">
+        <div class="section-header">
+          <span class="section-num">02</span>
+          <div>
+            <div class="section-title">Información organizacional</div>
+            <div class="section-sub">Tu posición dentro de la estructura de la empresa</div>
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label class="field-label" for="job_title">Cargo actual <span class="req">*</span></label>
+            <div class="input-wrap">
+              <input type="text" id="job_title" class="field-input" placeholder="Ej: Técnico Senior" oninput="onInput()">
+              <span class="icon">💼</span>
+            </div>
+            <span class="field-error" id="err-job_title"></span>
+          </div>
+          <div class="field">
+            <label class="field-label" for="department">Área / Departamento <span class="req">*</span></label>
+            <div class="input-wrap">
+              <input type="text" id="department" class="field-input" placeholder="Ej: Soporte TI" oninput="onInput()">
+              <span class="icon">🏢</span>
+            </div>
+            <span class="field-error" id="err-department"></span>
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:0">
+          <label class="field-label" for="primary_sede">Sede principal asignada <span class="req">*</span></label>
+          <div class="input-wrap">
+            <input type="text" id="primary_sede" class="field-input" placeholder="Ej: Sede Norte, Oficina Central" oninput="onInput()">
+            <span class="icon">📍</span>
+          </div>
+          <span class="field-error" id="err-primary_sede"></span>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- ── Sección 03: Residencia ── -->
+      <div class="form-section" style="margin-bottom:0">
+        <div class="section-header">
+          <span class="section-num">03</span>
+          <div>
+            <div class="section-title">Residencia</div>
+            <div class="section-sub">Ubicación para trazabilidad y logística interna</div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:0">
+          <label class="field-label" for="address">Dirección de residencia <span class="req">*</span></label>
+          <div class="input-wrap">
+            <input type="text" id="address" class="field-input" placeholder="Calle 123 # 45-67, Bogotá" oninput="onInput()">
+            <span class="icon">🏠</span>
+          </div>
+          <span class="field-hint">Se usará para asignación de zonas y cobertura de servicios</span>
+          <span class="field-error" id="err-address"></span>
+        </div>
+      </div>
+
+      <!-- Error banner -->
+      <div class="error-banner" id="error-banner"></div>
+
+      <!-- Submit -->
+      <button type="submit" class="submit-btn" id="btn-save" style="margin-top:32px">
+        <svg class="spinner" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,.3)" stroke-width="3"/>
+          <path d="M12 2a10 10 0 0 1 10 10" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span class="btn-label">Guardar y acceder al sistema</span>
+      </button>
+    </form>
+  </div>
 </div>
 
 <script>
   const API = 'http://localhost:3001/api/v1';
 
-  // ── Auth helpers ────────────────────────────────────────────────────────────
-
-  function getToken() { return localStorage.getItem('access_token'); }
+  // ── Auth ─────────────────────────────────────────────────────────────────────
 
   async function authFetch(url, opts = {}) {
-    const token = getToken();
+    let token = localStorage.getItem('access_token');
     if (!token) { window.location.href = 'test-auth.html'; throw new Error('No token'); }
-    opts.headers = { ...(opts.headers ?? {}), Authorization: `Bearer ${token}` };
-    const res = await fetch(url, opts);
+    opts.headers = { 'Content-Type': 'application/json', ...opts.headers, Authorization: `Bearer ${token}` };
+    let res = await fetch(url, opts);
     if (res.status === 401) {
-      // Try to refresh
       const rt = localStorage.getItem('refresh_token');
       if (rt) {
-        const rRes = await fetch(`${API}/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const rr = await fetch(`${API}/auth/refresh`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refresh_token: rt }),
         });
-        if (rRes.ok) {
-          const rData = await rRes.json();
-          localStorage.setItem('access_token',  rData.access_token);
-          localStorage.setItem('refresh_token', rData.refresh_token);
-          opts.headers['Authorization'] = `Bearer ${rData.access_token}`;
+        if (rr.ok) {
+          const d = await rr.json();
+          localStorage.setItem('access_token', d.access_token);
+          localStorage.setItem('refresh_token', d.refresh_token);
+          opts.headers['Authorization'] = `Bearer ${d.access_token}`;
           return fetch(url, opts);
         }
       }
@@ -153,53 +532,105 @@
     return res;
   }
 
-  // ── Validation ──────────────────────────────────────────────────────────────
+  // ── Progress & stepper ───────────────────────────────────────────────────────
 
-  function validate() {
-    const fields = [
-      { id: 'phone',        min: 7,  label: 'Teléfono' },
-      { id: 'job_title',    min: 2,  label: 'Cargo' },
-      { id: 'department',   min: 2,  label: 'Área / Departamento' },
-      { id: 'primary_sede', min: 2,  label: 'Sede principal' },
-      { id: 'address',      min: 5,  label: 'Dirección' },
-    ];
-    const errors = [];
-    for (const f of fields) {
-      const el = document.getElementById(f.id);
-      const val = el.value.trim();
-      el.classList.toggle('err', val.length < f.min);
-      if (val.length < f.min) errors.push(`${f.label} es requerido`);
-    }
-    // Username: optional but if provided must be valid
-    const usernameEl = document.getElementById('username');
-    const usernameVal = usernameEl.value.trim();
-    if (usernameVal && (usernameVal.length < 3 || /\s/.test(usernameVal))) {
-      usernameEl.classList.add('err');
-      errors.push('Nombre de usuario: mínimo 3 caracteres, sin espacios');
-    } else {
-      usernameEl.classList.remove('err');
-    }
-    return errors;
+  const REQUIRED_FIELDS = ['phone', 'job_title', 'department', 'primary_sede', 'address'];
+
+  function computeProgress() {
+    const s1 = document.getElementById('phone').value.trim().length >= 7;
+    const s2 = document.getElementById('job_title').value.trim().length >= 2
+            && document.getElementById('department').value.trim().length >= 2
+            && document.getElementById('primary_sede').value.trim().length >= 2;
+    const s3 = document.getElementById('address').value.trim().length >= 5;
+    return { s1, s2, s3 };
   }
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  function updateProgress() {
+    const { s1, s2, s3 } = computeProgress();
+    const count = [s1, s2, s3].filter(Boolean).length;
+    const pct   = Math.round((count / 3) * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-pct').textContent  = pct + '%';
+
+    setStep(1, s1 ? 'done' : 'active');
+    setStep(2, s2 ? 'done' : s1 ? 'active' : '');
+    setStep(3, s3 ? 'done' : s2 ? 'active' : '');
+    setStep(4, s3 ? 'active' : '');
+  }
+
+  function setStep(n, state) {
+    const el = document.getElementById('step-' + n);
+    if (!el) return;
+    el.classList.remove('active', 'done');
+    if (state) el.classList.add(state);
+  }
+
+  // ── Validation ───────────────────────────────────────────────────────────────
+
+  function validateField(id, rules) {
+    const el  = document.getElementById(id);
+    const err = document.getElementById('err-' + id);
+    if (!el || !err) return true;
+    const val = el.value.trim();
+    let msg = '';
+    if (rules.min && val.length < rules.min) msg = rules.msg ?? 'Campo requerido';
+    else if (rules.pattern && !rules.pattern.test(val) && val.length) msg = rules.msg ?? 'Formato inválido';
+    el.classList.toggle('is-err', !!msg);
+    el.classList.toggle('is-ok',  !msg && val.length > 0);
+    err.textContent = msg;
+    return !msg;
+  }
+
+  function validateAll(showErrors = true) {
+    const checks = [
+      validateField('phone',        { min: 7,  msg: 'Teléfono requerido (mínimo 7 dígitos)' }),
+      validateField('job_title',    { min: 2,  msg: 'Cargo requerido' }),
+      validateField('department',   { min: 2,  msg: 'Área / Departamento requerido' }),
+      validateField('primary_sede', { min: 2,  msg: 'Sede principal requerida' }),
+      validateField('address',      { min: 5,  msg: 'Dirección requerida (mínimo 5 caracteres)' }),
+    ];
+    const usernameEl  = document.getElementById('username');
+    const usernameErr = document.getElementById('err-username');
+    const uVal = usernameEl ? usernameEl.value.trim() : '';
+    let uOk = true;
+    if (uVal && (uVal.length < 3 || /\s/.test(uVal) || /[^a-z0-9_\-\.]/i.test(uVal))) {
+      if (usernameEl) { usernameEl.classList.add('is-err'); usernameEl.classList.remove('is-ok'); }
+      if (usernameErr) usernameErr.textContent = 'Mínimo 3 chars, sin espacios ni caracteres especiales';
+      uOk = false;
+    } else {
+      if (usernameEl) { usernameEl.classList.remove('is-err'); if (uVal) usernameEl.classList.add('is-ok'); }
+      if (usernameErr) usernameErr.textContent = '';
+    }
+    return checks.every(Boolean) && uOk;
+  }
+
+  function onInput() {
+    updateProgress();
+    // Clear error on edit
+    const active = document.activeElement;
+    if (active && active.classList.contains('is-err')) {
+      validateAll(false);
+    }
+  }
+
+  // ── Submit ───────────────────────────────────────────────────────────────────
 
   async function doSubmit(e) {
     e.preventDefault();
-    const msg = document.getElementById('msg');
-    msg.innerHTML = '';
+    const errBanner = document.getElementById('error-banner');
+    errBanner.style.display = 'none'; errBanner.textContent = '';
 
-    const errors = validate();
-    if (errors.length) {
-      msg.innerHTML = `<div class="msg msg-err">${errors.join(' · ')}</div>`;
+    if (!validateAll(true)) {
+      errBanner.textContent = 'Completa todos los campos obligatorios antes de continuar.';
+      errBanner.style.display = 'block';
+      errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
     const btn = document.getElementById('btn-save');
-    btn.disabled = true;
-    btn.textContent = 'Guardando...';
+    btn.disabled = true; btn.classList.add('loading');
 
-    const usernameVal = document.getElementById('username').value.trim();
+    const uVal = document.getElementById('username').value.trim();
     const body = {
       phone:        document.getElementById('phone').value.trim(),
       job_title:    document.getElementById('job_title').value.trim(),
@@ -207,62 +638,65 @@
       primary_sede: document.getElementById('primary_sede').value.trim(),
       address:      document.getElementById('address').value.trim(),
     };
-    if (usernameVal) body.username = usernameVal.toLowerCase();
+    if (uVal) body.username = uVal.toLowerCase();
 
     try {
-      const res = await authFetch(`${API}/users/me/complete-profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+      const res  = await authFetch(`${API}/users/me/complete-profile`, {
+        method: 'PATCH', body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
-        msg.innerHTML = `<div class="msg msg-err">${data.message ?? 'Error al guardar perfil.'}</div>`;
-        btn.disabled = false;
-        btn.textContent = 'Guardar y continuar';
+        errBanner.textContent = data.message ?? 'Error al guardar el perfil. Intenta de nuevo.';
+        errBanner.style.display = 'block';
+        btn.disabled = false; btn.classList.remove('loading');
         return;
       }
-      msg.innerHTML = '<div class="msg msg-ok">✓ Perfil completado. Redirigiendo...</div>';
-      setTimeout(() => { window.location.href = 'modules-test.html'; }, 1200);
+      showSuccess();
     } catch (err) {
-      msg.innerHTML = `<div class="msg msg-err">Error de red: ${err.message}</div>`;
-      btn.disabled = false;
-      btn.textContent = 'Guardar y continuar';
+      errBanner.textContent = 'Error de conexión: ' + (err.message ?? 'Intenta de nuevo');
+      errBanner.style.display = 'block';
+      btn.disabled = false; btn.classList.remove('loading');
     }
   }
 
-  // ── Logout ──────────────────────────────────────────────────────────────────
+  function showSuccess() {
+    // Animate stepper to done
+    [1,2,3,4].forEach(n => setStep(n, 'done'));
+    document.getElementById('progress-fill').style.width = '100%';
+    document.getElementById('progress-pct').textContent  = '100%';
+
+    // Hide form, show overlay
+    document.getElementById('profile-form').style.display = 'none';
+    document.getElementById('progress-wrap').style.display = 'none';
+    const overlay = document.getElementById('success-overlay');
+    overlay.classList.add('show');
+
+    setTimeout(() => { window.location.href = 'modules-test.html'; }, 2200);
+  }
+
+  // ── Logout ───────────────────────────────────────────────────────────────────
 
   function doLogout() {
     localStorage.clear();
     window.location.href = 'test-auth.html';
   }
 
-  // ── Init ────────────────────────────────────────────────────────────────────
+  // ── Init ─────────────────────────────────────────────────────────────────────
 
   (async function init() {
-    const token = getToken();
-    if (!token) { window.location.href = 'test-auth.html'; return; }
-
-    // Pre-fill existing values if profile is partially filled
+    if (!localStorage.getItem('access_token')) { window.location.href = 'test-auth.html'; return; }
     try {
       const res = await authFetch(`${API}/users/me`);
       if (!res.ok) return;
-      const profile = await res.json();
-
-      // If already complete, go to modules
-      if (profile.profile_complete) {
-        window.location.href = 'modules-test.html';
-        return;
-      }
-
-      // Pre-fill any existing values
-      if (profile.phone)        document.getElementById('phone').value        = profile.phone;
-      if (profile.job_title)    document.getElementById('job_title').value    = profile.job_title;
-      if (profile.department)   document.getElementById('department').value   = profile.department;
-      if (profile.primary_sede) document.getElementById('primary_sede').value = profile.primary_sede;
-      if (profile.address)      document.getElementById('address').value      = profile.address;
-      if (profile.username)     document.getElementById('username').value     = profile.username;
+      const p = await res.json();
+      if (p.profile_complete) { window.location.href = 'modules-test.html'; return; }
+      if (p.phone)        document.getElementById('phone').value        = p.phone;
+      if (p.job_title)    document.getElementById('job_title').value    = p.job_title;
+      if (p.department)   document.getElementById('department').value   = p.department;
+      if (p.primary_sede) document.getElementById('primary_sede').value = p.primary_sede;
+      if (p.address)      document.getElementById('address').value      = p.address;
+      if (p.username)     document.getElementById('username').value     = p.username;
+      updateProgress();
     } catch {}
   })();
 </script>
