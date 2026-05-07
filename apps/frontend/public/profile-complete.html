@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Completar perfil — Tickets System</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a; color: #e2e8f0;
+      min-height: 100vh; display: flex;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .card {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 12px; padding: 32px; width: 100%; max-width: 480px;
+    }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .sub { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
+    .banner {
+      background: #1c1917; border: 1px solid #78350f;
+      border-radius: 8px; padding: 14px 16px; margin-bottom: 24px;
+      font-size: 13px; color: #fbbf24; line-height: 1.5;
+    }
+    .banner strong { color: #f59e0b; }
+    label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+    .required { color: #f87171; margin-left: 3px; }
+    input, select {
+      width: 100%; padding: 10px 14px; background: #0f172a;
+      border: 1px solid #334155; border-radius: 8px; color: #e2e8f0;
+      font-size: 14px; margin-bottom: 16px; outline: none; transition: border-color .15s;
+    }
+    input:focus, select:focus { border-color: #6366f1; }
+    input.err { border-color: #f87171; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row .field { display: flex; flex-direction: column; }
+    .row .field input, .row .field select { margin-bottom: 0; }
+    .field-mb { margin-bottom: 16px; }
+    button {
+      width: 100%; padding: 12px; border-radius: 8px; border: none;
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s;
+      background: #6366f1; color: #fff;
+    }
+    button:hover { opacity: .88; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    .msg { font-size: 13px; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; }
+    .msg-err  { background: #450a0a; color: #fca5a5; }
+    .msg-ok   { background: #064e3b; color: #6ee7b7; }
+    .section-title {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .08em; color: #475569; margin: 4px 0 16px;
+      padding-bottom: 8px; border-bottom: 1px solid #1e3a5f;
+    }
+    .optional-badge {
+      display: inline-block; font-size: 10px; font-weight: 600;
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 4px; padding: 1px 6px; color: #64748b;
+      vertical-align: middle; margin-left: 6px;
+    }
+    .logout-link {
+      text-align: center; margin-top: 16px;
+      font-size: 12px; color: #475569; cursor: pointer;
+    }
+    .logout-link:hover { color: #94a3b8; text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🎫 Completa tu perfil</h1>
+  <p class="sub">Antes de continuar, necesitamos algunos datos organizacionales.</p>
+
+  <div class="banner">
+    ⚠️ <strong>Paso obligatorio.</strong> No podrás acceder al sistema hasta completar esta información.
+    Todos los campos marcados con <span style="color:#f87171">*</span> son requeridos.
+  </div>
+
+  <div id="msg"></div>
+
+  <form id="profile-form" onsubmit="doSubmit(event)" novalidate>
+    <p class="section-title">Contacto</p>
+
+    <label>Teléfono celular <span class="required">*</span></label>
+    <input type="tel" id="phone" placeholder="+57 311 000 0000" autocomplete="tel">
+
+    <p class="section-title">Información organizacional</p>
+
+    <div class="row field-mb">
+      <div class="field">
+        <label>Cargo <span class="required">*</span></label>
+        <input type="text" id="job_title" placeholder="Técnico, Analista...">
+      </div>
+      <div class="field">
+        <label>Área / Departamento <span class="required">*</span></label>
+        <input type="text" id="department" placeholder="Soporte TI, Redes...">
+      </div>
+    </div>
+
+    <label>Sede principal <span class="required">*</span></label>
+    <input type="text" id="primary_sede" placeholder="Sede Norte, Oficina Central...">
+
+    <p class="section-title">Residencia</p>
+
+    <label>Dirección de residencia <span class="required">*</span></label>
+    <input type="text" id="address" placeholder="Calle 123 # 45-67, Bogotá">
+
+    <p class="section-title">Acceso <span class="optional-badge">opcional</span></p>
+
+    <label>Nombre de usuario
+      <span style="font-size:11px;color:#475569;font-weight:400"> — para iniciar sesión sin email</span>
+    </label>
+    <input type="text" id="username" placeholder="juan_perez (sin espacios)" autocomplete="username">
+
+    <button type="submit" id="btn-save">Guardar y continuar</button>
+  </form>
+
+  <p class="logout-link" onclick="doLogout()">Cerrar sesión</p>
+</div>
+
+<script>
+  const API = 'http://localhost:3001/api/v1';
+
+  // ── Auth helpers ────────────────────────────────────────────────────────────
+
+  function getToken() { return localStorage.getItem('access_token'); }
+
+  async function authFetch(url, opts = {}) {
+    const token = getToken();
+    if (!token) { window.location.href = 'test-auth.html'; throw new Error('No token'); }
+    opts.headers = { ...(opts.headers ?? {}), Authorization: `Bearer ${token}` };
+    const res = await fetch(url, opts);
+    if (res.status === 401) {
+      // Try to refresh
+      const rt = localStorage.getItem('refresh_token');
+      if (rt) {
+        const rRes = await fetch(`${API}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: rt }),
+        });
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          localStorage.setItem('access_token',  rData.access_token);
+          localStorage.setItem('refresh_token', rData.refresh_token);
+          opts.headers['Authorization'] = `Bearer ${rData.access_token}`;
+          return fetch(url, opts);
+        }
+      }
+      localStorage.clear();
+      window.location.href = 'test-auth.html';
+      throw new Error('Unauthorized');
+    }
+    return res;
+  }
+
+  // ── Validation ──────────────────────────────────────────────────────────────
+
+  function validate() {
+    const fields = [
+      { id: 'phone',        min: 7,  label: 'Teléfono' },
+      { id: 'job_title',    min: 2,  label: 'Cargo' },
+      { id: 'department',   min: 2,  label: 'Área / Departamento' },
+      { id: 'primary_sede', min: 2,  label: 'Sede principal' },
+      { id: 'address',      min: 5,  label: 'Dirección' },
+    ];
+    const errors = [];
+    for (const f of fields) {
+      const el = document.getElementById(f.id);
+      const val = el.value.trim();
+      el.classList.toggle('err', val.length < f.min);
+      if (val.length < f.min) errors.push(`${f.label} es requerido`);
+    }
+    // Username: optional but if provided must be valid
+    const usernameEl = document.getElementById('username');
+    const usernameVal = usernameEl.value.trim();
+    if (usernameVal && (usernameVal.length < 3 || /\s/.test(usernameVal))) {
+      usernameEl.classList.add('err');
+      errors.push('Nombre de usuario: mínimo 3 caracteres, sin espacios');
+    } else {
+      usernameEl.classList.remove('err');
+    }
+    return errors;
+  }
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
+
+  async function doSubmit(e) {
+    e.preventDefault();
+    const msg = document.getElementById('msg');
+    msg.innerHTML = '';
+
+    const errors = validate();
+    if (errors.length) {
+      msg.innerHTML = `<div class="msg msg-err">${errors.join(' · ')}</div>`;
+      return;
+    }
+
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    const usernameVal = document.getElementById('username').value.trim();
+    const body = {
+      phone:        document.getElementById('phone').value.trim(),
+      job_title:    document.getElementById('job_title').value.trim(),
+      department:   document.getElementById('department').value.trim(),
+      primary_sede: document.getElementById('primary_sede').value.trim(),
+      address:      document.getElementById('address').value.trim(),
+    };
+    if (usernameVal) body.username = usernameVal.toLowerCase();
+
+    try {
+      const res = await authFetch(`${API}/users/me/complete-profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.innerHTML = `<div class="msg msg-err">${data.message ?? 'Error al guardar perfil.'}</div>`;
+        btn.disabled = false;
+        btn.textContent = 'Guardar y continuar';
+        return;
+      }
+      msg.innerHTML = '<div class="msg msg-ok">✓ Perfil completado. Redirigiendo...</div>';
+      setTimeout(() => { window.location.href = 'modules-test.html'; }, 1200);
+    } catch (err) {
+      msg.innerHTML = `<div class="msg msg-err">Error de red: ${err.message}</div>`;
+      btn.disabled = false;
+      btn.textContent = 'Guardar y continuar';
+    }
+  }
+
+  // ── Logout ──────────────────────────────────────────────────────────────────
+
+  function doLogout() {
+    localStorage.clear();
+    window.location.href = 'test-auth.html';
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+
+  (async function init() {
+    const token = getToken();
+    if (!token) { window.location.href = 'test-auth.html'; return; }
+
+    // Pre-fill existing values if profile is partially filled
+    try {
+      const res = await authFetch(`${API}/users/me`);
+      if (!res.ok) return;
+      const profile = await res.json();
+
+      // If already complete, go to modules
+      if (profile.profile_complete) {
+        window.location.href = 'modules-test.html';
+        return;
+      }
+
+      // Pre-fill any existing values
+      if (profile.phone)        document.getElementById('phone').value        = profile.phone;
+      if (profile.job_title)    document.getElementById('job_title').value    = profile.job_title;
+      if (profile.department)   document.getElementById('department').value   = profile.department;
+      if (profile.primary_sede) document.getElementById('primary_sede').value = profile.primary_sede;
+      if (profile.address)      document.getElementById('address').value      = profile.address;
+      if (profile.username)     document.getElementById('username').value     = profile.username;
+    } catch {}
+  })();
+</script>
+</body>
+</html>

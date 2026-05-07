@@ -12,6 +12,8 @@ import { FilesModule } from './modules/files/files.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { UsersModule } from './modules/users/users.module';
+import { RequestsModule } from './modules/requests/requests.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -32,6 +34,8 @@ import { HealthModule } from './health/health.module';
     NotificationsModule,
     ReportingModule,
     UsersModule,
+    RequestsModule,
+    AdminModule,
   ],
   providers: [
     // Rate limit guard aplicado globalmente

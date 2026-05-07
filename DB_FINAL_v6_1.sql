@@ -3276,20 +3276,22 @@ VALUES ('00000000-0000-0000-0000-000000000001',
         'Mi Empresa', 'mi-empresa', 'America/Bogota', 'es')
 ON CONFLICT (id) DO NOTHING;
 
--- Roles globales del sistema (deben existir antes de insertar usuarios)
+-- Roles globales del sistema: solo superadmin y usuario
+-- is_superadmin flag controla acceso; global_role_id es solo etiqueta visual
+DELETE FROM config.global_roles WHERE name NOT IN ('superadmin', 'usuario');
+
 INSERT INTO config.global_roles (name, description) VALUES
-    ('usuario',    'Usuario estándar del sistema'),
-    ('tecnico',    'Técnico con acceso a módulos asignados'),
-    ('supervisor', 'Supervisor de módulos'),
-    ('admin',      'Administrador de módulos')
+    ('superadmin', 'Administrador global de la plataforma'),
+    ('usuario',    'Usuario estándar del sistema')
 ON CONFLICT (name) DO NOTHING;
 
--- Usuario superadmin por defecto
+-- Usuario superadmin por defecto — global_role_id apunta a 'superadmin' (solo visual)
 INSERT INTO users.profiles (id, first_name, last_name, is_superadmin, is_active, global_role_id)
 VALUES ('00000000-0000-0000-0000-000000000001',
         'Admin', 'Sistema', true, true,
-        (SELECT id FROM config.global_roles WHERE name = 'admin'))
-ON CONFLICT (id) DO UPDATE SET global_role_id = EXCLUDED.global_role_id;
+        (SELECT id FROM config.global_roles WHERE name = 'superadmin'))
+ON CONFLICT (id) DO UPDATE
+    SET global_role_id = (SELECT id FROM config.global_roles WHERE name = 'superadmin');
 
 -- Preferencias del superadmin
 INSERT INTO users.preferences (user_id, language, timezone)
@@ -3533,6 +3535,58 @@ COMMENT ON COLUMN auth.email_otp.attempts IS
 ALTER TABLE auth.credentials ADD COLUMN IF NOT EXISTS login_locked_until TIMESTAMPTZ NULL;
 COMMENT ON COLUMN auth.credentials.login_locked_until IS
     'Bloqueo temporal por demasiados intentos OTP fallidos. NULL = sin bloqueo.';
+
+-- ============================================================================
+-- PARTE 27 — PATCH-4: requests schema + solicitudes administrativas
+-- ============================================================================
+
+CREATE SCHEMA IF NOT EXISTS requests;
+
+CREATE TABLE IF NOT EXISTS requests.admin_requests (
+    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    requester_id    UUID         NOT NULL REFERENCES users.profiles(id),
+    type            VARCHAR(50)  NOT NULL CHECK (type IN (
+        'role_change','module_access','info_correction','sede_change',
+        'permission_adjustment','account_issue','reactivation','other'
+    )),
+    title           VARCHAR(200) NOT NULL,
+    description     TEXT         NOT NULL,
+    status          VARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN (
+        'pending','under_review','approved','rejected'
+    )),
+    reviewed_by     UUID         NULL REFERENCES users.profiles(id),
+    reviewed_at     TIMESTAMPTZ  NULL,
+    review_notes    TEXT         NULL,
+    metadata        JSONB        NULL,
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_requests_requester ON requests.admin_requests(requester_id);
+CREATE INDEX IF NOT EXISTS idx_admin_requests_status    ON requests.admin_requests(status);
+CREATE INDEX IF NOT EXISTS idx_admin_requests_type      ON requests.admin_requests(type);
+
+-- modules.modules: retención 90 días tras soft-delete (ya añadido en PARTE 26.5)
+-- Sólo garantizamos que el campo exista:
+ALTER TABLE modules.modules ADD COLUMN IF NOT EXISTS scheduled_hard_delete_at TIMESTAMPTZ NULL;
+
+-- ============================================================================
+-- PARTE 28 — PATCH-5: Sistema de papelera unificado (2026-05-07)
+-- ============================================================================
+
+ALTER TABLE users.profiles
+  ADD COLUMN IF NOT EXISTS scheduled_hard_delete_at TIMESTAMPTZ NULL;
+
+ALTER TABLE config.global_roles
+  ADD COLUMN IF NOT EXISTS deleted_at               TIMESTAMPTZ NULL,
+  ADD COLUMN IF NOT EXISTS scheduled_hard_delete_at TIMESTAMPTZ NULL;
+
+ALTER TABLE requests.admin_requests
+  ADD COLUMN IF NOT EXISTS deleted_at               TIMESTAMPTZ NULL,
+  ADD COLUMN IF NOT EXISTS scheduled_hard_delete_at TIMESTAMPTZ NULL;
+
+CREATE INDEX IF NOT EXISTS idx_global_roles_deleted    ON config.global_roles(deleted_at)           WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_admin_requests_deleted  ON requests.admin_requests(deleted_at)        WHERE deleted_at IS NULL;
 
 -- ============================================================================
 -- FIN DEL SCRIPT — v6.1 SINGLE-TENANT (VERSIÓN FINAL DEPLOYABLE)

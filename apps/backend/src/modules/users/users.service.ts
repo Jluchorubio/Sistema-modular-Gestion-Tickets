@@ -17,6 +17,7 @@ import { AssignRoleDto } from './dto/assign-role.dto';
 import { AvailabilityDto } from './dto/availability.dto';
 import { AddSkillDto } from './dto/add-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
+import { CompleteProfileDto } from './dto/complete-profile.dto';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -49,13 +50,41 @@ export class UsersService {
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
+    // Check username uniqueness if provided
+    if (dto.username) {
+      const normalized = dto.username.toLowerCase().trim();
+      const [uConflict] = await this.db.query<{ id: string }[]>(
+        `SELECT id FROM users.profiles WHERE LOWER(username) = $1 AND deleted_at IS NULL`,
+        [normalized],
+      );
+      if (uConflict) throw new ConflictException(`Nombre de usuario '${normalized}' ya está en uso`);
+    }
+
+    // Profile is complete if all mandatory fields are provided at creation time
+    const hasAllProfileFields = !!(dto.phone && dto.address && dto.job_title && dto.department && dto.primary_sede);
+
     const [profile] = await this.db.query<{ id: string }[]>(
-      `INSERT INTO users.profiles (first_name, last_name, phone, is_superadmin, global_role_id)
-       VALUES ($1, $2, $3, $4,
-         COALESCE($5::uuid, (SELECT id FROM config.global_roles WHERE name = 'usuario'))
+      `INSERT INTO users.profiles
+         (first_name, last_name, phone, username, address, job_title, department, primary_sede,
+          is_superadmin, global_role_id, profile_complete)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+         COALESCE($10::uuid, (SELECT id FROM config.global_roles WHERE name = 'usuario')),
+         $11
        )
        RETURNING id`,
-      [dto.first_name, dto.last_name, dto.phone ?? null, dto.is_superadmin ?? false, dto.global_role_id ?? null],
+      [
+        dto.first_name,
+        dto.last_name,
+        dto.phone    ?? null,
+        dto.username ? dto.username.toLowerCase().trim() : null,
+        dto.address  ?? null,
+        dto.job_title   ?? null,
+        dto.department  ?? null,
+        dto.primary_sede ?? null,
+        dto.is_superadmin ?? false,
+        dto.global_role_id ?? null,
+        hasAllProfileFields,
+      ],
     );
 
     await this.db.query(
@@ -115,9 +144,15 @@ export class UsersService {
               p.first_name,
               p.last_name,
               p.phone,
+              p.username,
+              p.address,
+              p.job_title,
+              p.department,
+              p.primary_sede,
               p.avatar_url,
               p.is_superadmin,
               p.is_active,
+              p.profile_complete,
               p.created_at,
               c.email,
               c.last_login_at,
@@ -168,9 +203,15 @@ export class UsersService {
               p.last_name,
               p.display_email,
               p.phone,
+              p.username,
+              p.address,
+              p.job_title,
+              p.department,
+              p.primary_sede,
               p.avatar_url,
               p.is_superadmin,
               p.is_active,
+              p.profile_complete,
               p.created_at,
               p.updated_at,
               c.email,
@@ -236,6 +277,11 @@ export class UsersService {
     if (dto.is_active     !== undefined) add('is_active',     dto.is_active);
     if (dto.is_superadmin !== undefined) add('is_superadmin', dto.is_superadmin);
     if (dto.global_role_id !== undefined) add('global_role_id', dto.global_role_id);
+    if (dto.address       !== undefined) add('address',       dto.address);
+    if (dto.job_title     !== undefined) add('job_title',     dto.job_title);
+    if (dto.department    !== undefined) add('department',    dto.department);
+    if (dto.primary_sede  !== undefined) add('primary_sede',  dto.primary_sede);
+    if (dto.username      !== undefined) add('username',      dto.username ? dto.username.toLowerCase().trim() : null);
 
     if (fields.length === 0) throw new BadRequestException('Sin campos para actualizar');
 
@@ -266,7 +312,9 @@ export class UsersService {
     if (!user) throw new NotFoundException(`Usuario ${id} no encontrado`);
 
     await this.db.query(
-      `UPDATE users.profiles    SET deleted_at = now(), is_active = false WHERE id = $1`,
+      `UPDATE users.profiles
+       SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days', is_active = false
+       WHERE id = $1`,
       [id],
     );
     await this.db.query(
@@ -297,6 +345,12 @@ export class UsersService {
               p.is_active,
               p.created_at,
               p.updated_at,
+              p.username,
+              p.address,
+              p.job_title,
+              p.department,
+              p.primary_sede,
+              p.profile_complete,
               c.email,
               c.last_login_at,
               pref.language,
@@ -329,15 +383,42 @@ export class UsersService {
     return profile;
   }
 
-  async updateMyProfile(userId: string, dto: UpdateUserDto) {
-    // perfil propio: no puede cambiar is_active ni is_superadmin
-    const allowed: Partial<UpdateUserDto> = {
-      first_name: dto.first_name,
-      last_name:  dto.last_name,
-      phone:      dto.phone,
-      avatar_url: dto.avatar_url,
-    };
+  async completeMyProfile(userId: string, dto: CompleteProfileDto) {
+    if (dto.username) {
+      const normalized = dto.username.toLowerCase().trim();
+      const [conflict] = await this.db.query<{ id: string }[]>(
+        `SELECT id FROM users.profiles WHERE LOWER(username) = $1 AND id != $2 AND deleted_at IS NULL`,
+        [normalized, userId],
+      );
+      if (conflict) throw new ConflictException(`Nombre de usuario '${normalized}' ya está en uso`);
+    }
 
+    await this.db.query(
+      `UPDATE users.profiles
+       SET phone            = $1,
+           address          = $2,
+           primary_sede     = $3,
+           department       = $4,
+           job_title        = $5,
+           username         = COALESCE($6, username),
+           profile_complete = true,
+           updated_at       = now()
+       WHERE id = $7 AND deleted_at IS NULL`,
+      [
+        dto.phone.trim(),
+        dto.address.trim(),
+        dto.primary_sede.trim(),
+        dto.department.trim(),
+        dto.job_title.trim(),
+        dto.username ? dto.username.toLowerCase().trim() : null,
+        userId,
+      ],
+    );
+
+    return this.getMyProfile(userId);
+  }
+
+  async updateMyProfile(userId: string, dto: UpdateUserDto) {
     const fields: string[] = [];
     const params: unknown[] = [];
 
@@ -346,16 +427,34 @@ export class UsersService {
       fields.push(`${col} = $${params.length}`);
     };
 
-    if (allowed.first_name !== undefined) add('first_name', allowed.first_name);
-    if (allowed.last_name  !== undefined) add('last_name',  allowed.last_name);
-    if (allowed.phone      !== undefined) add('phone',      allowed.phone);
-    if (allowed.avatar_url !== undefined) add('avatar_url', allowed.avatar_url);
+    // username: validate uniqueness
+    if (dto.username !== undefined) {
+      const normalized = dto.username ? dto.username.toLowerCase().trim() : null;
+      if (normalized) {
+        const [conflict] = await this.db.query<{ id: string }[]>(
+          `SELECT id FROM users.profiles WHERE LOWER(username) = $1 AND id != $2 AND deleted_at IS NULL`,
+          [normalized, userId],
+        );
+        if (conflict) throw new ConflictException(`Nombre de usuario '${normalized}' ya está en uso`);
+      }
+      add('username', normalized);
+    }
+
+    if (dto.first_name   !== undefined) add('first_name',   dto.first_name);
+    if (dto.last_name    !== undefined) add('last_name',     dto.last_name);
+    if (dto.phone        !== undefined) add('phone',         dto.phone);
+    if (dto.avatar_url   !== undefined) add('avatar_url',    dto.avatar_url);
+    if (dto.address      !== undefined) add('address',       dto.address);
+    if (dto.job_title    !== undefined) add('job_title',     dto.job_title);
+    if (dto.department   !== undefined) add('department',    dto.department);
+    if (dto.primary_sede !== undefined) add('primary_sede',  dto.primary_sede);
 
     if (fields.length === 0) throw new BadRequestException('Sin campos para actualizar');
 
     params.push(userId);
     await this.db.query(
-      `UPDATE users.profiles SET ${fields.join(', ')} WHERE id = $${params.length} AND deleted_at IS NULL`,
+      `UPDATE users.profiles SET ${fields.join(', ')}, updated_at = now()
+       WHERE id = $${params.length} AND deleted_at IS NULL`,
       params,
     );
 
@@ -576,10 +675,11 @@ export class UsersService {
 
   async listGlobalRoles() {
     return this.db.query<any[]>(
-      `SELECT id, name, description, is_active, created_at
-       FROM config.global_roles
-       WHERE is_active = true
-       ORDER BY name`,
+      `SELECT id, name, description, is_active, created_at,
+              (SELECT COUNT(*) FROM users.profiles WHERE global_role_id = gr.id AND deleted_at IS NULL)::int AS user_count
+       FROM config.global_roles gr
+       WHERE gr.deleted_at IS NULL
+       ORDER BY is_active DESC, name`,
     );
   }
 
@@ -602,13 +702,29 @@ export class UsersService {
 
   async deleteGlobalRole(id: string) {
     const [role] = await this.db.query<{ id: string }[]>(
-      `SELECT id FROM config.global_roles WHERE id = $1 AND is_active = true`,
+      `SELECT id FROM config.global_roles WHERE id = $1 AND deleted_at IS NULL`,
       [id],
     );
     if (!role) throw new NotFoundException(`Rol global ${id} no encontrado`);
 
     await this.db.query(
-      `UPDATE config.global_roles SET is_active = false WHERE id = $1`,
+      `UPDATE config.global_roles
+       SET is_active = false, deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days'
+       WHERE id = $1`,
+      [id],
+    );
+    return { ok: true };
+  }
+
+  async reactivateGlobalRole(id: string) {
+    const [role] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM config.global_roles WHERE id = $1`,
+      [id],
+    );
+    if (!role) throw new NotFoundException(`Rol global ${id} no encontrado`);
+
+    await this.db.query(
+      `UPDATE config.global_roles SET is_active = true WHERE id = $1`,
       [id],
     );
     return { ok: true };

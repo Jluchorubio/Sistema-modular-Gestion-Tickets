@@ -17,6 +17,7 @@ import { createHash, randomBytes } from 'crypto';
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 3;
+const MAX_LOGIN_ATTEMPTS = 3;
 const LOCKOUT_MINUTES = 15;
 
 @Injectable()
@@ -32,20 +33,22 @@ export class AuthService {
   // ─── Login email/password ────────────────────────────────────────────────────
 
   async login(email: string, password: string) {
+    const identifier = email.toLowerCase().trim();
     const rows = await this.db.query<any[]>(
-      `SELECT c.id        AS cred_id,
+      `SELECT c.id                    AS cred_id,
               c.user_id,
               c.email,
               c.password_hash,
               c.is_active,
               c.login_locked_until,
+              c.failed_login_attempts,
               p.first_name,
               p.last_name,
               p.is_superadmin
        FROM   auth.credentials c
        JOIN   users.profiles   p ON p.id = c.user_id
-       WHERE  c.email = $1 AND p.deleted_at IS NULL`,
-      [email.toLowerCase().trim()],
+       WHERE  (c.email = $1 OR LOWER(p.username) = $1) AND p.deleted_at IS NULL`,
+      [identifier],
     );
 
     const cred = rows[0];
@@ -59,6 +62,7 @@ export class AuthService {
           message: `Cuenta bloqueada temporalmente. Intenta en ${secsRemaining} segundos.`,
           locked_until: cred.login_locked_until,
           seconds_remaining: secsRemaining,
+          locked: true,
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );
@@ -69,10 +73,39 @@ export class AuthService {
     }
 
     const valid = await bcrypt.compare(password, cred.password_hash);
-    if (!valid) throw new UnauthorizedException('Credenciales inválidas');
+    if (!valid) {
+      const newAttempts = (cred.failed_login_attempts ?? 0) + 1;
+      if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
+        await this.db.query(
+          `UPDATE auth.credentials
+           SET failed_login_attempts = 0,
+               login_locked_until    = now() + INTERVAL '${LOCKOUT_MINUTES} minutes'
+           WHERE id = $1`,
+          [cred.cred_id],
+        );
+        throw new HttpException(
+          {
+            message: `Demasiados intentos fallidos. Cuenta bloqueada ${LOCKOUT_MINUTES} minutos.`,
+            locked: true,
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      await this.db.query(
+        `UPDATE auth.credentials SET failed_login_attempts = $1 WHERE id = $2`,
+        [newAttempts, cred.cred_id],
+      );
+      throw new HttpException(
+        {
+          message: 'Contraseña incorrecta.',
+          attempts_remaining: MAX_LOGIN_ATTEMPTS - newAttempts,
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
 
     await this.db.query(
-      `UPDATE auth.credentials SET last_login_at = now() WHERE id = $1`,
+      `UPDATE auth.credentials SET last_login_at = now(), failed_login_attempts = 0 WHERE id = $1`,
       [cred.cred_id],
     );
 
@@ -342,7 +375,7 @@ export class AuthService {
   async getMe(userId: string) {
     const rows = await this.db.query<any[]>(
       `SELECT p.id, p.first_name, p.last_name, p.display_email, p.avatar_url,
-              p.is_superadmin, c.email, c.last_login_at
+              p.username, p.is_superadmin, p.profile_complete, c.email, c.last_login_at
        FROM   users.profiles   p
        JOIN   auth.credentials c ON c.user_id = p.id
        WHERE  p.id = $1 AND p.deleted_at IS NULL`,
@@ -351,14 +384,25 @@ export class AuthService {
     if (!rows[0]) throw new UnauthorizedException();
     const u = rows[0];
     return {
-      id:            u.id,
-      email:         u.email,
-      name:          `${u.first_name} ${u.last_name}`.trim(),
-      avatar_url:    u.avatar_url,
-      is_superadmin: u.is_superadmin,
-      mfa_enabled:   true,
-      last_login_at: u.last_login_at,
+      id:               u.id,
+      email:            u.email,
+      name:             `${u.first_name} ${u.last_name}`.trim(),
+      username:         u.username,
+      avatar_url:       u.avatar_url,
+      is_superadmin:    u.is_superadmin,
+      profile_complete: u.profile_complete,
+      mfa_enabled:      true,
+      last_login_at:    u.last_login_at,
     };
+  }
+
+  async verifyCredentials(userId: string, password: string): Promise<boolean> {
+    const [cred] = await this.db.query<{ password_hash: string }[]>(
+      `SELECT password_hash FROM auth.credentials WHERE user_id = $1 AND is_active = true`,
+      [userId],
+    );
+    if (!cred || cred.password_hash.startsWith('!')) return false;
+    return bcrypt.compare(password, cred.password_hash);
   }
 
   async validateToken(token: string) {
@@ -468,35 +512,43 @@ export class AuthService {
 
   private async sendEmail(to: string, subject: string, html: string) {
     const smtpHost = this.config.get<string>('SMTP_HOST');
+    const smtpPass = (this.config.get<string>('SMTP_PASS') ?? '').trim();
     const appName  = this.config.get<string>('APP_NAME') ?? 'Tickets System';
     const from     = this.config.get<string>('EMAIL_FROM') ?? 'noreply@tickets.app';
 
-    if (smtpHost) {
+    if (smtpHost && smtpPass) {
       const transporter = nodemailer.createTransport({
         host: smtpHost,
         port: parseInt(this.config.get<string>('SMTP_PORT') ?? '587'),
         secure: (this.config.get<string>('SMTP_PORT') ?? '587') === '465',
         auth: {
           user: this.config.get<string>('SMTP_USER'),
-          pass: this.config.get<string>('SMTP_PASS'),
+          pass: smtpPass,
         },
       });
       try {
         await transporter.sendMail({ from: `"${appName}" <${from}>`, to, subject, html });
+        this.logger.log(`Email enviado via SMTP a ${to}`);
+        return;
       } catch (err) {
-        this.logger.error(`SMTP error: ${err.message}`);
+        this.logger.error(`SMTP error: ${err.message} — usando Resend como fallback`);
       }
-      return;
     }
 
     // Fallback: Resend
     const apiKey = this.config.get<string>('RESEND_API_KEY');
     if (!apiKey) {
-      this.logger.warn(`Sin config de email. Revisa SMTP_HOST o RESEND_API_KEY.`);
+      this.logger.warn(`Sin config de email. Configura SMTP_PASS o RESEND_API_KEY.`);
       return;
     }
     const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({ from, to, subject, html });
+    const { error } = await resend.emails.send({
+      from: 'onboarding@resend.dev',
+      to,
+      subject,
+      html,
+    });
     if (error) this.logger.error(`Resend error: ${error.message}`);
+    else this.logger.log(`Email enviado via Resend a ${to}`);
   }
 }

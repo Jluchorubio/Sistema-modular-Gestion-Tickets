@@ -121,4 +121,14 @@ export class AuthController {
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.new_password);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('verify-credentials')
+  @ApiOperation({ summary: 'Verificar contraseña del usuario autenticado sin generar sesión.' })
+  async verifyCredentials(@Req() req: any, @Body() body: { password: string }) {
+    const valid = await this.authService.verifyCredentials(req.user.sub, body.password);
+    if (!valid) throw new UnauthorizedException('Contraseña incorrecta');
+    return { ok: true };
+  }
 }

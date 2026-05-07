@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — Tickets System</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -14,22 +15,61 @@
 
     /* ══ HEADER ══ */
     .header {
-      background: #1e293b; border-bottom: 1px solid #334155;
-      padding: 0 20px; height: 56px; display: flex;
+      background: #161b22; border-bottom: 1px solid #21262d;
+      padding: 0 16px; height: 56px; display: flex;
       align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 50; flex-shrink: 0;
+      position: sticky; top: 0; z-index: 100; flex-shrink: 0;
     }
-    .header-left { display: flex; align-items: center; gap: 12px; }
-    .logo { font-size: 15px; font-weight: 700; color: #e2e8f0; }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .logo { font-size: 15px; font-weight: 700; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
     .logo span { color: #6366f1; }
-    .user-area { display: flex; align-items: center; gap: 10px; }
-    .avatar {
-      width: 32px; height: 32px; border-radius: 50%;
-      background: #6366f1; display: flex; align-items: center;
-      justify-content: center; font-weight: 700; font-size: 13px;
-      overflow: hidden;
+    .header-right { display: flex; align-items: center; gap: 8px; }
+
+    /* Profile trigger */
+    .profile-menu-wrap { position: relative; }
+    .profile-trigger {
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: 1px solid transparent; border-radius: 8px;
+      padding: 5px 8px; cursor: pointer; transition: border-color .15s, background .15s;
+      color: #e2e8f0;
     }
-    .avatar img { width: 32px; height: 32px; object-fit: cover; }
+    .profile-trigger:hover { border-color: #30363d; background: #21262d; }
+    .avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: #6366f1; display: flex; align-items: center;
+      justify-content: center; font-weight: 700; font-size: 12px;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .avatar img { width: 30px; height: 30px; object-fit: cover; }
+    .header-username { font-size: 13px; color: #c9d1d9; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .header-chevron { font-size: 11px; color: #6e7681; transition: transform .15s; }
+    .profile-trigger[aria-expanded="true"] .header-chevron { transform: rotate(180deg); }
+
+    /* Profile dropdown */
+    .profile-dropdown {
+      display: none; position: absolute; right: 0; top: calc(100% + 6px);
+      background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+      min-width: 200px; padding: 8px 0; box-shadow: 0 16px 32px rgba(0,0,0,.6);
+      z-index: 200;
+    }
+    .profile-dropdown.open { display: block; }
+    .pd-info {
+      padding: 10px 16px 8px; border-bottom: 1px solid #21262d; margin-bottom: 4px;
+    }
+    .pd-name { font-size: 14px; font-weight: 600; color: #e2e8f0; }
+    .pd-username { font-size: 12px; color: #6e7681; margin-top: 2px; }
+    .pd-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px; background: none; border: none;
+      color: #c9d1d9; font-size: 13px; cursor: pointer;
+      transition: background .12s; width: 100%; text-align: left;
+    }
+    .pd-item:hover { background: #21262d; color: #e2e8f0; }
+    .pd-sep { height: 1px; background: #21262d; margin: 4px 0; }
+    .pd-danger { color: #f87171; }
+    .pd-danger:hover { color: #fca5a5; background: #1a0a0a; }
+
+    /* Legacy - keep for compat */
     .user-name { font-size: 13px; color: #cbd5e1; }
     .btn-logout {
       padding: 5px 12px; background: transparent;
@@ -275,6 +315,7 @@
       background: #1e293b; border: 1px solid #334155; border-radius: 8px;
       padding: 12px 16px;
     }
+    .role-row-inactive { opacity: 0.55; }
     .role-row-name { font-size: 14px; font-weight: 600; color: #e2e8f0; }
     .role-row-desc { font-size: 12px; color: #64748b; margin-top: 2px; }
     .btn-icon-danger {
@@ -355,6 +396,204 @@
     .user-checkbox-item:hover { background: #1e293b; }
     .user-checkbox-item input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: #6366f1; }
     .user-checkbox-item label { margin: 0; font-size: 13px; color: #e2e8f0; cursor: pointer; font-weight: 400; }
+
+    /* ══ MODULE ACTIONS ══ */
+    .btn-sm { padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: all .15s; }
+    .btn-sm-secondary { background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
+    .btn-sm-secondary:hover { border-color: #6366f1; color: #e2e8f0; }
+    .btn-sm-danger { background: #1e293b; border: 1px solid #334155; color: #f87171; }
+    .btn-sm-danger:hover { border-color: #f87171; background: #450a0a; }
+    .module-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* ══ KEBAB CARD MENU ══ */
+    .card-menu-wrap { position: absolute; top: 10px; right: 10px; z-index: 10; }
+    .kebab-btn {
+      background: none; border: none; color: #475569; cursor: pointer;
+      padding: 4px 7px; border-radius: 6px; font-size: 18px; line-height: 1;
+      transition: background .15s, color .15s; display: flex; align-items: center;
+    }
+    .kebab-btn:hover { background: #334155; color: #e2e8f0; }
+    .card-dropdown {
+      display: none; position: absolute; right: 0; top: 100%; margin-top: 4px;
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+      min-width: 170px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+      z-index: 100;
+    }
+    .card-dropdown.open { display: block; }
+    .card-dd-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 7px; cursor: pointer;
+      font-size: 13px; color: #94a3b8; transition: background .12s, color .12s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .card-dd-item:hover { background: #334155; color: #e2e8f0; }
+    .card-dd-item.danger { color: #f87171; }
+    .card-dd-item.danger:hover { background: #450a0a; color: #fca5a5; }
+    .card-dd-sep { height: 1px; background: #334155; margin: 4px 0; }
+
+    /* ══ DELETE CONFIRM MODAL ══ */
+    .delete-modal-banner {
+      background: #450a0a; border: 1px solid #7f1d1d; border-radius: 8px;
+      padding: 14px 16px; margin-bottom: 20px; font-size: 13px; color: #fca5a5; line-height: 1.5;
+    }
+    .delete-modal-banner strong { color: #f87171; }
+    .delete-confirm-input { border-color: #334155 !important; }
+    .delete-confirm-input.matched { border-color: #22c55e !important; }
+    .delete-confirm-input.wrong   { border-color: #f87171 !important; }
+    .act-destroy { background: #7f1d1d; color: #fca5a5; border: none; }
+    .act-destroy:not(:disabled):hover { background: #991b1b; }
+    .act-destroy:disabled { opacity: .35; cursor: not-allowed; }
+
+    /* ══ TRASH VIEW ══ */
+    .trash-card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+      padding: 16px 20px; display: flex; align-items: center; gap: 16px;
+      justify-content: space-between; margin-bottom: 10px;
+    }
+    .trash-card-info { flex: 1; min-width: 0; }
+    .trash-card-name { font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+    .trash-card-meta { font-size: 12px; color: #64748b; }
+    .days-pill {
+      font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 12px;
+      background: #422006; color: #f59e0b; white-space: nowrap;
+    }
+    .days-pill.urgent { background: #450a0a; color: #f87171; }
+
+    /* ══ TRASH TABS ══ */
+    .trash-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+    .trash-tab {
+      padding: 5px 14px; font-size: 12px; font-weight: 500;
+      background: #1e293b; border: 1px solid #334155; border-radius: 20px;
+      color: #94a3b8; cursor: pointer; transition: all .15s;
+    }
+    .trash-tab:hover { border-color: #6366f1; color: #a5b4fc; }
+    .trash-tab.active { background: #312e81; border-color: #6366f1; color: #c7d2fe; }
+    .trash-type-badge {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 1px 7px; border-radius: 10px; text-transform: uppercase;
+      letter-spacing: .04em; margin-right: 6px; vertical-align: middle;
+    }
+    .trash-type-module  { background: #1e3a5f; color: #7dd3fc; }
+    .trash-type-user    { background: #14532d; color: #86efac; }
+    .trash-type-role    { background: #3b1f6b; color: #c4b5fd; }
+    .trash-type-request { background: #422006; color: #fdba74; }
+
+    /* ══ BULK ACTION BAR ══ */
+    .bulk-action-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #1e293b; border-top: 2px solid #6366f1;
+      padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+      z-index: 200; transform: translateY(100%); transition: transform .2s ease;
+      box-shadow: 0 -4px 24px rgba(0,0,0,.5);
+    }
+    .bulk-action-bar.visible { transform: translateY(0); }
+
+    /* ══ TABLE CHECKBOX ══ */
+    .cb-th { width: 40px; padding: 0 8px !important; }
+    .cb-td { width: 40px; padding: 0 8px !important; text-align: center; }
+    .row-cb { width: 15px; height: 15px; accent-color: #6366f1; cursor: pointer; }
+
+    /* ══ INACTIVE MODULES ══ */
+    .inactive-section-title {
+      font-size: 11px; font-weight: 600; color: #475569;
+      text-transform: uppercase; letter-spacing: .08em;
+      margin: 36px 0 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .inactive-section-title::after {
+      content: ''; flex: 1; height: 1px; background: #1e293b;
+    }
+    .module-card.inactive {
+      opacity: 0.5; filter: grayscale(60%);
+    }
+    .module-card.inactive:hover { opacity: 0.75; }
+    .inactive-badge {
+      position: absolute; top: 10px; left: 10px;
+      font-size: 10px; font-weight: 700; background: #422006; color: #fb923c;
+      padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: .04em;
+    }
+
+    /* ══ PROFILE VIEW ══ */
+    .profile-page { max-width: 780px; }
+    .profile-hero {
+      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+      padding: 28px; display: flex; align-items: center; gap: 24px; margin-bottom: 24px;
+    }
+    .profile-avatar-lg {
+      width: 80px; height: 80px; border-radius: 50%; background: #312e81;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 700; color: #c7d2fe; flex-shrink: 0; overflow: hidden;
+    }
+    .profile-avatar-lg img { width: 80px; height: 80px; object-fit: cover; }
+    .profile-hero-info { flex: 1; min-width: 0; }
+    .profile-hero-name { font-size: 20px; font-weight: 700; color: #e2e8f0; }
+    .profile-hero-username { font-size: 13px; color: #64748b; margin-top: 2px; }
+    .profile-hero-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .profile-section {
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 24px; margin-bottom: 16px;
+    }
+    .profile-section-title {
+      font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;
+      letter-spacing: .08em; margin-bottom: 18px; padding-bottom: 10px;
+      border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 8px;
+    }
+    .profile-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .profile-field { display: flex; flex-direction: column; gap: 5px; }
+    .profile-field.full { grid-column: 1 / -1; }
+    .profile-field label {
+      font-size: 11px; font-weight: 600; color: #64748b;
+      text-transform: uppercase; letter-spacing: .06em; margin: 0;
+    }
+    .profile-field input, .profile-field select {
+      padding: 9px 13px; background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; color: #e2e8f0; font-size: 13px; outline: none;
+      transition: border-color .15s; font-family: inherit;
+    }
+    .profile-field input:focus, .profile-field select:focus { border-color: #6366f1; }
+    .profile-field input::placeholder { color: #475569; }
+    .profile-save-row { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+    .btn-save-profile {
+      padding: 9px 20px; background: #6366f1; color: #fff;
+      border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .btn-save-profile:hover { opacity: .88; }
+    .btn-save-profile:disabled { opacity: .4; cursor: not-allowed; }
+    .profile-save-msg { font-size: 13px; }
+    .profile-save-ok  { color: #6ee7b7; }
+    .profile-save-err { color: #f87171; }
+
+    /* Map container */
+    #profile-map {
+      height: 220px; border-radius: 10px; margin-top: 14px;
+      border: 1px solid #334155; overflow: hidden;
+    }
+    .geocode-hint { font-size: 11px; color: #475569; margin-top: 6px; }
+
+    /* ══ REQUESTS VIEW ══ */
+    .request-card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+      padding: 16px 20px; margin-bottom: 10px;
+    }
+    .request-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .request-card-title { font-size: 14px; font-weight: 600; color: #e2e8f0; }
+    .request-card-meta  { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .request-card-desc  { font-size: 13px; color: #94a3b8; line-height: 1.5; }
+    .request-card-review { margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e3a5f; font-size: 12px; color: #64748b; }
+    .status-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .status-pending      { background: #1c2a3a; color: #93c5fd; }
+    .status-under_review { background: #1c1917; color: #fbbf24; }
+    .status-approved     { background: #064e3b; color: #6ee7b7; }
+    .status-rejected     { background: #450a0a; color: #fca5a5; }
+    .req-type-label { font-size: 11px; color: #475569; background: #0f172a; border: 1px solid #1e293b; border-radius: 4px; padding: 2px 6px; }
+    .review-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .review-actions button { flex: 1; padding: 6px; border: 1px solid #334155; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; background: #0f172a; }
+    .btn-approve { color: #6ee7b7; border-color: #065f46 !important; }
+    .btn-approve:hover { background: #064e3b !important; }
+    .btn-reject  { color: #fca5a5; border-color: #7f1d1d !important; }
+    .btn-reject:hover  { background: #450a0a !important; }
+    .btn-review  { color: #fbbf24; border-color: #92400e !important; }
+    .btn-review:hover  { background: #1c1917 !important; }
   </style>
 </head>
 <body>
@@ -364,10 +603,28 @@
   <div class="header-left">
     <div class="logo">🎫 Tickets <span>System</span></div>
   </div>
-  <div class="user-area">
-    <div class="avatar" id="header-avatar"><span id="avatar-letter">?</span></div>
-    <span class="user-name" id="header-name">Cargando...</span>
-    <button class="btn-logout" onclick="doLogout()">Salir</button>
+  <div class="header-right">
+    <div class="profile-menu-wrap" id="profile-menu-wrap">
+      <button class="profile-trigger" id="profile-trigger" onclick="toggleProfileMenu()" aria-expanded="false">
+        <div class="avatar" id="header-avatar"><span id="avatar-letter">?</span></div>
+        <span class="header-username" id="header-name">Cargando...</span>
+        <span class="header-chevron">▾</span>
+      </button>
+      <div class="profile-dropdown" id="profile-dropdown">
+        <div class="pd-info">
+          <div class="pd-name" id="pd-fullname">—</div>
+          <div class="pd-username" id="pd-username-label">—</div>
+        </div>
+        <div class="pd-sep"></div>
+        <button class="pd-item" onclick="showView('profile'); closeProfileMenu()">
+          👤 Mi perfil
+        </button>
+        <div class="pd-sep"></div>
+        <button class="pd-item pd-danger" onclick="doLogout()">
+          🚪 Cerrar sesión
+        </button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -394,11 +651,19 @@
       <span class="nav-icon">🏷️</span>
       <span class="nav-label">Roles Globales</span>
     </div>
+    <div class="nav-item" id="nav-requests" onclick="showView('requests')">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Solicitudes</span>
+    </div>
+    <div class="nav-item" id="nav-trash" onclick="showView('trash')">
+      <span class="nav-icon">🗑️</span>
+      <span class="nav-label">Papelera</span>
+    </div>
 
     <div class="sidebar-bottom">
-      <div class="nav-item" style="color:#ef4444" onclick="doLogout()">
-        <span class="nav-icon">🚪</span>
-        <span class="nav-label">Cerrar sesión</span>
+      <div class="nav-item" id="nav-profile" onclick="showView('profile')">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">Mi perfil</span>
       </div>
     </div>
   </aside>
@@ -486,9 +751,9 @@
           <div class="view-title" id="detail-title">—</div>
           <div class="view-count" id="detail-slug" style="font-family:monospace;font-size:12px;color:#475569"></div>
         </div>
-        <button class="btn-primary" id="btn-bulk-assign" onclick="openBulkAssign()" style="display:none">
-          + Asignar usuarios
-        </button>
+        <div class="module-actions">
+          <button class="btn-primary" id="btn-bulk-assign" onclick="openBulkAssign()" style="display:none">+ Asignar usuarios</button>
+        </div>
       </div>
 
       <div class="stats-row" id="detail-stats">
@@ -499,6 +764,201 @@
 
       <div class="section-title" style="margin-bottom:12px">Miembros y roles</div>
       <div id="detail-members-wrap">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ VIEW: PAPELERA ═══ -->
+    <div class="view" id="view-trash">
+      <div class="view-header">
+        <div>
+          <div class="view-title">Papelera</div>
+          <div class="view-count" id="trash-count">—</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#64748b;margin-bottom:16px">
+        Items eliminados. Se conservan 90 días antes del borrado permanente.
+      </p>
+      <div class="trash-tabs" id="trash-tabs">
+        <button class="trash-tab active" data-type="all"     onclick="setTrashFilter('all')">Todos</button>
+        <button class="trash-tab"        data-type="module"  onclick="setTrashFilter('module')">Módulos</button>
+        <button class="trash-tab"        data-type="user"    onclick="setTrashFilter('user')">Usuarios</button>
+        <button class="trash-tab"        data-type="role"    onclick="setTrashFilter('role')">Roles</button>
+        <button class="trash-tab"        data-type="request" onclick="setTrashFilter('request')">Solicitudes</button>
+      </div>
+      <div id="trash-list">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ VIEW: PERFIL ═══ -->
+    <div class="view" id="view-profile">
+      <div class="profile-page">
+        <!-- Hero -->
+        <div class="profile-hero">
+          <div class="profile-avatar-lg" id="prof-avatar-lg"><span id="prof-avatar-letter">?</span></div>
+          <div class="profile-hero-info">
+            <div class="profile-hero-name" id="prof-fullname">—</div>
+            <div class="profile-hero-username" id="prof-username-display">—</div>
+            <div class="profile-hero-badges" id="prof-badges"></div>
+          </div>
+        </div>
+
+        <!-- Personal info -->
+        <div class="profile-section">
+          <div class="profile-section-title">👤 Información personal</div>
+          <div class="profile-field-grid">
+            <div class="profile-field">
+              <label>Nombre</label>
+              <input type="text" id="pf-first" placeholder="Juan">
+            </div>
+            <div class="profile-field">
+              <label>Apellido</label>
+              <input type="text" id="pf-last" placeholder="García">
+            </div>
+            <div class="profile-field">
+              <label>Nombre de usuario</label>
+              <input type="text" id="pf-username" placeholder="juangarcia">
+            </div>
+            <div class="profile-field">
+              <label>Teléfono</label>
+              <input type="text" id="pf-phone" placeholder="+57 300 000 0000">
+            </div>
+          </div>
+          <div class="profile-save-row">
+            <button class="btn-save-profile" onclick="saveProfileSection('personal')">Guardar cambios</button>
+            <span class="profile-save-msg" id="msg-personal"></span>
+          </div>
+        </div>
+
+        <!-- Work info -->
+        <div class="profile-section">
+          <div class="profile-section-title">🏢 Información laboral</div>
+          <div class="profile-field-grid">
+            <div class="profile-field">
+              <label>Cargo</label>
+              <input type="text" id="pf-job" placeholder="Técnico Senior">
+            </div>
+            <div class="profile-field">
+              <label>Área / Departamento</label>
+              <input type="text" id="pf-dept" placeholder="Soporte TI">
+            </div>
+            <div class="profile-field full">
+              <label>Sede principal</label>
+              <input type="text" id="pf-sede" placeholder="Sede Norte">
+            </div>
+          </div>
+          <div class="profile-save-row">
+            <button class="btn-save-profile" onclick="saveProfileSection('work')">Guardar cambios</button>
+            <span class="profile-save-msg" id="msg-work"></span>
+          </div>
+        </div>
+
+        <!-- Location -->
+        <div class="profile-section">
+          <div class="profile-section-title">🌍 Ubicación</div>
+          <div class="profile-field-grid">
+            <div class="profile-field">
+              <label>País</label>
+              <select id="pf-country" onchange="onCountryChange()">
+                <option value="">Cargando países…</option>
+              </select>
+            </div>
+            <div class="profile-field">
+              <label>Ciudad</label>
+              <select id="pf-city" onchange="onCityChange()">
+                <option value="">— Selecciona país primero —</option>
+              </select>
+            </div>
+            <div class="profile-field full">
+              <label>Dirección completa</label>
+              <input type="text" id="pf-address" placeholder="Calle 123 # 45-67, Barrio, Ciudad" oninput="debounceGeocode()">
+            </div>
+          </div>
+          <p class="geocode-hint" id="geocode-status">El mapa se actualizará automáticamente al ingresar tu dirección.</p>
+          <div id="profile-map"></div>
+          <div class="profile-save-row">
+            <button class="btn-save-profile" onclick="saveProfileSection('location')">Guardar cambios</button>
+            <span class="profile-save-msg" id="msg-location"></span>
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div class="profile-section">
+          <div class="profile-section-title">🔐 Seguridad</div>
+          <div id="pwd-change-wrap">
+            <button class="btn-save-profile" style="background:#334155;color:#94a3b8;border:1px solid #475569" onclick="togglePwdForm()">Cambiar contraseña</button>
+          </div>
+          <div id="pwd-form" style="display:none;margin-top:16px">
+            <div class="profile-field-grid">
+              <div class="profile-field full">
+                <label>Contraseña actual</label>
+                <input type="password" id="pf-pwd-current" placeholder="••••••••">
+              </div>
+              <div class="profile-field">
+                <label>Nueva contraseña</label>
+                <input type="password" id="pf-pwd-new" placeholder="Mín. 8 caracteres">
+              </div>
+              <div class="profile-field">
+                <label>Confirmar contraseña</label>
+                <input type="password" id="pf-pwd-confirm" placeholder="Repite la contraseña">
+              </div>
+            </div>
+            <div class="profile-save-row">
+              <button class="btn-save-profile" onclick="savePwd()">Cambiar contraseña</button>
+              <button class="btn-save-profile" style="background:#334155;color:#94a3b8;border:1px solid #475569" onclick="togglePwdForm()">Cancelar</button>
+              <span class="profile-save-msg" id="msg-pwd"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Module roles (read-only) -->
+        <div class="profile-section" id="prof-roles-section" style="display:none">
+          <div class="profile-section-title">🧩 Acceso a módulos</div>
+          <div id="prof-roles-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VIEW: SOLICITUDES ═══ -->
+    <div class="view" id="view-requests">
+      <div class="view-header">
+        <div>
+          <div class="view-title">Solicitudes</div>
+          <div class="view-count" id="requests-count">—</div>
+        </div>
+        <button class="btn-primary" onclick="openCreateRequestModal()">+ Nueva solicitud</button>
+      </div>
+
+      <!-- Admin view: filter tabs -->
+      <div id="requests-admin-bar" style="display:none;margin-bottom:16px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="filter-select" id="req-filter-status" onchange="loadRequests()">
+            <option value="">Estado: Todos</option>
+            <option value="pending">Pendiente</option>
+            <option value="under_review">En revisión</option>
+            <option value="approved">Aprobado</option>
+            <option value="rejected">Rechazado</option>
+          </select>
+          <select class="filter-select" id="req-filter-type" onchange="loadRequests()">
+            <option value="">Tipo: Todos</option>
+            <option value="role_change">Cambio de rol</option>
+            <option value="module_access">Acceso a módulo</option>
+            <option value="info_correction">Corrección de info</option>
+            <option value="sede_change">Cambio de sede</option>
+            <option value="permission_adjustment">Ajuste de permisos</option>
+            <option value="account_issue">Problema de cuenta</option>
+            <option value="reactivation">Reactivación</option>
+            <option value="other">Otro</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#94a3b8;cursor:pointer;margin:0">
+            <input type="checkbox" id="req-view-mine" style="width:14px;height:14px;accent-color:#6366f1" onchange="loadRequests()">
+            Solo las mías
+          </label>
+        </div>
+      </div>
+
+      <div id="requests-list">
         <div class="spinner-wrap"><div class="spinner"></div></div>
       </div>
     </div>
@@ -555,6 +1015,26 @@
 
     <label>Teléfono (opcional)</label>
     <input type="text" id="u-phone" placeholder="+573001234567">
+
+    <label>Usuario (opcional)</label>
+    <input type="text" id="u-username" placeholder="juan_garcia">
+
+    <div class="form-row">
+      <div>
+        <label>Cargo (opcional)</label>
+        <input type="text" id="u-job-title" placeholder="Técnico Senior">
+      </div>
+      <div>
+        <label>Área / Departamento (opcional)</label>
+        <input type="text" id="u-department" placeholder="Soporte TI">
+      </div>
+    </div>
+
+    <label>Sede principal (opcional)</label>
+    <input type="text" id="u-sede" placeholder="Sede Norte">
+
+    <label>Dirección (opcional)</label>
+    <input type="text" id="u-address" placeholder="Calle 123 # 45-67, Bogotá">
 
     <label>Rol Global</label>
     <select id="u-global-role">
@@ -678,6 +1158,109 @@
   </div>
 </div>
 
+<!-- ════ MODAL: ELIMINAR MÓDULO (GitHub-style) ════ -->
+<div class="modal-overlay" id="module-delete-modal">
+  <div class="modal" style="width:460px">
+    <div class="modal-header">
+      <div class="modal-title" style="color:#f87171">⚠️ Eliminar módulo</div>
+      <button class="modal-close" onclick="closeDeleteModuleModal()">×</button>
+    </div>
+
+    <div class="delete-modal-banner">
+      <strong>Esta acción eliminará el módulo de forma permanente tras 90 días.</strong>
+      Durante ese período podrás restaurarlo desde la Papelera.<br><br>
+      El módulo quedará inaccesible de inmediato para todos los usuarios.
+    </div>
+
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:16px">
+      Para confirmar, escribe el nombre exacto del módulo y tu nombre de usuario.
+    </p>
+
+    <label>Nombre del módulo <span id="del-module-hint" style="color:#475569;font-weight:400;text-transform:none"></span></label>
+    <input type="text" id="del-module-name" class="delete-confirm-input"
+      placeholder="Escribe el nombre exacto…" oninput="onDeleteInputChange()" autocomplete="off">
+
+    <label style="margin-top:14px">Tu nombre de usuario <span id="del-user-hint" style="color:#475569;font-weight:400;text-transform:none"></span></label>
+    <input type="text" id="del-user-name" class="delete-confirm-input"
+      placeholder="Escribe tu nombre de usuario…" oninput="onDeleteInputChange()" autocomplete="off">
+
+    <div id="delete-module-msg" style="margin-top:12px"></div>
+
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="act-cancel" onclick="closeDeleteModuleModal()">Cancelar</button>
+      <button class="act-destroy" id="btn-destroy-module" disabled onclick="doDeleteModule()">Eliminar módulo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: CREAR SOLICITUD ════ -->
+<div class="modal-overlay" id="create-request-modal">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <div class="modal-title">📋 Nueva solicitud</div>
+      <button class="modal-close" onclick="closeCreateRequestModal()">×</button>
+    </div>
+
+    <label>Tipo de solicitud</label>
+    <select id="req-type">
+      <option value="role_change">Cambio de rol</option>
+      <option value="module_access">Acceso a módulo</option>
+      <option value="info_correction">Corrección de información</option>
+      <option value="sede_change">Cambio de sede</option>
+      <option value="permission_adjustment">Ajuste de permisos</option>
+      <option value="account_issue">Problema de cuenta</option>
+      <option value="reactivation">Reactivación de cuenta</option>
+      <option value="other">Otro</option>
+    </select>
+
+    <label>Título</label>
+    <input type="text" id="req-title" placeholder="Resumen breve de tu solicitud…">
+
+    <label>Descripción</label>
+    <textarea id="req-desc" placeholder="Explica tu solicitud con detalle…" style="min-height:100px"></textarea>
+
+    <div id="create-request-msg"></div>
+
+    <div class="modal-actions">
+      <button class="act-cancel" onclick="closeCreateRequestModal()">Cancelar</button>
+      <button class="act-confirm" id="btn-create-request" onclick="doCreateRequest()">Enviar solicitud</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: ELIMINAR EN LOTE ════ -->
+<div class="modal-overlay" id="bulk-delete-modal">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <div class="modal-title" style="color:#f87171">⚠️ Eliminar elementos</div>
+      <button class="modal-close" onclick="closeBulkDeleteModal()">×</button>
+    </div>
+    <div class="delete-modal-banner">
+      <strong>Vas a eliminar <span id="bd-count">0</span> elemento(s).</strong><br>
+      Pasarán a la Papelera y se borrarán permanentemente en 90 días.
+    </div>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:16px">Confirma tu contraseña para continuar.</p>
+    <label>Tu contraseña</label>
+    <input type="password" id="bd-pwd" placeholder="Contraseña actual…" oninput="document.getElementById('bd-msg').innerHTML=''">
+    <div id="bd-msg" style="margin-top:10px"></div>
+    <div class="modal-actions">
+      <button class="act-cancel" onclick="closeBulkDeleteModal()">Cancelar</button>
+      <button class="act-destroy" id="btn-bd-confirm" onclick="submitBulkDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ BULK ACTION BAR ════ -->
+<div class="bulk-action-bar" id="bulk-action-bar">
+  <span style="color:#a5b4fc;font-size:13px;font-weight:500">
+    <span id="bulk-bar-count">0</span> seleccionado(s)
+  </span>
+  <div style="display:flex;gap:8px">
+    <button class="act-cancel" style="padding:6px 14px;font-size:12px" onclick="clearSelection()">Cancelar</button>
+    <button class="act-destroy" style="padding:6px 14px;font-size:12px" onclick="openBulkDeleteModal()">Eliminar seleccionados</button>
+  </div>
+</div>
+
 <!-- ════ SCRIPT ════ -->
 <script>
   const API = 'http://localhost:3001/api/v1';
@@ -698,8 +1281,14 @@
   let deletingUserId     = null;
   let isSuperadminToggle = false;
   let globalRolesCache   = [];
+  let usersMap           = {};
   let currentModuleId    = null;
+  let currentModuleName  = null;
+  let editingModuleId    = null;
   let bulkAllUsers       = [];
+  let selectedIds        = new Set();
+  let selectionType      = '';
+  let trashFilter        = 'all';
 
   // ── Init ────────────────────────────────────────────────────────────────────
   (async function init() {
@@ -718,6 +1307,27 @@
     await loadUser();
   })();
 
+  // ── Profile header dropdown ─────────────────────────────────────────────────
+  function toggleProfileMenu() {
+    const dd  = document.getElementById('profile-dropdown');
+    const btn = document.getElementById('profile-trigger');
+    const isOpen = dd.classList.contains('open');
+    dd.classList.toggle('open');
+    btn.setAttribute('aria-expanded', String(!isOpen));
+    if (!isOpen) {
+      setTimeout(() => document.addEventListener('click', closeProfileMenuOutside, { once: true }), 0);
+    }
+  }
+
+  function closeProfileMenu() {
+    document.getElementById('profile-dropdown').classList.remove('open');
+    document.getElementById('profile-trigger').setAttribute('aria-expanded', 'false');
+  }
+
+  function closeProfileMenuOutside(e) {
+    if (!document.getElementById('profile-menu-wrap').contains(e.target)) closeProfileMenu();
+  }
+
   // ── Sidebar toggle ──────────────────────────────────────────────────────────
   function toggleSidebar() {
     const sb  = document.getElementById('sidebar');
@@ -729,6 +1339,7 @@
 
   // ── View switcher ────────────────────────────────────────────────────────────
   function showView(name) {
+    clearSelection();
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
@@ -736,9 +1347,12 @@
     const navEl = document.getElementById('nav-' + name);
     if (navEl) navEl.classList.add('active');
 
-    if (name === 'users')   loadUsers();
-    if (name === 'modules') loadModules();
-    if (name === 'roles')   loadGlobalRoles();
+    if (name === 'users')    loadUsers();
+    if (name === 'modules')  loadModules();
+    if (name === 'roles')    loadGlobalRoles();
+    if (name === 'trash')    loadTrash();
+    if (name === 'requests') loadRequests();
+    if (name === 'profile')  loadProfileView();
   }
 
   // ══════════════════════════════════════════════════
@@ -750,18 +1364,29 @@
       const res  = await authFetch(`${API}/auth/me`);
       if (!res.ok) { handleUnauth(); return; }
       const user = await res.json();
+
+      if (!user.profile_complete) {
+        window.location.href = 'profile-complete.html';
+        return;
+      }
+
       currentUser = user;
 
       // Update header
-      const name = user.name || user.email;
-      document.getElementById('header-name').textContent = name;
+      const displayName = user.username || user.name || user.email;
+      const initial = (user.name || user.email || '?')[0].toUpperCase();
+      document.getElementById('header-name').textContent = displayName;
       document.getElementById('welcome-text').textContent = `Hola, ${user.name?.split(' ')[0] ?? 'Usuario'} 👋`;
+
+      // Header dropdown info
+      document.getElementById('pd-fullname').textContent = user.name || '—';
+      document.getElementById('pd-username-label').textContent = user.username ? `@${user.username}` : user.email;
 
       const avatarEl = document.getElementById('header-avatar');
       if (user.avatar_url) {
-        avatarEl.innerHTML = `<img src="${escHtml(user.avatar_url)}" onerror="this.parentElement.innerHTML='<span>${escHtml(name[0].toUpperCase())}</span>'">`;
+        avatarEl.innerHTML = `<img src="${escHtml(user.avatar_url)}" onerror="this.parentElement.innerHTML='<span>${escHtml(initial)}</span>'">`;
       } else {
-        avatarEl.innerHTML = `<span>${escHtml(name[0].toUpperCase())}</span>`;
+        avatarEl.innerHTML = `<span>${escHtml(initial)}</span>`;
       }
 
       // Sidebar: only for superadmin
@@ -811,19 +1436,40 @@
       return;
     }
 
-    const cards = list.map(m => {
+    const active   = list.filter(m => m.is_active);
+    const inactive = list.filter(m => !m.is_active);
+
+    const buildCard = m => {
       const ic = MODULE_ICONS[m.type] ?? MODULE_ICONS.custom;
       const iconHtml = m.image_url
         ? `<div class="module-icon"><img src="${escHtml(m.image_url)}" onerror="this.parentElement.innerHTML='${ic.emoji}';this.parentElement.className='module-icon ${ic.cls}'" alt="${escHtml(m.name)}"></div>`
         : `<div class="module-icon ${ic.cls}">${ic.emoji}</div>`;
+
+      const kebabMenu = isSuperAdmin ? `
+        <div class="card-menu-wrap" onclick="event.stopPropagation()">
+          <button class="kebab-btn" onclick="toggleCardMenu('menu-${m.id}')" title="Opciones">⋯</button>
+          <div class="card-dropdown" id="menu-${m.id}">
+            <button class="card-dd-item" onclick="openEditModuleFromCard('${m.id}')">✏️ Editar</button>
+            <button class="card-dd-item" onclick="toggleModuleActive('${m.id}', ${m.is_active}, '${escHtml(m.name)}')">
+              ${m.is_active ? '⏸ Desactivar' : '▶ Activar'}
+            </button>
+            <div class="card-dd-sep"></div>
+            <button class="card-dd-item danger" onclick="openDeleteFromCard('${m.id}', '${escHtml(m.name)}')">🗑️ Eliminar</button>
+          </div>
+        </div>` : '';
+
+      const inactiveBadge = !m.is_active ? '<span class="inactive-badge">Inactivo</span>' : '';
+
       return `
-        <div class="module-card" onclick="enterModule('${m.id}', '${escHtml(m.name)}', '${escHtml(m.slug)}')">
+        <div class="module-card${m.is_active ? '' : ' inactive'}" onclick="${m.is_active ? `enterModule('${m.id}', '${escHtml(m.name)}', '${escHtml(m.slug)}')` : 'void(0)'}">
+          ${kebabMenu}
+          ${inactiveBadge}
           ${iconHtml}
           <div class="module-name">${escHtml(m.name)}</div>
           <div class="module-desc">${escHtml(m.description ?? '')}</div>
           <span class="module-type ${ic.typeCls}">${escHtml(m.type)}</span>
         </div>`;
-    }).join('');
+    };
 
     const createCard = isSuperAdmin
       ? `<div class="module-card" onclick="openModuleModal()"
@@ -833,7 +1479,57 @@
          </div>`
       : '';
 
-    grid.innerHTML = cards + createCard;
+    const activeSection = active.map(buildCard).join('') + createCard;
+
+    const inactiveSection = (inactive.length && isSuperAdmin)
+      ? `<div style="grid-column:1/-1">
+           <div class="inactive-section-title">Módulos desactivados</div>
+           <div class="modules-grid" style="margin-top:0">${inactive.map(buildCard).join('')}</div>
+         </div>`
+      : '';
+
+    grid.innerHTML = activeSection + inactiveSection;
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', closeAllCardMenus, { once: true });
+  }
+
+  function toggleCardMenu(menuId) {
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    const isOpen = menu.classList.contains('open');
+    closeAllCardMenus();
+    if (!isOpen) menu.classList.add('open');
+  }
+
+  function closeAllCardMenus() {
+    document.querySelectorAll('.card-dropdown.open').forEach(d => d.classList.remove('open'));
+  }
+
+  function openEditModuleFromCard(id) {
+    closeAllCardMenus();
+    currentModuleId = id;
+    openEditModuleModal();
+  }
+
+  function openDeleteFromCard(id, name) {
+    closeAllCardMenus();
+    currentModuleId   = id;
+    currentModuleName = name;
+    openDeleteModuleModal();
+  }
+
+  async function toggleModuleActive(id, isActive, name) {
+    closeAllCardMenus();
+    const action = isActive ? 'desactivar' : 'activar';
+    if (!confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} el módulo "${name}"?`)) return;
+    try {
+      const res = await authFetch(`${API}/system-modules/${id}`, {
+        method: 'PATCH', body: JSON.stringify({ is_active: !isActive }),
+      });
+      if (!res.ok) { const d = await res.json(); alert(d.message ?? 'Error'); return; }
+      loadModules();
+    } catch { alert('Error de red'); }
   }
 
   function renderModulesError() {
@@ -842,7 +1538,8 @@
   }
 
   async function enterModule(id, name, slug) {
-    currentModuleId = id;
+    currentModuleId   = id;
+    currentModuleName = name;
     document.getElementById('detail-module-name').textContent = name;
     document.getElementById('detail-title').textContent = name;
     document.getElementById('detail-slug').textContent = slug;
@@ -851,9 +1548,9 @@
     document.getElementById('stat-techs').textContent   = '—';
     document.getElementById('stat-admins').textContent  = '—';
 
-    // Show bulk-assign button only for superadmin
-    document.getElementById('btn-bulk-assign').style.display =
-      currentUser?.is_superadmin ? '' : 'none';
+    // Show superadmin buttons
+    const isSA = !!currentUser?.is_superadmin;
+    document.getElementById('btn-bulk-assign').style.display = isSA ? '' : 'none';
 
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -963,12 +1660,15 @@
   }
 
   function renderUsersTable(list) {
+    usersMap = {};
+    list.forEach(u => { usersMap[u.id] = u; });
+
     if (!list.length) {
       document.getElementById('users-table-wrap').innerHTML = `
         <div class="table-wrap"><table><thead><tr>
-          <th>Usuario</th><th>Email</th><th>Rol Global</th><th>Módulos / Roles</th><th>Estado</th><th style="text-align:right">Acciones</th>
+          <th class="cb-th"></th><th>Usuario</th><th>Email</th><th>Rol Global</th><th>Módulos / Roles</th><th>Estado</th><th style="text-align:right">Acciones</th>
         </tr></thead><tbody>
-          <tr class="empty-row"><td colspan="6">${usersSearchVal ? 'Sin resultados' : 'No hay usuarios aún'}</td></tr>
+          <tr class="empty-row"><td colspan="7">${usersSearchVal ? 'Sin resultados' : 'No hay usuarios aún'}</td></tr>
         </tbody></table></div>`;
       return;
     }
@@ -977,6 +1677,7 @@
       <div class="table-wrap">
         <table>
           <thead><tr>
+            <th class="cb-th"><input type="checkbox" class="row-cb" id="select-all-users" onchange="toggleSelectAll('user', this.checked)"></th>
             <th>Usuario</th><th>Email</th><th>Rol Global</th><th>Módulos / Roles</th><th>Estado</th><th style="text-align:right">Acciones</th>
           </tr></thead>
           <tbody>${list.map(u => {
@@ -986,6 +1687,7 @@
 
             return `
             <tr>
+              <td class="cb-td"><input type="checkbox" class="row-cb" data-id="${u.id}" onchange="toggleSelection('user','${u.id}')"></td>
               <td>
                 <div class="user-cell">
                   ${avatarHtml}
@@ -1011,10 +1713,13 @@
                   ${!(u.roles?.length) ? '<span style="color:#475569;font-size:11px">—</span>' : ''}
                 </div>
               </td>
-              <td><span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Activo' : 'Inactivo'}</span></td>
+              <td>
+                <span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Activo' : 'Inactivo'}</span>
+                ${!u.profile_complete ? '<br><span class="badge" style="background:#78350f;color:#fde68a;margin-top:3px;font-size:10px">Perfil incompleto</span>' : ''}
+              </td>
               <td>
                 <div class="actions-cell">
-                  <button class="btn-sm btn-edit" onclick="openEditUser(${JSON.stringify(JSON.stringify(u))})">Editar</button>
+                  <button class="btn-sm btn-edit" onclick="openEditUser('${u.id}')">Editar</button>
                   <button class="btn-sm ${u.is_active ? 'btn-toggle-off' : 'btn-toggle-on'}"
                     onclick="toggleUserActive('${u.id}', ${u.is_active})">
                     ${u.is_active ? 'Desactivar' : 'Activar'}
@@ -1062,8 +1767,9 @@
       } catch (_) {}
     }
     const sel = document.getElementById(selectId);
+    const activeRoles = globalRolesCache.filter(r => r.is_active !== false);
     sel.innerHTML = '<option value="">— Sin rol global —</option>' +
-      globalRolesCache.map(r =>
+      activeRoles.map(r =>
         `<option value="${r.id}" ${r.id === selectedId ? 'selected' : ''}>${escHtml(r.name)}</option>`
       ).join('');
   }
@@ -1077,28 +1783,39 @@
     document.getElementById('user-modal-btn').textContent   = 'Crear usuario';
     document.getElementById('u-email-wrap').style.display    = '';
     document.getElementById('u-password-wrap').style.display = '';
-    document.getElementById('u-first').value   = '';
-    document.getElementById('u-last').value    = '';
-    document.getElementById('u-email').value   = '';
+    document.getElementById('u-first').value    = '';
+    document.getElementById('u-last').value     = '';
+    document.getElementById('u-email').value    = '';
     document.getElementById('u-password').value = '';
-    document.getElementById('u-phone').value   = '';
+    document.getElementById('u-phone').value    = '';
+    document.getElementById('u-username').value  = '';
+    document.getElementById('u-job-title').value = '';
+    document.getElementById('u-department').value = '';
+    document.getElementById('u-sede').value     = '';
+    document.getElementById('u-address').value  = '';
     document.getElementById('toggle-superadmin').classList.remove('on');
     document.getElementById('user-modal-msg').innerHTML = '';
     document.getElementById('user-modal').classList.add('open');
     await loadGlobalRolesIntoSelect('u-global-role', null);
   }
 
-  async function openEditUser(jsonStr) {
-    const u = JSON.parse(jsonStr);
+  async function openEditUser(id) {
+    const u = usersMap[id];
+    if (!u) return;
     editingUserId = u.id;
     isSuperadminToggle = u.is_superadmin;
     document.getElementById('user-modal-title').textContent  = 'Editar usuario';
     document.getElementById('user-modal-btn').textContent    = 'Guardar cambios';
     document.getElementById('u-email-wrap').style.display    = 'none';
     document.getElementById('u-password-wrap').style.display = 'none';
-    document.getElementById('u-first').value = u.first_name;
-    document.getElementById('u-last').value  = u.last_name;
-    document.getElementById('u-phone').value = u.phone ?? '';
+    document.getElementById('u-first').value     = u.first_name;
+    document.getElementById('u-last').value      = u.last_name;
+    document.getElementById('u-phone').value     = u.phone ?? '';
+    document.getElementById('u-username').value  = u.username ?? '';
+    document.getElementById('u-job-title').value = u.job_title ?? '';
+    document.getElementById('u-department').value = u.department ?? '';
+    document.getElementById('u-sede').value      = u.primary_sede ?? '';
+    document.getElementById('u-address').value   = u.address ?? '';
     const tog = document.getElementById('toggle-superadmin');
     isSuperadminToggle ? tog.classList.add('on') : tog.classList.remove('on');
     document.getElementById('user-modal-msg').innerHTML = '';
@@ -1123,6 +1840,11 @@
     const first          = document.getElementById('u-first').value.trim();
     const last           = document.getElementById('u-last').value.trim();
     const phone          = document.getElementById('u-phone').value.trim();
+    const username       = document.getElementById('u-username').value.trim();
+    const job_title      = document.getElementById('u-job-title').value.trim();
+    const department     = document.getElementById('u-department').value.trim();
+    const primary_sede   = document.getElementById('u-sede').value.trim();
+    const address        = document.getElementById('u-address').value.trim();
     const global_role_id = document.getElementById('u-global-role').value || undefined;
 
     if (!first || !last) {
@@ -1134,6 +1856,11 @@
       if (editingUserId) {
         const body = { first_name: first, last_name: last, is_superadmin: isSuperadminToggle };
         if (phone)          body.phone          = phone;
+        if (username)       body.username       = username;
+        if (job_title)      body.job_title      = job_title;
+        if (department)     body.department     = department;
+        if (primary_sede)   body.primary_sede   = primary_sede;
+        if (address)        body.address        = address;
         if (global_role_id) body.global_role_id = global_role_id;
         const res = await authFetch(`${API}/users/${editingUserId}`, {
           method: 'PATCH', body: JSON.stringify(body),
@@ -1152,6 +1879,11 @@
         }
         const body = { first_name: first, last_name: last, email, password, is_superadmin: isSuperadminToggle };
         if (phone)          body.phone          = phone;
+        if (username)       body.username       = username;
+        if (job_title)      body.job_title      = job_title;
+        if (department)     body.department     = department;
+        if (primary_sede)   body.primary_sede   = primary_sede;
+        if (address)        body.address        = address;
         if (global_role_id) body.global_role_id = global_role_id;
         const res = await authFetch(`${API}/users`, { method: 'POST', body: JSON.stringify(body) });
         if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
@@ -1224,14 +1956,25 @@
     document.getElementById('roles-list-wrap').innerHTML = `
       <div class="roles-admin-list">
         ${list.map(r => `
-          <div class="role-row">
-            <div>
-              <div class="role-row-name">${escHtml(r.name)}</div>
-              ${r.description ? `<div class="role-row-desc">${escHtml(r.description)}</div>` : ''}
+          <div class="role-row${r.is_active ? '' : ' role-row-inactive'}">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <input type="checkbox" class="row-cb" style="margin-top:3px" data-id="${r.id}"
+                     onchange="toggleSelection('role','${r.id}')">
+              <div>
+                <div class="role-row-name">
+                  ${escHtml(r.name)}
+                  ${!r.is_active ? '<span class="badge badge-inactive" style="margin-left:6px;font-size:10px">Inactivo</span>' : ''}
+                </div>
+                ${r.description ? `<div class="role-row-desc">${escHtml(r.description)}</div>` : ''}
+                <div class="role-row-desc">${r.user_count ?? 0} usuario${(r.user_count ?? 0) !== 1 ? 's' : ''}</div>
+              </div>
             </div>
-            <button class="btn-icon-danger" onclick="deleteGlobalRole('${r.id}', '${escHtml(r.name)}')">
-              Desactivar
-            </button>
+            <div style="display:flex;gap:6px">
+              ${r.is_active
+                ? `<button class="btn-icon-danger" onclick="deleteGlobalRole('${r.id}', '${escHtml(r.name)}')">Desactivar</button>`
+                : `<button class="btn-sm btn-toggle-on" onclick="reactivateGlobalRole('${r.id}')">Reactivar</button>`
+              }
+            </div>
           </div>`).join('')}
       </div>`;
   }
@@ -1275,19 +2018,49 @@
     } catch { alert('Error al desactivar el rol'); }
   }
 
+  async function reactivateGlobalRole(id) {
+    try {
+      const res = await authFetch(`${API}/users/global-roles/${id}/reactivate`, { method: 'PATCH' });
+      if (!res.ok) throw new Error();
+      globalRolesCache = [];
+      loadGlobalRoles();
+    } catch { alert('Error al reactivar el rol'); }
+  }
+
   // ══════════════════════════════════════════════════
   // MODULE CREATE MODAL
   // ══════════════════════════════════════════════════
 
   function openModuleModal() {
+    editingModuleId = null;
     document.getElementById('m-name').value  = '';
     document.getElementById('m-desc').value  = '';
     document.getElementById('m-image').value = '';
     document.getElementById('m-type').value  = 'tickets';
     document.getElementById('m-slug-preview').textContent = '';
     document.getElementById('module-modal-msg').innerHTML = '';
+    document.querySelector('#module-modal .modal-title').textContent = 'Crear módulo';
+    document.getElementById('module-modal-btn').textContent = 'Crear módulo';
     document.getElementById('module-modal').classList.add('open');
   }
+
+  function openEditModuleModal() {
+    if (!currentModuleId) return;
+    editingModuleId = currentModuleId;
+    // Fetch current data to pre-fill
+    authFetch(`${API}/system-modules/${currentModuleId}`).then(r => r.json()).then(m => {
+      document.getElementById('m-name').value  = m.name  ?? '';
+      document.getElementById('m-desc').value  = m.description ?? '';
+      document.getElementById('m-image').value = m.image_url ?? '';
+      document.getElementById('m-type').value  = m.type  ?? 'custom';
+      document.getElementById('m-slug-preview').textContent = `Slug actual: ${m.slug ?? ''}`;
+      document.getElementById('module-modal-msg').innerHTML = '';
+      document.querySelector('#module-modal .modal-title').textContent = 'Editar módulo';
+      document.getElementById('module-modal-btn').textContent = 'Guardar cambios';
+      document.getElementById('module-modal').classList.add('open');
+    });
+  }
+
   function closeModuleModal() { document.getElementById('module-modal').classList.remove('open'); }
 
   function previewSlug() {
@@ -1317,13 +2090,372 @@
       const body = { name, type };
       if (desc)      body.description = desc;
       if (image_url) body.image_url   = image_url;
-      const res = await authFetch(`${API}/system-modules`, { method: 'POST', body: JSON.stringify(body) });
+
+      let res;
+      if (editingModuleId) {
+        res = await authFetch(`${API}/system-modules/${editingModuleId}`, { method: 'PATCH', body: JSON.stringify(body) });
+      } else {
+        res = await authFetch(`${API}/system-modules`, { method: 'POST', body: JSON.stringify(body) });
+      }
       if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
-      msg.innerHTML = '<div class="msg-ok">✓ Módulo creado</div>';
+
+      msg.innerHTML = editingModuleId
+        ? '<div class="msg-ok">✓ Módulo actualizado</div>'
+        : '<div class="msg-ok">✓ Módulo creado</div>';
+
+      if (editingModuleId) {
+        // Update breadcrumb and title in detail view
+        const updated = await res.json().catch(() => ({}));
+        if (updated.name) {
+          currentModuleName = updated.name;
+          document.getElementById('detail-title').textContent = updated.name;
+          document.getElementById('detail-module-name').textContent = updated.name;
+          document.getElementById('detail-slug').textContent = updated.slug ?? '';
+        }
+      }
       setTimeout(() => { closeModuleModal(); loadModules(); }, 700);
     } catch (e) {
-      msg.innerHTML = `<div class="msg-err">${escHtml(e.message ?? 'Error al crear')}</div>`;
+      msg.innerHTML = `<div class="msg-err">${escHtml(e.message ?? 'Error')}</div>`;
     } finally { btn.disabled = false; }
+  }
+
+  // ══════════════════════════════════════════════════
+  // MODULE DELETE CONFIRMATION
+  // ══════════════════════════════════════════════════
+
+  function openDeleteModuleModal() {
+    if (!currentModuleId || !currentUser?.is_superadmin) return;
+    const username = currentUser.username || currentUser.name;
+    document.getElementById('del-module-name').value = '';
+    document.getElementById('del-user-name').value   = '';
+    document.getElementById('del-module-hint').textContent = `(«${currentModuleName}»)`;
+    document.getElementById('del-user-hint').textContent   = `(«${username}»)`;
+    document.getElementById('delete-module-msg').innerHTML = '';
+    document.getElementById('del-module-name').className = 'delete-confirm-input';
+    document.getElementById('del-user-name').className   = 'delete-confirm-input';
+    document.getElementById('btn-destroy-module').disabled = true;
+    document.getElementById('module-delete-modal').classList.add('open');
+  }
+
+  function closeDeleteModuleModal() {
+    document.getElementById('module-delete-modal').classList.remove('open');
+  }
+
+  function onDeleteInputChange() {
+    const typedModule = document.getElementById('del-module-name').value;
+    const typedUser   = document.getElementById('del-user-name').value;
+    const expectedUser = currentUser?.username || currentUser?.name;
+    const moduleOk    = typedModule === currentModuleName;
+    const userOk      = typedUser   === expectedUser;
+    document.getElementById('del-module-name').className = 'delete-confirm-input ' + (typedModule ? (moduleOk ? 'matched' : 'wrong') : '');
+    document.getElementById('del-user-name').className   = 'delete-confirm-input ' + (typedUser   ? (userOk   ? 'matched' : 'wrong') : '');
+    document.getElementById('btn-destroy-module').disabled = !(moduleOk && userOk);
+  }
+
+  async function doDeleteModule() {
+    const btn = document.getElementById('btn-destroy-module');
+    const msg = document.getElementById('delete-module-msg');
+    btn.disabled = true;
+    btn.textContent = 'Eliminando…';
+    try {
+      const res  = await authFetch(`${API}/system-modules/${currentModuleId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) { msg.innerHTML = `<div class="msg-err">${escHtml(data.message ?? 'Error')}</div>`; btn.disabled = false; btn.textContent = 'Eliminar módulo'; return; }
+      closeDeleteModuleModal();
+      showView('modules');
+    } catch (e) {
+      msg.innerHTML = `<div class="msg-err">Error de red: ${escHtml(e.message)}</div>`;
+      btn.disabled = false;
+      btn.textContent = 'Eliminar módulo';
+    }
+  }
+
+  // ══════════════════════════════════════════════════
+  // TRASH / PAPELERA
+  // ══════════════════════════════════════════════════
+
+  function setTrashFilter(type) {
+    trashFilter = type;
+    document.querySelectorAll('.trash-tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.type === type)
+    );
+    loadTrash();
+  }
+
+  async function loadTrash() {
+    const list = document.getElementById('trash-list');
+    list.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+    try {
+      const params = new URLSearchParams({ limit: '100' });
+      if (trashFilter && trashFilter !== 'all') params.set('type', trashFilter);
+      const res = await authFetch(`${API}/admin/trash?${params}`);
+      if (!res.ok) throw new Error();
+      const { data, meta } = await res.json();
+      document.getElementById('trash-count').textContent = `${meta.total} en papelera`;
+      if (!data.length) {
+        list.innerHTML = '<div style="color:#475569;padding:40px;text-align:center;font-size:13px">La papelera está vacía.</div>';
+        return;
+      }
+      const TYPE_LABELS = { module: 'Módulo', user: 'Usuario', role: 'Rol', request: 'Solicitud' };
+      list.innerHTML = data.map(item => {
+        const days    = Math.ceil(parseFloat(item.days_remaining ?? 0));
+        const urgent  = days <= 7;
+        const deleted = new Date(item.deleted_at).toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' });
+        const extra   = item.extra ? ` · ${escHtml(item.extra)}` : '';
+        return `
+          <div class="trash-card">
+            <div class="trash-card-info">
+              <div class="trash-card-name">
+                <span class="trash-type-badge trash-type-${item.item_type}">${TYPE_LABELS[item.item_type] ?? item.item_type}</span>
+                ${escHtml(item.display_name)}
+              </div>
+              <div class="trash-card-meta">Eliminado el ${deleted}${extra}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="days-pill${urgent ? ' urgent' : ''}">${days}d restantes</span>
+              <button class="btn-sm btn-sm-secondary" onclick="doRestoreTrash('${item.item_type}','${item.id}')">Restaurar</button>
+            </div>
+          </div>`;
+      }).join('');
+    } catch {
+      list.innerHTML = '<div style="color:#ef4444;padding:20px;font-size:13px">Error cargando papelera</div>';
+    }
+  }
+
+  async function doRestoreTrash(type, id) {
+    try {
+      const res = await authFetch(`${API}/admin/trash/restore`, {
+        method: 'POST', body: JSON.stringify({ type, ids: [id] }),
+      });
+      if (!res.ok) throw new Error();
+      loadTrash();
+      if (type === 'module')  loadModules();
+      if (type === 'user')    { if (document.getElementById('view-users').classList.contains('active')) loadUsers(); }
+      if (type === 'role')    { if (document.getElementById('view-roles').classList.contains('active')) loadGlobalRoles(); }
+    } catch { alert('Error al restaurar'); }
+  }
+
+  // ══════════════════════════════════════════════════
+  // BULK SELECTION & DELETE
+  // ══════════════════════════════════════════════════
+
+  function toggleSelection(type, id) {
+    if (selectionType && selectionType !== type) {
+      selectedIds.clear();
+      document.querySelectorAll('.row-cb[data-id]').forEach(cb => cb.checked = false);
+    }
+    selectionType = type;
+    if (selectedIds.has(id)) { selectedIds.delete(id); } else { selectedIds.add(id); }
+    const allCbs = Array.from(document.querySelectorAll('.row-cb[data-id]'));
+    const saId   = `select-all-${type}s`;
+    const saEl   = document.getElementById(saId);
+    if (saEl && allCbs.length) {
+      const all = allCbs.every(cb => selectedIds.has(cb.dataset.id));
+      const any = allCbs.some(cb => selectedIds.has(cb.dataset.id));
+      saEl.checked       = all;
+      saEl.indeterminate = !all && any;
+    }
+    updateBulkBar();
+  }
+
+  function toggleSelectAll(type, checked) {
+    if (selectionType && selectionType !== type) selectedIds.clear();
+    selectionType = type;
+    document.querySelectorAll('.row-cb[data-id]').forEach(cb => {
+      cb.checked = checked;
+      if (checked) { selectedIds.add(cb.dataset.id); } else { selectedIds.delete(cb.dataset.id); }
+    });
+    updateBulkBar();
+  }
+
+  function clearSelection() {
+    selectedIds.clear(); selectionType = '';
+    document.querySelectorAll('.row-cb').forEach(cb => { cb.checked = false; cb.indeterminate = false; });
+    updateBulkBar();
+  }
+
+  function updateBulkBar() {
+    const bar = document.getElementById('bulk-action-bar');
+    if (!bar) return;
+    if (selectedIds.size > 0) {
+      bar.classList.add('visible');
+      document.getElementById('bulk-bar-count').textContent = selectedIds.size;
+    } else {
+      bar.classList.remove('visible');
+    }
+  }
+
+  function openBulkDeleteModal() {
+    if (!selectedIds.size) return;
+    document.getElementById('bd-count').textContent  = selectedIds.size;
+    document.getElementById('bd-pwd').value          = '';
+    document.getElementById('bd-msg').innerHTML      = '';
+    document.getElementById('btn-bd-confirm').disabled = false;
+    document.getElementById('btn-bd-confirm').textContent = 'Eliminar';
+    document.getElementById('bulk-delete-modal').classList.add('open');
+    setTimeout(() => document.getElementById('bd-pwd').focus(), 100);
+  }
+  function closeBulkDeleteModal() { document.getElementById('bulk-delete-modal').classList.remove('open'); }
+
+  async function submitBulkDelete() {
+    const btn = document.getElementById('btn-bd-confirm');
+    const msg = document.getElementById('bd-msg');
+    const pwd = document.getElementById('bd-pwd').value;
+    if (!pwd) { msg.innerHTML = '<div class="msg-err">Contraseña requerida</div>'; return; }
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    try {
+      const authRes = await authFetch(`${API}/auth/verify-credentials`, {
+        method: 'POST', body: JSON.stringify({ password: pwd }),
+      });
+      if (!authRes.ok) {
+        msg.innerHTML = '<div class="msg-err">Contraseña incorrecta</div>';
+        return;
+      }
+      btn.textContent = 'Eliminando…';
+      const delRes = await authFetch(`${API}/admin/bulk-delete`, {
+        method: 'POST', body: JSON.stringify({ type: selectionType, ids: Array.from(selectedIds) }),
+      });
+      const data = await delRes.json();
+      if (!delRes.ok) throw new Error(data.message ?? 'Error al eliminar');
+      closeBulkDeleteModal();
+      const type = selectionType;
+      clearSelection();
+      if (type === 'user')    loadUsers();
+      if (type === 'role')    loadGlobalRoles();
+      if (type === 'request') loadRequests();
+      if (type === 'module')  loadModules();
+    } catch (e) {
+      msg.innerHTML = `<div class="msg-err">${escHtml(e.message ?? 'Error')}</div>`;
+    } finally { btn.disabled = false; btn.textContent = 'Eliminar'; }
+  }
+
+  // ══════════════════════════════════════════════════
+  // REQUESTS / SOLICITUDES
+  // ══════════════════════════════════════════════════
+
+  const REQUEST_TYPE_LABELS = {
+    role_change: 'Cambio de rol', module_access: 'Acceso a módulo',
+    info_correction: 'Corrección de info', sede_change: 'Cambio de sede',
+    permission_adjustment: 'Ajuste de permisos', account_issue: 'Problema de cuenta',
+    reactivation: 'Reactivación', other: 'Otro',
+  };
+  const STATUS_LABELS = {
+    pending: 'Pendiente', under_review: 'En revisión', approved: 'Aprobado', rejected: 'Rechazado',
+  };
+
+  async function loadRequests() {
+    const list = document.getElementById('requests-list');
+    list.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+
+    const isSA = !!currentUser?.is_superadmin;
+    document.getElementById('requests-admin-bar').style.display = isSA ? '' : 'none';
+
+    try {
+      let url, rows, meta;
+      if (isSA) {
+        const onlyMine = document.getElementById('req-view-mine')?.checked;
+        if (onlyMine) {
+          const res = await authFetch(`${API}/requests/me?limit=50`);
+          const d   = await res.json();
+          rows = d.data ?? []; meta = d.meta;
+        } else {
+          const status = document.getElementById('req-filter-status')?.value ?? '';
+          const type   = document.getElementById('req-filter-type')?.value   ?? '';
+          const params = new URLSearchParams({ limit: 50 });
+          if (status) params.set('status', status);
+          if (type)   params.set('type',   type);
+          const res = await authFetch(`${API}/requests?${params}`);
+          const d   = await res.json();
+          rows = d.data ?? []; meta = d.meta;
+        }
+      } else {
+        const res = await authFetch(`${API}/requests/me?limit=50`);
+        const d   = await res.json();
+        rows = d.data ?? []; meta = d.meta;
+      }
+
+      document.getElementById('requests-count').textContent = `${meta?.total ?? rows.length} solicitud${(meta?.total ?? rows.length) !== 1 ? 'es' : ''}`;
+
+      if (!rows.length) {
+        list.innerHTML = '<div style="color:#475569;padding:40px;text-align:center;font-size:13px">No hay solicitudes.</div>';
+        return;
+      }
+
+      list.innerHTML = rows.map(r => {
+        const statusCls = `status-${r.status}`;
+        const dateStr   = new Date(r.created_at).toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' });
+        const reviewActions = isSA && !document.getElementById('req-view-mine')?.checked && r.status === 'pending' ? `
+          <div class="review-actions">
+            <button class="btn-review"  onclick="doReviewRequest('${r.id}','under_review')">En revisión</button>
+            <button class="btn-approve" onclick="doReviewRequest('${r.id}','approved')">Aprobar</button>
+            <button class="btn-reject"  onclick="doReviewRequest('${r.id}','rejected')">Rechazar</button>
+          </div>` : '';
+        const reviewer = r.reviewer_name ? `<div class="request-card-review">Revisado por <strong>${escHtml(r.reviewer_name)}</strong>${r.review_notes ? ` · "${escHtml(r.review_notes)}"` : ''}</div>` : '';
+        return `
+          <div class="request-card">
+            <div class="request-card-header">
+              <div>
+                <div class="request-card-title">${escHtml(r.title)}</div>
+                <div class="request-card-meta">
+                  <span class="req-type-label">${REQUEST_TYPE_LABELS[r.type] ?? r.type}</span>
+                  ${r.requester_name ? ` · ${escHtml(r.requester_name)}` : ''}
+                  · ${dateStr}
+                </div>
+              </div>
+              <span class="status-pill ${statusCls}">${STATUS_LABELS[r.status] ?? r.status}</span>
+            </div>
+            <div class="request-card-desc">${escHtml(r.description)}</div>
+            ${reviewer}
+            ${reviewActions}
+          </div>`;
+      }).join('');
+    } catch (e) {
+      list.innerHTML = `<div style="color:#ef4444;padding:20px;font-size:13px">Error cargando solicitudes: ${escHtml(e.message)}</div>`;
+    }
+  }
+
+  function openCreateRequestModal() {
+    document.getElementById('req-type').value  = 'role_change';
+    document.getElementById('req-title').value = '';
+    document.getElementById('req-desc').value  = '';
+    document.getElementById('create-request-msg').innerHTML = '';
+    document.getElementById('create-request-modal').classList.add('open');
+  }
+  function closeCreateRequestModal() { document.getElementById('create-request-modal').classList.remove('open'); }
+
+  async function doCreateRequest() {
+    const btn   = document.getElementById('btn-create-request');
+    const msg   = document.getElementById('create-request-msg');
+    const title = document.getElementById('req-title').value.trim();
+    const desc  = document.getElementById('req-desc').value.trim();
+    const type  = document.getElementById('req-type').value;
+    if (title.length < 5) { msg.innerHTML = '<div class="msg-err">El título debe tener al menos 5 caracteres</div>'; return; }
+    if (desc.length < 10) { msg.innerHTML = '<div class="msg-err">La descripción debe tener al menos 10 caracteres</div>'; return; }
+    btn.disabled = true;
+    try {
+      const res  = await authFetch(`${API}/requests`, { method: 'POST', body: JSON.stringify({ type, title, description: desc }) });
+      const data = await res.json();
+      if (!res.ok) { msg.innerHTML = `<div class="msg-err">${escHtml(data.message ?? 'Error')}</div>`; return; }
+      msg.innerHTML = '<div class="msg-ok">✓ Solicitud enviada</div>';
+      setTimeout(() => { closeCreateRequestModal(); loadRequests(); }, 800);
+    } catch (e) {
+      msg.innerHTML = `<div class="msg-err">Error de red: ${escHtml(e.message)}</div>`;
+    } finally { btn.disabled = false; }
+  }
+
+  async function doReviewRequest(id, status) {
+    let notes = null;
+    if (status === 'rejected') {
+      notes = prompt('Motivo del rechazo (opcional):');
+      if (notes === null) return; // cancelled
+    }
+    try {
+      const body = { status };
+      if (notes) body.review_notes = notes;
+      const res  = await authFetch(`${API}/requests/${id}/review`, { method: 'PATCH', body: JSON.stringify(body) });
+      if (!res.ok) { const d = await res.json(); alert(d.message ?? 'Error'); return; }
+      loadRequests();
+    } catch { alert('Error de red'); }
   }
 
   // ══════════════════════════════════════════════════
@@ -1443,6 +2575,261 @@
   }
 
   // ══════════════════════════════════════════════════
+  // PROFILE VIEW
+  // ══════════════════════════════════════════════════
+
+  let profileMap     = null;
+  let profileMarker  = null;
+  let countriesCache = [];
+  let geocodeTimer   = null;
+
+  async function loadProfileView() {
+    try {
+      const res  = await authFetch(`${API}/users/me`);
+      if (!res.ok) return;
+      const p = await res.json();
+      renderProfileView(p);
+      loadCountries();
+    } catch {}
+  }
+
+  function renderProfileView(p) {
+    const initial = `${p.first_name ?? '?'}`.charAt(0).toUpperCase();
+
+    // Hero
+    const avatarEl = document.getElementById('prof-avatar-lg');
+    if (p.avatar_url) {
+      avatarEl.innerHTML = `<img src="${escHtml(p.avatar_url)}" onerror="this.parentElement.innerHTML='<span>${escHtml(initial)}</span>'">`;
+    } else {
+      avatarEl.innerHTML = `<span>${escHtml(initial)}</span>`;
+    }
+    document.getElementById('prof-fullname').textContent = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || '—';
+    document.getElementById('prof-username-display').textContent = p.username ? `@${p.username}` : p.email;
+
+    const badges = document.getElementById('prof-badges');
+    badges.innerHTML = '';
+    if (p.is_superadmin) {
+      badges.innerHTML += '<span class="badge badge-super">Superadmin</span>';
+    } else {
+      badges.innerHTML += '<span class="badge badge-global">Usuario</span>';
+    }
+    if (!p.profile_complete) {
+      badges.innerHTML += '<span class="badge" style="background:#78350f;color:#fde68a;font-size:10px">Perfil incompleto</span>';
+    }
+
+    // Personal fields
+    document.getElementById('pf-first').value    = p.first_name ?? '';
+    document.getElementById('pf-last').value     = p.last_name  ?? '';
+    document.getElementById('pf-username').value = p.username   ?? '';
+    document.getElementById('pf-phone').value    = p.phone      ?? '';
+
+    // Work fields
+    document.getElementById('pf-job').value   = p.job_title    ?? '';
+    document.getElementById('pf-dept').value  = p.department   ?? '';
+    document.getElementById('pf-sede').value  = p.primary_sede ?? '';
+
+    // Location
+    document.getElementById('pf-address').value = p.address ?? '';
+
+    // Module roles
+    const roles = p.roles ?? [];
+    if (roles.length) {
+      document.getElementById('prof-roles-section').style.display = '';
+      document.getElementById('prof-roles-list').innerHTML = roles.map(r =>
+        `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1e293b">
+          <span style="font-size:13px;color:#e2e8f0">${escHtml(r.module)}</span>
+          <span class="badge badge-role">${escHtml(r.role)}</span>
+        </div>`
+      ).join('');
+    }
+
+    // Init map after DOM settles
+    setTimeout(() => initProfileMap(p.address), 150);
+  }
+
+  function initProfileMap(address) {
+    if (!window.L) return;
+    if (profileMap) { profileMap.remove(); profileMap = null; profileMarker = null; }
+
+    profileMap = L.map('profile-map', { zoomControl: true, scrollWheelZoom: false }).setView([4.7110, -74.0721], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18,
+    }).addTo(profileMap);
+
+    if (address) geocodeAddress(address);
+  }
+
+  function debounceGeocode() {
+    clearTimeout(geocodeTimer);
+    geocodeTimer = setTimeout(() => {
+      const addr = document.getElementById('pf-address').value.trim();
+      if (addr.length > 5) geocodeAddress(addr);
+    }, 900);
+  }
+
+  async function geocodeAddress(address) {
+    try {
+      document.getElementById('geocode-status').textContent = '🔍 Buscando ubicación…';
+      const q   = encodeURIComponent(address);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=1`, {
+        headers: { 'Accept-Language': 'es' },
+      });
+      const data = await res.json();
+      if (!data.length) { document.getElementById('geocode-status').textContent = 'No se encontró la ubicación.'; return; }
+      const { lat, lon, display_name } = data[0];
+      const latlng = [parseFloat(lat), parseFloat(lon)];
+      if (!profileMap) return;
+      profileMap.setView(latlng, 14);
+      if (profileMarker) profileMarker.setLatLng(latlng);
+      else profileMarker = L.marker(latlng).addTo(profileMap);
+      profileMarker.bindPopup(escHtml(display_name)).openPopup();
+      document.getElementById('geocode-status').textContent = `📍 ${display_name.split(',').slice(0, 3).join(', ')}`;
+    } catch {
+      document.getElementById('geocode-status').textContent = 'Error al buscar ubicación.';
+    }
+  }
+
+  async function loadCountries() {
+    if (countriesCache.length) { renderCountriesDropdown(); return; }
+    try {
+      const res  = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2');
+      const data = await res.json();
+      countriesCache = data
+        .map(c => ({ code: c.cca2, name: c.name?.common ?? c.cca2 }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      renderCountriesDropdown();
+    } catch {}
+  }
+
+  function renderCountriesDropdown() {
+    const sel = document.getElementById('pf-country');
+    // Try to infer current country from address
+    const addr = (document.getElementById('pf-address')?.value ?? '').toLowerCase();
+    sel.innerHTML = '<option value="">— Seleccionar país —</option>' +
+      countriesCache.map(c => `<option value="${escHtml(c.name)}">${escHtml(c.name)}</option>`).join('');
+  }
+
+  async function onCountryChange() {
+    const country = document.getElementById('pf-country').value;
+    const sel = document.getElementById('pf-city');
+    if (!country) { sel.innerHTML = '<option value="">— Selecciona país primero —</option>'; return; }
+    sel.innerHTML = '<option value="">Cargando ciudades…</option>';
+    try {
+      const res  = await fetch('https://countriesnow.space/api/v0.1/countries/cities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ country }),
+      });
+      const data = await res.json();
+      const cities = data?.data ?? [];
+      sel.innerHTML = '<option value="">— Seleccionar ciudad —</option>' +
+        cities.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+    } catch {
+      sel.innerHTML = '<option value="">Error cargando ciudades</option>';
+    }
+  }
+
+  function onCityChange() {
+    const country = document.getElementById('pf-country').value;
+    const city    = document.getElementById('pf-city').value;
+    if (!city) return;
+    const current = document.getElementById('pf-address').value.trim();
+    if (!current) document.getElementById('pf-address').value = `${city}, ${country}`;
+    debounceGeocode();
+  }
+
+  async function saveProfileSection(section) {
+    const msgId = { personal: 'msg-personal', work: 'msg-work', location: 'msg-location' }[section];
+    const msgEl = document.getElementById(msgId);
+    msgEl.textContent = '';
+
+    let body = {};
+    if (section === 'personal') {
+      body = {
+        first_name: document.getElementById('pf-first').value.trim() || undefined,
+        last_name:  document.getElementById('pf-last').value.trim()  || undefined,
+        phone:      document.getElementById('pf-phone').value.trim() || undefined,
+        username:   document.getElementById('pf-username').value.trim() || undefined,
+      };
+    } else if (section === 'work') {
+      body = {
+        job_title:    document.getElementById('pf-job').value.trim()   || undefined,
+        department:   document.getElementById('pf-dept').value.trim()  || undefined,
+        primary_sede: document.getElementById('pf-sede').value.trim()  || undefined,
+      };
+    } else if (section === 'location') {
+      body = {
+        address: document.getElementById('pf-address').value.trim() || undefined,
+      };
+    }
+
+    // Remove undefined keys
+    Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
+    if (!Object.keys(body).length) { msgEl.textContent = 'Sin cambios.'; return; }
+
+    try {
+      const res  = await authFetch(`${API}/users/me`, { method: 'PATCH', body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? 'Error al guardar');
+      msgEl.className = 'profile-save-msg profile-save-ok';
+      msgEl.textContent = '✓ Guardado';
+      currentUser = { ...currentUser, ...body };
+      // Refresh hero
+      const nameText = `${body.first_name ?? currentUser.first_name ?? ''} ${body.last_name ?? currentUser.last_name ?? ''}`.trim();
+      if (nameText) document.getElementById('prof-fullname').textContent = nameText;
+      if (body.username !== undefined) {
+        const uname = body.username || '';
+        document.getElementById('prof-username-display').textContent = uname ? `@${uname}` : currentUser.email;
+        document.getElementById('pd-username-label').textContent = uname ? `@${uname}` : currentUser.email;
+        document.getElementById('header-name').textContent = uname || nameText || currentUser.email;
+      }
+      setTimeout(() => { msgEl.textContent = ''; }, 3000);
+    } catch (e) {
+      msgEl.className = 'profile-save-msg profile-save-err';
+      msgEl.textContent = e.message;
+    }
+  }
+
+  function togglePwdForm() {
+    const el = document.getElementById('pwd-form');
+    el.style.display = el.style.display === 'none' ? '' : 'none';
+    if (el.style.display === '') {
+      document.getElementById('pf-pwd-current').value = '';
+      document.getElementById('pf-pwd-new').value     = '';
+      document.getElementById('pf-pwd-confirm').value = '';
+      document.getElementById('msg-pwd').textContent  = '';
+    }
+  }
+
+  async function savePwd() {
+    const msg     = document.getElementById('msg-pwd');
+    const current = document.getElementById('pf-pwd-current').value;
+    const nw      = document.getElementById('pf-pwd-new').value;
+    const confirm = document.getElementById('pf-pwd-confirm').value;
+    msg.textContent = '';
+
+    if (!current || !nw || !confirm) { msg.className = 'profile-save-msg profile-save-err'; msg.textContent = 'Todos los campos son requeridos'; return; }
+    if (nw.length < 8) { msg.className = 'profile-save-msg profile-save-err'; msg.textContent = 'Mínimo 8 caracteres'; return; }
+    if (nw !== confirm) { msg.className = 'profile-save-msg profile-save-err'; msg.textContent = 'Las contraseñas no coinciden'; return; }
+
+    try {
+      const res  = await authFetch(`${API}/users/me/password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ current_password: current, new_password: nw }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? 'Error');
+      msg.className = 'profile-save-msg profile-save-ok';
+      msg.textContent = '✓ Contraseña actualizada. Inicia sesión nuevamente.';
+      setTimeout(() => doLogout(), 2000);
+    } catch (e) {
+      msg.className = 'profile-save-msg profile-save-err';
+      msg.textContent = e.message;
+    }
+  }
+
+  // ══════════════════════════════════════════════════
   // AUTH HELPERS
   // ══════════════════════════════════════════════════
 
@@ -1488,5 +2875,6 @@
     return new Date(iso).toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' });
   }
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>

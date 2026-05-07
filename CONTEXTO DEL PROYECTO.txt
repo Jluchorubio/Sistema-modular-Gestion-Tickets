@@ -1,0 +1,1139 @@
+🔐 Flujo de Autenticación del Sistema
+Objetivo
+
+Permitir el acceso seguro al sistema mediante dos métodos de autenticación:
+
+Inicio de sesión tradicional (usuario + contraseña)
+Inicio de sesión con Google OAuth
+
+El acceso solo será permitido a usuarios previamente registrados en la base de datos del sistema.
+
+1. Inicio de Sesión Tradicional
+Descripción General
+
+El usuario podrá autenticarse utilizando:
+
+Usuario o correo electrónico
+Contraseña
+Flujo de Autenticación
+Paso 1 — Ingreso de Credenciales
+
+El usuario ingresa:
+
+Usuario/correo
+Contraseña
+
+y presiona el botón “Iniciar sesión” o la tecla Enter.
+
+Paso 2 — Validación de Existencia
+
+El sistema debe verificar:
+
+Que el usuario exista en la base de datos.
+Que la cuenta esté activa.
+Que tenga permisos de acceso.
+Resultado esperado
+Si el usuario NO existe:
+
+Mostrar mensaje flotante:
+
+“Usuario no existente.”
+
+Si existe:
+Continuar al siguiente paso.
+Paso 3 — Validación de Contraseña
+
+El sistema valida la contraseña ingresada.
+
+Política de Intentos Fallidos
+
+El usuario tendrá un máximo de:
+
+3 intentos fallidos consecutivos.
+Si supera el límite:
+
+El sistema debe:
+
+Bloquear temporalmente el inicio de sesión.
+
+Mostrar mensaje indicando:
+
+“Demasiados intentos fallidos. Intente nuevamente más tarde.”
+
+Consideraciones técnicas
+
+El bloqueo puede implementarse mediante:
+
+Rate limiting por IP
+Rate limiting por usuario
+Tiempo de espera progresivo
+Registro de intentos fallidos en logs de auditoría
+Paso 4 — Autenticación en Dos Factores (2FA)
+
+Si las credenciales son correctas:
+
+El sistema generará un código temporal de verificación.
+El código será enviado al correo electrónico del usuario.
+El usuario deberá ingresar dicho código para completar el acceso.
+Validación del Código 2FA
+
+El sistema debe validar:
+
+Que el código sea correcto.
+Que no haya expirado.
+Que pertenezca al usuario autenticado.
+Resultado esperado
+Si el código es inválido:
+
+Mostrar mensaje:
+
+“Código incorrecto o expirado.”
+
+Si es válido:
+Permitir acceso al sistema.
+2. Inicio de Sesión con Google
+Descripción General
+
+El usuario podrá iniciar sesión mediante Google OAuth.
+
+⚠️ Importante:
+El sistema NO debe registrar automáticamente usuarios nuevos desde Google.
+
+Solo podrán acceder usuarios previamente existentes en la base de datos.
+
+Flujo de Autenticación con Google
+Paso 1 — Selección de Google Login
+
+El usuario presiona:
+
+“Iniciar sesión con Google”
+
+Paso 2 — Autenticación con Google
+
+Google devuelve:
+
+Correo electrónico autenticado
+Información básica del usuario
+Paso 3 — Validación en Base de Datos
+
+El sistema verifica:
+
+Que el correo exista en la base de datos.
+Que el usuario esté habilitado.
+Resultado esperado
+Caso válido
+
+Si el correo existe:
+
+Permitir acceso al sistema.
+Caso inválido
+
+Si el correo NO existe:
+
+El sistema NO debe:
+
+Registrar usuarios automáticamente
+Crear cuentas nuevas
+Guardar información en base de datos
+En su lugar:
+
+Mostrar mensaje flotante:
+
+“Usuario no existente.”
+
+y cancelar el acceso.
+
+3. Reglas Generales de Seguridad
+Requisitos Obligatorios
+Seguridad de contraseñas
+Contraseñas encriptadas con bcrypt o Argon2.
+Nunca almacenar contraseñas en texto plano.
+Seguridad de sesión
+Uso de JWT o sesiones seguras.
+Tokens con expiración.
+Refresh tokens opcionales.
+Auditoría
+
+Registrar:
+
+Intentos fallidos
+Bloqueos temporales
+Inicios de sesión exitosos
+Uso de autenticación Google
+Errores de autenticación
+Protección adicional
+
+Implementar:
+
+Rate limiting
+Protección contra fuerza bruta
+Validación de IP/dispositivo opcional
+CSRF protection
+Secure cookies
+4. Comportamientos Esperados del Sistema
+Escenario	Resultado
+Usuario inexistente	Mostrar “Usuario no existente”
+Contraseña incorrecta	Consumir intento
+3 intentos fallidos	Bloqueo temporal
+Código 2FA incorrecto	Denegar acceso
+Código expirado	Solicitar nuevo código
+Login Google con usuario existente	Acceso permitido
+Login Google con usuario no registrado	Denegar acceso sin registrar usuario
+5. Restricciones Importantes
+El sistema NO debe:
+Registrar usuarios automáticamente con Google.
+Permitir bypass del 2FA.
+Permitir intentos infinitos de login.
+Exponer información sensible en errores.
+Diferenciar visualmente entre:
+usuario inexistente
+contraseña incorrecta
+
+(para evitar enumeración de usuarios).
+
+
+----------------------------------------------------------
+
+
+# 🧩 Módulo Principal del Sistema (Dashboard Global)
+
+## Objetivo General
+
+El módulo principal funcionará como el núcleo central del sistema. Desde este apartado se gestionarán:
+
+* Los módulos/proyectos existentes
+* Los usuarios
+* Los roles globales y por módulo
+* La administración general de la plataforma
+
+La interfaz y funcionalidades visibles cambiarán dinámicamente según el rol global del usuario autenticado.
+
+---
+
+# 👥 Roles Globales del Sistema
+
+Dentro del sistema existirán inicialmente dos roles globales principales:
+
+| Rol         | Descripción                                                |
+| ----------- | ---------------------------------------------------------- |
+| Super Admin | Control total sobre toda la plataforma y todos los módulos |
+| Usuario     | Acceso limitado según permisos asignados                   |
+
+---
+
+# 🖥️ Estructura Visual del Dashboard
+
+La estructura general del dashboard estará dividida en:
+
+* Header superior
+* Área principal de módulos
+* Sidebar administrativo (solo Super Admin)
+
+---
+
+# 🔝 Header Global
+
+El header siempre estará visible para cualquier usuario autenticado.
+
+Debe contener:
+
+* Logo del sistema
+* Nombre de la plataforma
+* Información del usuario autenticado
+* Avatar/foto de perfil
+* Botón de cerrar sesión
+* Notificaciones (futuro)
+* Configuración rápida (futuro)
+
+---
+
+# 📦 Área Principal de Módulos
+
+Esta será la vista principal del sistema y estará disponible tanto para:
+
+* Super Admin
+* Usuario normal
+
+---
+
+## Funcionalidad del Área de Módulos
+
+Aquí se mostrarán todos los módulos disponibles a los que el usuario tenga acceso.
+
+Ejemplo:
+
+* Mesa de Ayuda
+* Inventario
+* Biblioteca
+* Recursos Humanos
+* CRM
+* Compras
+
+---
+
+## Diseño Visual
+
+Los módulos deberán visualizarse mediante:
+
+* Cards/Tarjetas
+* Nombre del módulo
+* Descripción corta
+* Imagen/Icono representativo
+* Categoría o etiqueta
+* Estado del módulo
+
+---
+
+## Acceso Condicional
+
+El sistema solo mostrará módulos:
+
+* Permitidos para el usuario
+* Asociados a sus permisos
+* Asociados a sus roles
+
+---
+
+# 🛡️ Sidebar Administrativo (Solo Super Admin)
+
+## Regla Principal
+
+El sidebar lateral de navegación administrativa únicamente será visible cuando:
+
+* El usuario autenticado tenga rol global `Super Admin`.
+
+---
+
+## Usuario Normal
+
+Si el usuario tiene rol global `Usuario`:
+
+* NO verá el sidebar lateral.
+* SOLO verá:
+
+  * Header
+  * Área principal de módulos disponibles
+
+La experiencia será más limpia y enfocada únicamente en los módulos asignados.
+
+---
+
+# 📚 Funcionalidades del Sidebar del Super Admin
+
+El sidebar contendrá accesos administrativos globales como:
+
+* Módulos
+* Usuarios
+* Roles Globales
+* Configuración
+* Auditoría
+* Administración del sistema
+
+---
+
+## Comportamiento del Sidebar
+
+El sidebar deberá ser:
+
+* Colapsable/desplegable
+* Persistente entre páginas
+* Responsive
+* Optimizado para escritorio y tablet
+
+---
+
+# 🧱 Arquitectura Base de los Módulos
+
+Cada módulo creado dinámicamente heredará por defecto ciertos componentes base del sistema principal.
+
+---
+
+## Funcionalidades Base Heredadas
+
+Todo nuevo módulo incluirá inicialmente:
+
+* Sistema de tickets
+* Sistema SLA
+* Sistema de nomenclaturas
+* Gestión de estados
+* Gestión básica de usuarios
+* Sistema de permisos
+* Auditoría básica
+
+---
+
+## Configuración Modular
+
+Cada módulo podrá personalizar posteriormente:
+
+* Roles
+* Permisos
+* Flujos
+* Estados
+* Nomenclaturas
+* Automatizaciones
+
+según las necesidades del negocio.
+
+---
+
+# 📦 Gestión de Módulos/Proyectos
+
+El Super Admin podrá:
+
+* Crear módulos
+* Editar módulos
+* Configurar módulos
+* Eliminar módulos
+* Gestionar estados del módulo
+
+---
+🗑️ Eliminación de Módulos
+Política Obligatoria de Eliminación
+
+Cuando el Super Admin elimine un módulo/proyecto, el sistema deberá utilizar obligatoriamente un proceso de confirmación tipo GitHub.
+
+No podrá existir eliminación directa con un solo clic.
+
+Flujo Obligatorio de Eliminación
+
+Antes de eliminar un módulo, el sistema deberá:
+
+Mostrar una advertencia clara sobre el impacto de la eliminación.
+Solicitar confirmación manual.
+Solicitar que el Super Admin escriba explícitamente:
+Su nombre de usuario
+El nombre exacto del módulo/proyecto a eliminar
+
+Solo si ambos datos coinciden correctamente:
+
+Se habilitará el botón de eliminación.
+♻️ Tipo de Eliminación
+
+La eliminación será mediante:
+
+Soft Delete
+
+Esto significa que el módulo NO será eliminado inmediatamente de la base de datos.
+
+🕒 Tiempo de Retención
+
+Una vez eliminado:
+
+El módulo permanecerá almacenado durante 3 meses.
+
+Durante este período:
+
+El Super Admin podrá recuperar completamente el módulo.
+Se deberán conservar:
+Tickets
+Usuarios
+Roles
+Configuraciones
+SLA
+Nomenclaturas
+Historial
+Archivos
+Relaciones internas
+Auditorías
+Configuraciones personalizadas
+
+La restauración deberá devolver el módulo exactamente al estado previo a su eliminación.
+
+❌ Eliminación Permanente
+
+Si transcurren los 3 meses de retención:
+
+El sistema eliminará automáticamente el módulo de forma definitiva (Hard Delete).
+
+Esta eliminación permanente incluirá:
+
+Datos
+Relaciones
+Configuraciones
+Historial asociado
+Archivos relacionados
+
+Después de este proceso:
+
+La recuperación ya no será posible.
+---
+
+# 👤 Gestión Global de Usuarios
+
+El Super Admin podrá:
+
+* Ver usuarios
+* Crear usuarios
+* Editar usuarios
+* Asignar roles
+* Gestionar permisos
+* Aplicar cambios masivos
+
+---
+
+# 🎭 Sistema de Roles
+
+El sistema manejará:
+
+## Roles Globales
+
+Aplican a toda la plataforma.
+
+Ejemplo:
+
+* Super Admin
+* Usuario
+
+---
+
+## Roles por Módulo
+
+Cada módulo tendrá roles independientes y personalizados.
+
+Ejemplo Inventario:
+
+* Admin
+* Técnico
+* Jefe Técnico
+* Usuario
+
+Ejemplo Biblioteca:
+
+* Bibliotecario
+* Supervisor
+* Estudiante
+
+---
+
+# ⚠️ Roles Dinámicos por Módulo
+
+Los roles cambiarán dinámicamente según el módulo seleccionado.
+
+Esto permitirá que:
+
+* Cada módulo tenga estructuras organizacionales diferentes.
+* Los permisos sean totalmente desacoplados entre módulos.
+
+---
+
+# 👥 Roles por Defecto
+
+Todo usuario nuevo creado tendrá automáticamente:
+
+| Nivel   | Rol     |
+| ------- | ------- |
+| Global  | Usuario |
+| Módulos | Usuario |
+
+Solo un administrador podrá modificar posteriormente dichos roles.
+
+---
+
+# 🚀 Gestión Masiva
+
+El sistema permitirá:
+
+* Selección múltiple de usuarios
+* Cambio masivo de roles
+* Asignación masiva de permisos
+* Activación/desactivación masiva
+
+con el objetivo de reducir clics y optimizar la administración.
+
+---
+
+# 🔎 Funcionalidades Obligatorias
+
+Todos los apartados administrativos deberán incluir:
+
+* Paginación ajustable
+* Filtros avanzados
+* Búsqueda avanzada
+* Ordenamiento dinámico
+* Acciones masivas
+* Persistencia de filtros
+* Scroll optimizado
+
+---
+
+# 🎨 Consideraciones UX/UI
+
+La interfaz debe priorizar:
+
+* Rapidez operativa
+* Escalabilidad
+* Bajo número de clics
+* Diseño limpio
+* Navegación clara
+* Separación visual entre administración y uso operativo
+
+---
+
+# 🔐 Restricciones del Usuario Normal
+
+El usuario estándar NO podrá:
+
+* Ver el sidebar administrativo
+* Crear módulos
+* Eliminar módulos
+* Gestionar usuarios globalmente
+* Modificar roles globales
+* Acceder a configuraciones críticas
+
+Su experiencia estará limitada únicamente a:
+
+* Los módulos asignados
+* Las funcionalidades permitidas por su rol
+* Las acciones autorizadas dentro de cada módulo
+
+-------------------------------------------------------------
+
+
+## 🔹 Sistema de módulos (núcleo del sistema)
+
+El sistema funciona como una **plataforma de módulos dinámicos**.
+
+### ✔ Creación de módulos
+
+El **Superadmin** puede:
+
+* Crear módulos ilimitados
+* Cada módulo se genera automáticamente con:
+
+  * Roles por defecto
+  * SLA base
+  * Categorías y subcategorías iniciales
+  * Sedes y ambientes por defecto
+  * Flujo de tickets preconfigurado
+
+👉 Esto convierte cada módulo en:
+
+> Una instancia independiente del sistema de tickets, completamente configurable
+
+---
+
+## 🔹 Tipos de módulos
+
+### 🟢 1. Módulos dinámicos (generados)
+
+* Configurables completamente
+* Basados en plantilla
+
+### 🔵 2. Módulos especiales
+
+#### ✔ Helpdesk
+
+* Implementación base del sistema de tickets
+
+#### ✔ Inventario
+
+* Sistema extendido de gestión de activos (no solo tickets)
+
+---
+
+# 👥 🔐 SISTEMA DE ROLES
+
+## 🔹 Rol global
+
+### Superadmin
+
+* Configura todo el sistema
+* Crea módulos
+* Define SLA, estructuras y reglas globales
+
+---
+
+## 🔹 Roles por módulo (independientes)
+
+* Admin
+* Jefe Técnico
+* Técnico
+* Usuario
+
+✔ Los roles son **contextuales por módulo**
+✔ Un mismo usuario puede tener diferentes roles según el módulo
+✔ Se pueden crear roles personalizados (ej: Técnico Hardware)
+
+---
+
+# 🎟️ 🔄 FLUJO COMPLETO DEL TICKET (FSM)
+
+## 🔹 1. Creación del ticket
+
+El usuario registra:
+
+* Categoría
+* Subcategoría
+* Sede
+* Ambiente
+* Descripción
+* Evidencias
+
+Estado inicial:
+
+> 🟢 Abierto
+
+---
+
+## 🔹 2. Cálculo automático (SLA)
+
+El sistema calcula automáticamente:
+
+* Prioridad:
+
+  * Baja
+  * Media
+  * Alta
+  * Crítica
+* Tiempo estimado de resolución
+
+Basado en:
+
+* Categoría y subcategoría
+* Tipo de daño
+* Ubicación (sede)
+* Ambiente
+* Reglas configuradas dinámicamente
+
+---
+
+## 🔹 3. Asignación automática del ticket
+
+### ✔ Métodos de asignación
+
+#### 🔸 Distribución equitativa (Round-robin)
+
+* Asignación secuencial entre técnicos
+
+#### 🔸 Asignación por especialización
+
+* Basada en roles personalizados
+* Ejemplo:
+
+  * Técnico Hardware → solo tickets de hardware
+
+---
+
+### ✔ Validaciones antes de asignar
+
+* Disponibilidad del técnico
+* Carga de trabajo
+* Horarios
+* Incapacidades / ausencias
+* Capacidades (categorías permitidas)
+
+---
+
+## 🔹 4. Cola de trabajo por técnico
+
+Cada técnico tiene su propia cola dinámica:
+
+### 📊 Orden de atención:
+
+1. Tickets del día anterior:
+
+   * Alta → Media → Baja
+2. Tickets del día actual:
+
+   * Alta → Media → Baja
+
+---
+
+## 🔹 5. Ejecución del ticket
+
+Estados del sistema:
+
+* 🟡 En espera
+* 🔵 En proceso
+* 🟣 Realizado
+* ⚪ Cerrado
+* 🔴 Reproceso
+
+El técnico debe:
+
+* Registrar solución
+* Adjuntar evidencias
+
+---
+
+# 🔔 🔐 VALIDACIÓN Y CIERRE (REGLA CRÍTICA DEL SISTEMA)
+
+## 🔹 Condición obligatoria de cierre
+
+> Un ticket SOLO se cierra cuando:
+
+* El técnico finaliza
+* El usuario valida la solución (firma digital)
+
+---
+
+## 🔹 Notificación al usuario
+
+El usuario recibe:
+
+* Notificación interna (obligatoria)
+* Email (Gmail por defecto)
+* WhatsApp (opcional)
+
+Incluye:
+
+* Solución aplicada
+* Evidencias
+* Token de firma digital
+
+---
+
+## 🔹 Escenarios de cierre
+
+### ✅ Aprobación
+
+* Usuario firma digitalmente
+* Estado → ⚪ Cerrado
+
+---
+
+### ⏳ Sin respuesta
+
+* Si no responde en 2 días:
+* Estado → ⚪ Cerrado automático
+
+---
+
+### ❌ Rechazo → Reproceso
+
+Condiciones:
+
+* Usuario no está satisfecho
+* Debe enviar:
+
+  * Justificación
+  * Evidencias
+
+Resultado:
+
+* Estado → 🔴 Reproceso
+* Se invalida la solución previa
+
+---
+
+## 🔁 6. Reproceso (controlado)
+
+* El técnico vuelve a trabajar el ticket
+* Se repite el flujo de validación
+
+---
+
+## 🔴 Regla crítica
+
+> ❗ Solo se permite **UN reproceso**
+
+---
+
+## 🔺 7. Escalamiento
+
+Si el usuario vuelve a rechazar:
+
+* El ticket se escala
+
+* Se reasigna (Jefe Técnico)
+
+* Prioridad aumenta:
+
+  * Máximo → **Alta (nunca Crítica)**
+
+* Resolución obligatoria
+
+---
+
+# ⚙️ 🧮 MOTOR SLA (COMPORTAMIENTO REAL)
+
+El SLA en tu sistema no es solo tiempo:
+
+> Es un motor inteligente que define prioridad, asignación y orden de ejecución
+
+---
+
+## 🔹 Componentes del SLA
+
+### 1. Cálculo automático
+
+* Determina prioridad y tiempos
+
+### 2. Asignación inteligente
+
+* Equitativa
+* Por especialización
+
+### 3. Priorización dinámica
+
+* Orden automático en cola
+
+---
+
+# 📦 🧾 MÓDULO DE INVENTARIO (SISTEMA COMPLETO)
+
+## 🔹 Registro de activos
+
+Cada activo debe incluir:
+
+* Descripción
+* Especificaciones
+* Categoría
+* Subcategoría
+* Información relevante completa
+
+---
+
+## 🔹 Generación de QR
+
+Al crear un activo:
+
+* Se genera automáticamente un **código QR único**
+
+Permite:
+
+* Identificación rápida
+* Asociación física (impresión y pegado)
+
+---
+
+## 🔹 Gestión de QR
+
+* Generación múltiple
+* Selección de varios activos
+* Impresión masiva sencilla
+
+---
+
+## 🔹 Visualización de activos
+
+Al seleccionar un activo (ej: computador):
+
+### 📊 Información disponible:
+
+* Datos completos
+* Especificaciones
+* Imágenes
+
+---
+
+### 📜 Historial de tickets
+
+* Todos los tickets asociados al activo
+* Trazabilidad completa
+
+---
+
+### 🔗 Relación entre activos
+
+Ejemplo:
+
+Un computador puede tener:
+
+* Mouse
+* Teclado
+* Batería
+
+👉 Modelo:
+
+> Relación jerárquica (activo padre → activos hijos)
+
+---
+
+## 🔹 Funcionalidades
+
+* Filtros avanzados
+* Paginación
+* Búsqueda por múltiples criterios
+
+---
+
+# 🔗 INTEGRACIÓN INVENTARIO + TICKETS
+
+* Un ticket puede asociarse a un activo
+* Un activo tiene historial completo de tickets
+
+👉 Resultado:
+
+> Trazabilidad total del ciclo de vida del equipo
+
+---
+
+# ⚙️ 🧩 PERSONALIZACIÓN DEL SISTEMA
+
+Cada módulo puede modificar sin código:
+
+* Categorías
+* Subcategorías
+* SLA
+* Roles
+* Flujos de estados
+* Sedes y ambientes
+
+---
+
+# 🧠 🔥 NATURALEZA REAL DEL SISTEMA
+
+Tu sistema es:
+
+* ✔ Sistema de tickets avanzado
+* ✔ Motor de workflows (FSM)
+* ✔ Motor SLA dinámico
+* ✔ Sistema de asignación inteligente
+* ✔ Plataforma modular configurable
+* ✔ Sistema de gestión de activos
+* ✔ Sistema de trazabilidad con QR
+
+-----------------------------------------------------
+
+👤 🔐 MÓDULO DE PERFIL DE USUARIO
+🔹 Objetivo
+
+El perfil funcionará como:
+
+Identidad principal del usuario dentro del sistema
+Centro de configuración personal
+Historial de actividad
+Gestión de acceso a módulos
+Control de seguridad y autenticación
+
+Inspirado visualmente en una estructura similar a GitHub, pero adaptado al entorno operativo y empresarial del sistema.
+
+🖥️ ESTRUCTURA DEL PERFIL
+
+El perfil incluirá:
+
+🔹 Información visual
+Foto de perfil
+Nombre completo
+Usuario
+Correo electrónico
+Rol global
+Roles por módulo
+Estado del usuario
+🔹 Información organizacional obligatoria
+
+El usuario deberá diligenciar obligatoriamente:
+
+Número celular
+Dirección de residencia
+Sede principal
+Ambiente/área de trabajo
+Cargo
+Información organizacional adicional
+⚠️ REGLA CRÍTICA DEL SISTEMA
+Perfil obligatorio
+
+El usuario NO podrá:
+
+Ver módulos
+Acceder al sistema
+Crear tickets
+Interactuar con funcionalidades
+
+hasta completar toda la información obligatoria del perfil.
+
+Flujo obligatorio
+Usuario inicia sesión
+Sistema valida estado del perfil
+Si el perfil está incompleto:
+Redirigir automáticamente al apartado de perfil
+Bloquear navegación restante
+Solo después de completar la información:
+Se habilita acceso al sistema
+🔐 SEGURIDAD DEL PERFIL
+Cambio de contraseña
+
+El usuario podrá:
+
+Cambiar contraseña
+Configurar seguridad personal
+Validaciones obligatorias
+
+Para cambiar contraseña:
+
+Solicitar contraseña actual
+Validar identidad
+Confirmar nueva contraseña
+Aplicar políticas de seguridad
+
+Opcional futuro:
+
+Confirmación mediante 2FA
+Verificación por correo
+📊 PANEL PERSONAL DEL USUARIO
+
+El perfil mostrará actividad reciente similar a GitHub, pero enfocada al sistema operativo.
+
+Información visible
+🎟️ Tickets recientes
+Últimos tickets creados
+Tickets asignados
+Tickets pendientes
+Tickets cerrados
+Tickets en reproceso
+📈 Actividad reciente
+
+Ejemplo:
+
+Tickets solucionados
+Comentarios realizados
+Cambios de estado
+Participación en módulos
+Actividad reciente del sistema
+🧩 Módulos disponibles
+
+El usuario podrá visualizar:
+
+Todos los módulos a los que tiene acceso
+Su rol dentro de cada módulo
+Estado de acceso
+👥 ACCESO A MÓDULOS
+Rol por defecto
+
+Todo usuario creado tendrá inicialmente:
+
+Rol Usuario
+
+en:
+
+el sistema global
+todos los módulos permitidos
+🔄 SOLICITUD DE CAMBIO DE ROL
+
+Y aquí viene algo MUY importante:
+
+La idea que mencionaste de solicitar cambio de rol es excelente.
+
+Porque evita:
+
+cambios manuales desorganizados,
+mensajes externos,
+procesos informales,
+pérdida de trazabilidad.
+🧾 PROPUESTA RECOMENDADA
+✔ Crear un módulo de solicitudes administrativas
+
+NO como sistema de tickets tradicional completo,
+sino como:
+
+Sistema de solicitudes internas administrativas
+
+Funciones del módulo
+
+El usuario podrá solicitar:
+
+Cambio de rol
+Acceso a módulos
+Corrección de información
+Cambio de sede
+Ajustes de permisos
+Problemas de cuenta
+Reactivaciones
+🔄 Flujo recomendado
+Usuario crea solicitud
+Admin/Superadmin recibe petición
+Revisa información
+Aprueba o rechaza
+Sistema registra auditoría completa

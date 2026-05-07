@@ -25,6 +25,7 @@ import { AssignRoleDto } from './dto/assign-role.dto';
 import { AvailabilityDto } from './dto/availability.dto';
 import { AddSkillDto } from './dto/add-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
+import { CompleteProfileDto } from './dto/complete-profile.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -74,6 +75,12 @@ export class UsersController {
     return this.service.updateMyProfile(req.user.sub, dto);
   }
 
+  @Patch('me/complete-profile')
+  @ApiOperation({ summary: 'Completar perfil obligatorio (phone, address, sede, área, cargo). Desbloquea acceso al sistema.' })
+  completeProfile(@Req() req: any, @Body() dto: CompleteProfileDto) {
+    return this.service.completeMyProfile(req.user.sub, dto);
+  }
+
   @Patch('me/password')
   @ApiOperation({ summary: 'Cambiar contraseña propia.' })
   changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
@@ -119,9 +126,17 @@ export class UsersController {
   @Delete('global-roles/:id')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
-  @ApiOperation({ summary: 'Desactivar rol global. Solo superadmin.' })
+  @ApiOperation({ summary: 'Desactivar rol global (soft-delete). Solo superadmin.' })
   deleteGlobalRole(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.deleteGlobalRole(id);
+  }
+
+  @Patch('global-roles/:id/reactivate')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Reactivar rol global desactivado. Solo superadmin.' })
+  reactivateGlobalRole(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.reactivateGlobalRole(id);
   }
 
   // ─── Asignación masiva por módulo ────────────────────────────────────────────

@@ -19,6 +19,14 @@ export class SystemModulesController {
     return this.service.findAll(req.user.sub);
   }
 
+  @Get('deleted')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Módulos en papelera (soft-deleted). Solo superadmin.' })
+  findDeleted() {
+    return this.service.findDeleted();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Detalle de módulo con conteo de miembros.' })
   findOne(@Param('id') id: string) {
@@ -50,8 +58,16 @@ export class SystemModulesController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
-  @ApiOperation({ summary: 'Eliminar módulo (soft-delete). Solo superadmin.' })
+  @ApiOperation({ summary: 'Eliminar módulo (soft-delete + 90 días retención). Solo superadmin.' })
   remove(@Param('id') id: string) {
     return this.service.deleteModule(id);
+  }
+
+  @Post(':id/restore')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Restaurar módulo eliminado (dentro del período de 90 días). Solo superadmin.' })
+  restore(@Param('id') id: string) {
+    return this.service.restoreModule(id);
   }
 }

@@ -16,8 +16,8 @@ export class SystemModulesService {
       return this.db.query<any[]>(
         `SELECT id, name, slug, description, type, image_url, is_active, created_at
          FROM modules.modules
-         WHERE deleted_at IS NULL AND is_active = true
-         ORDER BY name`,
+         WHERE deleted_at IS NULL
+         ORDER BY is_active DESC, name`,
       );
     }
 
@@ -90,10 +90,12 @@ export class SystemModulesService {
   }
 
   async updateModule(id: string, dto: Record<string, unknown>) {
-    const { name, description, type, image_url } = dto as any;
+    const { name, description, type, image_url, is_active } = dto as any;
     const fields: string[] = [];
     const values: any[] = [];
     let idx = 1;
+
+    if (is_active !== undefined) { fields.push(`is_active = $${idx++}`); values.push(is_active); }
 
     if (name !== undefined) {
       const slug = String(name).toLowerCase()
@@ -131,11 +133,57 @@ export class SystemModulesService {
   }
 
   async deleteModule(id: string) {
-    const result = await this.db.query(
-      `UPDATE modules.modules SET deleted_at = now(), is_active = false
-       WHERE id = $1 AND deleted_at IS NULL`,
+    const [mod] = await this.db.query<{ id: string; name: string }[]>(
+      `SELECT id, name FROM modules.modules WHERE id = $1 AND deleted_at IS NULL`,
       [id],
     );
-    return { ok: true };
+    if (!mod) throw new NotFoundException(`Módulo ${id} no encontrado`);
+
+    await this.db.query(
+      `UPDATE modules.modules
+       SET deleted_at               = now(),
+           is_active                = false,
+           scheduled_hard_delete_at = now() + INTERVAL '90 days'
+       WHERE id = $1`,
+      [id],
+    );
+    return {
+      ok: true,
+      message: `Módulo "${mod.name}" eliminado. Se conservará durante 90 días antes del borrado definitivo.`,
+      module: { id: mod.id, name: mod.name },
+    };
+  }
+
+  async restoreModule(id: string) {
+    const [mod] = await this.db.query<{ id: string; name: string; scheduled_hard_delete_at: string }[]>(
+      `SELECT id, name, scheduled_hard_delete_at
+       FROM modules.modules
+       WHERE id = $1 AND deleted_at IS NOT NULL`,
+      [id],
+    );
+    if (!mod) throw new NotFoundException(`Módulo ${id} no encontrado en la papelera`);
+
+    if (mod.scheduled_hard_delete_at && new Date(mod.scheduled_hard_delete_at) < new Date()) {
+      throw new BadRequestException('El período de retención expiró — el módulo ya no puede recuperarse');
+    }
+
+    await this.db.query(
+      `UPDATE modules.modules
+       SET deleted_at = NULL, is_active = true, scheduled_hard_delete_at = NULL
+       WHERE id = $1`,
+      [id],
+    );
+    return { ok: true, message: `Módulo "${mod.name}" restaurado correctamente.` };
+  }
+
+  async findDeleted() {
+    return this.db.query<any[]>(
+      `SELECT id, name, slug, description, type, image_url, deleted_at, scheduled_hard_delete_at,
+              EXTRACT(DAY FROM (scheduled_hard_delete_at - now())) AS days_remaining
+       FROM modules.modules
+       WHERE deleted_at IS NOT NULL
+         AND (scheduled_hard_delete_at IS NULL OR scheduled_hard_delete_at > now())
+       ORDER BY deleted_at DESC`,
+    );
   }
 }

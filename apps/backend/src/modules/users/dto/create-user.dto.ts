@@ -35,6 +35,35 @@ export class CreateUserDto {
   @MaxLength(30)
   phone?: string;
 
+  @ApiPropertyOptional({ example: 'juan_garcia' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  username?: string;
+
+  @ApiPropertyOptional({ example: 'Calle 123 # 45-67, Bogotá' })
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional({ example: 'Técnico Senior' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  job_title?: string;
+
+  @ApiPropertyOptional({ example: 'Soporte TI' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  department?: string;
+
+  @ApiPropertyOptional({ example: 'Sede Norte' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  primary_sede?: string;
+
   @ApiPropertyOptional({ default: false })
   @IsOptional()
   @IsBoolean()
