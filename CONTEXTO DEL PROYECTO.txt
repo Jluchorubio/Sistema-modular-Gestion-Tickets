@@ -1,5 +1,8 @@
 no uses emojis, usa path para colocar en la Pagina que estamos haciendo
 
+🎨 Paleta de ColoresColorHex (Aprox.)Nombre VisualUso en la Interfaz#FFFFFFBlanco PuroFondo principal de la aplicación y tarjetas de selección de hora.#0D1B2AAzul NochePanel lateral izquierdo y sidebar. Crea jerarquía y separa la navegación del contenido.#32C932Verde VibranteBotón de Acción Principal (CTA). Se usa exclusivamente para "Schedule a lesson" porque denota éxito y acción positiva.#FF5733Naranja CoralAcento de Selección. Resalta el día actual o seleccionado en el calendario para que no se pierda de vista.#1F2937Gris CarbónTítulos principales (Group lesson) y texto de alta importancia sobre fondo blanco.#94A3B8Gris SlateTexto secundario, días del calendario no seleccionados y etiquetas informativas.
+
+
 🔐 Flujo de Autenticación del Sistema
 Objetivo
 

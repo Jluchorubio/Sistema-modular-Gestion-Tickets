@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi Perfil — Tickets System</title>
+  <title>Mi Perfil - Tickets System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -242,6 +242,295 @@
       animation: shimmer 1.5s ease infinite;
     }
     @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+    /* GitHub-inspired enterprise profile refresh */
+    :root {
+      --ink: #0D1B2A;
+      --muted: #64748B;
+      --line: #D8E0EA;
+      --line-soft: #E8EDF3;
+      --panel: #FFFFFF;
+      --surface: #F7F9FC;
+      --accent: #2563EB;
+      --accent-soft: #EFF6FF;
+      --success: #22C55E;
+    }
+
+    body {
+      background: var(--panel);
+      color: var(--ink);
+    }
+
+    .page-content {
+      background: var(--panel);
+    }
+
+    .hero-strip {
+      display: none;
+    }
+
+    .card {
+      border-radius: 8px;
+      border-color: var(--line);
+      box-shadow: none;
+    }
+
+    main {
+      max-width: 1180px !important;
+      padding: 28px 24px 48px !important;
+    }
+
+    .layout {
+      gap: 38px;
+    }
+
+    .left-col {
+      width: 282px;
+      margin-top: 0;
+    }
+
+    .right-col {
+      margin-top: 0;
+      padding-top: 14px;
+    }
+
+    .left-col .card:first-child {
+      border: 0;
+      background: transparent;
+      padding: 0 !important;
+      margin-bottom: 18px !important;
+    }
+
+    .left-col .card:first-child > div[style*="position:relative"] {
+      width: 226px !important;
+      height: 226px !important;
+      margin-bottom: 20px !important;
+    }
+
+    .avatar-wrap {
+      width: 226px;
+      height: 226px;
+      border: 1px solid #CBD5E1;
+      background: #EEF2F7;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
+    }
+
+    #avatar-initials {
+      color: #98A2B3 !important;
+      font-size: 62px !important;
+      letter-spacing: 0;
+    }
+
+    .left-col .card:first-child > div[style*="position:relative"] > div:last-child {
+      width: 18px !important;
+      height: 18px !important;
+      right: 26px !important;
+      bottom: 22px !important;
+      border: 3px solid #FFFFFF !important;
+      background: var(--success) !important;
+    }
+
+    #display-name {
+      color: #020617 !important;
+      font-size: 24px !important;
+      letter-spacing: 0;
+      margin-bottom: 4px !important;
+    }
+
+    #display-username {
+      color: var(--muted) !important;
+      font-size: 18px !important;
+      margin-bottom: 18px !important;
+    }
+
+    #display-jobtitle {
+      display: none;
+    }
+
+    .btn-secondary,
+    .btn-primary {
+      border-radius: 6px;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn-secondary {
+      min-height: 36px;
+      color: var(--ink);
+      background: #F8FAFC;
+      border: 1px solid #CBD5E1;
+    }
+
+    .btn-secondary:hover {
+      background: #F1F5F9;
+      border-color: #94A3B8;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: var(--ink);
+      color: #FFFFFF;
+    }
+
+    .btn-primary:hover {
+      background: #16283B;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .left-col .card:not(:first-child) {
+      border: 0;
+      border-radius: 0;
+      border-top: 1px solid var(--line-soft);
+      padding: 18px 0 !important;
+      margin-bottom: 0 !important;
+    }
+
+    .side-row span {
+      color: #475569;
+      font-size: 13px;
+    }
+
+    .badge {
+      border-radius: 4px;
+      padding: 3px 8px;
+      background: var(--accent-soft) !important;
+      border: 1px solid #BFDBFE !important;
+      color: #1D4ED8 !important;
+    }
+
+    #badge-superadmin .badge {
+      background: #F8FAFC !important;
+      color: var(--ink) !important;
+      border-color: var(--line) !important;
+    }
+
+    .left-col .card:last-child {
+      display: none;
+    }
+
+    .right-col > .card {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      overflow: visible !important;
+    }
+
+    .right-col > .card > div:first-child {
+      border-bottom: 1px solid var(--line);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .nav-tab {
+      color: #334155;
+      font-size: 13px;
+      padding: 0 0 12px;
+      border-bottom-width: 2px;
+    }
+
+    .nav-tab:hover {
+      background: transparent;
+      color: #020617;
+    }
+
+    .nav-tab.active {
+      color: #020617;
+      border-bottom-color: #EF4444;
+      font-weight: 700;
+    }
+
+    #tab-overview {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 0 !important;
+      overflow: hidden;
+    }
+
+    .profile-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 64px;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .profile-section-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .profile-verified {
+      font-size: 10px;
+      font-weight: 800;
+      color: #64748B;
+      letter-spacing: .04em;
+    }
+
+    .profile-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px 84px;
+      padding: 24px 22px 28px;
+    }
+
+    .info-label {
+      color: #64748B;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: none;
+      margin-bottom: 5px;
+    }
+
+    .info-value {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    .activity-row {
+      min-height: 54px;
+      padding: 0 18px;
+    }
+
+    footer {
+      margin-top: 60px !important;
+    }
+
+    @media (max-width: 960px) {
+      main {
+        padding: 20px 18px 40px !important;
+      }
+
+      .layout {
+        gap: 24px;
+      }
+
+      .left-col {
+        width: 100%;
+        margin-top: 0;
+      }
+
+      .left-col .card:first-child > div[style*="position:relative"],
+      .avatar-wrap {
+        width: 148px !important;
+        height: 148px !important;
+      }
+
+      #avatar-initials {
+        font-size: 42px !important;
+      }
+
+      .profile-info-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -284,7 +573,7 @@
 
         <!-- Superadmin badge -->
         <div id="badge-superadmin" style="display:none; margin-bottom:14px;">
-          <span class="badge" style="background:linear-gradient(135deg,#1F7AE0 0%,#7C3AED 100%); color:white; padding:5px 12px;">⚡ Superadmin</span>
+          <span class="badge" style="padding:5px 12px;">Superadmin</span>
         </div>
 
         <!-- Edit button (stub — needs modal) -->
@@ -412,37 +701,28 @@
 
         <!-- ── OVERVIEW ── -->
         <div id="tab-overview" class="tab-content active" style="padding:28px 30px;">
-          <div class="overview-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:36px;">
-
-            <!-- Personal -->
-            <div>
-              <p style="font-size:10.5px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:.07em; margin-bottom:20px;">Información Personal</p>
-              <div style="display:flex; flex-direction:column; gap:20px;">
-                <div><p class="info-label">Nombre Completo</p><p id="ov-fullname" class="info-value">—</p></div>
-                <div><p class="info-label">Nombre de usuario</p><p id="ov-username" class="info-value">—</p></div>
-                <div><p class="info-label">Correo electrónico</p><p id="ov-email" class="info-value">—</p></div>
-                <div><p class="info-label">Teléfono Celular</p><p id="ov-phone" class="info-value">—</p></div>
-                <div><p class="info-label">Dirección de Residencia</p><p id="ov-address" class="info-value">—</p></div>
+          <div>
+            <div class="profile-section-header">
+              <p class="profile-section-title">Informacion Residencial</p>
+              <span class="profile-verified">VERIFICADO</span>
+            </div>
+            <div class="profile-info-grid">
+              <div><p class="info-label">Nombre Completo Legal</p><p id="ov-fullname" class="info-value">-</p></div>
+              <div><p class="info-label">Departamento / Area</p><p id="ov-dept" class="info-value">-</p></div>
+              <div><p class="info-label">Direccion Particular</p><p id="ov-address" class="info-value">-</p></div>
+              <div><p class="info-label">Telefono Celular</p><p id="ov-phone" class="info-value">-</p></div>
+              <div><p class="info-label">Correo electronico</p><p id="ov-email" class="info-value">-</p></div>
+              <div><p class="info-label">Sede Principal</p><p id="ov-sede" class="info-value">-</p></div>
+              <div><p class="info-label">Nombre de usuario</p><p id="ov-username" class="info-value">-</p></div>
+              <div><p class="info-label">Cargo Actual</p><p id="ov-jobtitle" class="info-value">-</p></div>
+              <div>
+                <p class="info-label">Estado de Cuenta</p>
+                <span id="ov-status" class="badge">
+                  <span style="width:6px; height:6px; border-radius:50%; background:#22C55E; display:inline-block;"></span>
+                  Activo
+                </span>
               </div>
             </div>
-
-            <!-- Organizational -->
-            <div>
-              <p style="font-size:10.5px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:.07em; margin-bottom:20px;">Información Organizacional</p>
-              <div style="display:flex; flex-direction:column; gap:20px;">
-                <div><p class="info-label">Cargo Actual</p><p id="ov-jobtitle" class="info-value">—</p></div>
-                <div><p class="info-label">Departamento / Área</p><p id="ov-dept" class="info-value">—</p></div>
-                <div><p class="info-label">Sede Principal</p><p id="ov-sede" class="info-value">—</p></div>
-                <div>
-                  <p class="info-label">Estado de Cuenta</p>
-                  <span id="ov-status" class="badge" style="background:#ECFDF5; color:#059669; border:1px solid #D1FAE5;">
-                    <span style="width:6px; height:6px; border-radius:50%; background:#22C55E; display:inline-block;"></span>
-                    Activo
-                  </span>
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
 
@@ -499,7 +779,7 @@
       <!-- FOOTER -->
       <footer style="margin-top:52px; padding-top:22px; border-top:1px solid #E2E8F0; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
         <div style="display:flex; align-items:center; gap:16px; font-size:12px; color:#94A3B8;">
-          <span>© 2025 Tickets System</span>
+          <span>© 2026 Tickets System</span>
           <a href="#" style="color:#94A3B8; text-decoration:none;" onmouseover="this.style.color='#1F7AE0'" onmouseout="this.style.color='#94A3B8'">Términos</a>
           <a href="#" style="color:#94A3B8; text-decoration:none;" onmouseover="this.style.color='#1F7AE0'" onmouseout="this.style.color='#94A3B8'">Privacidad</a>
         </div>
@@ -575,7 +855,7 @@
     if (u.is_superadmin) {
       document.getElementById('badge-superadmin').style.display = 'block';
       document.getElementById('roles-container').innerHTML =
-        '<span class="badge" style="background:linear-gradient(135deg,#1F7AE0,#7C3AED);color:white;padding:5px 12px;">⚡ Superadmin</span>';
+        '<span class="badge" style="padding:5px 12px;">Superadmin</span>';
     }
 
     // Incomplete banner
