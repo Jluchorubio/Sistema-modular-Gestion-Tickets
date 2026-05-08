@@ -188,4 +188,25 @@ export class SystemModulesService {
        ORDER BY deleted_at DESC`,
     );
   }
+
+  async findAllLocations() {
+    return this.db.query<any[]>(
+      `SELECT l.id, l.name, l.address, l.module_id, m.name AS module_name
+       FROM   modules.locations l
+       JOIN   modules.modules   m ON m.id = l.module_id
+       WHERE  l.is_active = true AND l.deleted_at IS NULL
+         AND  m.is_active = true AND m.deleted_at IS NULL
+       ORDER  BY m.name, l.name`,
+    );
+  }
+
+  async findEnvironmentsByLocation(locationId: string) {
+    return this.db.query<any[]>(
+      `SELECT e.id, e.name, e.description, e.location_id
+       FROM   modules.environments e
+       WHERE  e.location_id = $1 AND e.is_active = true AND e.deleted_at IS NULL
+       ORDER  BY e.name`,
+      [locationId],
+    );
+  }
 }

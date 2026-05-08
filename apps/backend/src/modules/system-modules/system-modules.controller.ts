@@ -1,14 +1,15 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
+import { ProfileCompleteGuard } from '../../gateway/guards/profile-complete.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
+import { SkipProfileCheck } from '../../gateway/decorators/skip-profile-check.decorator';
 import { SystemModulesService } from './system-modules.service';
 
 @ApiTags('system-modules')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ProfileCompleteGuard)
 @Controller('system-modules')
 export class SystemModulesController {
   constructor(private readonly service: SystemModulesService) {}
@@ -19,12 +20,18 @@ export class SystemModulesController {
     return this.service.findAll(req.user.sub);
   }
 
-  @Get('deleted')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin')
-  @ApiOperation({ summary: 'Módulos en papelera (soft-deleted). Solo superadmin.' })
-  findDeleted() {
-    return this.service.findDeleted();
+  @Get('locations')
+  @SkipProfileCheck()
+  @ApiOperation({ summary: 'Listar sedes activas para dropdowns de perfil.' })
+  findLocations() {
+    return this.service.findAllLocations();
+  }
+
+  @Get('locations/:locationId/environments')
+  @SkipProfileCheck()
+  @ApiOperation({ summary: 'Listar ambientes de una sede para dropdowns de perfil.' })
+  findEnvironments(@Param('locationId') locationId: string) {
+    return this.service.findEnvironmentsByLocation(locationId);
   }
 
   @Get(':id')

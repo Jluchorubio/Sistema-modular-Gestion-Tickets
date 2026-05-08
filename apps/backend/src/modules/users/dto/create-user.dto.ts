@@ -20,9 +20,10 @@ export class CreateUserDto {
   @MaxLength(100)
   last_name: string;
 
-  @ApiProperty({ example: 'juan.garcia@empresa.com' })
+  @ApiPropertyOptional({ example: 'juan.garcia@empresa.com', description: 'Si no se proporciona, se genera un email temporal.' })
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string;
 
   @ApiPropertyOptional({ example: 'Password123!', description: 'Si no se proporciona, se asigna contraseña por defecto.' })
   @IsOptional()

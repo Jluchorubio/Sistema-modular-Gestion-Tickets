@@ -5,6 +5,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
+import { ProfileCompleteGuard } from '../../gateway/guards/profile-complete.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
 import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
@@ -12,7 +13,7 @@ import { ReviewRequestDto } from './dto/review-request.dto';
 
 @ApiTags('requests')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ProfileCompleteGuard)
 @Controller('requests')
 export class RequestsController {
   constructor(private readonly service: RequestsService) {}

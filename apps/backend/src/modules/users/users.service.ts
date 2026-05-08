@@ -30,7 +30,14 @@ export class UsersService {
   // ─── CRUD usuarios ───────────────────────────────────────────────────────────
 
   async createUser(actorId: string, dto: CreateUserDto) {
-    const email = dto.email.toLowerCase().trim();
+    // Auto-generate username base from first+last name
+    const normalize = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+    const baseUsername = `${normalize(dto.first_name)}_${normalize(dto.last_name)}`;
+    const suffix = Math.random().toString(36).slice(2, 6);
+    const autoUsername = dto.username ? dto.username.toLowerCase().trim() : `${baseUsername}_${suffix}`;
+    const autoEmail = dto.email ? dto.email.toLowerCase().trim() : `${autoUsername}@temp.ticket.local`;
+    const email = autoEmail;
 
     // email único en auth.credentials
     const [existing] = await this.db.query<{ id: string }[]>(
@@ -51,15 +58,12 @@ export class UsersService {
     const DEFAULT_PASSWORD = 'Ticket2026!';
     const passwordHash = await bcrypt.hash(dto.password ?? DEFAULT_PASSWORD, BCRYPT_ROUNDS);
 
-    // Check username uniqueness if provided
-    if (dto.username) {
-      const normalized = dto.username.toLowerCase().trim();
-      const [uConflict] = await this.db.query<{ id: string }[]>(
-        `SELECT id FROM users.profiles WHERE LOWER(username) = $1 AND deleted_at IS NULL`,
-        [normalized],
-      );
-      if (uConflict) throw new ConflictException(`Nombre de usuario '${normalized}' ya está en uso`);
-    }
+    // Check username uniqueness (auto-generated or provided)
+    const [uConflict] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM users.profiles WHERE LOWER(username) = $1 AND deleted_at IS NULL`,
+      [autoUsername],
+    );
+    if (uConflict) throw new ConflictException(`Nombre de usuario '${autoUsername}' ya está en uso`);
 
     // Profile is complete if all mandatory fields are provided at creation time
     const hasAllProfileFields = !!(dto.phone && dto.address && dto.job_title && dto.department && dto.primary_sede);
@@ -77,7 +81,7 @@ export class UsersService {
         dto.first_name,
         dto.last_name,
         dto.phone    ?? null,
-        dto.username ? dto.username.toLowerCase().trim() : null,
+        autoUsername,
         dto.address  ?? null,
         dto.job_title   ?? null,
         dto.department  ?? null,
@@ -339,7 +343,6 @@ export class UsersService {
       `SELECT p.id,
               p.first_name,
               p.last_name,
-              p.display_email,
               p.phone,
               p.avatar_url,
               p.is_superadmin,
@@ -359,7 +362,6 @@ export class UsersService {
               pref.notification_email,
               pref.notification_whatsapp,
               pref.notification_in_app,
-              COALESCE(mfa.totp_enabled, false) AS totp_enabled,
               COALESCE(
                 json_agg(
                   json_build_object(
@@ -373,12 +375,11 @@ export class UsersService {
        FROM   users.profiles              p
        JOIN   auth.credentials            c    ON c.user_id   = p.id
        LEFT JOIN users.preferences        pref ON pref.user_id = p.id
-       LEFT JOIN auth.mfa_settings        mfa  ON mfa.user_id  = p.id
        LEFT JOIN modules.user_module_roles umr ON umr.user_id  = p.id AND umr.is_active = true
        LEFT JOIN modules.modules           m   ON m.id        = umr.module_id
        LEFT JOIN modules.module_roles      mr  ON mr.id       = umr.role_id
        WHERE  p.id = $1 AND p.deleted_at IS NULL
-       GROUP  BY p.id, c.email, c.last_login_at, pref.id, mfa.totp_enabled`,
+       GROUP  BY p.id, c.email, c.last_login_at, pref.id`,
       [userId],
     );
 

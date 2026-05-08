@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Delete,
-  Body, Query, Req, UseGuards,
+  Body, Query, Req, UseGuards, HttpCode,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
@@ -36,6 +36,13 @@ export class AdminController {
   @ApiOperation({ summary: 'Eliminar permanentemente de la papelera.' })
   permanentDelete(@Body() body: { type: string; ids: string[] }) {
     return this.service.permanentDeleteItems(body.type, body.ids);
+  }
+
+  @Post('trash/purge-expired')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Borrado definitivo de items cuyo período de retención expiró.' })
+  purgeExpired() {
+    return this.service.purgeExpired();
   }
 
   @Post('bulk-delete')

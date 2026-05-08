@@ -99,7 +99,10 @@
 </head>
 <body>
 <div class="card">
-  <h1>🎫 Tickets System</h1>
+  <h1 style="display:flex;align-items:center;gap:8px">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>
+    Tickets System
+  </h1>
   <p class="sub" id="card-sub">Inicia sesión para continuar</p>
 
   <!-- ── LOGIN ── -->
@@ -132,7 +135,10 @@
 
   <!-- ── EMAIL OTP ── -->
   <div id="otp-section">
-    <div class="tag tag-otp">📧 Verificación por email</div>
+    <div class="tag tag-otp" style="display:inline-flex;align-items:center;gap:5px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+      Verificación por email
+    </div>
     <p style="font-size:13px;color:#94a3b8;margin:10px 0 16px;">
       Te enviamos un código de 6 dígitos a tu correo.
     </p>
@@ -155,7 +161,10 @@
 
   <!-- ── FORGOT PASSWORD ── -->
   <div id="forgot-section">
-    <div class="tag tag-info">📧 Recuperar contraseña</div>
+    <div class="tag tag-info" style="display:inline-flex;align-items:center;gap:5px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+      Recuperar contraseña
+    </div>
     <p style="font-size:13px;color:#94a3b8;margin-bottom:16px;">
       Ingresa tu email y recibirás un enlace para resetear tu contraseña.
     </p>
@@ -168,7 +177,10 @@
 
   <!-- ── RESET PASSWORD ── -->
   <div id="reset-section">
-    <div class="tag tag-info">🔑 Nueva contraseña</div>
+    <div class="tag tag-info" style="display:inline-flex;align-items:center;gap:5px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+      Nueva contraseña
+    </div>
     <p style="font-size:13px;color:#94a3b8;margin-bottom:16px;">
       Ingresa tu nueva contraseña (mínimo 8 caracteres).
     </p>
@@ -189,7 +201,10 @@
 
   <!-- ── ERROR RESULT ── -->
   <div id="result-section">
-    <div class="tag tag-err">✗ Error</div>
+    <div class="tag tag-err" style="display:inline-flex;align-items:center;gap:5px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
+      Error
+    </div>
     <pre id="result-pre"></pre>
     <button class="btn-primary" onclick="show('login-section')">← Volver al login</button>
   </div>
@@ -333,7 +348,7 @@
     const el = document.getElementById('otp-attempts');
     if (attemptsRemaining < 3) {
       const plural = attemptsRemaining !== 1 ? 's' : '';
-      el.innerHTML = `<div class="msg msg-warn">⚠️ Te quedan <strong>${attemptsRemaining}</strong> intento${plural}</div>`;
+      el.innerHTML = `<div class="msg msg-warn" style="display:flex;align-items:center;gap:6px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg><span>Te quedan <strong>${attemptsRemaining}</strong> intento${plural}</span></div>`;
     } else {
       el.innerHTML = '';
     }
@@ -344,7 +359,7 @@
     const lockEl = document.getElementById('otp-lockout');
     lockEl.style.display = 'block';
     const time = lockedUntil ? new Date(lockedUntil).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : '';
-    lockEl.innerHTML = `<div class="msg msg-err">🔒 Cuenta bloqueada temporalmente${time ? ` hasta las ${time}` : ''}. Demasiados intentos fallidos.</div>`;
+    lockEl.innerHTML = `<div class="msg msg-err" style="display:flex;align-items:center;gap:6px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Cuenta bloqueada temporalmente${time ? ` hasta las ${time}` : ''}. Demasiados intentos fallidos.</span></div>`;
     document.getElementById('btn-otp').disabled = true;
     document.getElementById('btn-resend').disabled = true;
     document.getElementById('otp-attempts').innerHTML = '';
@@ -355,7 +370,13 @@
   function goToModules(data) {
     localStorage.setItem('access_token',  data.access_token);
     localStorage.setItem('refresh_token', data.refresh_token ?? '');
-    window.location.href = 'modules-test.html';
+    const profileComplete = data.user?.profile_complete ?? true;
+    const isSuperadmin    = data.user?.is_superadmin ?? false;
+    if (!profileComplete && !isSuperadmin) {
+      window.location.href = 'profile-complete.html';
+    } else {
+      window.location.href = 'modules-test.html';
+    }
   }
 
   // ── Login ───────────────────────────────────────────────────────────────
@@ -377,11 +398,11 @@
           const time = data.locked_until
             ? ` Intenta de nuevo a las ${new Date(data.locked_until).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}.`
             : '';
-          loginMsg.innerHTML = `<div class="msg msg-err">🔒 ${data.message ?? 'Cuenta bloqueada temporalmente.'}${time}</div>`;
+          loginMsg.innerHTML = `<div class="msg msg-err" style="display:flex;align-items:center;gap:6px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>${data.message ?? 'Cuenta bloqueada temporalmente.'}${time}</span></div>`;
         } else if (data.attempts_remaining !== undefined) {
           const n = data.attempts_remaining;
           const plural = n !== 1 ? 's' : '';
-          loginMsg.innerHTML = `<div class="msg msg-warn">⚠️ ${data.message ?? 'Credenciales incorrectas.'} Te queda${n !== 1 ? 'n' : ''} <strong>${n}</strong> intento${plural}.</div>`;
+          loginMsg.innerHTML = `<div class="msg msg-warn" style="display:flex;align-items:center;gap:6px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg><span>${data.message ?? 'Credenciales incorrectas.'} Te queda${n !== 1 ? 'n' : ''} <strong>${n}</strong> intento${plural}.</span></div>`;
         } else {
           loginMsg.innerHTML = `<div class="msg msg-err">${data.message ?? 'Error al iniciar sesión.'}</div>`;
         }
@@ -466,7 +487,7 @@
       updateAttemptsDisplay();
       clearOtpBoxes();
       document.getElementById('otp-lockout').style.display = 'none';
-      msg.innerHTML = '<div class="msg msg-ok">✓ Código reenviado a tu correo</div>';
+      msg.innerHTML = '<div class="msg msg-ok" style="display:flex;align-items:center;gap:6px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M20 6 9 17l-5-5"/></svg><span>Código reenviado a tu correo</span></div>';
       startCountdown(600);
       startResendCooldown(60);
     } catch (e) {
@@ -495,7 +516,7 @@
       if (!res.ok) {
         msg.innerHTML = `<div class="msg msg-err">${data.message ?? 'Error'}</div>`;
       } else {
-        msg.innerHTML = `<div class="msg msg-ok">✓ Si el email existe, recibirás el enlace en unos minutos.</div>`;
+        msg.innerHTML = `<div class="msg msg-ok" style="display:flex;align-items:center;gap:6px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M20 6 9 17l-5-5"/></svg><span>Si el email existe, recibirás el enlace en unos minutos.</span></div>`;
       }
     } catch (e) {
       msg.innerHTML = `<div class="msg msg-err">Error de red: ${e.message}</div>`;
@@ -527,7 +548,7 @@
       if (!res.ok) {
         msg.innerHTML = `<div class="msg msg-err">${data.message ?? 'Token inválido o expirado'}</div>`;
       } else {
-        msg.innerHTML = `<div class="msg msg-ok">✓ Contraseña actualizada. Redirigiendo...</div>`;
+        msg.innerHTML = `<div class="msg msg-ok" style="display:flex;align-items:center;gap:6px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M20 6 9 17l-5-5"/></svg><span>Contraseña actualizada. Redirigiendo...</span></div>`;
         setTimeout(() => { window.location.href = 'test-auth.html'; }, 1800);
       }
     } catch (e) {

@@ -78,6 +78,48 @@ export class AdminService {
     return { deleted: results.filter(r => r.ok).length, errors: results.filter(r => !r.ok) };
   }
 
+  async purgeExpired(): Promise<{ purged: number; detail: Record<string, number> }> {
+    const tables = [
+      { table: 'modules.modules',          label: 'modules' },
+      { table: 'users.profiles',            label: 'users' },
+      { table: 'config.global_roles',       label: 'roles' },
+      { table: 'requests.admin_requests',   label: 'requests' },
+    ];
+
+    const detail: Record<string, number> = {};
+    let total = 0;
+
+    for (const { table, label } of tables) {
+      if (label === 'users') {
+        // Credentials must be deleted first due to FK
+        await this.db.query(
+          `DELETE FROM auth.credentials
+           WHERE user_id IN (
+             SELECT id FROM users.profiles
+             WHERE deleted_at IS NOT NULL
+               AND scheduled_hard_delete_at IS NOT NULL
+               AND scheduled_hard_delete_at <= now()
+           )`,
+        );
+      }
+      const result = await this.db.query<{ count: string }[]>(
+        `WITH deleted AS (
+           DELETE FROM ${table}
+           WHERE deleted_at IS NOT NULL
+             AND scheduled_hard_delete_at IS NOT NULL
+             AND scheduled_hard_delete_at <= now()
+           RETURNING id
+         ) SELECT COUNT(*) AS count FROM deleted`,
+      );
+      const n = parseInt(result[0]?.count ?? '0', 10);
+      detail[label] = n;
+      total += n;
+    }
+
+    this.logger.log(`Purge expired: ${total} items removed — ${JSON.stringify(detail)}`);
+    return { purged: total, detail };
+  }
+
   async bulkSoftDelete(type: string, ids: string[], actorId: string) {
     this.assertValidType(type);
     const results: { id: string; ok: boolean; error?: string }[] = [];

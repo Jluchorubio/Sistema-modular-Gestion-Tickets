@@ -15,7 +15,9 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
+import { ProfileCompleteGuard } from '../../gateway/guards/profile-complete.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
+import { SkipProfileCheck } from '../../gateway/decorators/skip-profile-check.decorator';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -29,7 +31,7 @@ import { CompleteProfileDto } from './dto/complete-profile.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ProfileCompleteGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly service: UsersService) {}
@@ -64,36 +66,42 @@ export class UsersController {
   }
 
   @Get('me')
+  @SkipProfileCheck()
   @ApiOperation({ summary: 'Perfil propio completo.' })
   getMe(@Req() req: any) {
     return this.service.getMyProfile(req.user.sub);
   }
 
   @Patch('me')
+  @SkipProfileCheck()
   @ApiOperation({ summary: 'Actualizar mi perfil (phone, avatar_url).' })
   updateMe(@Req() req: any, @Body() dto: UpdateUserDto) {
     return this.service.updateMyProfile(req.user.sub, dto);
   }
 
   @Patch('me/complete-profile')
+  @SkipProfileCheck()
   @ApiOperation({ summary: 'Completar perfil obligatorio (phone, address, sede, área, cargo). Desbloquea acceso al sistema.' })
   completeProfile(@Req() req: any, @Body() dto: CompleteProfileDto) {
     return this.service.completeMyProfile(req.user.sub, dto);
   }
 
   @Patch('me/password')
+  @SkipProfileCheck()
   @ApiOperation({ summary: 'Cambiar contraseña propia.' })
   changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
     return this.service.changePassword(req.user.sub, dto);
   }
 
   @Get('me/preferences')
+  @SkipProfileCheck()
   @ApiOperation({ summary: 'Ver preferencias propias.' })
   getPreferences(@Req() req: any) {
     return this.service.getMyPreferences(req.user.sub);
   }
 
   @Put('me/preferences')
+  @SkipProfileCheck()
   @ApiOperation({ summary: 'Actualizar preferencias propias.' })
   upsertPreferences(@Req() req: any, @Body() dto: PreferencesDto) {
     return this.service.upsertMyPreferences(req.user.sub, dto);

@@ -14,8 +14,6 @@ import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { createHash, randomBytes } from 'crypto';
-import * as speakeasy from 'speakeasy';
-import * as QRCode from 'qrcode';
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 3;
@@ -376,7 +374,7 @@ export class AuthService {
 
   async getMe(userId: string) {
     const rows = await this.db.query<any[]>(
-      `SELECT p.id, p.first_name, p.last_name, p.display_email, p.avatar_url,
+      `SELECT p.id, p.first_name, p.last_name, p.avatar_url,
               p.username, p.is_superadmin, p.profile_complete, c.email, c.last_login_at
        FROM   users.profiles   p
        JOIN   auth.credentials c ON c.user_id = p.id
@@ -412,76 +410,6 @@ export class AuthService {
     catch { throw new UnauthorizedException(); }
   }
 
-  // ─── TOTP 2FA ────────────────────────────────────────────────────────────────
-
-  async setupTotp(userId: string) {
-    const [user] = await this.db.query<{ email: string; first_name: string }[]>(
-      `SELECT c.email, p.first_name FROM auth.credentials c
-       JOIN users.profiles p ON p.id = c.user_id
-       WHERE c.user_id = $1`,
-      [userId],
-    );
-
-    const secret = speakeasy.generateSecret({
-      name: `Tickets System (${user.email})`,
-      length: 20,
-    });
-
-    await this.db.query(
-      `INSERT INTO auth.mfa_settings (user_id, totp_secret, totp_enabled)
-       VALUES ($1, $2, false)
-       ON CONFLICT (user_id) DO UPDATE SET totp_secret = $2, totp_enabled = false`,
-      [userId, secret.base32],
-    );
-
-    const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url!);
-    return { secret: secret.base32, qr_code: qrDataUrl };
-  }
-
-  async confirmTotp(userId: string, code: string) {
-    const [mfa] = await this.db.query<{ totp_secret: string }[]>(
-      `SELECT totp_secret FROM auth.mfa_settings WHERE user_id = $1`,
-      [userId],
-    );
-    if (!mfa?.totp_secret) throw new BadRequestException('TOTP no configurado. Llama a /auth/totp/setup primero.');
-
-    const valid = speakeasy.totp.verify({
-      secret: mfa.totp_secret,
-      encoding: 'base32',
-      token: code,
-      window: 1,
-    });
-    if (!valid) throw new BadRequestException('Código TOTP incorrecto');
-
-    await this.db.query(
-      `UPDATE auth.mfa_settings SET totp_enabled = true, totp_last_verified_at = now() WHERE user_id = $1`,
-      [userId],
-    );
-    return { ok: true, message: 'Autenticación de dos factores activada' };
-  }
-
-  async disableTotp(userId: string, code: string) {
-    const [mfa] = await this.db.query<{ totp_secret: string; totp_enabled: boolean }[]>(
-      `SELECT totp_secret, totp_enabled FROM auth.mfa_settings WHERE user_id = $1`,
-      [userId],
-    );
-    if (!mfa?.totp_enabled) throw new BadRequestException('TOTP no está activo');
-
-    const valid = speakeasy.totp.verify({
-      secret: mfa.totp_secret,
-      encoding: 'base32',
-      token: code,
-      window: 1,
-    });
-    if (!valid) throw new BadRequestException('Código TOTP incorrecto');
-
-    await this.db.query(
-      `UPDATE auth.mfa_settings SET totp_enabled = false, totp_secret = NULL WHERE user_id = $1`,
-      [userId],
-    );
-    return { ok: true, message: 'Autenticación de dos factores desactivada' };
-  }
-
   // ─── Private helpers ─────────────────────────────────────────────────────────
 
   async sendEmailOtp(userId: string, email: string): Promise<void> {
@@ -510,6 +438,11 @@ export class AuthService {
     const access_token  = this.jwt.sign(payload, { expiresIn: '15m' });
     const refresh_token = this.jwt.sign(payload, { expiresIn: '7d' });
 
+    const [profileData] = await this.db.query<{ profile_complete: boolean }[]>(
+      `SELECT profile_complete FROM users.profiles WHERE id = $1`,
+      [userId],
+    );
+
     await this.db.query(
       `INSERT INTO auth.refresh_tokens (user_id, token_hash, expires_at)
        VALUES ($1, $2, now() + INTERVAL '7 days')`,
@@ -525,10 +458,11 @@ export class AuthService {
       access_token,
       refresh_token,
       user: {
-        id:            userId,
+        id:               userId,
         email,
-        name:          `${firstName} ${lastName}`.trim(),
-        is_superadmin: isSuperadmin,
+        name:             `${firstName} ${lastName}`.trim(),
+        is_superadmin:    isSuperadmin,
+        profile_complete: profileData?.profile_complete ?? false,
       },
     };
   }
@@ -549,8 +483,7 @@ export class AuthService {
     <tr><td align="center">
       <table width="480" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:16px;border:1px solid #334155;overflow:hidden">
         <tr><td style="background:linear-gradient(135deg,#312e81,#1e1b4b);padding:32px;text-align:center">
-          <p style="margin:0;font-size:28px">🎫</p>
-          <h1 style="margin:8px 0 0;color:#e2e8f0;font-size:20px;font-weight:700">${appName}</h1>
+          <h1 style="margin:0;color:#e2e8f0;font-size:20px;font-weight:700">${appName}</h1>
         </td></tr>
         <tr><td style="padding:40px 32px">
           <h2 style="margin:0 0 8px;color:#e2e8f0;font-size:18px;font-weight:600">Verificación de acceso</h2>
@@ -563,7 +496,7 @@ export class AuthService {
           </div>
           <div style="background:#1c1917;border:1px solid #78350f;border-radius:8px;padding:16px;margin-bottom:24px">
             <p style="margin:0;color:#fbbf24;font-size:13px">
-              ⚠️ <strong>No compartas este código.</strong> Nunca te lo pediremos por teléfono o chat.
+              <strong>No compartas este código.</strong> Nunca te lo pediremos por teléfono o chat.
             </p>
           </div>
           <p style="margin:0;color:#475569;font-size:12px;line-height:1.6">

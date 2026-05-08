@@ -2,7 +2,6 @@ import {
   Controller,
   Post,
   Get,
-  Delete,
   Body,
   Req,
   Res,
@@ -133,29 +132,4 @@ export class AuthController {
     return { ok: true };
   }
 
-  // ─── TOTP 2FA ────────────────────────────────────────────────────────────────
-
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Post('totp/setup')
-  @ApiOperation({ summary: 'Generar secret TOTP y QR code para configurar authenticator app.' })
-  setupTotp(@Req() req: any) {
-    return this.authService.setupTotp(req.user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Post('totp/confirm')
-  @ApiOperation({ summary: 'Confirmar TOTP con primer código del authenticator para activarlo.' })
-  confirmTotp(@Req() req: any, @Body() body: { code: string }) {
-    return this.authService.confirmTotp(req.user.sub, body.code);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Delete('totp/disable')
-  @ApiOperation({ summary: 'Desactivar TOTP verificando con código actual del authenticator.' })
-  disableTotp(@Req() req: any, @Body() body: { code: string }) {
-    return this.authService.disableTotp(req.user.sub, body.code);
-  }
 }
