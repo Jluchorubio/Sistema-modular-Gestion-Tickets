@@ -92,11 +92,21 @@ export class UsersService {
       ],
     );
 
-    await this.db.query(
-      `INSERT INTO auth.credentials (user_id, email, password_hash)
-       VALUES ($1, $2, $3)`,
-      [profile.id, email, passwordHash],
-    );
+    const forcePasswordChange = !dto.email; // auto-generated email = temporary account
+    try {
+      await this.db.query(
+        `INSERT INTO auth.credentials (user_id, email, password_hash, force_password_change)
+         VALUES ($1, $2, $3, $4)`,
+        [profile.id, email, passwordHash, forcePasswordChange],
+      );
+    } catch {
+      // Column may not exist yet — insert without it (migration pending)
+      await this.db.query(
+        `INSERT INTO auth.credentials (user_id, email, password_hash)
+         VALUES ($1, $2, $3)`,
+        [profile.id, email, passwordHash],
+      );
+    }
 
     // preferencias por defecto
     await this.db.query(
@@ -484,10 +494,18 @@ export class UsersService {
     }
 
     const newHash = await bcrypt.hash(dto.new_password, BCRYPT_ROUNDS);
-    await this.db.query(
-      `UPDATE auth.credentials SET password_hash = $1 WHERE user_id = $2`,
-      [newHash, userId],
-    );
+    try {
+      await this.db.query(
+        `UPDATE auth.credentials SET password_hash = $1, force_password_change = false WHERE user_id = $2`,
+        [newHash, userId],
+      );
+    } catch {
+      // Column may not exist yet — update without it (migration pending)
+      await this.db.query(
+        `UPDATE auth.credentials SET password_hash = $1 WHERE user_id = $2`,
+        [newHash, userId],
+      );
+    }
 
     // revocar todos los refresh tokens para forzar re-login
     await this.db.query(

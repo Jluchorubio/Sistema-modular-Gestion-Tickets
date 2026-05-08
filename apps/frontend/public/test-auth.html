@@ -370,9 +370,18 @@
   function goToModules(data) {
     localStorage.setItem('access_token',  data.access_token);
     localStorage.setItem('refresh_token', data.refresh_token ?? '');
-    const profileComplete = data.user?.profile_complete ?? true;
-    const isSuperadmin    = data.user?.is_superadmin ?? false;
+    const profileComplete     = data.user?.profile_complete ?? true;
+    const isSuperadmin        = data.user?.is_superadmin ?? false;
+    const forcePasswordChange = data.user?.force_password_change ?? false;
+
+    if (forcePasswordChange) {
+      localStorage.setItem('force_pw_change', '1');
+    } else {
+      localStorage.removeItem('force_pw_change');
+    }
+
     if (!profileComplete && !isSuperadmin) {
+      // Goes to profile-complete — security step there handles force_pw_change too
       window.location.href = 'profile-complete.html';
     } else {
       window.location.href = 'modules-test.html';

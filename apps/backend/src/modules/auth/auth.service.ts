@@ -109,16 +109,31 @@ export class AuthService {
       [cred.cred_id],
     );
 
-    // Always send email OTP for all users
-    await this.sendEmailOtp(cred.user_id, cred.email);
-    return {
-      requires_mfa: true,
-      mfa_type: 'email_otp',
-      otp_token: this.jwt.sign(
-        { sub: cred.user_id, email: cred.email, otp_pending: true },
-        { expiresIn: `${OTP_EXPIRY_MINUTES}m` },
-      ),
-    };
+    // Check if OTP is enabled for this user (default true for safety)
+    let otpEnabled = true;
+    try {
+      const [otpRow] = await this.db.query<{ otp_enabled: boolean }[]>(
+        `SELECT COALESCE(otp_enabled, true) AS otp_enabled FROM auth.credentials WHERE id = $1`,
+        [cred.cred_id],
+      );
+      otpEnabled = otpRow?.otp_enabled ?? true;
+    } catch {
+      otpEnabled = true;
+    }
+
+    if (otpEnabled) {
+      await this.sendEmailOtp(cred.user_id, cred.email);
+      return {
+        requires_mfa: true,
+        mfa_type: 'email_otp',
+        otp_token: this.jwt.sign(
+          { sub: cred.user_id, email: cred.email, otp_pending: true },
+          { expiresIn: `${OTP_EXPIRY_MINUTES}m` },
+        ),
+      };
+    }
+
+    return this.buildSession(cred.user_id, cred.email, cred.first_name, cred.last_name, cred.is_superadmin);
   }
 
   // ─── Google OAuth ────────────────────────────────────────────────────────────
@@ -396,6 +411,47 @@ export class AuthService {
     };
   }
 
+  async setOtpEnabled(userId: string, enabled: boolean) {
+    try {
+      await this.db.query(
+        `UPDATE auth.credentials SET otp_enabled = $1 WHERE user_id = $2`,
+        [enabled, userId],
+      );
+    } catch {
+      // Column may not exist yet — migration pending
+    }
+    return { ok: true, otp_enabled: enabled };
+  }
+
+  async setupPassword(userId: string, newPassword: string) {
+    let credRow: { password_hash: string } | undefined;
+    try {
+      const [row] = await this.db.query<{ password_hash: string }[]>(
+        `SELECT password_hash FROM auth.credentials WHERE user_id = $1 AND is_active = true`,
+        [userId],
+      );
+      credRow = row;
+    } catch {
+      throw new BadRequestException('Error al obtener credenciales');
+    }
+    if (!credRow) throw new BadRequestException('Credenciales no encontradas');
+    if (credRow.password_hash.startsWith('!')) throw new BadRequestException('Cuenta OAuth — no tiene contraseña local');
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    try {
+      await this.db.query(
+        `UPDATE auth.credentials SET password_hash = $1, force_password_change = false WHERE user_id = $2`,
+        [newHash, userId],
+      );
+    } catch {
+      await this.db.query(
+        `UPDATE auth.credentials SET password_hash = $1 WHERE user_id = $2`,
+        [newHash, userId],
+      );
+    }
+    return { ok: true };
+  }
+
   async verifyCredentials(userId: string, password: string): Promise<boolean> {
     const [cred] = await this.db.query<{ password_hash: string }[]>(
       `SELECT password_hash FROM auth.credentials WHERE user_id = $1 AND is_active = true`,
@@ -442,6 +498,17 @@ export class AuthService {
       `SELECT profile_complete FROM users.profiles WHERE id = $1`,
       [userId],
     );
+    let credData: { force_password_change: boolean } | undefined;
+    try {
+      const [row] = await this.db.query<{ force_password_change: boolean }[]>(
+        `SELECT COALESCE(force_password_change, false) AS force_password_change FROM auth.credentials WHERE user_id = $1`,
+        [userId],
+      );
+      credData = row;
+    } catch {
+      // Column does not exist yet — migration pending. Default to false.
+      credData = undefined;
+    }
 
     await this.db.query(
       `INSERT INTO auth.refresh_tokens (user_id, token_hash, expires_at)
@@ -458,11 +525,12 @@ export class AuthService {
       access_token,
       refresh_token,
       user: {
-        id:               userId,
+        id:                     userId,
         email,
-        name:             `${firstName} ${lastName}`.trim(),
-        is_superadmin:    isSuperadmin,
-        profile_complete: profileData?.profile_complete ?? false,
+        name:                   `${firstName} ${lastName}`.trim(),
+        is_superadmin:          isSuperadmin,
+        profile_complete:       profileData?.profile_complete ?? false,
+        force_password_change:  credData?.force_password_change ?? false,
       },
     };
   }

@@ -599,6 +599,33 @@
     .calendar-copy { min-width: 0; }
     .calendar-title { color: #e5edf7; font-weight: 750; font-size: 13px; }
     .calendar-meta { color: #7f93ad; font-size: 12px; margin-top: 4px; }
+    /* ── Calendar grid ── */
+    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-top: 12px; }
+    .cal-dow  { text-align: center; font-size: 10px; font-weight: 700; color: #475569; padding: 4px 0; text-transform: uppercase; letter-spacing: .05em; }
+    .cal-day  {
+      aspect-ratio: 1; border-radius: 7px; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-start; padding: 5px 3px 3px;
+      font-size: 11px; color: #94a3b8; background: #111827; border: 1px solid #1e2d3d;
+      position: relative; cursor: default; transition: background .15s;
+    }
+    .cal-day:hover { background: #1e2d3d; }
+    .cal-day.today { background: #312e81; border-color: #4f46e5; color: #a5b4fc; font-weight: 700; }
+    .cal-day.other-month { opacity: .3; }
+    .cal-day-dots { display: flex; gap: 2px; margin-top: 3px; flex-wrap: wrap; justify-content: center; }
+    .cal-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .cal-dot.ticket   { background: #6366f1; }
+    .cal-dot.event    { background: #22c55e; }
+    .cal-dot.request  { background: #f59e0b; }
+    .cal-dot.critical { background: #ef4444; }
+    .cal-agenda { display: grid; gap: 8px; margin-top: 16px; }
+    .cal-event-row {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+      background: #111827; border: 1px solid #1e2d3d; border-radius: 8px;
+      font-size: 12px; color: #e2e8f0;
+    }
+    .cal-event-date { font-size: 11px; color: #64748b; min-width: 68px; }
+    .cal-event-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
     .location-card { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 14px; align-items: stretch; }
     #profile-map {
       height: 128px; border-radius: 12px; border: 1px solid #334155; overflow: hidden;
@@ -1246,6 +1273,21 @@
               <div class="activity-legend">Menos <span class="activity-cell"></span><span class="activity-cell" data-level="1"></span><span class="activity-cell" data-level="2"></span><span class="activity-cell" data-level="3"></span><span class="activity-cell" data-level="4"></span> Más</div>
             </section>
 
+            <section class="profile-card profile-panel" id="profile-calendar-section">
+              <div class="profile-panel-head">
+                <div>
+                  <div class="profile-panel-title">Calendario</div>
+                  <div class="profile-panel-sub" id="calendar-role-sub">Tus tickets y eventos del mes</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <button type="button" class="profile-link-btn" onclick="calNav(-1)" style="padding:4px 8px;font-size:16px;line-height:1">‹</button>
+                  <span id="calendar-month-label" style="font-size:12px;font-weight:600;color:#94a3b8;min-width:100px;text-align:center"></span>
+                  <button type="button" class="profile-link-btn" onclick="calNav(1)" style="padding:4px 8px;font-size:16px;line-height:1">›</button>
+                </div>
+              </div>
+              <div id="profile-calendar-wrap"></div>
+            </section>
+
             <section class="profile-card profile-panel">
               <div class="profile-panel-head">
                 <div>
@@ -1313,23 +1355,7 @@
   </main>
 </div>
 
-<!-- ════ MODAL: MFA SETUP ════ -->
-<div class="modal-overlay" id="mfa-modal">
-  <div class="modal" style="width:360px">
-    <div class="modal-header">
-      <div class="modal-title">Verificación en 2 pasos</div>
-      <button class="modal-close" onclick="closeMfaModal()">×</button>
-    </div>
-    <p style="font-size:13px;color:#94a3b8;margin-bottom:18px">
-      Escanea el QR con <strong style="color:#e2e8f0">Google Authenticator</strong> y confirma con el código.
-    </p>
-    <div class="qr-wrap" id="qr-wrap"><div class="spinner" style="margin:0 auto"></div></div>
-    <input class="mfa-input" type="text" id="totp-input" placeholder="000000" maxlength="6" inputmode="numeric"
-      oninput="this.value=this.value.replace(/\D/g,'')">
-    <button class="btn-confirm" onclick="confirmMfa()">Activar 2FA</button>
-    <p id="mfa-msg" style="text-align:center;margin-top:10px;font-size:13px;"></p>
-  </div>
-</div>
+<!-- MFA modal removed — TOTP replaced by mandatory email OTP on login -->
 
 <!-- ════ MODAL: CREAR / EDITAR USUARIO ════ -->
 <div class="modal-overlay" id="user-modal">
@@ -1616,6 +1642,44 @@
   </div>
 </div>
 
+<!-- ════ MODAL: CAMBIAR CONTRASEÑA OBLIGATORIA ════ -->
+<div id="force-pw-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;align-items:center;justify-content:center;backdrop-filter:blur(6px)">
+  <div style="background:#0f172a;border:1px solid #334155;border-radius:16px;padding:36px 32px;max-width:420px;width:90%">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <div style="width:40px;height:40px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#f1f5f9">Cambio de contraseña requerido</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:2px">Tu cuenta fue creada con contraseña temporal</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:#94a3b8;line-height:1.6;margin:16px 0">
+      Por seguridad, debes establecer una contraseña personal antes de continuar.
+    </p>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:12px;color:#94a3b8;margin-bottom:6px">Contraseña actual (temporal)</label>
+      <input type="password" id="fpw-current" placeholder="Ticket2026!"
+        style="width:100%;padding:10px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;outline:none">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:12px;color:#94a3b8;margin-bottom:6px">Nueva contraseña</label>
+      <input type="password" id="fpw-new" placeholder="Mínimo 8 caracteres"
+        style="width:100%;padding:10px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;outline:none">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:12px;color:#94a3b8;margin-bottom:6px">Confirmar contraseña</label>
+      <input type="password" id="fpw-confirm" placeholder="Repetir contraseña"
+        style="width:100%;padding:10px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;outline:none">
+    </div>
+    <div id="fpw-msg" style="font-size:12px;margin-bottom:14px;min-height:16px"></div>
+    <button id="fpw-btn" onclick="submitForcePasswordChange()"
+      style="width:100%;padding:11px;background:#4f46e5;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer">
+      Establecer contraseña
+    </button>
+  </div>
+</div>
+
 <!-- ════ SCRIPT ════ -->
 <script>
   const API = 'http://localhost:3001/api/v1';
@@ -1661,7 +1725,52 @@
     }
     if (!accessToken) { window.location.href = 'test-auth.html'; return; }
     await loadUser();
+    if (localStorage.getItem('force_pw_change') === '1') {
+      showForcePasswordModal();
+    }
   })();
+
+  // ── Force password change ────────────────────────────────────────────────────
+
+  function showForcePasswordModal() {
+    const el = document.getElementById('force-pw-modal');
+    el.style.display = 'flex';
+    document.getElementById('fpw-current').focus();
+  }
+
+  async function submitForcePasswordChange() {
+    const btn     = document.getElementById('fpw-btn');
+    const msg     = document.getElementById('fpw-msg');
+    const current = document.getElementById('fpw-current').value;
+    const nw      = document.getElementById('fpw-new').value;
+    const confirm = document.getElementById('fpw-confirm').value;
+    msg.style.color = '#ef4444';
+
+    if (!current || !nw || !confirm) { msg.textContent = 'Todos los campos son requeridos'; return; }
+    if (nw.length < 8) { msg.textContent = 'Mínimo 8 caracteres'; return; }
+    if (nw !== confirm) { msg.textContent = 'Las contraseñas no coinciden'; return; }
+
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const res  = await authFetch(`${API}/users/me/password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ current_password: current, new_password: nw }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? 'Error');
+      localStorage.removeItem('force_pw_change');
+      msg.style.color = '#22c55e';
+      msg.textContent = 'Contraseña actualizada. Reiniciando sesión…';
+      setTimeout(() => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = 'test-auth.html';
+      }, 1500);
+    } catch (e) {
+      msg.textContent = e.message;
+      btn.disabled = false; btn.textContent = 'Establecer contraseña';
+    }
+  }
 
   // ── View switcher ────────────────────────────────────────────────────────────
   function showView(name) {
@@ -2073,8 +2182,8 @@
               : `<div class="user-avatar">${escHtml((u.first_name[0] ?? '?').toUpperCase())}</div>`;
 
             return `
-            <tr>
-              <td class="cb-td"><input type="checkbox" class="row-cb" data-id="${u.id}" onchange="toggleSelection('user','${u.id}')"></td>
+            <tr style="cursor:pointer" onclick="handleUserRowClick(event,'${u.id}')">
+              <td class="cb-td" onclick="event.stopPropagation()"><input type="checkbox" class="row-cb" data-id="${u.id}" onchange="toggleSelection('user','${u.id}')"></td>
               <td>
                 <div class="user-cell">
                   ${avatarHtml}
@@ -2925,71 +3034,7 @@
   }
 
   // ══════════════════════════════════════════════════
-  // MFA SETUP MODAL (secondary, for already-logged-in users who want to re-setup)
-  // ══════════════════════════════════════════════════
-
-  async function openMfaModal() {
-    document.getElementById('mfa-modal').classList.add('open');
-    document.getElementById('totp-input').value = '';
-    document.getElementById('mfa-msg').textContent = '';
-    document.querySelector('#mfa-modal .modal-title').textContent = 'Activar autenticación 2FA';
-    document.querySelector('#mfa-modal .btn-confirm').textContent = 'Activar 2FA';
-    document.querySelector('#mfa-modal .btn-confirm').onclick = confirmMfa;
-    document.getElementById('qr-wrap').innerHTML = '<div class="spinner" style="margin:0 auto"></div>';
-    try {
-      const res  = await authFetch(`${API}/auth/totp/setup`, { method: 'POST' });
-      const data = await res.json();
-      document.getElementById('qr-wrap').innerHTML =
-        `<img src="${data.qr_code}" width="175" height="175" alt="QR Code">
-         <p style="font-size:11px;color:#475569;margin-top:8px">Clave manual: <code style="color:#94a3b8">${data.secret}</code></p>`;
-    } catch {
-      document.getElementById('qr-wrap').innerHTML = '<p style="color:#ef4444;font-size:13px">Error generando QR</p>';
-    }
-    document.getElementById('totp-input').focus();
-  }
-  function closeMfaModal() { document.getElementById('mfa-modal').classList.remove('open'); }
-
-  async function confirmMfa() {
-    const code = document.getElementById('totp-input').value;
-    const msg  = document.getElementById('mfa-msg');
-    if (code.length !== 6) { msg.style.color = '#ef4444'; msg.textContent = 'Ingresa 6 dígitos'; return; }
-    try {
-      const res  = await authFetch(`${API}/auth/totp/confirm`, { method: 'POST', body: JSON.stringify({ code }) });
-      const data = await res.json();
-      if (!res.ok) { msg.style.color = '#ef4444'; msg.textContent = data.message ?? 'Código incorrecto'; return; }
-      msg.style.color = '#6ee7b7';
-      msg.textContent = '2FA activado';
-      setTimeout(() => { closeMfaModal(); loadProfileView(); }, 1500);
-    } catch { msg.style.color = '#ef4444'; msg.textContent = 'Error de red'; }
-  }
-
-  function openDisableTotpModal() {
-    document.getElementById('mfa-modal').classList.add('open');
-    document.getElementById('totp-input').value = '';
-    document.getElementById('mfa-msg').textContent = '';
-    document.querySelector('#mfa-modal .modal-title').textContent = 'Desactivar 2FA';
-    document.querySelector('#mfa-modal .btn-confirm').textContent = 'Desactivar 2FA';
-    document.querySelector('#mfa-modal .btn-confirm').onclick = doDisableTotp;
-    document.getElementById('qr-wrap').innerHTML =
-      `<p style="font-size:13px;color:#94a3b8;text-align:center;padding:16px 0">
-         Ingresa el código de tu autenticador para confirmar la desactivación.
-       </p>`;
-    document.getElementById('totp-input').focus();
-  }
-
-  async function doDisableTotp() {
-    const code = document.getElementById('totp-input').value;
-    const msg  = document.getElementById('mfa-msg');
-    if (code.length !== 6) { msg.style.color = '#ef4444'; msg.textContent = 'Ingresa 6 dígitos'; return; }
-    try {
-      const res  = await authFetch(`${API}/auth/totp/disable`, { method: 'DELETE', body: JSON.stringify({ code }) });
-      const data = await res.json();
-      if (!res.ok) { msg.style.color = '#ef4444'; msg.textContent = data.message ?? 'Código incorrecto'; return; }
-      msg.style.color = '#6ee7b7';
-      msg.textContent = '2FA desactivado';
-      setTimeout(() => { closeMfaModal(); loadProfileView(); }, 1500);
-    } catch { msg.style.color = '#ef4444'; msg.textContent = 'Error de red'; }
-  }
+  function closeMfaModal() { document.getElementById('mfa-modal')?.classList.remove('open'); }
 
   // ══════════════════════════════════════════════════
   // PROFILE VIEW
@@ -3002,6 +3047,11 @@
   let profileAvatarUrl = '';
   let profileRequestsCache = [];
   let profileTicketsCache = [];
+
+  function handleUserRowClick(event, userId) {
+    if (event.target.closest('button, input, .actions-cell')) return;
+    viewUserProfile(userId);
+  }
 
   function viewUserProfile(userId) {
     viewingUserId = userId;
@@ -3023,12 +3073,21 @@
       const backBtn = document.getElementById('profile-back-btn');
       if (backBtn) backBtn.style.display = viewingUserId ? '' : 'none';
 
-      // Hide edit for self-profile changes if viewing another user as superadmin
       const editBtn = document.querySelector('.profile-action');
       if (editBtn) editBtn.style.display = viewingUserId && !currentUser?.is_superadmin ? 'none' : '';
 
       renderProfileView(p);
       loadCountries();
+
+      // Superadmin viewing another user → auto-open edit mode, hide calendar
+      const calSec = document.getElementById('profile-calendar-section');
+      if (viewingUserId && currentUser?.is_superadmin) {
+        toggleProfileEdit(true);
+        if (calSec) calSec.style.display = 'none';
+      } else {
+        if (calSec) calSec.style.display = '';
+      }
+
       if (!viewingUserId) loadProfileOperationalData();
     } catch {}
   }
@@ -3125,40 +3184,194 @@
 
   function renderProfileSecurity(p) {
     const list = document.getElementById('profile-security-list');
-    const totpEnabled = !!p.totp_enabled;
     const isOwnProfile = !viewingUserId;
+
+    const lastLogin = p.last_login_at
+      ? new Date(p.last_login_at).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+      : 'Sin registro';
+
     list.innerHTML = `
       <div class="security-row">
-        <div><div class="row-title">Contraseña</div><div class="row-sub">Último cambio no disponible</div></div>
-        ${isOwnProfile ? `<button type="button" class="profile-link-btn" onclick="setProfileEditPane('security');toggleProfileEdit(true)">Cambiar</button>` : '<span class="profile-badge">Solo el usuario puede cambiarla</span>'}
-      </div>
-      <div class="security-row">
-        <div>
-          <div class="row-title">Autenticación 2FA (TOTP)</div>
-          <div class="row-sub">${totpEnabled ? 'Activo — autenticador configurado' : 'Desactivado — solo OTP por email'}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <div class="row-title">Autenticación de dos factores</div>
+            <div class="row-sub">OTP por email — requerida en cada inicio de sesión</div>
+          </div>
         </div>
-        ${isOwnProfile ? (totpEnabled
-          ? `<button type="button" class="profile-link-btn" style="color:#fca5a5" onclick="openDisableTotpModal()">Desactivar</button>`
-          : `<button type="button" class="profile-link-btn" onclick="openMfaModal()">Activar</button>`
-        ) : `<span class="profile-badge ${totpEnabled ? 'ok' : ''}">${totpEnabled ? 'Activo' : 'Inactivo'}</span>`}
+        <span class="profile-badge ok" style="display:flex;align-items:center;gap:5px">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="#16a34a"><circle cx="12" cy="12" r="12"/></svg>
+          Activa
+        </span>
       </div>
       <div class="security-row">
-        <div><div class="row-title">Sesión actual</div><div class="row-sub">Navegador activo · token vigente</div></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <div class="row-title">Contraseña</div>
+            <div class="row-sub">Último acceso: ${escHtml(lastLogin)}</div>
+          </div>
+        </div>
+        ${isOwnProfile
+          ? `<button type="button" class="profile-link-btn" onclick="setProfileEditPane('security');toggleProfileEdit(true)">Cambiar</button>`
+          : `<span class="profile-badge">Solo el usuario puede cambiarla</span>`}
+      </div>
+      <div class="security-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:8px;background:#f0f9ff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <div>
+            <div class="row-title">Sesión actual</div>
+            <div class="row-sub">Token activo · este navegador</div>
+          </div>
+        </div>
         <span class="profile-badge ok">Activa</span>
-      </div>
-      <div class="security-row">
-        <div><div class="row-title">Actividad sospechosa</div><div class="row-sub">Monitoreo futuro</div></div>
-        <span class="profile-badge">Sin alertas</span>
       </div>`;
   }
 
-  function openOperationalCalendar() {
-    alert('Calendario operativo preparado como acceso de header. La funcionalidad la conectará el módulo correspondiente.');
+  function openOperationalCalendar() { showView('profile'); }
+
+  // ── Profile Calendar ──────────────────────────────────────────────────────────
+
+  let calYear  = new Date().getFullYear();
+  let calMonth = new Date().getMonth(); // 0-indexed
+
+  function calNav(dir) {
+    calMonth += dir;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0)  { calMonth = 11; calYear--; }
+    renderProfileCalendar();
+  }
+
+  function buildCalEvents() {
+    const events = [];
+    const now = new Date();
+
+    // Derive events from cached tickets
+    (profileTicketsCache ?? []).forEach(t => {
+      const d = t.created_at ? new Date(t.created_at) : null;
+      if (!d) return;
+      const type = (t.priority === 'critical' || t.priority === 'alta') ? 'critical' : 'ticket';
+      events.push({ date: d, label: t.title ?? 'Ticket', type });
+    });
+
+    // Derive events from cached requests
+    (profileRequestsCache ?? []).forEach(r => {
+      const d = r.created_at ? new Date(r.created_at) : null;
+      if (!d) return;
+      events.push({ date: d, label: r.title ?? 'Solicitud', type: 'request' });
+    });
+
+    // Synthetic "today" placeholder event if no real data
+    if (!events.length) {
+      events.push({ date: now, label: 'Sin eventos este mes', type: 'event' });
+    }
+
+    return events;
+  }
+
+  function renderProfileCalendar() {
+    const wrap = document.getElementById('profile-calendar-wrap');
+    if (!wrap) return;
+
+    const DAYS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const today = new Date();
+
+    document.getElementById('calendar-month-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+
+    // Sub label by role
+    const role = currentUser?.global_role ?? '';
+    const roleSubs = {
+      'tecnico':       'Tickets asignados, SLA y mantenimientos',
+      'jefe tecnico':  'Carga del equipo, escalaciones y reuniones',
+      'administrador': 'Actividad global, auditorías y vencimientos SLA',
+    };
+    const subEl = document.getElementById('calendar-role-sub');
+    if (subEl) subEl.textContent = roleSubs[role.toLowerCase()] ?? 'Tus tickets y eventos del mes';
+
+    const events = buildCalEvents();
+    const eventsInMonth = events.filter(e => e.date.getFullYear() === calYear && e.date.getMonth() === calMonth);
+
+    // Map day → events array
+    const dayMap = {};
+    eventsInMonth.forEach(e => {
+      const d = e.date.getDate();
+      if (!dayMap[d]) dayMap[d] = [];
+      dayMap[d].push(e);
+    });
+
+    // Build grid
+    const firstDay = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
+
+    let grid = `<div class="cal-grid">`;
+    DAYS.forEach(d => { grid += `<div class="cal-dow">${d}</div>`; });
+
+    // Prefix cells from prev month
+    for (let i = 0; i < firstDay; i++) {
+      const day = prevMonthDays - firstDay + 1 + i;
+      grid += `<div class="cal-day other-month"><span>${day}</span></div>`;
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+      const evs = dayMap[d] ?? [];
+      const dots = evs.slice(0, 4).map(e => `<span class="cal-dot ${e.type}"></span>`).join('');
+      grid += `<div class="cal-day${isToday ? ' today' : ''}">
+        <span>${d}</span>
+        ${dots ? `<div class="cal-day-dots">${dots}</div>` : ''}
+      </div>`;
+    }
+
+    // Suffix cells
+    const total = firstDay + daysInMonth;
+    const suffix = total % 7 === 0 ? 0 : 7 - (total % 7);
+    for (let i = 1; i <= suffix; i++) {
+      grid += `<div class="cal-day other-month"><span>${i}</span></div>`;
+    }
+    grid += '</div>';
+
+    // Agenda: upcoming events sorted
+    const upcoming = eventsInMonth
+      .sort((a, b) => a.date - b.date)
+      .slice(0, 5);
+
+    const COLOR = { ticket: '#6366f1', event: '#22c55e', request: '#f59e0b', critical: '#ef4444' };
+    const agenda = upcoming.length
+      ? `<div class="cal-agenda">${upcoming.map(e => `
+          <div class="cal-event-row">
+            <span class="cal-event-dot" style="background:${COLOR[e.type]}"></span>
+            <span class="cal-event-date">${e.date.toLocaleDateString('es-CO',{day:'numeric',month:'short'})}</span>
+            <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(e.label)}</span>
+            <span style="font-size:10px;color:#475569;text-transform:capitalize">${e.type}</span>
+          </div>`).join('')}
+        </div>`
+      : `<div style="color:#475569;font-size:13px;padding:16px 0;text-align:center">Sin eventos este mes</div>`;
+
+    // Legend
+    const legend = `<div style="display:flex;gap:14px;margin-top:12px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b"><span class="cal-dot ticket" style="width:8px;height:8px"></span> Ticket</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b"><span class="cal-dot critical" style="width:8px;height:8px"></span> Crítico</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b"><span class="cal-dot request" style="width:8px;height:8px"></span> Solicitud</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b"><span class="cal-dot event" style="width:8px;height:8px"></span> Evento</span>
+    </div>`;
+
+    wrap.innerHTML = grid + agenda + legend;
   }
 
   async function loadProfileOperationalData() {
     await Promise.all([loadProfileTickets(), loadProfileRequests()]);
     renderProfileActivity();
+    calYear  = new Date().getFullYear();
+    calMonth = new Date().getMonth();
+    renderProfileCalendar();
   }
 
   async function loadProfileTickets() {

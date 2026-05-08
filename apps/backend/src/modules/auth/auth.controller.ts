@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Req,
   Res,
@@ -21,6 +22,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailOtpDto } from './dto/email-otp.dto';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
+import { SkipProfileCheck } from '../../gateway/decorators/skip-profile-check.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -130,6 +132,24 @@ export class AuthController {
     const valid = await this.authService.verifyCredentials(req.user.sub, body.password);
     if (!valid) throw new UnauthorizedException('Contraseña incorrecta');
     return { ok: true };
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('otp-setting')
+  @ApiOperation({ summary: 'Activar/desactivar verificación en dos pasos por email OTP.' })
+  setOtpSetting(@Req() req: any, @Body() body: { enabled: boolean }) {
+    return this.authService.setOtpEnabled(req.user.sub, body.enabled);
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('setup-password')
+  @ApiOperation({ summary: 'Establecer contraseña inicial (onboarding). No requiere contraseña actual.' })
+  setupPassword(@Req() req: any, @Body() body: { new_password: string }) {
+    return this.authService.setupPassword(req.user.sub, body.new_password);
   }
 
 }
