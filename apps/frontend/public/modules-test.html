@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — Tickets System</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="components/app-sidebar.js"></script>
+  <script src="components/app-header.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -17,171 +19,21 @@
       align-items: start;
     }
     body.sidebar-expanded { grid-template-columns: 220px minmax(0, 1fr); }
-    body:has(.sidebar.hidden) { grid-template-columns: minmax(0, 1fr); }
-    body:has(.sidebar.hidden) .header,
-    body:has(.sidebar.hidden) .main { grid-column: 1; }
-    body:has(.sidebar.hidden) .main { grid-row: 2; }
+    body:has(app-sidebar.hidden) { grid-template-columns: minmax(0, 1fr); }
+    body:has(app-sidebar.hidden) .main { grid-column: 1; grid-row: 2; }
 
     @media (max-width: 720px) {
       body { grid-template-columns: 64px minmax(0, 1fr); }
       body.sidebar-expanded { grid-template-columns: 188px minmax(0, 1fr); }
     }
 
-    /* ══ HEADER ══ */
-    .header {
-      background: #161b22; border-bottom: 1px solid #21262d;
-      padding: 0 16px; height: 56px; display: flex;
-      align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 100; flex-shrink: 0;
-      grid-column: 2; grid-row: 1; width: 100%;
-    }
-    .header-left { display: flex; align-items: center; gap: 16px; }
-    .logo { font-size: 15px; font-weight: 700; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
-    .logo span { color: #6366f1; }
-    .header-right { display: flex; align-items: center; gap: 8px; }
-    .header-calendar-btn {
-      align-items: center; justify-content: center;
-      height: 34px; padding: 0 14px; border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, .18);
-      background: rgba(15, 23, 42, .45); color: #c9d7e6;
-      font-size: 12px; font-weight: 700; cursor: pointer;
-      transition: background .16s, border-color .16s, color .16s;
-    }
-    .header-calendar-btn:hover { background: #102f3d; border-color: rgba(45, 91, 111, .65); color: #fff; }
-
-    /* Profile trigger */
-    .profile-menu-wrap { position: relative; }
-    .profile-trigger {
-      display: flex; align-items: center; gap: 8px;
-      background: none; border: 1px solid transparent; border-radius: 8px;
-      padding: 5px 8px; cursor: pointer; transition: border-color .15s, background .15s;
-      color: #e2e8f0;
-    }
-    .profile-trigger:hover { border-color: #30363d; background: #21262d; }
-    .avatar {
-      width: 30px; height: 30px; border-radius: 50%;
-      background: #6366f1; display: flex; align-items: center;
-      justify-content: center; font-weight: 700; font-size: 12px;
-      overflow: hidden; flex-shrink: 0;
-    }
-    .avatar img { width: 30px; height: 30px; object-fit: cover; }
-    .header-username { font-size: 13px; color: #c9d1d9; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .header-chevron { font-size: 11px; color: #6e7681; transition: transform .15s; }
-    .profile-trigger[aria-expanded="true"] .header-chevron { transform: rotate(180deg); }
-
-    /* Profile dropdown */
-    .profile-dropdown {
-      display: none; position: absolute; right: 0; top: calc(100% + 6px);
-      background: #161b22; border: 1px solid #30363d; border-radius: 10px;
-      min-width: 200px; padding: 8px 0; box-shadow: 0 16px 32px rgba(0,0,0,.6);
-      z-index: 200;
-    }
-    .profile-dropdown.open { display: block; }
-    .pd-info {
-      padding: 10px 16px 8px; border-bottom: 1px solid #21262d; margin-bottom: 4px;
-    }
-    .pd-name { font-size: 14px; font-weight: 600; color: #e2e8f0; }
-    .pd-username { font-size: 12px; color: #6e7681; margin-top: 2px; }
-    .pd-item {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 16px; background: none; border: none;
-      color: #c9d1d9; font-size: 13px; cursor: pointer;
-      transition: background .12s; width: 100%; text-align: left;
-    }
-    .pd-item:hover { background: #21262d; color: #e2e8f0; }
-    .pd-sep { height: 1px; background: #21262d; margin: 4px 0; }
-    .pd-danger { color: #f87171; }
-    .pd-danger:hover { color: #fca5a5; background: #1a0a0a; }
-
-    /* Legacy - keep for compat */
-    .user-name { font-size: 13px; color: #cbd5e1; }
-    .btn-logout {
-      padding: 5px 12px; background: transparent;
-      border: 1px solid #475569; border-radius: 6px;
-      color: #94a3b8; font-size: 12px; cursor: pointer; transition: all .15s;
-    }
-    .btn-logout:hover { border-color: #ef4444; color: #ef4444; }
+    /* ══ COMPONENTS ══ */
+    app-sidebar { grid-column: 1; grid-row: 1 / span 2; }
+    app-header  { grid-column: 2; grid-row: 1; width: 100%; position: sticky; top: 0; z-index: 100; }
+    body:has(app-sidebar.hidden) app-header { grid-column: 1; }
 
     /* ══ LAYOUT ══ */
     .body-wrap { display: contents; }
-
-    /* ══ SIDEBAR ══ */
-    .sidebar {
-      width: 76px; background: #fff; border-right: 1px solid #edf2f6;
-      display: flex; flex-direction: column; align-items: center;
-      transition: width .22s ease, box-shadow .22s ease; overflow: hidden; flex-shrink: 0;
-      box-shadow: 18px 0 38px rgba(15, 23, 42, .06);
-      grid-column: 1; grid-row: 1 / span 2;
-      height: 100vh; position: sticky; top: 0; z-index: 120;
-    }
-    .sidebar.expanded { width: 220px; align-items: stretch; }
-    .sidebar.hidden { display: none; }
-
-    .sidebar-brand {
-      height: 92px; display: flex; align-items: center; justify-content: center;
-      width: 100%; flex-shrink: 0;
-    }
-    .brand-mark { position: relative; width: 38px; height: 30px; }
-    .brand-mark::before,
-    .brand-mark::after {
-      content: ''; position: absolute; top: 8px; width: 8px; height: 28px;
-      border-radius: 999px; background: #17384a; transform: rotate(-28deg);
-      box-shadow: 0 1px 3px rgba(23, 56, 74, .18);
-    }
-    .brand-mark::before { left: 5px; }
-    .brand-mark::after { left: 18px; }
-    .brand-dot {
-      position: absolute; top: 1px; right: 2px; width: 8px; height: 8px;
-      border-radius: 50%; background: #ff6347; box-shadow: 0 0 0 3px rgba(255, 99, 71, .12);
-    }
-    .sidebar-nav {
-      display: flex; flex-direction: column; align-items: center; gap: 18px;
-      width: 100%; padding: 56px 0 12px;
-    }
-    .toggle-btn {
-      width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center;
-      background: transparent; border: none; color: #17384a;
-      cursor: pointer; border-radius: 12px;
-      transition: background .16s, color .16s, transform .16s;
-    }
-    .toggle-btn:hover { background: #f2f6f8; transform: translateX(1px); }
-    .toggle-btn svg { width: 20px; height: 20px; stroke-width: 2.2; transition: transform .2s; }
-    .sidebar.expanded .toggle-btn svg { transform: rotate(180deg); }
-
-    .sidebar-section-label {
-      display: none;
-    }
-
-    .nav-item {
-      width: 42px; min-width: 42px; height: 42px; border: 0;
-      display: flex; align-items: center; justify-content: center; gap: 12px;
-      padding: 0; cursor: pointer; background: transparent;
-      font-size: 13px; font-weight: 650; color: #17384a;
-      transition: background .16s, color .16s, box-shadow .16s, transform .16s;
-      white-space: nowrap; border-radius: 12px;
-    }
-    .nav-item:hover { background: #f2f6f8; transform: translateY(-1px); }
-    .nav-item.active {
-      background: #0e3546; color: #fff;
-      box-shadow: 0 14px 28px rgba(14, 53, 70, .24);
-    }
-    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 2.25; }
-    .nav-label {
-      display: none; overflow: hidden; color: inherit; opacity: 0;
-      transition: opacity .14s ease;
-    }
-    .sidebar.expanded .sidebar-nav { align-items: stretch; padding: 34px 14px 12px; gap: 8px; }
-    .sidebar.expanded .sidebar-brand { justify-content: flex-start; padding-left: 25px; }
-    .sidebar.expanded .nav-item {
-      width: 100%; justify-content: flex-start; padding: 0 13px;
-    }
-    .sidebar.expanded .nav-label { display: inline; opacity: 1; }
-
-    .sidebar-bottom {
-      margin-top: auto; width: 100%; padding: 12px 0 18px;
-      display: flex; flex-direction: column; align-items: center; gap: 40px;
-    }
-    .sidebar.expanded .sidebar-bottom { padding: 12px 14px 18px; align-items: stretch; gap: 18px; }
 
     /* ══ MAIN ══ */
     .main {
@@ -192,10 +44,6 @@
     .view.active { display: block; }
 
     @media (max-width: 720px) {
-      .sidebar { width: 64px; }
-      .sidebar.expanded { width: 188px; }
-      .sidebar-brand { height: 78px; }
-      .sidebar-nav { padding-top: 34px; gap: 14px; }
       .main { padding: 22px; }
     }
 
@@ -994,83 +842,14 @@
 </head>
 <body>
 
-<!-- ════ HEADER ════ -->
-<header class="header">
-  <div class="header-left">
-    <div class="logo">🎫 Tickets <span>System</span></div>
-  </div>
-  <div class="header-right">
-    <button type="button" class="header-calendar-btn" id="header-calendar-btn" onclick="openOperationalCalendar()" style="display:none">
-      Calendario operativo
-    </button>
-    <div class="profile-menu-wrap" id="profile-menu-wrap">
-      <button class="profile-trigger" id="profile-trigger" onclick="toggleProfileMenu()" aria-expanded="false">
-        <div class="avatar" id="header-avatar"><span id="avatar-letter">?</span></div>
-        <span class="header-username" id="header-name">Cargando...</span>
-        <span class="header-chevron">▾</span>
-      </button>
-      <div class="profile-dropdown" id="profile-dropdown">
-        <div class="pd-info">
-          <div class="pd-name" id="pd-fullname">—</div>
-          <div class="pd-username" id="pd-username-label">—</div>
-        </div>
-        <div class="pd-sep"></div>
-        <button class="pd-item" onclick="showView('profile'); closeProfileMenu()">
-          👤 Mi perfil
-        </button>
-        <div class="pd-sep"></div>
-        <button class="pd-item pd-danger" onclick="doLogout()">
-          🚪 Cerrar sesión
-        </button>
-      </div>
-    </div>
-  </div>
-</header>
+<script src="components/app-header.js"></script>
+<app-header></app-header>
 
 <!-- ════ BODY ════ -->
 <div class="body-wrap">
 
-  <!-- ── SIDEBAR (only for superadmin) ── -->
-  <aside class="sidebar hidden" id="sidebar">
-    <div class="sidebar-brand" aria-label="Tickets System">
-      <div class="brand-mark" aria-hidden="true"><span class="brand-dot"></span></div>
-    </div>
-
-    <div class="sidebar-section-label">Panel global</div>
-
-    <nav class="sidebar-nav" aria-label="Panel global">
-    <button type="button" class="nav-item active" id="nav-modules" onclick="showView('modules')" title="Módulos" aria-label="Módulos">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/></svg>
-      <span class="nav-label">Módulos</span>
-    </button>
-    <button type="button" class="nav-item" id="nav-users" onclick="showView('users')" title="Usuarios" aria-label="Usuarios">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M7 7.5h10"/><path d="M7 12h10"/><path d="M7 16.5h6"/><path d="M5 3.5h12l2 2V20.5H5z"/><path d="M17 3.5v3h3"/></svg>
-      <span class="nav-label">Usuarios</span>
-    </button>
-    <button type="button" class="nav-item" id="nav-roles" onclick="showView('roles')" title="Roles globales" aria-label="Roles globales">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 7.5h11.5l4.5 4.5-4.5 4.5H4z"/><path d="M8 12h.01"/></svg>
-      <span class="nav-label">Roles Globales</span>
-    </button>
-    <button type="button" class="nav-item" id="nav-requests" onclick="showView('requests')" title="Solicitudes" aria-label="Solicitudes">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10h6"/><path d="M9 14h4"/></svg>
-      <span class="nav-label">Solicitudes</span>
-    </button>
-    <button type="button" class="nav-item" id="nav-trash" onclick="showView('trash')" title="Papelera" aria-label="Papelera">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 14h10l1-14"/><path d="M9 7V4h6v3"/></svg>
-      <span class="nav-label">Papelera</span>
-    </button>
-    </nav>
-
-    <div class="sidebar-bottom">
-      <button type="button" class="nav-item" id="nav-profile" onclick="showView('profile')" title="Mi perfil" aria-label="Mi perfil">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M16 19a4 4 0 0 0-8 0"/><circle cx="12" cy="9" r="3"/><path d="M19 8.5h.01"/><path d="M19.5 15.5h.01"/></svg>
-        <span class="nav-label">Mi perfil</span>
-      </button>
-      <button type="button" class="toggle-btn" onclick="toggleSidebar()" id="toggle-btn" title="Expandir" aria-label="Expandir menú">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-      </button>
-    </div>
-  </aside>
+  <!-- ── SIDEBAR ── -->
+  <app-sidebar id="sidebar"></app-sidebar>
 
   <!-- ── MAIN ── -->
   <main class="main">
@@ -1750,38 +1529,6 @@
     await loadUser();
   })();
 
-  // ── Profile header dropdown ─────────────────────────────────────────────────
-  function toggleProfileMenu() {
-    const dd  = document.getElementById('profile-dropdown');
-    const btn = document.getElementById('profile-trigger');
-    const isOpen = dd.classList.contains('open');
-    dd.classList.toggle('open');
-    btn.setAttribute('aria-expanded', String(!isOpen));
-    if (!isOpen) {
-      setTimeout(() => document.addEventListener('click', closeProfileMenuOutside, { once: true }), 0);
-    }
-  }
-
-  function closeProfileMenu() {
-    document.getElementById('profile-dropdown').classList.remove('open');
-    document.getElementById('profile-trigger').setAttribute('aria-expanded', 'false');
-  }
-
-  function closeProfileMenuOutside(e) {
-    if (!document.getElementById('profile-menu-wrap').contains(e.target)) closeProfileMenu();
-  }
-
-  // ── Sidebar toggle ──────────────────────────────────────────────────────────
-  function toggleSidebar() {
-    const sb  = document.getElementById('sidebar');
-    const btn = document.getElementById('toggle-btn');
-    sb.classList.toggle('expanded');
-    const expanded = sb.classList.contains('expanded');
-    document.body.classList.toggle('sidebar-expanded', expanded);
-    btn.title = expanded ? 'Colapsar' : 'Expandir';
-    btn.setAttribute('aria-label', expanded ? 'Colapsar menú' : 'Expandir menú');
-  }
-
   // ── View switcher ────────────────────────────────────────────────────────────
   function showView(name) {
     if (currentUser && currentUser.profile_complete === false && name !== 'profile') {
@@ -1789,11 +1536,11 @@
     }
     clearSelection();
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('app-sidebar .as-nav-item').forEach(n => n.classList.remove('as-nav-item--active'));
 
     document.getElementById('view-' + name)?.classList.add('active');
-    const navEl = document.getElementById('nav-' + name);
-    if (navEl) navEl.classList.add('active');
+    const navEl = document.querySelector(`app-sidebar .as-nav-item[data-view="${name}"]`);
+    if (navEl) navEl.classList.add('as-nav-item--active');
 
     if (name === 'users')    loadUsers();
     if (name === 'modules')  loadModules();
@@ -1816,28 +1563,16 @@
       currentUser = user;
 
       // Update header
-      const displayName = user.username || user.name || user.email;
-      const initial = (user.name || user.email || '?')[0].toUpperCase();
-      document.getElementById('header-name').textContent = displayName;
       document.getElementById('welcome-text').textContent = `Hola, ${user.name?.split(' ')[0] ?? 'Usuario'} 👋`;
-
-      // Header dropdown info
-      document.getElementById('pd-fullname').textContent = user.name || '—';
-      document.getElementById('pd-username-label').textContent = user.username ? `@${user.username}` : user.email;
-      updateHeaderCalendarButton(user);
-
-      const avatarEl = document.getElementById('header-avatar');
-      if (user.avatar_url) {
-        avatarEl.innerHTML = `<img src="${escHtml(user.avatar_url)}" onerror="this.parentElement.innerHTML='<span>${escHtml(initial)}</span>'">`;
-      } else {
-        avatarEl.innerHTML = `<span>${escHtml(initial)}</span>`;
-      }
-
+      document.querySelector('app-header').setUser({
+        fullName:    user.name,
+        username:    user.username || user.email,
+        avatarUrl:   user.avatar_url,
+        avatarLetter: (user.name || user.email || '?')[0].toUpperCase(),
+      });
       // Sidebar: only for superadmin
       if (user.is_superadmin) {
-        document.getElementById('sidebar').classList.remove('hidden');
-      } else {
-        document.body.classList.remove('sidebar-expanded');
+        document.getElementById('sidebar').show();
       }
 
       if (!user.profile_complete) {
@@ -1849,19 +1584,6 @@
 
     } catch { handleUnauth(); }
   }
-
-  function updateHeaderCalendarButton(user) {
-    const btn = document.getElementById('header-calendar-btn');
-    if (!btn) return;
-    const roles = (user.roles ?? []).map(r => r.role);
-    const isAdmin = user.is_superadmin || roles.includes('admin_modulo');
-    const isLead = roles.includes('jefe_tecnico');
-    const isTech = roles.includes('tecnico');
-    const show = isAdmin || isLead || isTech;
-    btn.style.display = show ? 'inline-flex' : 'none';
-    btn.textContent = isAdmin ? 'Calendario administrativo' : isLead ? 'Calendario técnico' : 'Agenda técnica';
-  }
-
 
   // ══════════════════════════════════════════════════
   // MODULES SECTION
@@ -3114,7 +2836,6 @@
     document.getElementById('pf-address').value = p.address ?? '';
 
     renderProfileSecurity(p);
-    renderProfileCalendar(p);
 
     // Init map after DOM settles
     setTimeout(() => initProfileMap(p.address), 150);
@@ -3170,19 +2891,6 @@
         <div><div class="row-title">Actividad sospechosa</div><div class="row-sub">Monitoreo futuro</div></div>
         <span class="profile-badge">Sin alertas</span>
       </div>`;
-  }
-
-  function renderProfileCalendar(p) {
-    const role = p.is_superadmin ? 'admin' : (p.roles?.[0]?.role ?? 'usuario');
-    const canUseCalendar = ['admin', 'superadmin', 'jefe_tecnico', 'tecnico', 'admin_modulo'].includes(role);
-    const btn = document.getElementById('header-calendar-btn');
-    if (!btn) return;
-    btn.style.display = canUseCalendar ? 'inline-flex' : 'none';
-    btn.textContent = role === 'admin' || role === 'admin_modulo'
-      ? 'Calendario administrativo'
-      : role === 'jefe_tecnico'
-        ? 'Calendario técnico'
-        : 'Agenda técnica';
   }
 
   function openOperationalCalendar() {
@@ -3526,8 +3234,12 @@
       if (body.username !== undefined) {
         const uname = body.username || '';
         document.getElementById('prof-username-display').textContent = uname ? `@${uname}` : currentUser.email;
-        document.getElementById('pd-username-label').textContent = uname ? `@${uname}` : currentUser.email;
-        document.getElementById('header-name').textContent = uname || nameText || currentUser.email;
+        document.querySelector('app-header').setUser({
+          fullName:    nameText || currentUser.name,
+          username:    uname || currentUser.email,
+          avatarUrl:   currentUser.avatar_url,
+          avatarLetter: (nameText || currentUser.name || currentUser.email || '?')[0].toUpperCase(),
+        });
       }
       setTimeout(() => { msgEl.textContent = ''; }, 3000);
     } catch (e) {

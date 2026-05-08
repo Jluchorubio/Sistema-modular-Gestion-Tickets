@@ -1,3 +1,5 @@
+no uses emojis, usa path para colocar en la Pagina que estamos haciendo
+
 🔐 Flujo de Autenticación del Sistema
 Objetivo
 
