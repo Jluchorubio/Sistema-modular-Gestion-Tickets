@@ -850,6 +850,108 @@
     .btn-reject:hover  { background: #450a0a !important; }
     .btn-review  { color: #fbbf24; border-color: #92400e !important; }
     .btn-review:hover  { background: #1c1917 !important; }
+
+    /* ══ LIGHT THEME OVERRIDE ══════════════════════════════════════════════════ */
+    body {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+    }
+    .main { background: #f1f5f9; }
+
+    /* Textos que eran claros sobre fondo oscuro → ahora oscuros */
+    .welcome, .view-title, .modal-title, .section-title,
+    .profile-panel-title, .stat-value, .role-row-name,
+    .trash-card-name, .request-card-title,
+    .module-name, td, th { color: #0f172a !important; }
+    .sub, .view-count, .stat-label, .role-row-desc, .pagination-info,
+    .trash-card-meta, .request-card-meta, .request-card-desc,
+    .user-name-cell, .user-login, .input-hint,
+    .profile-panel-sub, .module-desc { color: #475569 !important; }
+
+    /* Tarjetas y superficies */
+    .module-card, .stat-card, .role-row, .trash-card,
+    .request-card, .table-wrap, .modal, .profile-stat-card { background: #ffffff !important; border-color: #e2e8f0 !important; }
+    .module-card:hover { border-color: #6366f1 !important; }
+
+    /* Tabla */
+    th { background: #f8fafc !important; color: #475569 !important; border-color: #e2e8f0 !important; }
+    td { border-color: #f1f5f9 !important; }
+    tr:hover td { background: #f8fafc !important; }
+
+    /* Inputs y selects */
+    .search-bar, .filter-select,
+    input[type="text"], input[type="email"], input[type="password"],
+    input[type="url"], input[type="date"], select, textarea {
+      background: #ffffff !important;
+      border-color: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+    .search-bar::placeholder, input::placeholder, textarea::placeholder { color: #94a3b8 !important; }
+
+    /* Modales */
+    .modal-overlay { background: rgba(15,23,42,.55) !important; }
+    .modal { background: #ffffff !important; border-color: #e2e8f0 !important; }
+    .modal-close { color: #94a3b8 !important; }
+    label { color: #475569 !important; }
+
+    /* Badges y botones secundarios */
+    .btn-secondary { background: #ffffff !important; border-color: #e2e8f0 !important; color: #475569 !important; }
+    .btn-secondary:hover { border-color: #cbd5e1 !important; color: #0f172a !important; }
+    .badge-role { background: #f1f5f9 !important; color: #475569 !important; border-color: #e2e8f0 !important; }
+    .badge-global { background: #eff6ff !important; color: #1d4ed8 !important; }
+    .modal-actions .act-cancel { background: #f1f5f9 !important; color: #475569 !important; }
+    .delete-modal-banner { background: #fef2f2 !important; border-color: #fecaca !important; color: #991b1b !important; }
+    .delete-confirm-input { background: #ffffff !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
+
+    /* Papelera */
+    .trash-tab { background: #ffffff !important; border-color: #e2e8f0 !important; color: #475569 !important; }
+    .trash-tab.active { background: #eef2ff !important; border-color: #6366f1 !important; color: #4338ca !important; }
+    .days-pill { background: #fef3c7 !important; color: #92400e !important; }
+    .days-pill.urgent { background: #fee2e2 !important; color: #991b1b !important; }
+
+    /* Bulk bar */
+    .bulk-action-bar { background: #ffffff !important; border-color: #6366f1 !important; }
+
+    /* Kebab menus en tarjetas de módulos */
+    .card-dropdown { background: #ffffff !important; border-color: #e2e8f0 !important; }
+    .card-dd-item { color: #475569 !important; }
+    .card-dd-item:hover { background: #f1f5f9 !important; color: #0f172a !important; }
+    .card-dd-sep { background: #e2e8f0 !important; }
+    .kebab-btn { color: #94a3b8 !important; }
+    .kebab-btn:hover { background: #f1f5f9 !important; color: #475569 !important; }
+
+    /* Módulos inactivos */
+    .inactive-section-title { color: #94a3b8 !important; }
+    .inactive-section-title::after { background: #e2e8f0 !important; }
+
+    /* Roles globales */
+    .roles-admin-list { background: transparent; }
+    .btn-icon-danger { border-color: #e2e8f0 !important; color: #94a3b8 !important; background: #ffffff !important; }
+
+    /* Solicitudes */
+    .status-pending      { background: #eff6ff !important; color: #1d4ed8 !important; }
+    .status-under_review { background: #fffbeb !important; color: #92400e !important; }
+    .req-type-label { background: #f1f5f9 !important; border-color: #e2e8f0 !important; color: #475569 !important; }
+    .review-actions button { background: #ffffff !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
+
+    /* Paginación */
+    .pagination-limit { color: #475569 !important; }
+
+    /* User checkbox list en modal bulk assign */
+    .user-checkbox-list { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+    .user-checkbox-item:hover { background: #f1f5f9 !important; }
+    .user-checkbox-item label { color: #0f172a !important; }
+
+    /* Módulo detalle – stats */
+    .breadcrumb, .breadcrumb a { color: #64748b !important; }
+    .stat-card { color: #0f172a !important; }
+
+    /* Spinner */
+    .spinner { border-color: #e2e8f0 !important; border-top-color: #6366f1 !important; }
+
+    /* El perfil ya tiene su propio tema claro — excluir sobreescritura */
+    #view-profile .profile-identity-card,
+    #view-profile .profile-identity-card * { color: inherit; }
   </style>
 </head>
 <body>
