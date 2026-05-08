@@ -411,6 +411,18 @@
     .cb-td { width: 40px; padding: 0 8px !important; text-align: center; }
     .row-cb { width: 15px; height: 15px; accent-color: #6366f1; cursor: pointer; }
 
+    /* ══ LOCKED MODULES (no access) ══ */
+    .module-card.locked {
+      opacity: 0.42; filter: grayscale(65%); cursor: default; pointer-events: auto;
+    }
+    .module-card.locked:hover { border-color: #334155; transform: none; }
+    .module-card.locked::before { display: none; }
+    .locked-badge {
+      position: absolute; top: 10px; right: 10px;
+      font-size: 10px; font-weight: 700; background: #1e2d3d; color: #60a5fa;
+      padding: 2px 6px; border-radius: 4px;
+    }
+
     /* ══ INACTIVE MODULES ══ */
     .inactive-section-title {
       font-size: 11px; font-weight: 600; color: #475569;
@@ -977,6 +989,9 @@
     <!-- ═══ VIEW: PERFIL ═══ -->
     <div class="view" id="view-profile">
       <div class="profile-page">
+        <div id="profile-back-btn" style="display:none;margin-bottom:16px">
+          <button onclick="backFromUserProfile()" style="background:none;border:1px solid #334155;color:#94a3b8;border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;">← Volver a Usuarios</button>
+        </div>
         <div class="profile-completion-banner" id="profile-completion-banner">
           Tu perfil es obligatorio para operar en el sistema. Completa celular, sede, ambiente/área, dirección y cargo para desbloquear módulos, tickets e información operativa.
         </div>
@@ -1230,33 +1245,36 @@
       <input type="email" id="u-email" placeholder="juan@empresa.com">
     </div>
 
-    <div id="u-password-wrap">
+    <div id="u-password-wrap" style="display:none">
       <label>Contraseña</label>
       <input type="password" id="u-password" placeholder="Mínimo 8 caracteres">
+      <p class="input-hint">Opcional — si no se ingresa se asigna contraseña por defecto (Ticket2026!).</p>
     </div>
 
-    <label>Teléfono (opcional)</label>
-    <input type="text" id="u-phone" placeholder="+573001234567">
+    <div id="u-optional-wrap">
+      <label>Teléfono (opcional)</label>
+      <input type="text" id="u-phone" placeholder="+573001234567">
 
-    <label>Usuario (opcional)</label>
-    <input type="text" id="u-username" placeholder="juan_garcia">
+      <label>Usuario (opcional)</label>
+      <input type="text" id="u-username" placeholder="juan_garcia">
 
-    <div class="form-row">
-      <div>
-        <label>Cargo (opcional)</label>
-        <input type="text" id="u-job-title" placeholder="Técnico Senior">
+      <div class="form-row">
+        <div>
+          <label>Cargo (opcional)</label>
+          <input type="text" id="u-job-title" placeholder="Técnico Senior">
+        </div>
+        <div>
+          <label>Área / Departamento (opcional)</label>
+          <input type="text" id="u-department" placeholder="Soporte TI">
+        </div>
       </div>
-      <div>
-        <label>Área / Departamento (opcional)</label>
-        <input type="text" id="u-department" placeholder="Soporte TI">
-      </div>
+
+      <label>Sede principal (opcional)</label>
+      <input type="text" id="u-sede" placeholder="Sede Norte">
+
+      <label>Dirección (opcional)</label>
+      <input type="text" id="u-address" placeholder="Calle 123 # 45-67, Bogotá">
     </div>
-
-    <label>Sede principal (opcional)</label>
-    <input type="text" id="u-sede" placeholder="Sede Norte">
-
-    <label>Dirección (opcional)</label>
-    <input type="text" id="u-address" placeholder="Calle 123 # 45-67, Bogotá">
 
     <label>Rol Global</label>
     <select id="u-global-role">
@@ -1511,6 +1529,7 @@
   let selectedIds        = new Set();
   let selectionType      = '';
   let trashFilter        = 'all';
+  let viewingUserId      = null;
 
   // ── Init ────────────────────────────────────────────────────────────────────
   (async function init() {
@@ -1630,6 +1649,18 @@
         ? `<div class="module-icon"><img src="${escHtml(m.image_url)}" onerror="this.parentElement.innerHTML='${ic.emoji}';this.parentElement.className='module-icon ${ic.cls}'" alt="${escHtml(m.name)}"></div>`
         : `<div class="module-icon ${ic.cls}">${ic.emoji}</div>`;
 
+      // For regular users without access: show locked card
+      if (!isSuperAdmin && m.has_access === false) {
+        return `
+          <div class="module-card locked" onclick="requestModuleAccess('${escHtml(m.name)}')">
+            <span class="locked-badge">🔒 Sin acceso</span>
+            ${iconHtml}
+            <div class="module-name">${escHtml(m.name)}</div>
+            <div class="module-desc">${escHtml(m.description ?? '')}</div>
+            <span class="module-type ${ic.typeCls}">${escHtml(m.type)}</span>
+          </div>`;
+      }
+
       const kebabMenu = isSuperAdmin ? `
         <div class="card-menu-wrap" onclick="event.stopPropagation()">
           <button class="kebab-btn" onclick="toggleCardMenu('menu-${m.id}')" title="Opciones">⋯</button>
@@ -1720,6 +1751,10 @@
   function renderModulesError() {
     document.getElementById('modules-grid').innerHTML =
       '<div style="color:#475569;padding:40px">Error cargando módulos</div>';
+  }
+
+  function requestModuleAccess(moduleName) {
+    alert(`No tienes acceso al módulo "${moduleName}".\n\nPara solicitar acceso, ingresa al módulo Gestión Administrativa y diligencia tu solicitud de ingreso a este módulo.`);
   }
 
   async function enterModule(id, name, slug) {
@@ -1904,7 +1939,7 @@
               </td>
               <td>
                 <div class="actions-cell">
-                  <button class="btn-sm btn-edit" onclick="openEditUser('${u.id}')">Editar</button>
+                  <button class="btn-sm btn-edit" onclick="viewUserProfile('${u.id}')">Ver perfil</button>
                   <button class="btn-sm ${u.is_active ? 'btn-toggle-off' : 'btn-toggle-on'}"
                     onclick="toggleUserActive('${u.id}', ${u.is_active})">
                     ${u.is_active ? 'Desactivar' : 'Activar'}
@@ -1964,20 +1999,15 @@
   async function openCreateUser() {
     editingUserId = null;
     isSuperadminToggle = false;
-    document.getElementById('user-modal-title').textContent = 'Crear usuario';
-    document.getElementById('user-modal-btn').textContent   = 'Crear usuario';
+    document.getElementById('user-modal-title').textContent  = 'Crear usuario';
+    document.getElementById('user-modal-btn').textContent    = 'Crear usuario';
     document.getElementById('u-email-wrap').style.display    = '';
-    document.getElementById('u-password-wrap').style.display = '';
+    document.getElementById('u-password-wrap').style.display = 'none';
+    document.getElementById('u-optional-wrap').style.display = 'none';
     document.getElementById('u-first').value    = '';
     document.getElementById('u-last').value     = '';
     document.getElementById('u-email').value    = '';
     document.getElementById('u-password').value = '';
-    document.getElementById('u-phone').value    = '';
-    document.getElementById('u-username').value  = '';
-    document.getElementById('u-job-title').value = '';
-    document.getElementById('u-department').value = '';
-    document.getElementById('u-sede').value     = '';
-    document.getElementById('u-address').value  = '';
     document.getElementById('toggle-superadmin').classList.remove('on');
     document.getElementById('user-modal-msg').innerHTML = '';
     document.getElementById('user-modal').classList.add('open');
@@ -1993,6 +2023,7 @@
     document.getElementById('user-modal-btn').textContent    = 'Guardar cambios';
     document.getElementById('u-email-wrap').style.display    = 'none';
     document.getElementById('u-password-wrap').style.display = 'none';
+    document.getElementById('u-optional-wrap').style.display = '';
     document.getElementById('u-first').value     = u.first_name;
     document.getElementById('u-last').value      = u.last_name;
     document.getElementById('u-phone').value     = u.phone ?? '';
@@ -2052,23 +2083,12 @@
         });
         if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
       } else {
-        const email    = document.getElementById('u-email').value.trim();
-        const password = document.getElementById('u-password').value;
-        if (!email || !password) {
-          msg.innerHTML = '<div class="msg-err">Email y contraseña son requeridos</div>';
+        const email = document.getElementById('u-email').value.trim();
+        if (!email) {
+          msg.innerHTML = '<div class="msg-err">El email es requerido</div>';
           btn.disabled = false; return;
         }
-        if (password.length < 8) {
-          msg.innerHTML = '<div class="msg-err">Contraseña mínimo 8 caracteres</div>';
-          btn.disabled = false; return;
-        }
-        const body = { first_name: first, last_name: last, email, password, is_superadmin: isSuperadminToggle };
-        if (phone)          body.phone          = phone;
-        if (username)       body.username       = username;
-        if (job_title)      body.job_title      = job_title;
-        if (department)     body.department     = department;
-        if (primary_sede)   body.primary_sede   = primary_sede;
-        if (address)        body.address        = address;
+        const body = { first_name: first, last_name: last, email, is_superadmin: isSuperadminToggle };
         if (global_role_id) body.global_role_id = global_role_id;
         const res = await authFetch(`${API}/users`, { method: 'POST', body: JSON.stringify(body) });
         if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
@@ -2399,6 +2419,7 @@
             <div style="display:flex;align-items:center;gap:12px">
               <span class="days-pill${urgent ? ' urgent' : ''}">${days}d restantes</span>
               <button class="btn-sm btn-sm-secondary" onclick="doRestoreTrash('${item.item_type}','${item.id}')">Restaurar</button>
+              <button class="btn-sm btn-sm-danger" onclick="doPermanentDelete('${item.item_type}','${item.id}','${escHtml(item.display_name)}')">Eliminar def.</button>
             </div>
           </div>`;
       }).join('');
@@ -2418,6 +2439,17 @@
       if (type === 'user')    { if (document.getElementById('view-users').classList.contains('active')) loadUsers(); }
       if (type === 'role')    { if (document.getElementById('view-roles').classList.contains('active')) loadGlobalRoles(); }
     } catch { alert('Error al restaurar'); }
+  }
+
+  async function doPermanentDelete(type, id, displayName) {
+    if (!confirm(`¿Eliminar permanentemente "${displayName}"?\n\nEsta acción es IRREVERSIBLE. El registro será borrado definitivamente de la base de datos.`)) return;
+    try {
+      const res = await authFetch(`${API}/admin/trash/permanent`, {
+        method: 'DELETE', body: JSON.stringify({ type, ids: [id] }),
+      });
+      if (!res.ok) { const d = await res.json(); alert(d.message ?? 'Error al eliminar'); return; }
+      loadTrash();
+    } catch { alert('Error al eliminar permanentemente'); }
   }
 
   // ══════════════════════════════════════════════════
@@ -2736,11 +2768,19 @@
     document.getElementById('mfa-modal').classList.add('open');
     document.getElementById('totp-input').value = '';
     document.getElementById('mfa-msg').textContent = '';
-    const res  = await authFetch(`${API}/auth/mfa/setup`);
-    const data = await res.json();
-    document.getElementById('qr-wrap').innerHTML =
-      `<img src="${data.qr_code}" width="175" height="175" alt="QR Code">
-       <p style="font-size:11px;color:#475569;margin-top:8px">Clave manual: <code style="color:#94a3b8">${data.secret}</code></p>`;
+    document.querySelector('#mfa-modal .modal-title').textContent = 'Activar autenticación 2FA';
+    document.querySelector('#mfa-modal .btn-confirm').textContent = 'Activar 2FA';
+    document.querySelector('#mfa-modal .btn-confirm').onclick = confirmMfa;
+    document.getElementById('qr-wrap').innerHTML = '<div class="spinner" style="margin:0 auto"></div>';
+    try {
+      const res  = await authFetch(`${API}/auth/totp/setup`, { method: 'POST' });
+      const data = await res.json();
+      document.getElementById('qr-wrap').innerHTML =
+        `<img src="${data.qr_code}" width="175" height="175" alt="QR Code">
+         <p style="font-size:11px;color:#475569;margin-top:8px">Clave manual: <code style="color:#94a3b8">${data.secret}</code></p>`;
+    } catch {
+      document.getElementById('qr-wrap').innerHTML = '<p style="color:#ef4444;font-size:13px">Error generando QR</p>';
+    }
     document.getElementById('totp-input').focus();
   }
   function closeMfaModal() { document.getElementById('mfa-modal').classList.remove('open'); }
@@ -2750,12 +2790,40 @@
     const msg  = document.getElementById('mfa-msg');
     if (code.length !== 6) { msg.style.color = '#ef4444'; msg.textContent = 'Ingresa 6 dígitos'; return; }
     try {
-      const res  = await authFetch(`${API}/auth/mfa/enable`, { method: 'POST', body: JSON.stringify({ code }) });
+      const res  = await authFetch(`${API}/auth/totp/confirm`, { method: 'POST', body: JSON.stringify({ code }) });
       const data = await res.json();
       if (!res.ok) { msg.style.color = '#ef4444'; msg.textContent = data.message ?? 'Código incorrecto'; return; }
       msg.style.color = '#6ee7b7';
       msg.textContent = '✓ 2FA activado';
-      setTimeout(closeMfaModal, 1500);
+      setTimeout(() => { closeMfaModal(); loadProfileView(); }, 1500);
+    } catch { msg.style.color = '#ef4444'; msg.textContent = 'Error de red'; }
+  }
+
+  function openDisableTotpModal() {
+    document.getElementById('mfa-modal').classList.add('open');
+    document.getElementById('totp-input').value = '';
+    document.getElementById('mfa-msg').textContent = '';
+    document.querySelector('#mfa-modal .modal-title').textContent = 'Desactivar 2FA';
+    document.querySelector('#mfa-modal .btn-confirm').textContent = 'Desactivar 2FA';
+    document.querySelector('#mfa-modal .btn-confirm').onclick = doDisableTotp;
+    document.getElementById('qr-wrap').innerHTML =
+      `<p style="font-size:13px;color:#94a3b8;text-align:center;padding:16px 0">
+         Ingresa el código de tu autenticador para confirmar la desactivación.
+       </p>`;
+    document.getElementById('totp-input').focus();
+  }
+
+  async function doDisableTotp() {
+    const code = document.getElementById('totp-input').value;
+    const msg  = document.getElementById('mfa-msg');
+    if (code.length !== 6) { msg.style.color = '#ef4444'; msg.textContent = 'Ingresa 6 dígitos'; return; }
+    try {
+      const res  = await authFetch(`${API}/auth/totp/disable`, { method: 'DELETE', body: JSON.stringify({ code }) });
+      const data = await res.json();
+      if (!res.ok) { msg.style.color = '#ef4444'; msg.textContent = data.message ?? 'Código incorrecto'; return; }
+      msg.style.color = '#6ee7b7';
+      msg.textContent = '✓ 2FA desactivado';
+      setTimeout(() => { closeMfaModal(); loadProfileView(); }, 1500);
     } catch { msg.style.color = '#ef4444'; msg.textContent = 'Error de red'; }
   }
 
@@ -2771,14 +2839,33 @@
   let profileRequestsCache = [];
   let profileTicketsCache = [];
 
+  function viewUserProfile(userId) {
+    viewingUserId = userId;
+    showView('profile');
+  }
+
+  function backFromUserProfile() {
+    viewingUserId = null;
+    showView('users');
+  }
+
   async function loadProfileView() {
     try {
-      const res  = await authFetch(`${API}/users/me`);
+      const url = viewingUserId ? `${API}/users/${viewingUserId}` : `${API}/users/me`;
+      const res = await authFetch(url);
       if (!res.ok) return;
       const p = await res.json();
+
+      const backBtn = document.getElementById('profile-back-btn');
+      if (backBtn) backBtn.style.display = viewingUserId ? '' : 'none';
+
+      // Hide edit for self-profile changes if viewing another user as superadmin
+      const editBtn = document.querySelector('.profile-action');
+      if (editBtn) editBtn.style.display = viewingUserId && !currentUser?.is_superadmin ? 'none' : '';
+
       renderProfileView(p);
       loadCountries();
-      loadProfileOperationalData();
+      if (!viewingUserId) loadProfileOperationalData();
     } catch {}
   }
 
@@ -2874,14 +2961,22 @@
 
   function renderProfileSecurity(p) {
     const list = document.getElementById('profile-security-list');
+    const totpEnabled = !!p.totp_enabled;
+    const isOwnProfile = !viewingUserId;
     list.innerHTML = `
       <div class="security-row">
         <div><div class="row-title">Contraseña</div><div class="row-sub">Último cambio no disponible</div></div>
-        <button type="button" class="profile-link-btn" onclick="setProfileEditPane('security');toggleProfileEdit(true)">Cambiar</button>
+        ${isOwnProfile ? `<button type="button" class="profile-link-btn" onclick="setProfileEditPane('security');toggleProfileEdit(true)">Cambiar</button>` : '<span class="profile-badge">Solo el usuario puede cambiarla</span>'}
       </div>
       <div class="security-row">
-        <div><div class="row-title">Autenticación 2FA</div><div class="row-sub">Protección adicional de la cuenta</div></div>
-        <button type="button" class="profile-link-btn" onclick="openMfaModal()">Configurar</button>
+        <div>
+          <div class="row-title">Autenticación 2FA (TOTP)</div>
+          <div class="row-sub">${totpEnabled ? 'Activo — autenticador configurado' : 'Desactivado — solo OTP por email'}</div>
+        </div>
+        ${isOwnProfile ? (totpEnabled
+          ? `<button type="button" class="profile-link-btn" style="color:#fca5a5" onclick="openDisableTotpModal()">Desactivar</button>`
+          : `<button type="button" class="profile-link-btn" onclick="openMfaModal()">Activar</button>`
+        ) : `<span class="profile-badge ${totpEnabled ? 'ok' : ''}">${totpEnabled ? 'Activo' : 'Inactivo'}</span>`}
       </div>
       <div class="security-row">
         <div><div class="row-title">Sesión actual</div><div class="row-sub">Navegador activo · token vigente</div></div>
@@ -3207,10 +3302,11 @@
     if (!Object.keys(body).length) { msgEl.textContent = 'Sin cambios.'; return; }
 
     try {
-      const res  = await authFetch(`${API}/users/me`, { method: 'PATCH', body: JSON.stringify(body) });
+      const saveUrl = viewingUserId ? `${API}/users/${viewingUserId}` : `${API}/users/me`;
+      const res  = await authFetch(saveUrl, { method: 'PATCH', body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? 'Error al guardar');
-      if (currentUser?.profile_complete === false && mandatoryProfileInputsComplete()) {
+      if (!viewingUserId && currentUser?.profile_complete === false && mandatoryProfileInputsComplete()) {
         await authFetch(`${API}/users/me/complete-profile`, {
           method: 'PATCH',
           body: JSON.stringify({
@@ -3225,8 +3321,9 @@
       }
       msgEl.className = 'profile-save-msg profile-save-ok';
       msgEl.textContent = '✓ Guardado';
-      currentUser = { ...currentUser, ...body };
-      const latestProfile = await authFetch(`${API}/users/me`);
+      if (!viewingUserId) currentUser = { ...currentUser, ...body };
+      const latestUrl = viewingUserId ? `${API}/users/${viewingUserId}` : `${API}/users/me`;
+      const latestProfile = await authFetch(latestUrl);
       if (latestProfile.ok) renderProfileView(await latestProfile.json());
       // Refresh hero
       const nameText = `${body.first_name ?? currentUser.first_name ?? ''} ${body.last_name ?? currentUser.last_name ?? ''}`.trim();

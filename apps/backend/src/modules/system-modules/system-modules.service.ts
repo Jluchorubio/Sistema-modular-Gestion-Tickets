@@ -21,12 +21,14 @@ export class SystemModulesService {
       );
     }
 
-    // Regular users: only modules where they have an active role
+    // Regular users: all active modules with has_access flag
     return this.db.query<any[]>(
-      `SELECT DISTINCT m.id, m.name, m.slug, m.description, m.type, m.image_url, m.is_active, m.created_at
+      `SELECT m.id, m.name, m.slug, m.description, m.type, m.image_url, m.is_active, m.created_at,
+              EXISTS(
+                SELECT 1 FROM modules.user_module_roles umr
+                WHERE umr.module_id = m.id AND umr.user_id = $1 AND umr.is_active = true
+              ) AS has_access
        FROM modules.modules m
-       JOIN modules.user_module_roles umr
-         ON umr.module_id = m.id AND umr.user_id = $1 AND umr.is_active = true
        WHERE m.deleted_at IS NULL AND m.is_active = true
        ORDER BY m.name`,
       [userId],

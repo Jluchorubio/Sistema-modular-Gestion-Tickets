@@ -48,7 +48,8 @@ export class UsersService {
       if (!actor?.is_superadmin) throw new ForbiddenException('Solo superadmin puede crear otro superadmin');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const DEFAULT_PASSWORD = 'Ticket2026!';
+    const passwordHash = await bcrypt.hash(dto.password ?? DEFAULT_PASSWORD, BCRYPT_ROUNDS);
 
     // Check username uniqueness if provided
     if (dto.username) {
@@ -358,6 +359,7 @@ export class UsersService {
               pref.notification_email,
               pref.notification_whatsapp,
               pref.notification_in_app,
+              COALESCE(mfa.totp_enabled, false) AS totp_enabled,
               COALESCE(
                 json_agg(
                   json_build_object(
@@ -371,11 +373,12 @@ export class UsersService {
        FROM   users.profiles              p
        JOIN   auth.credentials            c    ON c.user_id   = p.id
        LEFT JOIN users.preferences        pref ON pref.user_id = p.id
+       LEFT JOIN auth.mfa_settings        mfa  ON mfa.user_id  = p.id
        LEFT JOIN modules.user_module_roles umr ON umr.user_id  = p.id AND umr.is_active = true
        LEFT JOIN modules.modules           m   ON m.id        = umr.module_id
        LEFT JOIN modules.module_roles      mr  ON mr.id       = umr.role_id
        WHERE  p.id = $1 AND p.deleted_at IS NULL
-       GROUP  BY p.id, c.email, c.last_login_at, pref.id`,
+       GROUP  BY p.id, c.email, c.last_login_at, pref.id, mfa.totp_enabled`,
       [userId],
     );
 

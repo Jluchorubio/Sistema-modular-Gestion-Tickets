@@ -953,7 +953,10 @@
               <p class="security-label">Autenticación de dos factores (2FA)</p>
               <p class="security-sub" id="twofa-status">Comprobando estado...</p>
             </div>
-            <span id="twofa-badge" class="badge badge-gray">—</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="twofa-badge" class="badge badge-gray">—</span>
+              <button id="twofa-btn" onclick="openTotpAction()" style="padding:5px 12px;border:1px solid #D8E0EA;border-radius:6px;background:none;font-size:12px;font-weight:600;cursor:pointer;color:#2563EB;display:none">Activar</button>
+            </div>
           </div>
           <div class="security-item">
             <div>
@@ -1276,12 +1279,16 @@
     set('account-created',    fmtDate(u.created_at));
     const twofa = document.getElementById('twofa-status');
     const twofaBadge = document.getElementById('twofa-badge');
+    const totpBtn = document.getElementById('twofa-btn');
+    window._currentTotpEnabled = !!u.totp_enabled;
     if (u.totp_enabled) {
       if (twofa) twofa.textContent = 'Autenticación TOTP activa';
       if (twofaBadge) { twofaBadge.textContent = 'Activo'; twofaBadge.className = 'badge badge-green'; }
+      if (totpBtn) { totpBtn.textContent = 'Desactivar'; totpBtn.style.color = '#EF4444'; totpBtn.style.display = ''; }
     } else {
       if (twofa) twofa.textContent = 'No configurado — se recomienda activarlo';
       if (twofaBadge) { twofaBadge.textContent = 'Inactivo'; twofaBadge.className = 'badge badge-yellow'; }
+      if (totpBtn) { totpBtn.textContent = 'Activar'; totpBtn.style.color = '#2563EB'; totpBtn.style.display = ''; }
     }
 
     // Preferences
@@ -1321,6 +1328,7 @@
     }
 
     // Contribution graph
+    window._profileUserId = u.id;
     buildContribGraph();
 
     // Activity feed
@@ -1328,16 +1336,29 @@
   }
 
   // ─── Contribution graph ───────────────────────────────────────────────────────
+  function seededRand(seed) {
+    let s = seed;
+    return function() {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      return (s >>> 0) / 0xffffffff;
+    };
+  }
+
   function buildContribGraph() {
     const graph = document.getElementById('contrib-graph');
     if (!graph) return;
+    const userId = (window._profileUserId || 'default').split('-').join('');
+    let seedNum = 0;
+    for (let i = 0; i < Math.min(userId.length, 8); i++) seedNum = seedNum * 31 + userId.charCodeAt(i);
+    const rand = seededRand(seedNum | 0);
+
     const weeks = 26;
     const days = 7;
     let html = '';
     for (let w = 0; w < weeks; w++) {
       html += '<div class="contrib-col">';
       for (let d = 0; d < days; d++) {
-        const level = Math.random() < 0.35 ? 0 : Math.min(4, Math.ceil(Math.random() * 4));
+        const level = rand() < 0.35 ? 0 : Math.min(4, Math.ceil(rand() * 4));
         html += `<div class="contrib-cell" data-level="${level}" title="Actividad en semana ${w+1}"></div>`;
       }
       html += '</div>';
@@ -1588,6 +1609,76 @@
     finally { setLoading('changePwdBtn', false); }
   }
 
+  // ─── TOTP 2FA ─────────────────────────────────────────────────────────────────
+  let totpModalMode = 'setup'; // 'setup' | 'disable'
+
+  async function openTotpAction() {
+    totpModalMode = window._currentTotpEnabled ? 'disable' : 'setup';
+    const overlay = document.getElementById('totp-modal');
+    const title   = document.getElementById('totp-modal-title');
+    const body    = document.getElementById('totp-modal-body');
+    const msgEl   = document.getElementById('totp-modal-msg');
+    const input   = document.getElementById('totp-modal-code');
+    if (!overlay) return;
+
+    title.textContent = totpModalMode === 'setup' ? 'Activar autenticación 2FA' : 'Desactivar 2FA';
+    msgEl.textContent = '';
+    input.value = '';
+    body.innerHTML = '<div style="text-align:center;padding:16px"><div class="spinner-sm"></div></div>';
+    overlay.style.display = 'flex';
+
+    if (totpModalMode === 'setup') {
+      try {
+        const res  = await authFetch(`${API}/auth/totp/setup`, { method: 'POST' });
+        const data = await res.json();
+        body.innerHTML = `
+          <div style="text-align:center;margin-bottom:14px">
+            <img src="${data.qr_code}" width="170" height="170" style="border-radius:8px" alt="QR">
+            <p style="font-size:11px;color:#64748b;margin-top:8px">Clave manual: <code style="color:#2563EB">${data.secret}</code></p>
+          </div>
+          <p style="font-size:13px;color:#64748b;margin-bottom:8px">Escanea el QR con tu app autenticadora y luego ingresa el código.</p>`;
+      } catch {
+        body.innerHTML = '<p style="color:#EF4444;font-size:13px">Error generando QR. Intenta de nuevo.</p>';
+      }
+    } else {
+      body.innerHTML = '<p style="font-size:13px;color:#64748b;margin-bottom:8px">Ingresa el código de tu app autenticadora para confirmar la desactivación.</p>';
+    }
+  }
+
+  async function submitTotpAction() {
+    const code   = document.getElementById('totp-modal-code').value.trim();
+    const msgEl  = document.getElementById('totp-modal-msg');
+    msgEl.textContent = '';
+    if (!/^\d{6}$/.test(code)) { msgEl.textContent = 'Ingresa 6 dígitos'; msgEl.style.color = '#EF4444'; return; }
+
+    const btn = document.getElementById('totp-modal-btn');
+    btn.disabled = true;
+    try {
+      let res, data;
+      if (totpModalMode === 'setup') {
+        res  = await authFetch(`${API}/auth/totp/confirm`, { method: 'POST', body: JSON.stringify({ code }) });
+        data = await res.json();
+      } else {
+        res  = await authFetch(`${API}/auth/totp/disable`, { method: 'DELETE', body: JSON.stringify({ code }) });
+        data = await res.json();
+      }
+      if (!res.ok) { msgEl.textContent = data.message ?? 'Código incorrecto'; msgEl.style.color = '#EF4444'; return; }
+      msgEl.textContent = totpModalMode === 'setup' ? '✓ 2FA activado correctamente' : '✓ 2FA desactivado';
+      msgEl.style.color = '#22C55E';
+      setTimeout(async () => {
+        closeTotpModal();
+        const r = await authFetch(`${API}/users/me`);
+        if (r.ok) renderUser(await r.json());
+      }, 1500);
+    } catch { msgEl.textContent = 'Error de red'; msgEl.style.color = '#EF4444'; }
+    finally { btn.disabled = false; }
+  }
+
+  function closeTotpModal() {
+    const overlay = document.getElementById('totp-modal');
+    if (overlay) overlay.style.display = 'none';
+  }
+
   // ─── Preferences ─────────────────────────────────────────────────────────────
   let prefSaveTimer = null;
   async function savePref() {
@@ -1631,6 +1722,26 @@
     }
   })();
 </script>
+
+<!-- TOTP Modal -->
+<div id="totp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px;width:380px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h3 id="totp-modal-title" style="font-size:16px;font-weight:700;color:#0D1B2A">Activar 2FA</h3>
+      <button onclick="closeTotpModal()" style="background:none;border:none;font-size:22px;color:#94A3B8;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="totp-modal-body"></div>
+    <label style="display:block;font-size:11px;font-weight:600;color:#64748b;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Código de verificación</label>
+    <input id="totp-modal-code" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+      style="width:100%;padding:10px 13px;border:1px solid #D8E0EA;border-radius:8px;font-size:20px;letter-spacing:.3em;text-align:center;outline:none"
+      oninput="this.value=this.value.replace(/\D/g,'')">
+    <p id="totp-modal-msg" style="font-size:13px;margin-top:8px;min-height:18px"></p>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button onclick="closeTotpModal()" style="flex:1;padding:9px;border:1px solid #D8E0EA;border-radius:8px;background:none;font-size:13px;cursor:pointer;color:#64748b">Cancelar</button>
+      <button id="totp-modal-btn" onclick="submitTotpAction()" style="flex:1;padding:9px;background:#2563EB;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

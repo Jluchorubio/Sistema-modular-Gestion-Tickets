@@ -14,6 +14,8 @@ import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { createHash, randomBytes } from 'crypto';
+import * as speakeasy from 'speakeasy';
+import * as QRCode from 'qrcode';
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 3;
@@ -408,6 +410,76 @@ export class AuthService {
   async validateToken(token: string) {
     try { return this.jwt.verify(token); }
     catch { throw new UnauthorizedException(); }
+  }
+
+  // ─── TOTP 2FA ────────────────────────────────────────────────────────────────
+
+  async setupTotp(userId: string) {
+    const [user] = await this.db.query<{ email: string; first_name: string }[]>(
+      `SELECT c.email, p.first_name FROM auth.credentials c
+       JOIN users.profiles p ON p.id = c.user_id
+       WHERE c.user_id = $1`,
+      [userId],
+    );
+
+    const secret = speakeasy.generateSecret({
+      name: `Tickets System (${user.email})`,
+      length: 20,
+    });
+
+    await this.db.query(
+      `INSERT INTO auth.mfa_settings (user_id, totp_secret, totp_enabled)
+       VALUES ($1, $2, false)
+       ON CONFLICT (user_id) DO UPDATE SET totp_secret = $2, totp_enabled = false`,
+      [userId, secret.base32],
+    );
+
+    const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url!);
+    return { secret: secret.base32, qr_code: qrDataUrl };
+  }
+
+  async confirmTotp(userId: string, code: string) {
+    const [mfa] = await this.db.query<{ totp_secret: string }[]>(
+      `SELECT totp_secret FROM auth.mfa_settings WHERE user_id = $1`,
+      [userId],
+    );
+    if (!mfa?.totp_secret) throw new BadRequestException('TOTP no configurado. Llama a /auth/totp/setup primero.');
+
+    const valid = speakeasy.totp.verify({
+      secret: mfa.totp_secret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+    if (!valid) throw new BadRequestException('Código TOTP incorrecto');
+
+    await this.db.query(
+      `UPDATE auth.mfa_settings SET totp_enabled = true, totp_last_verified_at = now() WHERE user_id = $1`,
+      [userId],
+    );
+    return { ok: true, message: 'Autenticación de dos factores activada' };
+  }
+
+  async disableTotp(userId: string, code: string) {
+    const [mfa] = await this.db.query<{ totp_secret: string; totp_enabled: boolean }[]>(
+      `SELECT totp_secret, totp_enabled FROM auth.mfa_settings WHERE user_id = $1`,
+      [userId],
+    );
+    if (!mfa?.totp_enabled) throw new BadRequestException('TOTP no está activo');
+
+    const valid = speakeasy.totp.verify({
+      secret: mfa.totp_secret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+    if (!valid) throw new BadRequestException('Código TOTP incorrecto');
+
+    await this.db.query(
+      `UPDATE auth.mfa_settings SET totp_enabled = false, totp_secret = NULL WHERE user_id = $1`,
+      [userId],
+    );
+    return { ok: true, message: 'Autenticación de dos factores desactivada' };
   }
 
   // ─── Private helpers ─────────────────────────────────────────────────────────

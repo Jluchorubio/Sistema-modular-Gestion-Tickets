@@ -31,7 +31,7 @@
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       background: var(--bg); color: var(--text);
-      min-height: 100vh; display: flex; overflow: hidden;
+      min-height: 100vh; display: flex; overflow: hidden; height: 100vh;
     }
 
     ::-webkit-scrollbar { width: 5px; }
@@ -44,7 +44,7 @@
       background: linear-gradient(160deg, #0F2A3D 0%, #163d5a 100%);
       border-right: 1px solid rgba(255,255,255,.06);
       display: flex; flex-direction: column;
-      padding: 40px 36px; position: relative; overflow: hidden;
+      padding: 40px 36px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
     }
 
     .left-panel::before {

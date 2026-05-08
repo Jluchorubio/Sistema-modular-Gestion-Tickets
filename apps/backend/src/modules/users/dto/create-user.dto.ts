@@ -24,10 +24,11 @@ export class CreateUserDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'Password123!' })
+  @ApiPropertyOptional({ example: 'Password123!', description: 'Si no se proporciona, se asigna contraseña por defecto.' })
+  @IsOptional()
   @IsString()
   @MinLength(8)
-  password: string;
+  password?: string;
 
   @ApiPropertyOptional({ example: '+573001234567' })
   @IsOptional()
