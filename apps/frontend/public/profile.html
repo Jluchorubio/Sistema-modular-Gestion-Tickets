@@ -540,6 +540,72 @@
     .field-error { font-size: 11px; color: var(--danger); margin-top: 3px; display: none; }
     .field-error.show { display: block; }
 
+    /* ── Ticket stat row ── */
+    .ticket-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    .ticket-stat-item {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: background 0.12s;
+    }
+    .ticket-stat-item:hover { background: var(--accent-soft); border-color: #BFDBFE; }
+    .ticket-stat-label { font-size: 10px; font-weight: 700; color: var(--muted-2); text-transform: uppercase; letter-spacing: .05em; }
+    .ticket-stat-value { font-size: 22px; font-weight: 800; color: var(--ink); }
+    .ticket-stat-note  { font-size: 10px; color: var(--muted-2); }
+
+    /* ── Recent ticket cards ── */
+    .ticket-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 22px 20px; }
+    .ticket-card-p {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .ticket-card-p:hover { border-color: #93C5FD; box-shadow: 0 4px 14px rgba(37,99,235,.08); }
+    .ticket-card-p-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+    .ticket-card-p-id { font-size: 12px; font-weight: 700; color: var(--accent); }
+    .ticket-card-p-title { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.35; margin-bottom: 8px; }
+    .ticket-card-p-meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; color: var(--muted-2); }
+
+    /* ── Calendar (profile) ── */
+    .prof-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .prof-cal-dow { text-align: center; font-size: 10px; font-weight: 700; color: var(--muted-2); padding: 4px 0; text-transform: uppercase; letter-spacing: .04em; }
+    .prof-cal-day {
+      aspect-ratio: 1; border-radius: 6px; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-start; padding: 5px 2px 2px;
+      font-size: 11px; color: var(--muted); background: var(--surface);
+      border: 1px solid var(--line-soft); cursor: default;
+    }
+    .prof-cal-day.today { background: var(--accent-soft); border-color: #BFDBFE; color: var(--accent); font-weight: 700; }
+    .prof-cal-day.other { opacity: .35; }
+    .prof-cal-dots { display: flex; gap: 2px; margin-top: 3px; flex-wrap: wrap; justify-content: center; }
+    .prof-cal-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Request rows ── */
+    .req-row-p {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 22px; gap: 12px;
+    }
+    .req-row-p + .req-row-p { border-top: 1px solid var(--line-soft); }
+
+    @media (max-width: 960px) {
+      .ticket-stat-grid { grid-template-columns: repeat(4, 1fr); }
+      .ticket-card-grid  { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .ticket-stat-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
     /* ── Skeleton shimmer ── */
     .skeleton {
       height: 14px;
@@ -850,6 +916,28 @@
           </div>
         </div>
 
+        <!-- Ticket stat cards -->
+        <div class="ticket-stat-grid js-stagger" id="ticket-stats-row">
+          <div class="ticket-stat-item"><div class="ticket-stat-label">Abiertos</div><div id="ts-open" class="ticket-stat-value" style="color:var(--warn);">—</div><div class="ticket-stat-note">tickets</div></div>
+          <div class="ticket-stat-item"><div class="ticket-stat-label">Cerrados</div><div id="ts-closed" class="ticket-stat-value" style="color:var(--success);">—</div><div class="ticket-stat-note">resueltos</div></div>
+          <div class="ticket-stat-item"><div class="ticket-stat-label">SLA OK</div><div id="ts-sla" class="ticket-stat-value">—</div><div class="ticket-stat-note">cumplimiento</div></div>
+          <div class="ticket-stat-item"><div class="ticket-stat-label">Promedio</div><div id="ts-avg" class="ticket-stat-value">—</div><div class="ticket-stat-note">tiempo</div></div>
+          <div class="ticket-stat-item"><div class="ticket-stat-label">Reprocesos</div><div id="ts-rework" class="ticket-stat-value" style="color:var(--danger);">—</div><div class="ticket-stat-note">casos</div></div>
+          <div class="ticket-stat-item"><div class="ticket-stat-label">Satisfacción</div><div id="ts-sat" class="ticket-stat-value">—</div><div class="ticket-stat-note">CSAT</div></div>
+          <div class="ticket-stat-item"><div class="ticket-stat-label">Escalados</div><div id="ts-escalated" class="ticket-stat-value" style="color:var(--danger);">—</div><div class="ticket-stat-note">tickets</div></div>
+        </div>
+
+        <!-- Recent tickets -->
+        <div class="card js-stagger" style="margin-bottom:22px; overflow:hidden;">
+          <div class="profile-section-header">
+            <p class="profile-section-title">Últimos tickets</p>
+            <span class="profile-verified" style="color:var(--muted); letter-spacing:0; text-transform:none; font-size:11px;">6 más recientes</span>
+          </div>
+          <div class="ticket-card-grid" id="ov-tickets">
+            <div style="grid-column:1/-1;padding:16px 0;text-align:center;color:var(--muted-2);font-size:13px;">Cargando tickets…</div>
+          </div>
+        </div>
+
         <!-- Actividad (contribution graph) -->
         <div class="card js-stagger" style="margin-bottom:22px; overflow:hidden;">
           <div class="profile-section-header">
@@ -873,13 +961,35 @@
         </div>
 
         <!-- Actividad reciente -->
-        <div class="js-stagger">
+        <div class="js-stagger" style="margin-bottom:22px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
             <p style="font-size:14px; font-weight:700; color:var(--ink);">Actividad reciente</p>
           </div>
           <div class="card" style="overflow:hidden;">
             <div id="activity-list"></div>
           </div>
+        </div>
+
+        <!-- Calendar -->
+        <div class="card js-stagger" style="margin-bottom:22px; overflow:hidden;">
+          <div class="profile-section-header">
+            <p class="profile-section-title">Calendario</p>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button onclick="calNavP(-1)" style="background:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px;line-height:1;color:var(--muted);">‹</button>
+              <span id="ov-cal-month" style="font-size:12px;font-weight:600;color:var(--muted);min-width:110px;text-align:center;"></span>
+              <button onclick="calNavP(1)" style="background:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px;line-height:1;color:var(--muted);">›</button>
+            </div>
+          </div>
+          <div style="padding:0 22px 20px;" id="ov-calendar"></div>
+        </div>
+
+        <!-- Administrative requests -->
+        <div class="card js-stagger" style="overflow:hidden;">
+          <div class="profile-section-header">
+            <p class="profile-section-title">Solicitudes administrativas</p>
+            <span class="profile-verified" style="color:var(--muted-2); font-size:11px; letter-spacing:0; text-transform:none;">Cambio de rol, sede, permisos</span>
+          </div>
+          <div id="ov-requests"></div>
         </div>
 
       </div><!-- /overview -->
@@ -1386,6 +1496,148 @@
     `).join('');
   }
 
+  // ─── Operational data (tickets, calendar, requests) ──────────────────────────
+  let ticketsCache  = [];
+  let requestsCache = [];
+  let calYearP  = new Date().getFullYear();
+  let calMonthP = new Date().getMonth();
+
+  async function loadProfileOperationalData() {
+    try {
+      const [tickRes, reqRes] = await Promise.all([
+        authFetch(`${API}/tickets`).catch(() => null),
+        authFetch(`${API}/requests/me?limit=6`).catch(() => null),
+      ]);
+
+      if (tickRes && tickRes.ok) {
+        const raw = await tickRes.json();
+        ticketsCache = Array.isArray(raw) ? raw : (raw.data ?? []);
+      }
+      if (reqRes && reqRes.ok) {
+        const raw = await reqRes.json();
+        requestsCache = Array.isArray(raw) ? raw : (raw.data ?? []);
+      }
+    } catch {}
+
+    renderTicketStats(ticketsCache);
+    renderRecentTickets(ticketsCache.slice(0, 6));
+    calYearP  = new Date().getFullYear();
+    calMonthP = new Date().getMonth();
+    renderCalendarP();
+    renderProfileRequests(requestsCache);
+  }
+
+  function renderTicketStats(rows) {
+    const open      = rows.filter(t => !/cerr|done|resuelto|closed/i.test(String(t.status ?? ''))).length;
+    const closed    = rows.length - open;
+    const rework    = rows.filter(t => /rework|repro/i.test(String(t.status ?? ''))).length;
+    const escalated = rows.filter(t => t.escalated || /escal/i.test(String(t.status ?? ''))).length;
+    const se = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    se('ts-open', open);
+    se('ts-closed', closed);
+    se('ts-rework', rework);
+    se('ts-escalated', escalated);
+    se('ts-sla', '—');
+    se('ts-avg', '—');
+    se('ts-sat', '—');
+  }
+
+  function renderRecentTickets(rows) {
+    const wrap = document.getElementById('ov-tickets');
+    if (!wrap) return;
+    if (!rows.length) {
+      wrap.innerHTML = '<div style="grid-column:1/-1;padding:20px 0;text-align:center;color:var(--muted-2);font-size:13px;">Sin tickets registrados todavía.</div>';
+      return;
+    }
+    const statusClass = s => {
+      const v = String(s || '').toLowerCase();
+      if (v.includes('cerr') || v.includes('done') || v.includes('resuelto')) return 'badge-green';
+      if (v.includes('pend') || v.includes('espera')) return 'badge-yellow';
+      if (v.includes('crit') || v.includes('rework')) return 'badge-red';
+      return 'badge-blue';
+    };
+    wrap.innerHTML = rows.map(t => {
+      const id = t.code || t.ticket_code || String(t.id || '—').slice(0,8);
+      return `<div class="ticket-card-p">
+        <div class="ticket-card-p-header">
+          <span class="ticket-card-p-id">#${id}</span>
+          <span class="badge ${statusClass(t.status)}">${t.status ?? 'abierto'}</span>
+        </div>
+        <p class="ticket-card-p-title">${t.title || t.titulo || 'Sin título'}</p>
+        <div class="ticket-card-p-meta">
+          <span>${t.category || 'General'}</span>
+          <span>·</span>
+          <span>Prioridad ${t.priority || 'media'}</span>
+          <span>·</span>
+          <span>${t.created_at ? fmtDate(t.created_at) : '—'}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function calNavP(dir) {
+    calMonthP += dir;
+    if (calMonthP > 11) { calMonthP = 0; calYearP++; }
+    if (calMonthP < 0)  { calMonthP = 11; calYearP--; }
+    renderCalendarP();
+  }
+
+  function renderCalendarP() {
+    const wrap = document.getElementById('ov-calendar');
+    if (!wrap) return;
+    const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const today  = new Date();
+    document.getElementById('ov-cal-month').textContent = `${MONTHS[calMonthP]} ${calYearP}`;
+
+    const first    = new Date(calYearP, calMonthP, 1);
+    const lastDay  = new Date(calYearP, calMonthP + 1, 0).getDate();
+    const startDow = first.getDay();
+
+    const events = {};
+    [...ticketsCache, ...requestsCache].forEach(item => {
+      const d = item.created_at ? new Date(item.created_at) : null;
+      if (!d || d.getFullYear() !== calYearP || d.getMonth() !== calMonthP) return;
+      const day = d.getDate();
+      if (!events[day]) events[day] = [];
+      const type = item.status !== undefined ? (
+        (item.priority === 'critical' || item.priority === 'alta') ? 'critical' : 'ticket'
+      ) : 'request';
+      events[day].push(type);
+    });
+
+    let html = '<div class="prof-cal-grid">';
+    DAYS.forEach(d => { html += `<div class="prof-cal-dow">${d}</div>`; });
+    for (let i = 0; i < startDow; i++) html += '<div class="prof-cal-day other"></div>';
+    for (let d = 1; d <= lastDay; d++) {
+      const isToday = today.getDate() === d && today.getMonth() === calMonthP && today.getFullYear() === calYearP;
+      const dotColors = { ticket: '#6366F1', critical: '#EF4444', request: '#F59E0B', event: '#22C55E' };
+      const dots = (events[d] || []).slice(0,3).map(t => `<span class="prof-cal-dot" style="background:${dotColors[t] || dotColors.ticket}"></span>`).join('');
+      html += `<div class="prof-cal-day${isToday ? ' today' : ''}">${d}<div class="prof-cal-dots">${dots}</div></div>`;
+    }
+    html += '</div>';
+    wrap.innerHTML = html;
+  }
+
+  function renderProfileRequests(rows) {
+    const wrap = document.getElementById('ov-requests');
+    if (!wrap) return;
+    if (!rows.length) {
+      wrap.innerHTML = '<div style="padding:20px 22px;text-align:center;color:var(--muted-2);font-size:13px;">Sin solicitudes administrativas recientes.</div>';
+      return;
+    }
+    const typeLabel = t => ({ role_change:'Cambio de rol', module_access:'Acceso a módulo', info_correction:'Corrección de información', sede_change:'Cambio de sede', permission_adjustment:'Ajuste de permisos', account_issue:'Cuenta', reactivation:'Reactivación', other:'Otro' }[t] ?? t ?? '—');
+    const statusCls = s => { const v = String(s||'').toLowerCase(); return v.includes('approved') ? 'badge-green' : v.includes('reject') ? 'badge-red' : v.includes('review') ? 'badge-yellow' : 'badge-gray'; };
+    wrap.innerHTML = rows.map(r => `
+      <div class="req-row-p">
+        <div>
+          <p style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px;">${r.title || 'Solicitud'}</p>
+          <p style="font-size:12px;color:var(--muted);">${typeLabel(r.type)} · ${r.created_at ? fmtDate(r.created_at) : '—'}</p>
+        </div>
+        <span class="badge ${statusCls(r.status)}">${r.status ?? '—'}</span>
+      </div>`).join('');
+  }
+
   // ─── Tabs ─────────────────────────────────────────────────────────────────────
   function switchTab(name, btn) {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -1717,6 +1969,7 @@
       if (!res.ok) { doLogout(); return; }
       const data = await res.json();
       renderUser(data);
+      loadProfileOperationalData();
     } catch (e) {
       console.error(e);
     }
