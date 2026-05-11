@@ -74,4 +74,10 @@ export class RequestsController {
   ) {
     return this.service.review(req.user.sub, id, dto);
   }
+
+  @Get(':id/timeline')
+  @ApiOperation({ summary: 'Historial de cambios de una solicitud.' })
+  getTimeline(@Req() req: any, @Param('id') id: string) {
+    return this.service.getTimeline(id, req.user.sub);
+  }
 }

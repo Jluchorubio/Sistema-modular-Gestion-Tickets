@@ -1,4 +1,4 @@
-import { IsString, IsIn, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsIn, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export const REQUEST_TYPES = [
@@ -11,6 +11,8 @@ export const REQUEST_TYPES = [
   'reactivation',
   'other',
 ] as const;
+
+export const PRIORITY_LEVELS = ['baja', 'media', 'alta', 'critica'] as const;
 
 export class CreateRequestDto {
   @ApiProperty({ enum: REQUEST_TYPES })
@@ -27,4 +29,9 @@ export class CreateRequestDto {
   @IsString()
   @MinLength(10)
   description: string;
+
+  @ApiPropertyOptional({ enum: PRIORITY_LEVELS, default: 'media' })
+  @IsIn(PRIORITY_LEVELS)
+  @IsOptional()
+  priority?: string;
 }

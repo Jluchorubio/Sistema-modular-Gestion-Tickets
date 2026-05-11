@@ -80,7 +80,7 @@ export function ProfileView({ user: initialUser, isOwnProfile, onBack, onUserUpd
             <ProfileOverviewTab user={user} isOwnProfile={isOwnProfile} fullName={fullName} />
           )}
           {isOwnProfile && activeTab === 'security' && (
-            <ProfileSecurityTab user={user} onTotpToggled={handleTotpToggled} />
+            <ProfileSecurityTab user={user} isOwnProfile={isOwnProfile} onTotpToggled={handleTotpToggled} />
           )}
           {isOwnProfile && activeTab === 'settings' && (
             <ProfileSettingsTab user={user} />

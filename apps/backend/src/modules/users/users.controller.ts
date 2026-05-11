@@ -93,6 +93,20 @@ export class UsersController {
     return this.service.changePassword(req.user.sub, dto);
   }
 
+  @Get('me/sessions')
+  @SkipProfileCheck()
+  @ApiOperation({ summary: 'Historial de sesiones propias — últimas 30.' })
+  getMySessions(@Req() req: any) {
+    return this.service.getMySessions(req.user.sub);
+  }
+
+  @Get('me/activity')
+  @SkipProfileCheck()
+  @ApiOperation({ summary: 'Gráfica de actividad propia — últimas 26 semanas.' })
+  getMyActivity(@Req() req: any) {
+    return this.service.getMyActivityGraph(req.user.sub);
+  }
+
   @Get('me/preferences')
   @SkipProfileCheck()
   @ApiOperation({ summary: 'Ver preferencias propias.' })

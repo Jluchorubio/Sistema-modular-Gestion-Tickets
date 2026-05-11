@@ -197,6 +197,90 @@
   transform: rotate(180deg);
 }
 
+/* ── Section dividers ── */
+.sectionDivider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 12px 0 4px;
+  min-height: 30px;
+}
+
+.sidebar:not(.expanded) .sectionDivider {
+  padding: 8px 0;
+  justify-content: center;
+}
+
+.sectionLabel {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  color: #94a3b8;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.sidebar.expanded .sectionLabel {
+  padding: 0 2px;
+}
+
+.sectionLine {
+  width: 28px;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+/* ── Module context header ── */
+.moduleCtx {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0 0;
+  gap: 4px;
+}
+
+.sidebar.expanded .moduleCtx {
+  align-items: stretch;
+  padding: 8px 14px 0;
+}
+
+.moduleCtxBack {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  text-decoration: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background .15s, color .15s;
+}
+
+.sidebar:not(.expanded) .moduleCtxBack {
+  justify-content: center;
+  width: 36px;
+  padding: 6px 0;
+  margin: 0 auto;
+}
+
+.moduleCtxBack:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.moduleCtxLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #94a3b8;
+  padding: 0 8px 6px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
 @media (max-width: 720px) {
   .sidebar { width: 64px; }
   .sidebar.expanded { width: 188px; }

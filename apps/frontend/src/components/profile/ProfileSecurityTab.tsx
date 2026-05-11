@@ -3,12 +3,29 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation } from '@tanstack/react-query';
-import { Eye, EyeOff, ShieldCheck, ShieldOff, Smartphone, Copy, Check } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Eye, EyeOff, ShieldCheck, ShieldOff, Smartphone, Copy, Check, Monitor, Globe } from 'lucide-react';
 import { usersService } from '@/services/users.service';
 import { authService } from '@/services/auth.service';
 import { fmtDate, fmtRelative, type ProfileUser } from './profile.types';
 import styles from './profile.module.css';
+
+function parseUA(ua: string | null): { browser: string; os: string } {
+  if (!ua) return { browser: 'Navegador desconocido', os: 'SO desconocido' };
+  let browser = 'Otro';
+  if (/Edg\//i.test(ua))          browser = 'Edge';
+  else if (/OPR\//i.test(ua))     browser = 'Opera';
+  else if (/Chrome\//i.test(ua))  browser = 'Chrome';
+  else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+  else if (/Safari\//i.test(ua))  browser = 'Safari';
+  let os = 'Otro';
+  if (/Windows NT/i.test(ua))        os = 'Windows';
+  else if (/Macintosh/i.test(ua))    os = 'macOS';
+  else if (/Android/i.test(ua))      os = 'Android';
+  else if (/iPhone|iPad/i.test(ua))  os = 'iOS';
+  else if (/Linux/i.test(ua))        os = 'Linux';
+  return { browser, os };
+}
 
 const pwdSchema = z.object({
   current: z.string().min(1, 'Requerido'),
@@ -28,10 +45,18 @@ type TotpStep =
 
 interface Props {
   user:          ProfileUser;
+  isOwnProfile:  boolean;
   onTotpToggled: (enabled: boolean) => void;
 }
 
-export function ProfileSecurityTab({ user, onTotpToggled }: Props) {
+export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props) {
+  const { data: sessions } = useQuery({
+    queryKey: ['my-sessions'],
+    queryFn:  () => usersService.getMySessions(),
+    enabled:  isOwnProfile,
+    staleTime: 60_000,
+  });
+
   const [showPwd,     setShowPwd]     = useState({ current: false, newPwd: false, confirm: false });
   const [pwdStrength, setPwdStrength] = useState(0);
   const [pwdMsg,      setPwdMsg]      = useState<{ ok: boolean; text: string } | null>(null);
@@ -379,23 +404,60 @@ export function ProfileSecurityTab({ user, onTotpToggled }: Props) {
         </div>
       </div>
 
-      {/* ── Session info ── */}
+      {/* ── Session history ── */}
       <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
         <div className={styles.sectionHeader}>
-          <p className={styles.sectionTitle}>Información de sesión</p>
+          <p className={styles.sectionTitle}>Historial de sesiones</p>
+          <span style={{ fontSize: 10, color: '#94A3B8' }}>Últimas 30</span>
         </div>
+
+        {/* static baseline row */}
         <div className={styles.securityItem}>
-          <div>
-            <p className={styles.securityLabel}>Último inicio de sesión</p>
-            <p className={styles.securitySub}>{fmtRelative(user.last_login_at)}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Globe size={14} style={{ color: '#94A3B8', flexShrink: 0 }} />
+            <div>
+              <p className={styles.securityLabel}>Cuenta creada</p>
+              <p className={styles.securitySub}>{fmtDate(user.created_at)}</p>
+            </div>
           </div>
         </div>
-        <div className={styles.securityItem}>
-          <div>
-            <p className={styles.securityLabel}>Cuenta creada</p>
-            <p className={styles.securitySub}>{fmtDate(user.created_at)}</p>
+
+        {sessions && sessions.length === 0 && (
+          <div style={{ padding: '20px 22px', color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>
+            Sin sesiones registradas.
           </div>
-        </div>
+        )}
+
+        {sessions?.map((s) => {
+          const { browser, os } = parseUA(s.user_agent);
+          const isActive  = s.is_active;
+          const isClosed  = !!s.ended_at;
+          const statusLabel = isActive ? 'Activa' : isClosed ? 'Cerrada' : 'Expirada';
+          const statusCls   = isActive ? styles.badgeGreen : styles.badgeGray;
+          return (
+            <div key={s.id} className={styles.securityItem}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <Monitor size={14} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                <div style={{ minWidth: 0 }}>
+                  <p className={styles.securityLabel} style={{ fontWeight: 500 }}>
+                    {browser} · {os}
+                    {s.ip_address && (
+                      <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 400 }}> — {s.ip_address}</span>
+                    )}
+                  </p>
+                  <p className={styles.securitySub}>
+                    Inicio: {fmtRelative(s.created_at)}
+                    {isClosed && ` · Cerrada: ${fmtRelative(s.ended_at)}`}
+                    {!isClosed && !isActive && ` · Expiró: ${fmtDate(s.expires_at)}`}
+                  </p>
+                </div>
+              </div>
+              <span className={`${styles.badge} ${statusCls}`} style={{ flexShrink: 0, fontSize: 10 }}>
+                {statusLabel}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </>
   );

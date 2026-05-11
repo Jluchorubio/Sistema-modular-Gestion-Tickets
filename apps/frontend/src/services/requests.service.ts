@@ -11,12 +11,24 @@ export type RequestType =
   | 'reactivation'
   | 'other';
 
-export type RequestStatus = 'pending' | 'under_review' | 'approved' | 'rejected';
+export type RequestStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'cancelled';
+export type RequestPriority = 'baja' | 'media' | 'alta' | 'critica';
+
+export interface RequestTimelineEntry {
+  id:         string;
+  action:     string;
+  old_status: RequestStatus | null;
+  new_status: RequestStatus | null;
+  notes:      string | null;
+  actor_name: string;
+  created_at: string;
+}
 
 export interface AdmRequest {
   id:             string;
   type:           RequestType;
   status:         RequestStatus;
+  priority:       RequestPriority;
   title:          string;
   description:    string;
   requester_name?: string | null;
@@ -48,8 +60,18 @@ export const requestsService = {
     return data;
   },
 
-  async create(payload: { type: RequestType; title: string; description: string }): Promise<AdmRequest> {
+  async create(payload: { type: RequestType; title: string; description: string; priority?: RequestPriority }): Promise<AdmRequest> {
     const { data } = await api.post('/requests', payload);
+    return data;
+  },
+
+  async cancel(id: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/requests/me/${id}`);
+    return data;
+  },
+
+  async getTimeline(id: string): Promise<RequestTimelineEntry[]> {
+    const { data } = await api.get(`/requests/${id}/timeline`);
     return data;
   },
 

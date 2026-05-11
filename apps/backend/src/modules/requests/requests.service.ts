@@ -10,10 +10,15 @@ export class RequestsService {
 
   async create(requesterId: string, dto: CreateRequestDto) {
     const [row] = await this.db.query<any[]>(
-      `INSERT INTO requests.admin_requests (requester_id, type, title, description)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO requests.admin_requests (requester_id, type, title, description, priority)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [requesterId, dto.type, dto.title.trim(), dto.description.trim()],
+      [requesterId, dto.type, dto.title.trim(), dto.description.trim(), dto.priority ?? 'media'],
+    );
+    await this.db.query(
+      `INSERT INTO requests.request_timeline (request_id, actor_id, action, new_status)
+       VALUES ($1, $2, 'created', 'pending')`,
+      [row.id, requesterId],
     );
     return row;
   }
@@ -36,7 +41,7 @@ export class RequestsService {
     const oi = params.length;
 
     const rows = await this.db.query<any[]>(
-      `SELECT r.id, r.type, r.title, r.description, r.status,
+      `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
               r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
               p.first_name || ' ' || p.last_name AS requester_name,
               p.id                               AS requester_id,
@@ -79,7 +84,7 @@ export class RequestsService {
     const oi = params.length;
 
     const rows = await this.db.query<any[]>(
-      `SELECT r.id, r.type, r.title, r.description, r.status,
+      `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
               r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
               rv.first_name || ' ' || rv.last_name AS reviewer_name
        FROM   requests.admin_requests r
@@ -103,7 +108,7 @@ export class RequestsService {
 
   async review(reviewerId: string, requestId: string, dto: ReviewRequestDto) {
     const [req] = await this.db.query<{ id: string; status: string }[]>(
-      `SELECT id, status FROM requests.admin_requests WHERE id = $1`,
+      `SELECT id, status FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
       [requestId],
     );
     if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
@@ -119,22 +124,67 @@ export class RequestsService {
        RETURNING *`,
       [dto.status, reviewerId, dto.review_notes ?? null, requestId],
     );
+    await this.db.query(
+      `INSERT INTO requests.request_timeline
+         (request_id, actor_id, action, old_status, new_status, notes)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [requestId, reviewerId, `reviewed_${dto.status}`, req.status, dto.status, dto.review_notes ?? null],
+    );
     return updated;
   }
 
   async cancelMine(userId: string, requestId: string) {
     const [req] = await this.db.query<{ id: string; requester_id: string; status: string }[]>(
-      `SELECT id, requester_id, status FROM requests.admin_requests WHERE id = $1`,
+      `SELECT id, requester_id, status
+       FROM requests.admin_requests
+       WHERE id = $1 AND deleted_at IS NULL`,
       [requestId],
     );
     if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
     if (req.requester_id !== userId) throw new ForbiddenException('No es tu solicitud');
-    if (req.status !== 'pending') throw new ForbiddenException('Solo se pueden cancelar solicitudes pendientes');
+    if (!['pending', 'under_review'].includes(req.status)) {
+      throw new ForbiddenException('Solo se pueden cancelar solicitudes pendientes o en revisión');
+    }
 
     await this.db.query(
-      `DELETE FROM requests.admin_requests WHERE id = $1`,
+      `UPDATE requests.admin_requests
+       SET status = 'cancelled', updated_at = now()
+       WHERE id = $1`,
       [requestId],
     );
+    await this.db.query(
+      `INSERT INTO requests.request_timeline
+         (request_id, actor_id, action, old_status, new_status)
+       VALUES ($1, $2, 'cancelled', $3, 'cancelled')`,
+      [requestId, userId, req.status],
+    );
     return { ok: true };
+  }
+
+  async getTimeline(requestId: string, userId: string) {
+    const [req] = await this.db.query<{ requester_id: string }[]>(
+      `SELECT requester_id
+       FROM requests.admin_requests
+       WHERE id = $1 AND deleted_at IS NULL`,
+      [requestId],
+    );
+    if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
+
+    const [profile] = await this.db.query<{ is_superadmin: boolean }[]>(
+      `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
+      [userId],
+    );
+    const canView = req.requester_id === userId || profile?.is_superadmin;
+    if (!canView) throw new ForbiddenException('Sin acceso al timeline de esta solicitud');
+
+    return this.db.query<any[]>(
+      `SELECT t.id, t.action, t.old_status, t.new_status, t.notes, t.created_at,
+              p.first_name || ' ' || p.last_name AS actor_name
+       FROM   requests.request_timeline t
+       JOIN   users.profiles            p ON p.id = t.actor_id
+       WHERE  t.request_id = $1
+       ORDER  BY t.created_at ASC`,
+      [requestId],
+    );
   }
 }

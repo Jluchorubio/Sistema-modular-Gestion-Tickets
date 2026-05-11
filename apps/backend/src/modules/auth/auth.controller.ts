@@ -36,8 +36,8 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'Login. Retorna { requires_mfa, mfa_type, otp_token } para verificación por email.' })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+  login(@Req() req: any, @Body() dto: LoginDto) {
+    return this.authService.login(dto.email, dto.password, req.ip, req.headers['user-agent']);
   }
 
   @Post('refresh')
@@ -76,7 +76,7 @@ export class AuthController {
   async googleCallback(@Req() req: any, @Res() res: Response) {
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
     try {
-      const result = await this.authService.loginWithGoogle(req.user);
+      const result = await this.authService.loginWithGoogle(req.user, req.ip, req.headers['user-agent']);
       const u      = result.user;
       return res.redirect(
         `${appUrl}/auth/callback` +
@@ -99,12 +99,13 @@ export class AuthController {
   @Post('otp/verify')
   @ApiOperation({ summary: 'Verificar código OTP. Requiere otp_token en Authorization.' })
   verifyEmailOtp(
+    @Req() req: any,
     @Body() dto: VerifyEmailOtpDto,
     @Headers('authorization') auth: string,
   ) {
     const token = auth?.replace('Bearer ', '').trim();
     if (!token) throw new UnauthorizedException('otp_token requerido en Authorization header');
-    return this.authService.verifyEmailOtp(token, dto.code);
+    return this.authService.verifyEmailOtp(token, dto.code, req.ip, req.headers['user-agent']);
   }
 
   @Post('otp/resend')

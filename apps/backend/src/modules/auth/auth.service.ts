@@ -34,7 +34,7 @@ export class AuthService {
 
   // ─── Login email/password ────────────────────────────────────────────────────
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, ip?: string, userAgent?: string) {
     const identifier = email.toLowerCase().trim();
     const rows = await this.db.query<any[]>(
       `SELECT c.id                    AS cred_id,
@@ -135,12 +135,12 @@ export class AuthService {
       };
     }
 
-    return this.buildSession(cred.user_id, cred.email, cred.first_name, cred.last_name, cred.is_superadmin);
+    return this.buildSession(cred.user_id, cred.email, cred.first_name, cred.last_name, cred.is_superadmin, ip, userAgent);
   }
 
   // ─── Google OAuth ────────────────────────────────────────────────────────────
 
-  async loginWithGoogle(profile: { email: string; firstName: string; lastName: string; avatar: string | null }) {
+  async loginWithGoogle(profile: { email: string; firstName: string; lastName: string; avatar: string | null }, ip?: string, userAgent?: string) {
     const rows = await this.db.query<any[]>(
       `SELECT c.user_id, c.email, p.first_name, p.last_name, p.is_superadmin
        FROM auth.credentials c
@@ -154,12 +154,12 @@ export class AuthService {
     }
 
     const user = rows[0];
-    return this.buildSession(user.user_id, user.email, user.first_name, user.last_name, user.is_superadmin);
+    return this.buildSession(user.user_id, user.email, user.first_name, user.last_name, user.is_superadmin, ip, userAgent);
   }
 
   // ─── Email OTP: verificar ────────────────────────────────────────────────────
 
-  async verifyEmailOtp(otpToken: string, code: string) {
+  async verifyEmailOtp(otpToken: string, code: string, ip?: string, userAgent?: string) {
     let payload: any;
     try { payload = this.jwt.verify(otpToken); }
     catch { throw new UnauthorizedException('otp_token inválido o expirado'); }
@@ -245,7 +245,7 @@ export class AuthService {
        WHERE p.id = $1`,
       [payload.sub],
     );
-    return this.buildSession(payload.sub, user.email, user.first_name, user.last_name, user.is_superadmin);
+    return this.buildSession(payload.sub, user.email, user.first_name, user.last_name, user.is_superadmin, ip, userAgent);
   }
 
   // ─── Email OTP: reenviar ─────────────────────────────────────────────────────
@@ -569,7 +569,7 @@ export class AuthService {
     await this.sendOtpEmail(email, rawCode);
   }
 
-  private async buildSession(userId: string, email: string, firstName: string, lastName: string, isSuperadmin: boolean) {
+  private async buildSession(userId: string, email: string, firstName: string, lastName: string, isSuperadmin: boolean, ip?: string, userAgent?: string) {
     const payload     = { sub: userId, email };
     const access_token  = this.jwt.sign(payload, { expiresIn: '15m' });
     const refresh_token = this.jwt.sign(payload, { expiresIn: '7d' });
@@ -596,9 +596,9 @@ export class AuthService {
       [userId, this.hash(refresh_token)],
     );
     await this.db.query(
-      `INSERT INTO auth.sessions (user_id, expires_at)
-       VALUES ($1, now() + INTERVAL '15 minutes')`,
-      [userId],
+      `INSERT INTO auth.sessions (user_id, ip_address, user_agent, expires_at)
+       VALUES ($1, $2::inet, $3, now() + INTERVAL '7 days')`,
+      [userId, ip ?? null, userAgent ?? null],
     );
 
     return {

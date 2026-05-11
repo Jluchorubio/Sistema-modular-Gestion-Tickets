@@ -4,9 +4,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus } from 'lucide-react';
-import { requestsService, type AdmRequest, type RequestType, type RequestStatus } from '@/services/requests.service';
-import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, REQUEST_TYPES } from '@/constants/requests';
+import { Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
+import {
+  requestsService,
+  type AdmRequest,
+  type RequestType,
+  type RequestStatus,
+  type RequestPriority,
+  type RequestTimelineEntry,
+} from '@/services/requests.service';
+import {
+  REQUEST_TYPE_LABELS,
+  REQUEST_STATUS_LABELS,
+  REQUEST_STATUS_COLORS,
+  REQUEST_TYPES,
+  REQUEST_PRIORITY_LABELS,
+  REQUEST_PRIORITY_COLORS,
+  REQUEST_PRIORITIES,
+} from '@/constants/requests';
 import { useAuthStore } from '@/stores/auth.store';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
@@ -19,12 +34,14 @@ const STATUS_PILL: Record<string, string> = {
   under_review: styles.pillUnderReview,
   approved:     styles.pillApproved,
   rejected:     styles.pillRejected,
+  cancelled:    styles.pillCancelled,
 };
 
 /* ── Schemas ─────────────────────────────────────────────────────────────── */
 const createSchema = z.object({
   type:        z.enum(['role_change', 'module_access', 'info_correction', 'sede_change',
                         'permission_adjustment', 'account_issue', 'reactivation', 'other']),
+  priority:    z.enum(['baja', 'media', 'alta', 'critica']),
   title:       z.string().min(5, 'Mínimo 5 caracteres'),
   description: z.string().min(10, 'Mínimo 10 caracteres'),
 });
@@ -33,6 +50,59 @@ type CreateForm = z.infer<typeof createSchema>;
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtRelative(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 60_000)     return 'Hace un momento';
+  if (diff < 3_600_000)  return `Hace ${Math.floor(diff / 60_000)} min`;
+  if (diff < 86_400_000) return `Hace ${Math.floor(diff / 3_600_000)}h`;
+  return fmtDate(iso);
+}
+
+const TIMELINE_ACTION_LABELS: Record<string, string> = {
+  created:             'Solicitud creada',
+  reviewed_under_review: 'Puesta en revisión',
+  reviewed_approved:   'Aprobada',
+  reviewed_rejected:   'Rechazada',
+  cancelled:           'Cancelada por el solicitante',
+};
+
+/* ── Timeline ─────────────────────────────────────────────────────────────── */
+function TimelinePanel({ requestId }: { requestId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['request-timeline', requestId],
+    queryFn:  () => requestsService.getTimeline(requestId),
+    staleTime: 30_000,
+  });
+
+  if (isLoading) return <div style={{ padding: '12px 0', textAlign: 'center' }}><Spinner /></div>;
+
+  const entries: RequestTimelineEntry[] = data ?? [];
+  return (
+    <div className={styles.timeline}>
+      {entries.map((e, i) => (
+        <div key={e.id} className={styles.timelineEntry}>
+          <div className={styles.timelineDotWrap}>
+            <div
+              className={styles.timelineDot}
+              style={{ background: e.new_status ? REQUEST_STATUS_COLORS[e.new_status] : '#6366F1' }}
+            />
+            {i < entries.length - 1 && <div className={styles.timelineLine} />}
+          </div>
+          <div className={styles.timelineContent}>
+            <div className={styles.timelineAction}>
+              {TIMELINE_ACTION_LABELS[e.action] ?? e.action}
+            </div>
+            <div className={styles.timelineMeta}>
+              {e.actor_name} · {fmtRelative(e.created_at)}
+            </div>
+            {e.notes && <div className={styles.timelineNotes}>"{e.notes}"</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /* ── Component ───────────────────────────────────────────────────────────── */
@@ -47,11 +117,13 @@ export default function RequestsPage() {
   const [onlyMine,     setOnlyMine]     = useState(false);
 
   /* ── Modal state ── */
-  const [createOpen,  setCreateOpen]  = useState(false);
-  const [serverMsg,   setServerMsg]   = useState<{ ok: boolean; text: string } | null>(null);
-  const [rejectOpen,  setRejectOpen]  = useState(false);
-  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
-  const [rejectNotes, setRejectNotes]  = useState('');
+  const [createOpen,    setCreateOpen]    = useState(false);
+  const [serverMsg,     setServerMsg]     = useState<{ ok: boolean; text: string } | null>(null);
+  const [rejectOpen,    setRejectOpen]    = useState(false);
+  const [rejectTarget,  setRejectTarget]  = useState<string | null>(null);
+  const [rejectNotes,   setRejectNotes]   = useState('');
+  const [expandedId,    setExpandedId]    = useState<string | null>(null);
+  const [cancelTarget,  setCancelTarget]  = useState<string | null>(null);
 
   /* ── Query ── */
   const queryKey = isSuperadmin && !onlyMine
@@ -72,7 +144,7 @@ export default function RequestsPage() {
     formState: { errors, isSubmitting },
   } = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
-    defaultValues: { type: 'role_change', title: '', description: '' },
+    defaultValues: { type: 'role_change', priority: 'media', title: '', description: '' },
   });
 
   /* ── Mutations ── */
@@ -90,6 +162,14 @@ export default function RequestsPage() {
     mutationFn: ({ id, status, notes }: { id: string; status: RequestStatus; notes?: string }) =>
       requestsService.review(id, status, notes),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['requests'] }),
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: (id: string) => requestsService.cancel(id),
+    onSuccess: () => {
+      setCancelTarget(null);
+      qc.invalidateQueries({ queryKey: ['requests'] });
+    },
   });
 
   /* ── Handlers ── */
@@ -117,8 +197,8 @@ export default function RequestsPage() {
   }, [reset]);
 
   /* ── Render ── */
-  const rows = data?.data ?? [];
-  const total = data?.meta.total ?? rows.length;
+  const rows        = data?.data ?? [];
+  const total       = data?.meta.total ?? rows.length;
   const showActions = isSuperadmin && !onlyMine;
 
   return (
@@ -151,6 +231,7 @@ export default function RequestsPage() {
             <option value="under_review">En revisión</option>
             <option value="approved">Aprobado</option>
             <option value="rejected">Rechazado</option>
+            <option value="cancelled">Cancelado</option>
           </select>
 
           <select
@@ -184,59 +265,97 @@ export default function RequestsPage() {
         <div className={styles.emptyMsg}>No hay solicitudes.</div>
       )}
 
-      {rows.map(req => (
-        <div key={req.id} className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div>
-              <div className={styles.cardTitle}>{req.title}</div>
-              <div className={styles.cardMeta}>
-                <span className={styles.typeLabel}>{REQUEST_TYPE_LABELS[req.type] ?? req.type}</span>
-                {req.requester_name && <><span>·</span><span>{req.requester_name}</span></>}
-                <span>·</span>
-                <span>{fmtDate(req.created_at)}</span>
+      {rows.map(req => {
+        const isExpanded = expandedId === req.id;
+        const canCancel  = !isSuperadmin && ['pending', 'under_review'].includes(req.status);
+
+        return (
+          <div key={req.id} className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>{req.title}</div>
+                <div className={styles.cardMeta}>
+                  <span className={styles.typeLabel}>{REQUEST_TYPE_LABELS[req.type] ?? req.type}</span>
+                  {req.requester_name && <><span>·</span><span>{req.requester_name}</span></>}
+                  <span>·</span>
+                  <span>{fmtDate(req.created_at)}</span>
+                  <span>·</span>
+                  <span
+                    className={styles.priorityDot}
+                    style={{ background: REQUEST_PRIORITY_COLORS[req.priority] }}
+                    title={`Prioridad: ${REQUEST_PRIORITY_LABELS[req.priority]}`}
+                  />
+                  <span style={{ fontSize: 11, color: '#64748B' }}>
+                    {REQUEST_PRIORITY_LABELS[req.priority]}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className={`${styles.pill} ${STATUS_PILL[req.status] ?? ''}`}>
+                  {REQUEST_STATUS_LABELS[req.status] ?? req.status}
+                </span>
+                {canCancel && (
+                  <button
+                    className={styles.cancelBtn}
+                    title="Cancelar solicitud"
+                    onClick={() => setCancelTarget(req.id)}
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+                <button
+                  className={styles.expandBtn}
+                  title={isExpanded ? 'Ocultar historial' : 'Ver historial'}
+                  onClick={() => setExpandedId(isExpanded ? null : req.id)}
+                >
+                  {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
               </div>
             </div>
-            <span className={`${styles.pill} ${STATUS_PILL[req.status] ?? ''}`}>
-              {REQUEST_STATUS_LABELS[req.status] ?? req.status}
-            </span>
+
+            <div className={styles.cardDesc}>{req.description}</div>
+
+            {req.reviewer_name && (
+              <div className={styles.cardReview}>
+                Revisado por <strong>{req.reviewer_name}</strong>
+                {req.review_notes && ` · "${req.review_notes}"`}
+              </div>
+            )}
+
+            {showActions && req.status === 'pending' && (
+              <div className={styles.reviewActions}>
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
+                  onClick={() => handleReview(req, 'under_review')}
+                  disabled={reviewMut.isPending}
+                >
+                  En revisión
+                </button>
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
+                  onClick={() => handleReview(req, 'approved')}
+                  disabled={reviewMut.isPending}
+                >
+                  Aprobar
+                </button>
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
+                  onClick={() => handleReview(req, 'rejected')}
+                  disabled={reviewMut.isPending}
+                >
+                  Rechazar
+                </button>
+              </div>
+            )}
+
+            {isExpanded && (
+              <div className={styles.timelineWrap}>
+                <TimelinePanel requestId={req.id} />
+              </div>
+            )}
           </div>
-
-          <div className={styles.cardDesc}>{req.description}</div>
-
-          {req.reviewer_name && (
-            <div className={styles.cardReview}>
-              Revisado por <strong>{req.reviewer_name}</strong>
-              {req.review_notes && ` · "${req.review_notes}"`}
-            </div>
-          )}
-
-          {showActions && req.status === 'pending' && (
-            <div className={styles.reviewActions}>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
-                onClick={() => handleReview(req, 'under_review')}
-                disabled={reviewMut.isPending}
-              >
-                En revisión
-              </button>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
-                onClick={() => handleReview(req, 'approved')}
-                disabled={reviewMut.isPending}
-              >
-                Aprobar
-              </button>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
-                onClick={() => handleReview(req, 'rejected')}
-                disabled={reviewMut.isPending}
-              >
-                Rechazar
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
+        );
+      })}
 
       {/* Create modal */}
       <Modal open={createOpen} title="Nueva solicitud" onClose={() => setCreateOpen(false)}>
@@ -245,6 +364,13 @@ export default function RequestsPage() {
           <select className={mstyles.fieldInput} {...register('type')}>
             {REQUEST_TYPES.map(t => (
               <option key={t} value={t}>{REQUEST_TYPE_LABELS[t]}</option>
+            ))}
+          </select>
+
+          <label className={mstyles.fieldLabel}>Prioridad</label>
+          <select className={mstyles.fieldInput} {...register('priority')}>
+            {REQUEST_PRIORITIES.map(p => (
+              <option key={p} value={p}>{REQUEST_PRIORITY_LABELS[p]}</option>
             ))}
           </select>
 
@@ -316,6 +442,26 @@ export default function RequestsPage() {
             disabled={reviewMut.isPending}
           >
             Confirmar rechazo
+          </button>
+        </div>
+      </Modal>
+
+      {/* Cancel confirm modal */}
+      <Modal open={!!cancelTarget} title="Cancelar solicitud" onClose={() => setCancelTarget(null)}>
+        <p style={{ fontSize: 14, color: '#374151', marginBottom: 4 }}>
+          ¿Seguro que quieres cancelar esta solicitud? Esta acción no se puede deshacer.
+        </p>
+        <div className={mstyles.actions}>
+          <button type="button" className={mstyles.actCancel} onClick={() => setCancelTarget(null)}>
+            Volver
+          </button>
+          <button
+            type="button"
+            className={mstyles.actDanger}
+            onClick={() => cancelTarget && cancelMut.mutate(cancelTarget)}
+            disabled={cancelMut.isPending}
+          >
+            Confirmar cancelación
           </button>
         </div>
       </Modal>

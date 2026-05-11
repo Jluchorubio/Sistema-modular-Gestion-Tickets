@@ -1,12 +1,14 @@
 'use client';
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
-  fmtDate, fmtRelative, buildContribLevel, seedFromId,
-  CONTRIB_COLORS, getActiveModules,
+  fmtDate, fmtRelative, getActiveModules,
+  CONTRIB_COLORS,
   type ProfileUser,
 } from './profile.types';
 import { requestsService } from '@/services/requests.service';
+import { usersService } from '@/services/users.service';
 import { REQUEST_STATUS_LABELS } from '@/constants/requests';
 import styles from './profile.module.css';
 
@@ -15,7 +17,32 @@ const STATUS_CLS: Record<string, string> = {
   under_review: styles.badgeBlue,
   approved:     styles.badgeGreen,
   rejected:     styles.badgeRed,
+  cancelled:    styles.badgeGray,
 };
+
+/* ── Activity graph helpers ──────────────────────────────────────────────── */
+
+function getGraphStartDate(): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  // align to Monday of 26 weeks ago
+  const dayOfWeek = (today.getDay() + 6) % 7; // 0=Mon
+  const start = new Date(today);
+  start.setDate(today.getDate() - dayOfWeek - 25 * 7);
+  return start;
+}
+
+function toISODay(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function countToLevel(count: number): number {
+  if (count === 0) return 0;
+  if (count <= 2)  return 1;
+  if (count <= 5)  return 2;
+  if (count <= 9)  return 3;
+  return 4;
+}
 
 interface Props {
   user:          ProfileUser;
@@ -26,15 +53,43 @@ interface Props {
 export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
   const router        = useRouter();
   const activeModules = getActiveModules(user);
-  const seed          = seedFromId(user.id);
 
   const { data: requestsData } = useQuery({
-    queryKey: ['my-requests-preview'],
-    queryFn:  () => requestsService.getMine(6),
+    queryKey: ['my-requests-all'],
+    queryFn:  () => requestsService.getMine(200),
     enabled:  isOwnProfile,
     staleTime: 60_000,
   });
-  const recentRequests = requestsData?.data ?? [];
+  const allRequests    = requestsData?.data ?? [];
+  const recentRequests = allRequests.slice(0, 6);
+
+  const reqStats = useMemo(() => ({
+    total:        allRequests.length,
+    pending:      allRequests.filter(r => r.status === 'pending').length,
+    under_review: allRequests.filter(r => r.status === 'under_review').length,
+    approved:     allRequests.filter(r => r.status === 'approved').length,
+    rejected:     allRequests.filter(r => r.status === 'rejected').length,
+    cancelled:    allRequests.filter(r => r.status === 'cancelled').length,
+  }), [allRequests]);
+
+  const { data: activityData } = useQuery({
+    queryKey: ['my-activity'],
+    queryFn:  () => usersService.getMyActivity(),
+    enabled:  isOwnProfile,
+    staleTime: 5 * 60_000,
+  });
+
+  const activityMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    (activityData ?? []).forEach(({ day, count }) => { map[day] = count; });
+    return map;
+  }, [activityData]);
+
+  const graphStart   = useMemo(() => getGraphStartDate(), []);
+  const totalActivity = useMemo(
+    () => Object.values(activityMap).reduce((s, v) => s + v, 0),
+    [activityMap],
+  );
 
   return (
     <>
@@ -53,6 +108,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
         </div>
       )}
 
+      {/* ── Profile info card ── */}
       <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
         <div className={styles.sectionHeader}>
           <p className={styles.sectionTitle}>Información del perfil</p>
@@ -88,24 +144,27 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
         </div>
       </div>
 
-      <div className={styles.ticketStatGrid}>
-        {([
-          ['Abiertos',    '#F59E0B'],
-          ['Cerrados',    '#22C55E'],
-          ['SLA OK',      '#0D1B2A'],
-          ['Promedio',    '#0D1B2A'],
-          ['Reprocesos',  '#EF4444'],
-          ['Satisfacción','#0D1B2A'],
-          ['Escalados',   '#EF4444'],
-        ] as [string, string][]).map(([label, color]) => (
-          <div key={label} className={styles.ticketStatItem}>
-            <div className={styles.ticketStatLabel}>{label}</div>
-            <div className={styles.ticketStatValue} style={{ color }}>—</div>
-            <div className={styles.ticketStatNote}>tickets</div>
-          </div>
-        ))}
-      </div>
+      {/* ── Request stats ── */}
+      {isOwnProfile && (
+        <div className={styles.ticketStatGrid} style={{ marginBottom: 22 }}>
+          {([
+            ['Total',       reqStats.total,        '#0D1B2A'],
+            ['Pendientes',  reqStats.pending,       '#F59E0B'],
+            ['En revisión', reqStats.under_review,  '#6366F1'],
+            ['Aprobadas',   reqStats.approved,      '#22C55E'],
+            ['Rechazadas',  reqStats.rejected,      '#EF4444'],
+            ['Canceladas',  reqStats.cancelled,     '#94A3B8'],
+          ] as [string, number, string][]).map(([label, value, color]) => (
+            <div key={label} className={styles.ticketStatItem}>
+              <div className={styles.ticketStatLabel}>{label}</div>
+              <div className={styles.ticketStatValue} style={{ color }}>{value}</div>
+              <div className={styles.ticketStatNote}>solicitudes</div>
+            </div>
+          ))}
+        </div>
+      )}
 
+      {/* ── Recent activity (login + account events) ── */}
       <div style={{ marginBottom: 22 }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: '#0D1B2A', marginBottom: 14 }}>Actividad reciente</p>
         <div className={styles.card} style={{ overflow: 'hidden' }}>
@@ -131,6 +190,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
         </div>
       </div>
 
+      {/* ── Recent requests ── */}
       {isOwnProfile && (
         <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
           <div className={styles.sectionHeader}>
@@ -188,39 +248,49 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
         </div>
       )}
 
-      <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
-        <div className={styles.sectionHeader}>
-          <p className={styles.sectionTitle}>Actividad operativa</p>
-          <span style={{ fontSize: 10, color: '#64748B' }}>Últimas 26 semanas</span>
-        </div>
-        <div style={{ padding: '18px 22px 20px' }}>
-          <div className={styles.contribGraph}>
-            {Array.from({ length: 26 }, (_, w) => (
-              <div key={w} className={styles.contribCol}>
-                {Array.from({ length: 7 }, (_, d) => {
-                  const level = buildContribLevel(seed, w, d);
-                  return (
-                    <div
-                      key={d}
-                      className={styles.contribCell}
-                      style={{ background: CONTRIB_COLORS[level] }}
-                    />
-                  );
-                })}
-              </div>
-            ))}
+      {/* ── Activity graph ── */}
+      {isOwnProfile && (
+        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionTitle}>Actividad operativa</p>
+            <span style={{ fontSize: 10, color: '#64748B' }}>
+              {totalActivity} eventos · últimas 26 semanas
+            </span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 11, color: '#94A3B8' }}>
-            <span>Menos</span>
-            <div style={{ display: 'flex', gap: 3 }}>
-              {CONTRIB_COLORS.map(c => (
-                <div key={c} style={{ width: 11, height: 11, borderRadius: 2, background: c }} />
+          <div style={{ padding: '18px 22px 20px' }}>
+            <div className={styles.contribGraph}>
+              {Array.from({ length: 26 }, (_, w) => (
+                <div key={w} className={styles.contribCol}>
+                  {Array.from({ length: 7 }, (_, d) => {
+                    const date  = new Date(graphStart);
+                    date.setDate(graphStart.getDate() + w * 7 + d);
+                    const key   = toISODay(date);
+                    const count = activityMap[key] ?? 0;
+                    const level = countToLevel(count);
+                    return (
+                      <div
+                        key={d}
+                        className={styles.contribCell}
+                        style={{ background: CONTRIB_COLORS[level] }}
+                        title={count > 0 ? `${count} eventos · ${key}` : key}
+                      />
+                    );
+                  })}
+                </div>
               ))}
             </div>
-            <span>Más</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 11, color: '#94A3B8' }}>
+              <span>Menos</span>
+              <div style={{ display: 'flex', gap: 3 }}>
+                {CONTRIB_COLORS.map(c => (
+                  <div key={c} style={{ width: 11, height: 11, borderRadius: 2, background: c }} />
+                ))}
+              </div>
+              <span>Más</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

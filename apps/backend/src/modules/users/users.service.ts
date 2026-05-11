@@ -807,6 +807,41 @@ export class UsersService {
     };
   }
 
+  // ─── Session history ─────────────────────────────────────────────────────────
+
+  async getMySessions(userId: string) {
+    return this.db.query<any[]>(
+      `SELECT id,
+              ip_address::text  AS ip_address,
+              user_agent,
+              expires_at,
+              ended_at,
+              created_at,
+              (ended_at IS NULL AND expires_at > now()) AS is_active
+       FROM   auth.sessions
+       WHERE  user_id = $1
+       ORDER  BY created_at DESC
+       LIMIT  30`,
+      [userId],
+    );
+  }
+
+  // ─── Activity graph ──────────────────────────────────────────────────────────
+
+  async getMyActivityGraph(userId: string): Promise<{ day: string; count: number }[]> {
+    const rows = await this.db.query<{ day: string; count: string }[]>(
+      `SELECT DATE(created_at AT TIME ZONE 'America/Bogota') AS day,
+              COUNT(*)::int                                  AS count
+       FROM   audit.event_log
+       WHERE  actor_id   = $1
+         AND  created_at >= now() - INTERVAL '26 weeks'
+       GROUP  BY day
+       ORDER  BY day`,
+      [userId],
+    );
+    return rows.map((r) => ({ day: r.day, count: parseInt(r.count as unknown as string, 10) }));
+  }
+
   // ─── Helpers privados ────────────────────────────────────────────────────────
 
   private async assertUserExists(userId: string): Promise<void> {

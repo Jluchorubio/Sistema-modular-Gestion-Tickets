@@ -287,8 +287,197 @@
   margin-top: 8px;
 }
 
+/* ── Header right cluster ── */
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filterToggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+
+.filterToggle:hover { border-color: #6366f1; color: #6366f1; }
+
+.filterToggleActive {
+  border-color: #6366f1;
+  background: #eef2ff;
+  color: #6366f1;
+}
+
+/* ── Filter bar ── */
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.filterSelect {
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  font-size: 12px;
+  color: #475569;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.filterSelect:focus { border-color: #6366f1; }
+
+.clearFilters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid #fca5a5;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  color: #ef4444;
+  cursor: pointer;
+  transition: background .12s;
+}
+
+.clearFilters:hover { background: #fef2f2; }
+
+/* ── Stats bar ── */
+.statsBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.statCard {
+  flex: 1;
+  min-width: 80px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.statValue {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+/* ── Popup badges row ── */
+.popupBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.popupPriorityBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1.5px solid currentColor;
+  background: transparent;
+}
+
+/* ── Popup action buttons ── */
+.popupActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.popupBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity .15s, filter .15s;
+}
+
+.popupBtn:disabled { opacity: .55; cursor: default; }
+.popupBtn:not(:disabled):hover { filter: brightness(.92); }
+
+.popupBtnReview  { background: #eef2ff; color: #6366f1; }
+.popupBtnApprove { background: #dcfce7; color: #16a34a; }
+.popupBtnReject  { background: #fee2e2; color: #dc2626; }
+.popupBtnCancel  { background: #f1f5f9; color: #475569; }
+
+/* ── Reject notes box ── */
+.rejectBox {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rejectTextarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 9px 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #475569;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  transition: border-color .15s;
+  box-sizing: border-box;
+}
+
+.rejectTextarea:focus { border-color: #6366f1; }
+
+.rejectBoxActions {
+  display: flex;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
 @media (max-width: 640px) {
   .pageHeader { flex-direction: column; }
   .legend { gap: 8px; }
+  .statsBar { gap: 6px; }
+  .statCard { padding: 8px 10px; }
   .calWrap :global(.fc-toolbar) { flex-direction: column; gap: 8px; }
 }

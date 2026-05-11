@@ -1,10 +1,10 @@
 'use client';
-import { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Camera, Edit2, Check, Star, Eye, Upload, Trash2 } from 'lucide-react';
+import { Camera, Edit2, Check, Star, Eye, Upload, Trash2, Building2, MapPin, Mail, Phone, Home, CalendarDays } from 'lucide-react';
 import { usersService } from '@/services/users.service';
 import type { UpdateMeDto } from '@/services/users.service';
 import { useAuthStore } from '@/stores/auth.store';
@@ -275,16 +275,16 @@ export function ProfileSidebar({ user, isOwnProfile, onUserUpdated }: Props) {
       {/* ── Info rows ── */}
       <div className={styles.divider}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[
-            { label: user.department   || '—', icon: '🏢' },
-            { label: user.primary_sede || '—', icon: '📍' },
-            { label: user.email        || '—', icon: '✉' },
-            { label: user.phone        || '—', icon: '📞' },
-            { label: user.address      || '—', icon: '🏠' },
-            { label: `Desde ${fmtDate(user.created_at)}`, icon: '📅' },
-          ].map((row, i) => (
+          {([
+            { label: user.department   || '—', Icon: Building2  },
+            { label: user.primary_sede || '—', Icon: MapPin      },
+            { label: user.email        || '—', Icon: Mail        },
+            { label: user.phone        || '—', Icon: Phone       },
+            { label: user.address      || '—', Icon: Home        },
+            { label: `Desde ${fmtDate(user.created_at)}`, Icon: CalendarDays },
+          ] as { label: string; Icon: React.ElementType }[]).map((row, i) => (
             <div key={i} className={styles.sideRow}>
-              <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{row.icon}</span>
+              <row.Icon size={14} style={{ flexShrink: 0, marginTop: 1, color: '#64748B' }} />
               <span className={styles.sideRowText}>{row.label}</span>
             </div>
           ))}

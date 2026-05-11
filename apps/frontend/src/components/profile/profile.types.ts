@@ -33,19 +33,6 @@ export function fmtRelative(iso: string | null | undefined): string {
   return fmtDate(iso);
 }
 
-export function buildContribLevel(seedNum: number, w: number, d: number): number {
-  let s = (seedNum ^ (w * 31 + d));
-  s = ((s * 1664525 + 1013904223) & 0x7fffffff);
-  const r = (s >>> 0) / 0x7fffffff;
-  return r < 0.35 ? 0 : Math.min(4, Math.ceil(r * 4));
-}
-
-export function seedFromId(id: string): number {
-  let n = 0;
-  for (let i = 0; i < Math.min(id.length, 8); i++) n = n * 31 + id.charCodeAt(i);
-  return n | 0;
-}
-
 export const CONTRIB_COLORS = ['#EBEDF0', '#9BE9A8', '#40C463', '#30A14E', '#216E39'];
 
 export function getActiveModules(user: ProfileUser): UserModuleRole[] {

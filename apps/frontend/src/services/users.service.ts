@@ -134,6 +134,24 @@ export const usersService = {
     return data;
   },
 
+  async getMySessions(): Promise<Array<{
+    id:           string;
+    ip_address:   string | null;
+    user_agent:   string | null;
+    expires_at:   string;
+    ended_at:     string | null;
+    created_at:   string;
+    is_active:    boolean;
+  }>> {
+    const { data } = await api.get('/users/me/sessions');
+    return data;
+  },
+
+  async getMyActivity(): Promise<{ day: string; count: number }[]> {
+    const { data } = await api.get('/users/me/activity');
+    return data;
+  },
+
   async assignUserRole(userId: string, moduleId: string, roleId: string): Promise<UserModuleRole> {
     const { data } = await api.post(`/users/${userId}/roles`, {
       module_id: moduleId,
