@@ -1,0 +1,37 @@
+.shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e8edf3 50%, #f1f5f9 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.5s ease infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+
+/* ── Utility blocks ── */
+.line   { height: 14px; }
+.line-sm { height: 11px; }
+.line-lg { height: 20px; }
+.circle { border-radius: 50%; }
+.rect   { border-radius: 8px; }
+
+/* ── Card skeleton ── */
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+/* ── Row skeleton ── */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.row:last-child { border-bottom: none; }

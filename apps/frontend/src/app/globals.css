@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dark surfaces (auth pages) */
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-raised: #243447;
+  --color-border: #334155;
+  --color-text: #e2e8f0;
+  --color-text-muted: #94a3b8;
+  --color-text-subtle: #475569;
+
+  /* Accent */
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
+
+  /* Brand */
+  --color-brand-dark: #0f2a3d;
+  --color-brand-active: #0e3546;
+  --color-brand-nav: #17384a;
+  --color-brand-nav-hover: #f2f6f8;
+
+  /* Feedback */
+  --color-success-bg: #064e3b;
+  --color-success-text: #6ee7b7;
+  --color-error-bg: #450a0a;
+  --color-error-text: #fca5a5;
+  --color-warning-bg: #422006;
+  --color-warning-text: #fbbf24;
+  --color-info-bg: #0c2442;
+  --color-info-text: #93c5fd;
+
+  /* Layout (light header/sidebar) */
+  --color-header-bg: #ffffff;
+  --color-header-border: #e2e8f0;
+  --color-sidebar-bg: #ffffff;
+  --color-sidebar-border: #edf2f6;
+
+  /* Ticket statuses */
+  --color-ticket-open: #22c55e;
+  --color-ticket-waiting: #eab308;
+  --color-ticket-inprogress: #3b82f6;
+  --color-ticket-done: #a855f7;
+  --color-ticket-closed: #6b7280;
+  --color-ticket-rework: #ef4444;
+
+  /* Dimensions */
+  --sidebar-collapsed: 76px;
+  --sidebar-expanded: 220px;
+  --header-height: 56px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

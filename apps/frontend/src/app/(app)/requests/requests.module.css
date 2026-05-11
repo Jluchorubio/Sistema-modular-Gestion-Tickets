@@ -1,0 +1,168 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.title { font-size: 18px; font-weight: 600; color: #0f172a; }
+.count { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+.btnPrimary {
+  padding: 8px 16px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btnPrimary:hover { opacity: .88; }
+
+/* ── Admin filter bar ── */
+.filterBar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.filterSelect {
+  padding: 7px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.filterSelect:focus { border-color: #6366f1; }
+
+.onlyMine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+}
+.onlyMineCb { width: 14px; height: 14px; accent-color: #6366f1; }
+
+/* ── Request card ── */
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.cardTitle { font-size: 14px; font-weight: 600; color: #0f172a; }
+
+.cardMeta {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.typeLabel {
+  font-size: 11px;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.cardReview {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ── Status pills ── */
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pillPending     { background: #eff6ff; color: #1d4ed8; }
+.pillUnderReview { background: #fffbeb; color: #92400e; }
+.pillApproved    { background: #f0fdf4; color: #15803d; }
+.pillRejected    { background: #fef2f2; color: #991b1b; }
+
+/* ── Review action buttons ── */
+.reviewActions { display: flex; gap: 8px; margin-top: 12px; }
+
+.reviewBtn {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  background: #ffffff;
+  font-family: inherit;
+}
+.reviewBtnPending { color: #92400e; border-color: #fde68a; }
+.reviewBtnPending:hover { background: #fffbeb; }
+.reviewBtnApprove { color: #15803d; border-color: #bbf7d0; }
+.reviewBtnApprove:hover { background: #f0fdf4; }
+.reviewBtnReject  { color: #991b1b; border-color: #fecaca; }
+.reviewBtnReject:hover  { background: #fef2f2; }
+
+/* ── Empty / error ── */
+.emptyMsg { color: #64748b; font-size: 13px; padding: 40px; text-align: center; }
+.errorMsg { color: #ef4444; font-size: 13px; padding: 20px; }
+
+/* ── Reject notes modal field ── */
+.rejectNotes {
+  width: 100%;
+  padding: 9px 13px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color .15s;
+  margin-top: 6px;
+}
+.rejectNotes:focus { border-color: #6366f1; }

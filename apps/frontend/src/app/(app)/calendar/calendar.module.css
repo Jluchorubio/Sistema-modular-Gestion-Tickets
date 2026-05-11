@@ -1,0 +1,294 @@
+.wrap {
+  padding-bottom: 40px;
+}
+
+/* ── Page header ── */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.title    { font-size: 18px; font-weight: 600; color: #0f172a; }
+.subtitle { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+/* ── Legend ── */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Calendar wrapper ── */
+.calWrap {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 20px;
+  position: relative;
+}
+
+.loadOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, .7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #64748b;
+  z-index: 10;
+}
+
+/* ── FullCalendar overrides
+     All rules scoped under .calWrap so CSS Modules stays "pure" ── */
+
+.calWrap :global(.fc) {
+  --fc-border-color:               #e2e8f0;
+  --fc-button-bg-color:            #6366f1;
+  --fc-button-border-color:        #6366f1;
+  --fc-button-hover-bg-color:      #4f46e5;
+  --fc-button-hover-border-color:  #4f46e5;
+  --fc-button-active-bg-color:     #4338ca;
+  --fc-button-active-border-color: #4338ca;
+  --fc-today-bg-color:             #eef2ff;
+  --fc-page-bg-color:              #ffffff;
+  --fc-neutral-bg-color:           #f8fafc;
+  --fc-list-event-hover-bg-color:  #f8fafc;
+  --fc-event-border-color:         transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.calWrap :global(.fc-toolbar-title) {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.calWrap :global(.fc-button) {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-family: inherit;
+  text-transform: none;
+  box-shadow: none !important;
+  transition: opacity .15s;
+}
+
+.calWrap :global(.fc-button:focus) {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.calWrap :global(.fc-button-group .fc-button) {
+  border-radius: 0;
+}
+
+.calWrap :global(.fc-button-group .fc-button:first-child) {
+  border-radius: 7px 0 0 7px;
+}
+
+.calWrap :global(.fc-button-group .fc-button:last-child) {
+  border-radius: 0 7px 7px 0;
+}
+
+.calWrap :global(.fc-col-header-cell-cushion) {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  text-decoration: none;
+}
+
+.calWrap :global(.fc-daygrid-day-number) {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  text-decoration: none;
+}
+
+.calWrap :global(.fc-daygrid-day.fc-day-today .fc-daygrid-day-number) {
+  color: #6366f1;
+  font-weight: 700;
+}
+
+.calWrap :global(.fc-event) {
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none !important;
+}
+
+.calWrap :global(.fc-event:hover) {
+  opacity: .88;
+}
+
+.calWrap :global(.fc-more-link) {
+  font-size: 11px;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.calWrap :global(.fc-list-event-title a) {
+  color: #0f172a;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.calWrap :global(.fc-list-event:hover .fc-list-event-title) {
+  background: #f8fafc;
+}
+
+.calWrap :global(.fc-list-day-cushion) {
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.calWrap :global(.fc-list-event-dot) {
+  border-radius: 50%;
+}
+
+.calWrap :global(.fc th) {
+  border-color: #e2e8f0;
+}
+
+.calWrap :global(.fc td) {
+  border-color: #f1f5f9;
+}
+
+.calWrap :global(.fc-scrollgrid) {
+  border-color: #e2e8f0;
+}
+
+/* ── Event detail popup ── */
+.popupOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .35);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.popup {
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px;
+  width: 380px;
+  max-width: 100%;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, .2);
+  position: relative;
+}
+
+.popupClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color .12s;
+}
+
+.popupClose:hover { color: #0f172a; }
+
+.popupType {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.popupTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 10px;
+  line-height: 1.35;
+  padding-right: 20px;
+}
+
+.popupStatus {
+  margin-bottom: 12px;
+}
+
+.popupStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.popupDesc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.55;
+  margin-bottom: 12px;
+  border-left: 3px solid #e2e8f0;
+  padding-left: 10px;
+}
+
+.popupMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.popupNotes {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #475569;
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .pageHeader { flex-direction: column; }
+  .legend { gap: 8px; }
+  .calWrap :global(.fc-toolbar) { flex-direction: column; gap: 8px; }
+}

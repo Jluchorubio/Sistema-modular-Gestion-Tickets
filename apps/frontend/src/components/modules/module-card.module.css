@@ -1,0 +1,236 @@
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  cursor: pointer;
+  transition: border-color .2s, transform .15s;
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+  width: 100%;
+}
+
+.card:hover {
+  border-color: #6366f1;
+  transform: translateY(-2px);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.card:hover::before { opacity: 1; }
+
+/* ── States ── */
+.locked {
+  opacity: 0.55;
+  filter: grayscale(50%);
+}
+
+.locked:hover {
+  border-color: #4f46e5;
+  transform: translateY(-2px);
+}
+
+.locked::before { display: none; }
+
+.inactive {
+  opacity: 0.5;
+  filter: grayscale(60%);
+  cursor: default;
+}
+
+.inactive:hover {
+  opacity: 0.75;
+  transform: none;
+  border-color: #e2e8f0;
+}
+
+.inactive::before { display: none; }
+
+/* ── Locked overlay ── */
+.lockedOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, .82);
+  color: #e2e8f0;
+  opacity: 0;
+  transition: opacity .18s ease;
+  z-index: 2;
+  border-radius: inherit;
+}
+
+.card.locked:hover .lockedOverlay { opacity: 1; }
+
+.lockedLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.lockedHint {
+  font-size: 11px;
+  color: #818cf8;
+  border: 1px solid #4f46e5;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-top: 4px;
+}
+
+/* ── Inactive badge ── */
+.inactiveBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #422006;
+  color: #fb923c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* ── Icon ── */
+.icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.iconTickets    { background: #1e3a5f; color: #93c5fd; }
+.iconInventario { background: #1a3a2a; color: #6ee7b7; }
+.iconCrm        { background: #2d1f3d; color: #c4b5fd; }
+.iconRrhh       { background: #1c2a1c; color: #86efac; }
+.iconCustom     { background: #2d1f3d; color: #c4b5fd; }
+
+.iconImg {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+/* ── Content ── */
+.name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 5px;
+}
+
+.desc {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+  min-height: 34px;
+}
+
+.typePill {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.typeTickets    { background: #1e3a5f; color: #93c5fd; }
+.typeInventario { background: #1a3a2a; color: #6ee7b7; }
+.typeCrm        { background: #2d1f3d; color: #c4b5fd; }
+.typeRrhh       { background: #1c2a1c; color: #86efac; }
+.typeCustom     { background: #2d1f3d; color: #c4b5fd; }
+.typeHelpdesk   { background: #1e3a5f; color: #93c5fd; }
+.typeInventory  { background: #1a3a2a; color: #6ee7b7; }
+
+/* ── Kebab menu ── */
+.menuWrap {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+}
+
+.kebabBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px 7px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: background .15s, color .15s;
+}
+
+.kebabBtn:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  min-width: 170px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+  z-index: 100;
+}
+
+.dropdownOpen { display: block; }
+
+.ddItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #475569;
+  transition: background .12s, color .12s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.ddItem:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ddDanger { color: #f87171; }
+.ddDanger:hover { background: #450a0a; color: #fca5a5; }
+
+.ddSep {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}

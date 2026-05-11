@@ -372,6 +372,7 @@ export class UsersService {
               pref.notification_email,
               pref.notification_whatsapp,
               pref.notification_in_app,
+              COALESCE(mfa.totp_enabled, false) AS totp_enabled,
               COALESCE(
                 json_agg(
                   json_build_object(
@@ -385,11 +386,12 @@ export class UsersService {
        FROM   users.profiles              p
        JOIN   auth.credentials            c    ON c.user_id   = p.id
        LEFT JOIN users.preferences        pref ON pref.user_id = p.id
+       LEFT JOIN auth.mfa_settings        mfa  ON mfa.user_id  = p.id
        LEFT JOIN modules.user_module_roles umr ON umr.user_id  = p.id AND umr.is_active = true
        LEFT JOIN modules.modules           m   ON m.id        = umr.module_id
        LEFT JOIN modules.module_roles      mr  ON mr.id       = umr.role_id
        WHERE  p.id = $1 AND p.deleted_at IS NULL
-       GROUP  BY p.id, c.email, c.last_login_at, pref.id`,
+       GROUP  BY p.id, c.email, c.last_login_at, pref.id, mfa.totp_enabled`,
       [userId],
     );
 
@@ -697,10 +699,9 @@ export class UsersService {
 
   async listGlobalRoles() {
     return this.db.query<any[]>(
-      `SELECT id, name, description, is_active, created_at,
+      `SELECT id, name, description, is_active, deleted_at, created_at,
               (SELECT COUNT(*) FROM users.profiles WHERE global_role_id = gr.id AND deleted_at IS NULL)::int AS user_count
        FROM config.global_roles gr
-       WHERE gr.deleted_at IS NULL
        ORDER BY is_active DESC, name`,
     );
   }
@@ -724,15 +725,13 @@ export class UsersService {
 
   async deleteGlobalRole(id: string) {
     const [role] = await this.db.query<{ id: string }[]>(
-      `SELECT id FROM config.global_roles WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT id FROM config.global_roles WHERE id = $1`,
       [id],
     );
     if (!role) throw new NotFoundException(`Rol global ${id} no encontrado`);
 
     await this.db.query(
-      `UPDATE config.global_roles
-       SET is_active = false, deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days'
-       WHERE id = $1`,
+      `UPDATE config.global_roles SET is_active = false WHERE id = $1`,
       [id],
     );
     return { ok: true };
@@ -746,7 +745,9 @@ export class UsersService {
     if (!role) throw new NotFoundException(`Rol global ${id} no encontrado`);
 
     await this.db.query(
-      `UPDATE config.global_roles SET is_active = true WHERE id = $1`,
+      `UPDATE config.global_roles
+       SET is_active = true, deleted_at = NULL, scheduled_hard_delete_at = NULL
+       WHERE id = $1`,
       [id],
     );
     return { ok: true };

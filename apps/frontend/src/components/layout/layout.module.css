@@ -1,0 +1,34 @@
+.shell {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-rows: 56px minmax(calc(100vh - 56px), auto);
+  min-height: 100vh;
+  align-items: start;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.shell.expanded {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.main {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  padding: 32px;
+  overflow: visible;
+}
+
+@media (max-width: 720px) {
+  .shell {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .shell.expanded {
+    grid-template-columns: 188px minmax(0, 1fr);
+  }
+  .main {
+    padding: 22px;
+  }
+}

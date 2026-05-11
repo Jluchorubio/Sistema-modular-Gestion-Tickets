@@ -14,6 +14,8 @@ import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { createHash, randomBytes } from 'crypto';
+import * as speakeasy from 'speakeasy';
+import * as QRCode from 'qrcode';
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 3;
@@ -299,7 +301,7 @@ export class AuthService {
     );
 
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
-    const resetLink = `${appUrl}/test-auth.html?reset_token=${rawToken}`;
+    const resetLink = `${appUrl}/login?reset_token=${rawToken}`;
 
     await this.sendEmail(
       email,
@@ -421,6 +423,84 @@ export class AuthService {
       // Column may not exist yet — migration pending
     }
     return { ok: true, otp_enabled: enabled };
+  }
+
+  // ─── TOTP (Google Authenticator) ─────────────────────────────────────────────
+
+  async setupTotp(userId: string): Promise<{ qr: string; secret: string }> {
+    const [cred] = await this.db.query<{ email: string }[]>(
+      `SELECT email FROM auth.credentials WHERE user_id = $1`,
+      [userId],
+    );
+
+    const secret = speakeasy.generateSecret({
+      name:   `Ticket System (${cred?.email ?? userId})`,
+      length: 20,
+    });
+
+    await this.db.query(
+      `INSERT INTO auth.mfa_settings (user_id, totp_secret, totp_enabled)
+       VALUES ($1, $2, false)
+       ON CONFLICT (user_id) DO UPDATE SET totp_secret = EXCLUDED.totp_secret, updated_at = now()`,
+      [userId, secret.base32],
+    );
+
+    const qr = await QRCode.toDataURL(secret.otpauth_url!);
+    return { qr, secret: secret.base32 };
+  }
+
+  async enableTotp(userId: string, code: string): Promise<{ ok: boolean; totp_enabled: boolean }> {
+    const [row] = await this.db.query<{ totp_secret: string }[]>(
+      `SELECT totp_secret FROM auth.mfa_settings WHERE user_id = $1`,
+      [userId],
+    );
+
+    if (!row?.totp_secret) throw new BadRequestException('Escanea el QR primero.');
+
+    const valid = speakeasy.totp.verify({
+      secret:   row.totp_secret,
+      encoding: 'base32',
+      token:    code.replace(/\s/g, ''),
+      window:   2,
+    });
+
+    if (!valid) throw new UnauthorizedException('Código incorrecto o expirado');
+
+    await this.db.query(
+      `UPDATE auth.mfa_settings
+       SET totp_enabled = true, totp_last_verified_at = now(), updated_at = now()
+       WHERE user_id = $1`,
+      [userId],
+    );
+
+    return { ok: true, totp_enabled: true };
+  }
+
+  async disableTotp(userId: string, code: string): Promise<{ ok: boolean; totp_enabled: boolean }> {
+    const [row] = await this.db.query<{ totp_secret: string; totp_enabled: boolean }[]>(
+      `SELECT totp_secret, totp_enabled FROM auth.mfa_settings WHERE user_id = $1`,
+      [userId],
+    );
+
+    if (!row?.totp_enabled) throw new BadRequestException('TOTP no está activo');
+
+    const valid = speakeasy.totp.verify({
+      secret:   row.totp_secret,
+      encoding: 'base32',
+      token:    code.replace(/\s/g, ''),
+      window:   2,
+    });
+
+    if (!valid) throw new UnauthorizedException('Código incorrecto o expirado');
+
+    await this.db.query(
+      `UPDATE auth.mfa_settings
+       SET totp_enabled = false, totp_secret = NULL, updated_at = now()
+       WHERE user_id = $1`,
+      [userId],
+    );
+
+    return { ok: true, totp_enabled: false };
   }
 
   async setupPassword(userId: string, newPassword: string) {

@@ -1,0 +1,285 @@
+.root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 32px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sub {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 28px;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 14px;
+  margin-bottom: 16px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.input:focus {
+  border-color: #6366f1;
+}
+
+.pwWrap {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.pwWrap .input {
+  margin-bottom: 0;
+  padding-right: 44px;
+}
+
+.pwToggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  width: auto;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.pwToggle:hover {
+  color: #94a3b8;
+}
+
+.btn {
+  width: 100%;
+  padding: 11px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: inherit;
+}
+
+.btn:hover {
+  opacity: 0.88;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  background: #6366f1;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.btnGoogle {
+  background: #fff;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btnBack {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+.btnResend {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #6366f1;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: #475569;
+  font-size: 12px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #334155;
+}
+
+.linkBtn {
+  font-size: 12px;
+  color: #6366f1;
+  cursor: pointer;
+  text-align: right;
+  display: block;
+  margin-top: -10px;
+  margin-bottom: 16px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  width: 100%;
+}
+
+.linkBtn:hover {
+  text-decoration: underline;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.tagOtp {
+  background: #0c2442;
+  color: #93c5fd;
+}
+
+.tagErr {
+  background: #450a0a;
+  color: #fca5a5;
+}
+
+.tagInfo {
+  background: #0c2442;
+  color: #93c5fd;
+}
+
+.msg {
+  font-size: 13px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.msgErr {
+  background: #450a0a;
+  color: #fca5a5;
+}
+
+.msgOk {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+.msgWarn {
+  background: #422006;
+  color: #fbbf24;
+}
+
+.pre {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 12px;
+  overflow-x: auto;
+  color: #a5f3fc;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 12px;
+}
+
+.otpWrap {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.otpDigit {
+  width: 46px;
+  height: 56px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 0;
+  margin-bottom: 0;
+  border-radius: 10px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.otpDigit:focus {
+  border-color: #6366f1;
+}
+
+.otpCountdown {
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.otpCountdownExpiring {
+  color: #f87171;
+}
+
+.sectionDesc {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 10px 0 16px;
+}

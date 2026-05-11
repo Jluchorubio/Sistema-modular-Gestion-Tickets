@@ -39,7 +39,7 @@ export class ProfileCompleteGuard implements CanActivate {
       throw new ForbiddenException({
         message: 'Debes completar tu perfil antes de acceder al sistema.',
         code: 'PROFILE_INCOMPLETE',
-        redirect: '/profile-complete.html',
+        redirect: '/complete-profile',
       });
     }
 

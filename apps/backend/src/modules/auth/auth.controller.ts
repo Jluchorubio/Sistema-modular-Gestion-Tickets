@@ -77,15 +77,20 @@ export class AuthController {
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
     try {
       const result = await this.authService.loginWithGoogle(req.user);
+      const u      = result.user;
       return res.redirect(
-        `${appUrl}/modules-test.html` +
+        `${appUrl}/auth/callback` +
         `#access_token=${result.access_token}` +
         `&refresh_token=${result.refresh_token}` +
-        `&name=${encodeURIComponent(result.user.name)}`,
+        `&profile_complete=${u.profile_complete ? '1' : '0'}` +
+        `&force_pw=${u.force_password_change ? '1' : '0'}` +
+        `&is_superadmin=${u.is_superadmin ? '1' : '0'}` +
+        `&name=${encodeURIComponent(u.name ?? '')}` +
+        `&email=${encodeURIComponent(u.email ?? '')}`,
       );
     } catch (err) {
       const message = encodeURIComponent(err.message ?? 'Error de autenticación');
-      return res.redirect(`${appUrl}/test-auth.html?error=${message}`);
+      return res.redirect(`${appUrl}/login?error=${message}`);
     }
   }
 
@@ -150,6 +155,35 @@ export class AuthController {
   @ApiOperation({ summary: 'Establecer contraseña inicial (onboarding). No requiere contraseña actual.' })
   setupPassword(@Req() req: any, @Body() body: { new_password: string }) {
     return this.authService.setupPassword(req.user.sub, body.new_password);
+  }
+
+  // ─── TOTP (Google Authenticator) ─────────────────────────────────────────────
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('totp/setup')
+  @ApiOperation({ summary: 'Generar secreto + QR para configurar autenticador TOTP.' })
+  setupTotp(@Req() req: any) {
+    return this.authService.setupTotp(req.user.sub);
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('totp/enable')
+  @ApiOperation({ summary: 'Verificar código TOTP y activar 2FA.' })
+  enableTotp(@Req() req: any, @Body() body: { code: string }) {
+    return this.authService.enableTotp(req.user.sub, body.code);
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('totp/disable')
+  @ApiOperation({ summary: 'Verificar código TOTP y desactivar 2FA.' })
+  disableTotp(@Req() req: any, @Body() body: { code: string }) {
+    return this.authService.disableTotp(req.user.sub, body.code);
   }
 
 }
