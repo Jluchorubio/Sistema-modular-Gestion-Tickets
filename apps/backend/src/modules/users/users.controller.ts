@@ -104,7 +104,7 @@ export class UsersController {
   @SkipProfileCheck()
   @ApiOperation({ summary: 'Gráfica de actividad propia — últimas 26 semanas.' })
   getMyActivity(@Req() req: any) {
-    return this.service.getMyActivityGraph(req.user.sub);
+    return this.service.getActivityGraph(req.user.sub);
   }
 
   @Get('me/preferences')
@@ -112,6 +112,13 @@ export class UsersController {
   @ApiOperation({ summary: 'Ver preferencias propias.' })
   getPreferences(@Req() req: any) {
     return this.service.getMyPreferences(req.user.sub);
+  }
+
+  @Get('me/recent-tickets')
+  @ApiOperation({ summary: 'Últimos tickets creados por el usuario. ?limit=N (default 6).' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getMyRecentTickets(@Req() req: any, @Query('limit') limit?: string) {
+    return this.service.getMyRecentTickets(req.user.sub, limit ? parseInt(limit, 10) : 6);
   }
 
   @Put('me/preferences')
@@ -173,6 +180,23 @@ export class UsersController {
     @Body() body: { user_ids: string[]; role_id: string },
   ) {
     return this.service.bulkAssignModuleRole(req.user.sub, body.user_ids, moduleId, body.role_id);
+  }
+
+  @Get(':id/activity')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Gráfica de actividad de un usuario — últimas 26 semanas.' })
+  getUserActivity(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.getActivityGraph(id);
+  }
+
+  @Get(':id/recent-tickets')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Últimos tickets de un usuario. ?limit=N (default 6).' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getUserRecentTickets(@Param('id', ParseUUIDPipe) id: string, @Query('limit') limit?: string) {
+    return this.service.getMyRecentTickets(id, limit ? parseInt(limit, 10) : 6);
   }
 
   @Get(':id')

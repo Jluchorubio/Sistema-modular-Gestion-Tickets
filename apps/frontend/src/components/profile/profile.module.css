@@ -513,6 +513,83 @@
   margin-bottom: 12px;
 }
 
+/* ── Camera Modal ── */
+.cameraBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 27, 42, 0.72);
+  backdrop-filter: blur(4px);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cameraModal {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 28px 28px 24px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+}
+
+.cameraClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #F7F9FC;
+  border: 1px solid #D8E0EA;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  transition: background 0.12s;
+}
+.cameraClose:hover { background: #E2E8F0; }
+
+.cameraTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0D1B2A;
+  margin: 0;
+  align-self: flex-start;
+}
+
+.cameraVideo {
+  width: 304px;
+  height: 304px;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #0D1B2A;
+  border: 2px solid #E2E8F0;
+}
+
+.cameraPreview {
+  width: 304px;
+  height: 304px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #E2E8F0;
+}
+
+.cameraBtns {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.cameraBtns .btnPrimary,
+.cameraBtns .btnSecondary { flex: 1; }
+
 /* ── Responsive ── */
 @media (max-width: 960px) {
   .layout                         { flex-direction: column; gap: 24px; }

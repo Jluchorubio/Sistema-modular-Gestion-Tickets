@@ -152,6 +152,14 @@ export const usersService = {
     return data;
   },
 
+  async getMyRecentTickets(limit = 6): Promise<{
+    id: string; title: string; priority: string; created_at: string;
+    module_name: string; state_label: string; state_name: string; is_final: boolean;
+  }[]> {
+    const { data } = await api.get('/users/me/recent-tickets', { params: { limit } });
+    return data;
+  },
+
   async assignUserRole(userId: string, moduleId: string, roleId: string): Promise<UserModuleRole> {
     const { data } = await api.post(`/users/${userId}/roles`, {
       module_id: moduleId,
@@ -162,9 +170,10 @@ export const usersService = {
 
   async bulkAssignToModule(
     moduleId: string,
-    assignments: Array<{ user_id: string; role_id: string }>,
+    userIds: string[],
+    roleId: string,
   ): Promise<void> {
-    await api.post(`/users/module/${moduleId}/bulk-assign`, { assignments });
+    await api.post(`/users/module/${moduleId}/bulk-assign`, { user_ids: userIds, role_id: roleId });
   },
 
 };

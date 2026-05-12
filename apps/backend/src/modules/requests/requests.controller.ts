@@ -46,6 +46,12 @@ export class RequestsController {
     return this.service.cancelMine(req.user.sub, id);
   }
 
+  @Patch('me/:id/complete')
+  @ApiOperation({ summary: 'Marcar tarea propia como completada.' })
+  completeTask(@Req() req: any, @Param('id') id: string) {
+    return this.service.completeMineTask(req.user.sub, id);
+  }
+
   @Get()
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')

@@ -9,11 +9,12 @@ export class RequestsService {
   constructor(@InjectDataSource() private readonly db: DataSource) {}
 
   async create(requesterId: string, dto: CreateRequestDto) {
+    const metaJson = dto.metadata ? JSON.stringify(dto.metadata) : null;
     const [row] = await this.db.query<any[]>(
-      `INSERT INTO requests.admin_requests (requester_id, type, title, description, priority)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO requests.admin_requests (requester_id, type, title, description, priority, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [requesterId, dto.type, dto.title.trim(), dto.description.trim(), dto.priority ?? 'media'],
+      [requesterId, dto.type, dto.title.trim(), dto.description.trim(), dto.priority ?? 'media', metaJson],
     );
     await this.db.query(
       `INSERT INTO requests.request_timeline (request_id, actor_id, action, new_status)
@@ -21,6 +22,27 @@ export class RequestsService {
       [row.id, requesterId],
     );
     return row;
+  }
+
+  async completeMineTask(userId: string, requestId: string) {
+    const [req] = await this.db.query<{ id: string; requester_id: string; type: string; status: string }[]>(
+      `SELECT id, requester_id, type, status FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
+      [requestId],
+    );
+    if (!req) throw new NotFoundException(`Tarea ${requestId} no encontrada`);
+    if (req.requester_id !== userId) throw new ForbiddenException('No es tu tarea');
+    if (req.type !== 'task') throw new ForbiddenException('Solo aplicable a tareas');
+
+    await this.db.query(
+      `UPDATE requests.admin_requests SET status = 'approved', updated_at = now() WHERE id = $1`,
+      [requestId],
+    );
+    await this.db.query(
+      `INSERT INTO requests.request_timeline (request_id, actor_id, action, old_status, new_status)
+       VALUES ($1, $2, 'completed', $3, 'approved')`,
+      [requestId, userId, req.status],
+    );
+    return { ok: true };
   }
 
   async findAll(opts: { status?: string; type?: string; page?: number; limit?: number }) {
@@ -42,7 +64,7 @@ export class RequestsService {
 
     const rows = await this.db.query<any[]>(
       `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
-              r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
+              r.metadata, r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
               p.first_name || ' ' || p.last_name AS requester_name,
               p.id                               AS requester_id,
               c.email                            AS requester_email,
@@ -85,7 +107,7 @@ export class RequestsService {
 
     const rows = await this.db.query<any[]>(
       `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
-              r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
+              r.metadata, r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
               rv.first_name || ' ' || rv.last_name AS reviewer_name
        FROM   requests.admin_requests r
        LEFT JOIN users.profiles rv ON rv.id = r.reviewed_by

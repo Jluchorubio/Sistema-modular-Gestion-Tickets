@@ -9,6 +9,7 @@ export const REQUEST_TYPE_LABELS: Record<string, string> = {
   account_issue:         'Problema de cuenta',
   reactivation:          'Reactivación',
   other:                 'Otro',
+  task:                  'Tarea',
 };
 
 export const REQUEST_STATUS_LABELS: Record<string, string> = {
@@ -47,3 +48,5 @@ export const REQUEST_TYPES: RequestType[] = [
   'role_change', 'module_access', 'info_correction', 'sede_change',
   'permission_adjustment', 'account_issue', 'reactivation', 'other',
 ];
+
+export const TASK_TYPES: RequestType[] = ['task'];

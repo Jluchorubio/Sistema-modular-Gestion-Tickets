@@ -59,4 +59,13 @@ export const modulesService = {
   async deleteModule(id: string): Promise<void> {
     await api.delete(`/system-modules/${id}`);
   },
+
+  async getModuleRoles(moduleId: string): Promise<{ id: string; name: string; description: string | null }[]> {
+    const { data } = await api.get(`/system-modules/${moduleId}/roles`);
+    return data;
+  },
+
+  async bulkAssignUsers(moduleId: string, userIds: string[], roleId: string): Promise<void> {
+    await api.post(`/users/module/${moduleId}/bulk-assign`, { user_ids: userIds, role_id: roleId });
+  },
 };

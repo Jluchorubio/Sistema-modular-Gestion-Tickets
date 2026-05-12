@@ -1,32 +1,32 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { TicketsService } from './tickets.service';
 
 @ApiTags('tickets')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(JwtAuthGuard)
 @Controller('tickets')
 export class TicketsController {
   constructor(private readonly service: TicketsService) {}
 
   @Get()
-  findAll() {
+  findAll(@Req() req: any, @Query('module_id') moduleId?: string) {
     return this.service.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+    return this.service.findOne();
   }
 
   @Post()
-  create(@Body() dto: Record<string, unknown>) {
-    return this.service.create(dto);
+  create(@Req() req: any, @Body() dto: any) {
+    return this.service.create();
   }
 
   @Patch(':id/transition')
-  transition(@Param('id') id: string, @Body() dto: { event: string }) {
-    return this.service.transition(id, dto.event);
+  transition(@Param('id') id: string, @Body() body: any) {
+    return this.service.transition();
   }
 }

@@ -4,11 +4,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Camera, Edit2, Check, Star, Eye, Upload, Trash2, Building2, MapPin, Mail, Phone, Home, CalendarDays } from 'lucide-react';
+import { Camera, Edit2, Check, Star, Eye, Upload, Trash2, Building2, MapPin, Mail, Phone, Home, CalendarDays, X, RefreshCw } from 'lucide-react';
 import { usersService } from '@/services/users.service';
 import type { UpdateMeDto } from '@/services/users.service';
 import { useAuthStore } from '@/stores/auth.store';
-import { useFileUpload } from '@/hooks/useFileUpload';
 import { getInitials } from '@/lib/utils';
 import type { CurrentUser } from '@/types/user.types';
 import { fmtDate, fmtRelative, getActiveModules, type ProfileUser } from './profile.types';
@@ -28,28 +27,61 @@ interface Props {
   onUserUpdated: (updated: CurrentUser) => void;
 }
 
+async function resizeImageToBase64(file: File, size = 320): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width  = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d')!;
+      const scale = Math.max(size / img.width, size / img.height);
+      const w = img.width  * scale;
+      const h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/webp', 0.85));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 export function ProfileSidebar({ user, isOwnProfile, onUserUpdated }: Props) {
   const { setUser } = useAuthStore();
   const qc          = useQueryClient();
   const menuRef     = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef    = useRef<HTMLVideoElement>(null);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editMsg,  setEditMsg]  = useState<{ ok: boolean; text: string } | null>(null);
+  const [menuOpen,    setMenuOpen]    = useState(false);
+  const [editOpen,    setEditOpen]    = useState(false);
+  const [editMsg,     setEditMsg]     = useState<{ ok: boolean; text: string } | null>(null);
+  const [cameraOpen,  setCameraOpen]  = useState(false);
+  const [captured,    setCaptured]    = useState<string | null>(null);
+  const [streamRef,   setStreamRef]   = useState<MediaStream | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadError,   setUploadError]  = useState<string | null>(null);
+  const [isUploading,   setIsUploading]  = useState(false);
 
   const fullName      = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre';
   const initials      = getInitials(user.first_name || '?', user.last_name || '?');
   const activeModules = getActiveModules(user);
 
-  // ── Avatar upload via Phase D hook ───────────────────────────────────────
-  const avatarUpload = useFileUpload({
-    accept:    ['image/jpeg', 'image/png', 'image/webp'],
-    maxSizeMb: 5,
-  });
+  const avatarSrc = avatarPreview ?? user.avatar_url;
 
   const applyAvatarMut = useMutation({
     mutationFn: (url: string) => usersService.updateMe({ avatar_url: url }),
-    onSuccess:  (updated) => { applyUpdate(updated); setMenuOpen(false); avatarUpload.reset(); },
+    onSuccess:  (updated) => {
+      applyUpdate(updated);
+      setMenuOpen(false);
+      setAvatarPreview(null);
+      setCameraOpen(false);
+      setCaptured(null);
+    },
+    onError: () => setUploadError('Error al guardar la foto'),
   });
 
   const deleteAvatarMut = useMutation({
@@ -57,15 +89,84 @@ export function ProfileSidebar({ user, isOwnProfile, onUserUpdated }: Props) {
     onSuccess:  (updated) => { applyUpdate(updated); setMenuOpen(false); },
   });
 
-  const isAvatarBusy = avatarUpload.isUploading || applyAvatarMut.isPending;
+  const isAvatarBusy = isUploading || applyAvatarMut.isPending;
 
   async function handleAvatarFile(file: File) {
-    const url = await avatarUpload.upload(file);
-    if (url) applyAvatarMut.mutate(url);
+    setUploadError(null);
+    setIsUploading(true);
+    try {
+      const base64 = await resizeImageToBase64(file);
+      setAvatarPreview(base64);
+      applyAvatarMut.mutate(base64);
+    } catch {
+      setUploadError('Error al procesar la imagen');
+    } finally {
+      setIsUploading(false);
+    }
   }
 
-  // current display source: local blob while uploading, then remote
-  const avatarSrc = avatarUpload.preview ?? user.avatar_url;
+  // ── Camera ───────────────────────────────────────────────────────────────
+  async function openCamera() {
+    setMenuOpen(false);
+    setCaptured(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      setStreamRef(stream);
+      setCameraOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      }, 80);
+    } catch {
+      setUploadError('No se pudo acceder a la cámara');
+    }
+  }
+
+  function closeCamera() {
+    streamRef?.getTracks().forEach(t => t.stop());
+    setStreamRef(null);
+    setCameraOpen(false);
+    setCaptured(null);
+  }
+
+  function captureFrame() {
+    const video  = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    const size = 320;
+    canvas.width  = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    const scale = Math.max(size / video.videoWidth, size / video.videoHeight);
+    const w = video.videoWidth  * scale;
+    const h = video.videoHeight * scale;
+    ctx.save();
+    ctx.translate(size, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, (size - w) / 2, (size - h) / 2, w, h);
+    ctx.restore();
+    setCaptured(canvas.toDataURL('image/webp', 0.85));
+  }
+
+  function confirmCapture() {
+    if (!captured) return;
+    streamRef?.getTracks().forEach(t => t.stop());
+    setStreamRef(null);
+    setAvatarPreview(captured);
+    applyAvatarMut.mutate(captured);
+    setCameraOpen(false);
+    setCaptured(null);
+  }
+
+  // Re-attach stream when user hits "Retomar" (captured → null resets the <video> element)
+  useEffect(() => {
+    if (!captured && streamRef && cameraOpen && videoRef.current) {
+      videoRef.current.srcObject = streamRef;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [captured, streamRef, cameraOpen]);
 
   // ── Close menu on outside click ──────────────────────────────────────────
   useEffect(() => {
@@ -110,6 +211,52 @@ export function ProfileSidebar({ user, isOwnProfile, onUserUpdated }: Props) {
   return (
     <div className={styles.leftCol}>
 
+      {/* ── Camera Modal ── */}
+      {cameraOpen && (
+        <div className={styles.cameraBackdrop} onClick={closeCamera}>
+          <div className={styles.cameraModal} onClick={e => e.stopPropagation()}>
+            <button className={styles.cameraClose} onClick={closeCamera}><X size={18} /></button>
+            <h3 className={styles.cameraTitle}>Tomar foto de perfil</h3>
+
+            {captured ? (
+              <img src={captured} alt="preview" className={styles.cameraPreview} />
+            ) : (
+              <video
+                ref={videoRef}
+                className={styles.cameraVideo}
+                autoPlay
+                playsInline
+                muted
+                style={{ transform: 'scaleX(-1)' }}
+              />
+            )}
+
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+            <div className={styles.cameraBtns}>
+              {captured ? (
+                <>
+                  <button className={styles.btnSecondary} onClick={() => setCaptured(null)}>
+                    <RefreshCw size={13} /> Retomar
+                  </button>
+                  <button
+                    className={styles.btnPrimary}
+                    onClick={confirmCapture}
+                    disabled={applyAvatarMut.isPending}
+                  >
+                    <Check size={13} /> Usar esta foto
+                  </button>
+                </>
+              ) : (
+                <button className={styles.btnPrimary} onClick={captureFrame}>
+                  <Camera size={13} /> Capturar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Avatar ── */}
       <div
         ref={menuRef}
@@ -124,14 +271,12 @@ export function ProfileSidebar({ user, isOwnProfile, onUserUpdated }: Props) {
           }
         </div>
 
-        {/* Hover overlay (edit label) — hidden while uploading */}
         {isOwnProfile && !isAvatarBusy && (
           <div className={styles.avatarOverlay}>
             <span className={styles.avatarOverlayLabel}><Camera size={14} />Editar foto</span>
           </div>
         )}
 
-        {/* Upload spinner overlay (always visible during upload) */}
         {isAvatarBusy && (
           <div className={`${styles.avatarOverlay} ${styles.avatarOverlayVisible}`}>
             <span className={styles.avatarSpinner} />
@@ -140,18 +285,13 @@ export function ProfileSidebar({ user, isOwnProfile, onUserUpdated }: Props) {
 
         <div className={styles.onlineDot} />
 
-        {/* Context menu */}
         {isOwnProfile && menuOpen && !isAvatarBusy && (
           <div className={styles.avatarCtxMenu}>
             {user.avatar_url && (
               <>
                 <button
                   className={styles.avatarCtxItem}
-                  onClick={e => {
-                    e.stopPropagation();
-                    window.open(user.avatar_url!, '_blank');
-                    setMenuOpen(false);
-                  }}
+                  onClick={e => { e.stopPropagation(); window.open(user.avatar_url!, '_blank'); setMenuOpen(false); }}
                 >
                   <Eye size={13} /> Ver foto
                 </button>
@@ -160,9 +300,15 @@ export function ProfileSidebar({ user, isOwnProfile, onUserUpdated }: Props) {
             )}
             <button
               className={styles.avatarCtxItem}
-              onClick={e => { e.stopPropagation(); avatarUpload.inputRef.current?.click(); }}
+              onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
             >
-              <Upload size={13} /> Cambiar foto
+              <Upload size={13} /> Subir foto
+            </button>
+            <button
+              className={styles.avatarCtxItem}
+              onClick={e => { e.stopPropagation(); openCamera(); }}
+            >
+              <Camera size={13} /> Tomar foto
             </button>
             {user.avatar_url && (
               <>
@@ -180,10 +326,10 @@ export function ProfileSidebar({ user, isOwnProfile, onUserUpdated }: Props) {
         )}
       </div>
 
-      {/* Hidden file input (owned by hook) */}
+      {/* Hidden file input */}
       {isOwnProfile && (
         <input
-          ref={avatarUpload.inputRef}
+          ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
           style={{ display: 'none' }}
@@ -195,10 +341,7 @@ export function ProfileSidebar({ user, isOwnProfile, onUserUpdated }: Props) {
         />
       )}
 
-      {/* Upload error */}
-      {avatarUpload.error && (
-        <p className={styles.avatarError}>{avatarUpload.error}</p>
-      )}
+      {uploadError && <p className={styles.avatarError}>{uploadError}</p>}
 
       {/* ── Identity ── */}
       <h1 style={{ fontSize: 24, fontWeight: 800, color: '#020617', lineHeight: 1.2, marginBottom: 4 }}>

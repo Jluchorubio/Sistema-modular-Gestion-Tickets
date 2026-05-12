@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
@@ -7,6 +8,7 @@ import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { getInitials } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
+import { AssignUsersModal } from './AssignUsersModal';
 import styles from './module-detail.module.css';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -24,10 +26,11 @@ const ROLE_CLS: Record<string, string> = {
 };
 
 export default function ModuleDetailPage() {
-  const { id }       = useParams<{ id: string }>();
-  const router       = useRouter();
-  const user         = useAuthStore((s) => s.user);
-  const isSuperadmin = user?.is_superadmin ?? false;
+  const { id }          = useParams<{ id: string }>();
+  const router          = useRouter();
+  const user            = useAuthStore((s) => s.user);
+  const isSuperadmin    = user?.is_superadmin ?? false;
+  const [showAssign, setShowAssign] = useState(false);
 
   const {
     data: mod,
@@ -49,10 +52,11 @@ export default function ModuleDetailPage() {
     enabled:  !!id,
   });
 
-  const techs  = members?.filter((m) =>
-    m.role_name === 'tecnico' || m.role_name === 'jefe_tecnico'
-  ) ?? [];
-  const admins = members?.filter((m) => m.role_name === 'admin_modulo') ?? [];
+  const techs  = members?.filter((m) => {
+    const r = (m as any).role_name as string;
+    return r === 'tecnico' || r === 'jefe_tecnico';
+  }) ?? [];
+  const admins = members?.filter((m) => (m as any).role_name === 'admin_modulo') ?? [];
 
   if (modLoading) return <Spinner />;
   if (modError || !mod) {
@@ -75,7 +79,7 @@ export default function ModuleDetailPage() {
           <div className={styles.slug}>{mod.slug}</div>
         </div>
         {isSuperadmin && (
-          <button type="button" className={styles.btnPrimary}>
+          <button type="button" className={styles.btnPrimary} onClick={() => setShowAssign(true)}>
             + Asignar usuarios
           </button>
         )}
@@ -104,6 +108,14 @@ export default function ModuleDetailPage() {
         <p className={styles.errorMsg}>Error cargando miembros.</p>
       )}
 
+      {showAssign && (
+        <AssignUsersModal
+          moduleId={id}
+          existingUserIds={new Set(members?.map((m) => m.id) ?? [])}
+          onClose={() => setShowAssign(false)}
+        />
+      )}
+
       {members && (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -124,13 +136,14 @@ export default function ModuleDetailPage() {
                   </td>
                 </tr>
               )}
-              {members.map((m) => {
+              {members.map((m, i) => {
                 const initials = getInitials(m.first_name, m.last_name);
-                const roleCls  = ROLE_CLS[m.role_name] ?? styles.roleUsuario;
-                const isActive = (m as { status?: string }).status === 'active';
+                const roleName = (m as any).role_name as string;
+                const roleCls  = ROLE_CLS[roleName] ?? styles.roleUsuario;
+                const isActive = (m as any).status === 'active';
 
                 return (
-                  <tr key={m.id}>
+                  <tr key={`${m.id}_${roleName}_${i}`}>
                     <td>
                       <div className={styles.userCell}>
                         <div className={styles.avatar}>
@@ -150,7 +163,7 @@ export default function ModuleDetailPage() {
                     <td>{m.email}</td>
                     <td>
                       <span className={`${styles.rolePill} ${roleCls}`}>
-                        {ROLE_LABEL[m.role_name] ?? m.role_name}
+                        {ROLE_LABEL[roleName] ?? roleName}
                       </span>
                     </td>
                     <td>

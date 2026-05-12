@@ -9,7 +9,8 @@ export type RequestType =
   | 'permission_adjustment'
   | 'account_issue'
   | 'reactivation'
-  | 'other';
+  | 'other'
+  | 'task';
 
 export type RequestStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'cancelled';
 export type RequestPriority = 'baja' | 'media' | 'alta' | 'critica';
@@ -25,17 +26,19 @@ export interface RequestTimelineEntry {
 }
 
 export interface AdmRequest {
-  id:             string;
-  type:           RequestType;
-  status:         RequestStatus;
-  priority:       RequestPriority;
-  title:          string;
-  description:    string;
+  id:              string;
+  type:            RequestType;
+  status:          RequestStatus;
+  priority:        RequestPriority;
+  title:           string;
+  description:     string;
   requester_name?: string | null;
   reviewer_name?:  string | null;
   review_notes?:   string | null;
-  created_at:     string;
-  updated_at:     string;
+  reviewed_at?:    string | null;
+  metadata?:       Record<string, unknown> | null;
+  created_at:      string;
+  updated_at:      string;
 }
 
 export interface RequestsFilter {
@@ -60,8 +63,19 @@ export const requestsService = {
     return data;
   },
 
-  async create(payload: { type: RequestType; title: string; description: string; priority?: RequestPriority }): Promise<AdmRequest> {
+  async create(payload: {
+    type: RequestType;
+    title: string;
+    description: string;
+    priority?: RequestPriority;
+    metadata?: Record<string, unknown>;
+  }): Promise<AdmRequest> {
     const { data } = await api.post('/requests', payload);
+    return data;
+  },
+
+  async completeTask(id: string): Promise<{ ok: boolean }> {
+    const { data } = await api.patch(`/requests/me/${id}/complete`);
     return data;
   },
 

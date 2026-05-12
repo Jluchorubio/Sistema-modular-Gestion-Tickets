@@ -72,6 +72,13 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
     cancelled:    allRequests.filter(r => r.status === 'cancelled').length,
   }), [allRequests]);
 
+  const { data: recentTickets } = useQuery({
+    queryKey: ['my-recent-tickets'],
+    queryFn:  () => usersService.getMyRecentTickets(6),
+    enabled:  isOwnProfile,
+    staleTime: 60_000,
+  });
+
   const { data: activityData } = useQuery({
     queryKey: ['my-activity'],
     queryFn:  () => usersService.getMyActivity(),
@@ -189,6 +196,76 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
             ))}
         </div>
       </div>
+
+      {/* ── Recent tickets ── */}
+      {isOwnProfile && (
+        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionTitle}>Últimos tickets</p>
+            <button
+              style={{
+                fontSize: 11, color: '#6366F1', background: 'none', border: 'none',
+                cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', padding: 0,
+              }}
+              onClick={() => router.push('/my-tickets')}
+            >
+              Ver más →
+            </button>
+          </div>
+
+          {!recentTickets || recentTickets.length === 0 ? (
+            <div style={{ padding: '24px 22px', color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>
+              Sin tickets aún.
+            </div>
+          ) : (
+            <div>
+              {recentTickets.map((t, i, arr) => {
+                const pColor: Record<string, string> = {
+                  baja: '#94A3B8', media: '#3B82F6', alta: '#F59E0B', critica: '#EF4444',
+                };
+                const color = pColor[t.priority] ?? '#94A3B8';
+                return (
+                  <div
+                    key={t.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 22px',
+                      borderBottom: i < arr.length - 1 ? '1px solid #F1F5F9' : undefined,
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: '#0F172A', margin: 0,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {t.title}
+                      </p>
+                      <p style={{ fontSize: 11, color: '#94A3B8', margin: '2px 0 0' }}>
+                        {t.module_name} · {fmtRelative(t.created_at)}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+                      <span
+                        className={styles.badge}
+                        style={{ fontSize: 10, background: `${color}22`, color, border: `1px solid ${color}44` }}
+                      >
+                        {t.priority}
+                      </span>
+                      <span
+                        className={styles.badge}
+                        style={{ fontSize: 10, background: t.is_final ? '#22C55E22' : '#6366F122',
+                          color: t.is_final ? '#22C55E' : '#6366F1',
+                          border: `1px solid ${t.is_final ? '#22C55E44' : '#6366F144'}` }}
+                      >
+                        {t.state_label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Recent requests ── */}
       {isOwnProfile && (

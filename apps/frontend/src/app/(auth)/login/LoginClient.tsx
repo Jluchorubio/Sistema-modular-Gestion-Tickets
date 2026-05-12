@@ -13,14 +13,15 @@ import { ForgotForm } from './_components/ForgotForm';
 import { ResetForm } from './_components/ResetForm';
 import styles from './login.module.css';
 
-type AuthView = 'login' | 'otp' | 'forgot' | 'reset' | 'error';
+type AuthView = 'login' | 'otp' | 'forgot' | 'reset' | 'error' | 'pw_changed';
 
 const SUBTITLES: Record<AuthView, string> = {
-  login:  'Inicia sesión para continuar',
-  otp:    'Código enviado a tu correo',
-  forgot: 'Recuperar acceso',
-  reset:  'Nueva contraseña',
-  error:  'Error',
+  login:      'Inicia sesión para continuar',
+  otp:        'Código enviado a tu correo',
+  forgot:     'Recuperar acceso',
+  reset:      'Nueva contraseña',
+  error:      'Error',
+  pw_changed: 'Contraseña actualizada',
 };
 
 function handleAuthRedirect(data: LoginResponse, push: (href: string) => void) {
@@ -59,8 +60,9 @@ export function LoginClient() {
   const [errorData,  setErrorData]  = useState('');
 
   useEffect(() => {
-    const rt  = searchParams.get('reset_token');
-    const err = searchParams.get('error');
+    const rt      = searchParams.get('reset_token');
+    const err     = searchParams.get('error');
+    const pwChg   = searchParams.get('pw_changed');
     if (rt) {
       setResetToken(rt);
       window.history.replaceState(null, '', window.location.pathname);
@@ -70,8 +72,9 @@ export function LoginClient() {
       window.history.replaceState(null, '', window.location.pathname);
       setView('error');
     } else {
-      setView('login');
-      if (tokens.getAccess()) router.replace(ROUTES.APP.DASHBOARD);
+      setView(pwChg === '1' ? 'pw_changed' : 'login');
+      if (pwChg === '1') window.history.replaceState(null, '', window.location.pathname);
+      if (!pwChg && tokens.getAccess()) router.replace(ROUTES.APP.DASHBOARD);
     }
   }, [searchParams, router]);
 
@@ -109,6 +112,18 @@ export function LoginClient() {
             resetToken={resetToken}
             onSuccess={() => router.push(ROUTES.AUTH.LOGIN)}
           />
+        )}
+        {view === 'pw_changed' && (
+          <div>
+            <p style={{ fontSize: 13, color: '#166534', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '10px 14px', marginBottom: 20, lineHeight: 1.5 }}>
+              Contraseña actualizada correctamente. Inicia sesión con tu nueva contraseña.
+            </p>
+            <LoginForm
+              onOtp={(t) => { setOtpToken(t); setView('otp'); }}
+              onForgot={() => setView('forgot')}
+              onRedirect={redirect}
+            />
+          </div>
         )}
         {view === 'error' && (
           <div>

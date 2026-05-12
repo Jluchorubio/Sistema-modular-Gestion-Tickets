@@ -1,4 +1,4 @@
-import { IsString, IsIn, IsOptional, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsIn, IsOptional, IsObject, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export const REQUEST_TYPES = [
@@ -10,6 +10,7 @@ export const REQUEST_TYPES = [
   'account_issue',
   'reactivation',
   'other',
+  'task',
 ] as const;
 
 export const PRIORITY_LEVELS = ['baja', 'media', 'alta', 'critica'] as const;
@@ -34,4 +35,9 @@ export class CreateRequestDto {
   @IsIn(PRIORITY_LEVELS)
   @IsOptional()
   priority?: string;
+
+  @ApiPropertyOptional({ description: 'Metadata JSON (ej: { due_date: "2026-05-20" } para tasks)' })
+  @IsObject()
+  @IsOptional()
+  metadata?: Record<string, unknown>;
 }

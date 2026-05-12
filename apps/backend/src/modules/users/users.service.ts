@@ -376,13 +376,16 @@ export class UsersService {
               COALESCE(
                 json_agg(
                   json_build_object(
-                    'module_id', umr.module_id,
-                    'module',    m.name,
-                    'role',      mr.name
+                    'umr_id',      umr.id,
+                    'module_id',   umr.module_id,
+                    'module_name', m.name,
+                    'role_name',   mr.name,
+                    'status',      CASE WHEN umr.is_active THEN 'active' ELSE 'inactive' END,
+                    'assigned_at', umr.assigned_at
                   )
                 ) FILTER (WHERE umr.id IS NOT NULL),
                 '[]'
-              ) AS roles
+              ) AS module_roles
        FROM   users.profiles              p
        JOIN   auth.credentials            c    ON c.user_id   = p.id
        LEFT JOIN users.preferences        pref ON pref.user_id = p.id
@@ -664,33 +667,16 @@ export class UsersService {
               p.last_name,
               p.avatar_url,
               c.email,
-              p.is_active,
-              ts.is_available,
-              ts.reason        AS unavailability_reason,
-              ts.unavailable_from,
-              ts.unavailable_to,
-              COALESCE(
-                json_agg(
-                  json_build_object(
-                    'umr_id',   umr.id,
-                    'role_id',  umr.role_id,
-                    'role',     mr.name,
-                    'assigned_at', umr.assigned_at
-                  )
-                ) FILTER (WHERE umr.id IS NOT NULL),
-                '[]'
-              ) AS roles
+              mr.name                                          AS role_name,
+              CASE WHEN umr.is_active THEN 'active' ELSE 'inactive' END AS status
        FROM   modules.user_module_roles umr
        JOIN   users.profiles            p   ON p.id    = umr.user_id
        JOIN   auth.credentials          c   ON c.user_id = p.id
        JOIN   modules.module_roles      mr  ON mr.id   = umr.role_id
-       LEFT JOIN modules.technician_status ts
-              ON ts.user_id = umr.user_id AND ts.module_id = umr.module_id
-       WHERE  umr.module_id  = $1
-         AND  umr.is_active  = true
-         AND  p.deleted_at   IS NULL
-       GROUP  BY p.id, c.email, ts.is_available, ts.reason, ts.unavailable_from, ts.unavailable_to
-       ORDER  BY p.first_name, p.last_name`,
+       WHERE  umr.module_id = $1
+         AND  umr.is_active = true
+         AND  p.deleted_at  IS NULL
+       ORDER  BY p.first_name, p.last_name, mr.name`,
       [moduleId],
     );
   }
@@ -828,7 +814,7 @@ export class UsersService {
 
   // ─── Activity graph ──────────────────────────────────────────────────────────
 
-  async getMyActivityGraph(userId: string): Promise<{ day: string; count: number }[]> {
+  async getActivityGraph(userId: string): Promise<{ day: string; count: number }[]> {
     const rows = await this.db.query<{ day: string; count: string }[]>(
       `SELECT DATE(created_at AT TIME ZONE 'America/Bogota') AS day,
               COUNT(*)::int                                  AS count
@@ -840,6 +826,23 @@ export class UsersService {
       [userId],
     );
     return rows.map((r) => ({ day: r.day, count: parseInt(r.count as unknown as string, 10) }));
+  }
+
+  async getMyRecentTickets(userId: string, limit = 6) {
+    return this.db.query<any[]>(
+      `SELECT t.id, t.title, t.priority, t.created_at,
+              m.name  AS module_name,
+              s.label AS state_label,
+              s.name  AS state_name,
+              s.is_final
+       FROM   tickets.tickets t
+       JOIN   modules.modules  m ON m.id = t.module_id
+       JOIN   tickets.states   s ON s.id = t.current_state_id
+       WHERE  t.created_by = $1
+       ORDER  BY t.created_at DESC
+       LIMIT  $2`,
+      [userId, limit],
+    );
   }
 
   // ─── Helpers privados ────────────────────────────────────────────────────────

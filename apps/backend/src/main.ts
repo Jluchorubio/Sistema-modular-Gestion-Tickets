@@ -19,6 +19,9 @@ async function bootstrap() {
   fs.mkdirSync(uploadsDir, { recursive: true });
   app.use('/uploads', express.static(uploadsDir));
 
+  // Trust Railway/nginx reverse proxy so req.ip reflects the real client IP
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   // ── Security ────────────────────────────────────────────────────────────────
   app.use((helmet as any).default());
   app.use(compression());

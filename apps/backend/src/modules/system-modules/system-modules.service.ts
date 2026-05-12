@@ -14,25 +14,12 @@ export class SystemModulesService {
 
     if (profile?.is_superadmin) {
       return this.db.query<any[]>(
-        `SELECT id, name, slug, description, type, image_url, is_active, created_at
+        `SELECT id, name, slug, description, type, image_url, color, is_active, created_at
          FROM modules.modules
          WHERE deleted_at IS NULL
          ORDER BY is_active DESC, name`,
       );
     }
-
-    // Regular users: all active modules with has_access flag
-    return this.db.query<any[]>(
-      `SELECT m.id, m.name, m.slug, m.description, m.type, m.image_url, m.is_active, m.created_at,
-              EXISTS(
-                SELECT 1 FROM modules.user_module_roles umr
-                WHERE umr.module_id = m.id AND umr.user_id = $1 AND umr.is_active = true
-              ) AS has_access
-       FROM modules.modules m
-       WHERE m.deleted_at IS NULL AND m.is_active = true
-       ORDER BY m.name`,
-      [userId],
-    );
   }
 
   async findOne(id: string) {
@@ -60,7 +47,7 @@ export class SystemModulesService {
   }
 
   async create(dto: Record<string, unknown>) {
-    const { name, description, type, image_url } = dto as any;
+    const { name, description, type, image_url, color } = dto as any;
 
     // Auto-generate slug from name
     const slug = String(name ?? '')
@@ -84,15 +71,15 @@ export class SystemModulesService {
     }
 
     const rows = await this.db.query<any[]>(
-      `INSERT INTO modules.modules (name, slug, description, type, image_url)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [name, finalSlug, description ?? null, type ?? 'custom', image_url ?? null],
+      `INSERT INTO modules.modules (name, slug, description, type, image_url, color)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [name, finalSlug, description ?? null, type ?? 'custom', image_url ?? null, color ?? null],
     );
     return rows[0];
   }
 
   async updateModule(id: string, dto: Record<string, unknown>) {
-    const { name, description, type, image_url, is_active } = dto as any;
+    const { name, description, type, image_url, color, is_active } = dto as any;
     const fields: string[] = [];
     const values: any[] = [];
     let idx = 1;
@@ -121,6 +108,7 @@ export class SystemModulesService {
     if (description !== undefined) { fields.push(`description = $${idx++}`); values.push(description); }
     if (type !== undefined) { fields.push(`type = $${idx++}`); values.push(type); }
     if (image_url !== undefined) { fields.push(`image_url = $${idx++}`); values.push(image_url); }
+    if (color !== undefined) { fields.push(`color = $${idx++}`); values.push(color || null); }
 
     if (!fields.length) throw new BadRequestException('Nada que actualizar');
 

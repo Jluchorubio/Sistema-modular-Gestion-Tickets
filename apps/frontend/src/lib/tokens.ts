@@ -37,6 +37,11 @@ export const tokens = {
       : `needs_profile=; ${COOKIE_EXP}`;
   },
 
+  clearForcePw(): void {
+    if (!isBrowser()) return;
+    localStorage.removeItem(KEYS.FORCE_PW);
+  },
+
   clearNeedsProfile(): void {
     if (!isBrowser()) return;
     document.cookie = `needs_profile=; ${COOKIE_EXP}`;
