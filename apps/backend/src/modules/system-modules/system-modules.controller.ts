@@ -77,4 +77,16 @@ export class SystemModulesController {
   restore(@Param('id') id: string) {
     return this.service.restoreModule(id);
   }
+
+  @Patch(':id/maintenance')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Activar/desactivar modo mantenimiento. Solo superadmin.' })
+  toggleMaintenance(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() body: { enabled: boolean; message?: string },
+  ) {
+    return this.service.toggleMaintenance(id, req.user.sub, body.enabled, body.message);
+  }
 }

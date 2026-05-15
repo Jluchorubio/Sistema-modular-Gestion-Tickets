@@ -1,21 +1,44 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Smartphone, Briefcase, Building2, MapPin, Home, ChevronDown,
+  Smartphone, Briefcase, Building2, MapPin, Home, ChevronDown, Globe,
 } from 'lucide-react';
 import { modulesService } from '@/services/modules.service';
 import styles from '../complete-profile.module.css';
 
 type ProfileForm = {
-  phone:         string;
-  username?:     string;
-  job_title:     string;
-  department:    string;
-  primary_sede:  string;
-  address:       string;
+  phone_prefix?:  string;
+  phone:          string;
+  username?:      string;
+  job_title:      string;
+  department:     string;
+  primary_sede:   string;
+  address:        string;
+  country?:       string;
+  state_province?: string;
+  city?:          string;
 };
+
+type CountryOption = { name: string; dialCode: string; flag: string };
+let _cache: CountryOption[] | null = null;
+
+async function loadCountries(): Promise<CountryOption[]> {
+  if (_cache) return _cache;
+  const res = await fetch('https://restcountries.com/v3.1/all?fields=name,idd,flag');
+  const raw: Array<{ name: { common: string }; idd: { root: string; suffixes: string[] }; flag: string }> = await res.json();
+  _cache = raw
+    .filter(c => c.idd?.root && c.idd?.suffixes?.length)
+    .map(c => ({
+      name:     c.name.common,
+      dialCode: c.idd.suffixes.length === 1 ? `${c.idd.root}${c.idd.suffixes[0]}` : c.idd.root,
+      flag:     c.flag,
+    }))
+    .filter(c => /^\+\d/.test(c.dialCode))
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  return _cache;
+}
 
 interface Props {
   form:         UseFormReturn<ProfileForm>;
@@ -26,8 +49,37 @@ interface Props {
 }
 
 export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, onSubmit }: Props) {
-  const { register, formState: { errors }, watch } = form;
+  const { register, formState: { errors }, watch, setValue } = form;
   const sede = watch('primary_sede', '');
+
+  const [countries,    setCountries]    = useState<CountryOption[]>([]);
+  const [prefixOpen,   setPrefixOpen]   = useState(false);
+  const [prefixSearch, setPrefixSearch] = useState('');
+  const prefixRef = useRef<HTMLDivElement>(null);
+  const watchedPrefix = watch('phone_prefix', '');
+
+  useEffect(() => { loadCountries().then(setCountries).catch(() => {}); }, []);
+
+  useEffect(() => {
+    if (!prefixOpen) return;
+    function handler(e: MouseEvent) {
+      if (prefixRef.current && !prefixRef.current.contains(e.target as Node)) {
+        setPrefixOpen(false); setPrefixSearch('');
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [prefixOpen]);
+
+  const filteredCountries = useMemo(() =>
+    countries.filter(c =>
+      !prefixSearch ||
+      c.name.toLowerCase().includes(prefixSearch.toLowerCase()) ||
+      c.dialCode.includes(prefixSearch)
+    ).slice(0, 60),
+  [countries, prefixSearch]);
+
+  const countryNames = useMemo(() => countries.map(c => c.name), [countries]);
 
   const { data: locations = [] } = useQuery({
     queryKey: ['locations'],
@@ -80,17 +132,79 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
             <label className={styles.fieldLabel} htmlFor="phone">
               Teléfono celular <span className={styles.req}>*</span>
             </label>
-            <div className={styles.inputWrap}>
-              <input
-                {...register('phone')}
-                id="phone"
-                type="tel"
-                placeholder="+57 300 000 0000"
-                autoComplete="tel"
-                inputMode="tel"
-                className={`${styles.fieldInput} ${errors.phone ? styles.isErr : ''}`}
-              />
-              <span className={styles.fieldIcon}><Smartphone size={15} /></span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {/* Prefix picker */}
+              <div ref={prefixRef} style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className={styles.fieldInput}
+                  style={{ width: 96, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', paddingRight: 6, height: '100%' }}
+                  onClick={() => { setPrefixOpen(v => !v); setPrefixSearch(''); }}
+                >
+                  <Globe size={12} style={{ flexShrink: 0, color: '#94A3B8' }} />
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13 }}>
+                    {watchedPrefix || '+'}
+                  </span>
+                  <ChevronDown size={11} style={{ flexShrink: 0, color: '#94A3B8' }} />
+                </button>
+                {prefixOpen && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, zIndex: 50, marginTop: 4,
+                    background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10,
+                    boxShadow: '0 8px 24px rgba(0,0,0,.12)', width: 260, overflow: 'hidden',
+                  }}>
+                    <div style={{ padding: 8, borderBottom: '1px solid #F1F5F9' }}>
+                      <input
+                        autoFocus
+                        placeholder="Buscar país o código…"
+                        value={prefixSearch}
+                        onChange={e => setPrefixSearch(e.target.value)}
+                        style={{
+                          width: '100%', padding: '6px 10px', borderRadius: 6, fontSize: 12,
+                          border: '1px solid #E2E8F0', outline: 'none', fontFamily: 'inherit',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                    <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                      {filteredCountries.length === 0 && (
+                        <p style={{ fontSize: 12, color: '#94A3B8', padding: '10px 12px', margin: 0 }}>Sin resultados</p>
+                      )}
+                      {filteredCountries.map(c => (
+                        <button
+                          key={c.name}
+                          type="button"
+                          onClick={() => { setValue('phone_prefix', c.dialCode, { shouldDirty: true }); setPrefixOpen(false); setPrefixSearch(''); }}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 12px', border: 'none', background: 'none',
+                            cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, textAlign: 'left',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#F8FAFC')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                        >
+                          <span>{c.flag}</span>
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0F172A' }}>{c.name}</span>
+                          <span style={{ color: '#64748B', flexShrink: 0 }}>{c.dialCode}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Phone number */}
+              <div className={styles.inputWrap} style={{ flex: 1 }}>
+                <input
+                  {...register('phone')}
+                  id="phone"
+                  type="tel"
+                  placeholder="300 000 0000"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  className={`${styles.fieldInput} ${errors.phone ? styles.isErr : ''}`}
+                />
+                <span className={styles.fieldIcon}><Smartphone size={15} /></span>
+              </div>
             </div>
             {errors.phone && <span className={styles.fieldError}>{errors.phone.message}</span>}
           </div>
@@ -224,6 +338,60 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
             </div>
           </div>
 
+          <div className={styles.field}>
+            <label className={styles.fieldLabel} htmlFor="country">
+              País <span className={styles.opt}>opcional</span>
+            </label>
+            <div className={styles.inputWrap}>
+              <input
+                {...register('country')}
+                id="country"
+                type="text"
+                placeholder="Colombia"
+                list="country-list"
+                className={styles.fieldInput}
+              />
+              <span className={styles.fieldIcon}><Globe size={15} /></span>
+            </div>
+            <datalist id="country-list">
+              {countryNames.slice(0, 100).map(n => <option key={n} value={n} />)}
+            </datalist>
+          </div>
+
+          <div className={styles.fieldGrid}>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="state_province">
+                Departamento / Estado <span className={styles.opt}>opcional</span>
+              </label>
+              <div className={styles.inputWrap}>
+                <input
+                  {...register('state_province')}
+                  id="state_province"
+                  type="text"
+                  placeholder="Cundinamarca"
+                  className={styles.fieldInput}
+                />
+                <span className={styles.fieldIcon}><MapPin size={15} /></span>
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="city">
+                Ciudad <span className={styles.opt}>opcional</span>
+              </label>
+              <div className={styles.inputWrap}>
+                <input
+                  {...register('city')}
+                  id="city"
+                  type="text"
+                  placeholder="Bogotá"
+                  className={styles.fieldInput}
+                />
+                <span className={styles.fieldIcon}><Building2 size={15} /></span>
+              </div>
+            </div>
+          </div>
+
           <div className={styles.field} style={{ marginBottom: 0 }}>
             <label className={styles.fieldLabel} htmlFor="address">
               Dirección de residencia <span className={styles.req}>*</span>
@@ -233,7 +401,7 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
                 {...register('address')}
                 id="address"
                 type="text"
-                placeholder="Calle 123 # 45-67, Bogotá"
+                placeholder="Calle 123 # 45-67"
                 className={`${styles.fieldInput} ${errors.address ? styles.isErr : ''}`}
               />
               <span className={styles.fieldIcon}><Home size={15} /></span>

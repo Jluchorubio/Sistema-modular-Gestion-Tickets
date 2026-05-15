@@ -8,11 +8,14 @@
   cursor: pointer;
   transition: border-color .2s, box-shadow .2s;
   position: relative;
-  overflow: hidden;
   text-align: left;
   width: 100%;
   min-height: 100px;
 }
+
+/* Elevate card in stacking context while its kebab menu is open so the
+   dropdown paints above sibling cards (which have no explicit z-index). */
+.cardMenuOpen { z-index: 20; }
 
 .card:hover {
   border-color: #6366f1;
@@ -35,6 +38,34 @@
   cursor: default;
 }
 
+.maintenance {
+  border-color: #f59e0b;
+}
+
+.maintenance:hover {
+  border-color: #d97706;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, .15);
+}
+
+/* ── Maintenance badge ── */
+.maintenanceBadge {
+  position: absolute;
+  bottom: 7px;
+  left: 7px;
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(120, 53, 15, .9);
+  color: #fbbf24;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .inactive:hover {
   opacity: 0.75;
   box-shadow: none;
@@ -50,7 +81,7 @@
   justify-content: center;
   overflow: hidden;
   position: relative;
-  border-radius: 11px 0 0 11px;
+  border-radius: 12px 0 0 12px;
   background: #1e293b;
 }
 

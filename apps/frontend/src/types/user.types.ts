@@ -5,11 +5,20 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
+  phone_prefix: string | null;
   phone: string | null;
   username: string | null;
   job_title: string | null;
   department: string | null;
   address: string | null;
+  country: string | null;
+  state_province: string | null;
+  city: string | null;
+  birth_date: string | null;
+  national_id: string | null;
+  gender: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
   primary_sede: string | null;
   avatar_url: string | null;
   is_superadmin: boolean;
@@ -38,8 +47,10 @@ export interface UserPreferences {
 }
 
 export interface CurrentUser extends User {
-  module_roles: UserModuleRole[];
-  preferences: UserPreferences | null;
+  module_roles:  UserModuleRole[];
+  preferences:   UserPreferences | null;
+  otp_enabled?:  boolean;
+  totp_enabled?: boolean;
 }
 
 export interface GlobalRole {

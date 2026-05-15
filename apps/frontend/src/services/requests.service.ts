@@ -12,8 +12,18 @@ export type RequestType =
   | 'other'
   | 'task';
 
-export type RequestStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'cancelled';
+export type RequestStatus =
+  | 'pending'
+  | 'taken'
+  | 'in_progress'
+  | 'completed'
+  | 'under_review'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled';
+
 export type RequestPriority = 'baja' | 'media' | 'alta' | 'critica';
+export type TaskSource      = 'user' | 'system';
 
 export interface RequestTimelineEntry {
   id:         string;
@@ -30,12 +40,17 @@ export interface AdmRequest {
   type:            RequestType;
   status:          RequestStatus;
   priority:        RequestPriority;
+  task_source:     TaskSource;
   title:           string;
   description:     string;
+  requester_id?:   string | null;
   requester_name?: string | null;
   reviewer_name?:  string | null;
   review_notes?:   string | null;
   reviewed_at?:    string | null;
+  taken_at?:       string | null;
+  taken_by_name?:  string | null;
+  sla_due_at?:     string | null;
   metadata?:       Record<string, unknown> | null;
   created_at:      string;
   updated_at:      string;
@@ -44,6 +59,7 @@ export interface AdmRequest {
 export interface RequestsFilter {
   status?: RequestStatus | '';
   type?:   RequestType   | '';
+  source?: TaskSource    | '';
   limit?:  number;
   page?:   number;
 }
@@ -53,6 +69,7 @@ export const requestsService = {
     const params: Record<string, string | number> = { limit: filter.limit ?? 50 };
     if (filter.status) params.status = filter.status;
     if (filter.type)   params.type   = filter.type;
+    if (filter.source) params.source = filter.source;
     if (filter.page)   params.page   = filter.page;
     const { data } = await api.get('/requests', { params });
     return data;
@@ -64,13 +81,24 @@ export const requestsService = {
   },
 
   async create(payload: {
-    type: RequestType;
-    title: string;
-    description: string;
-    priority?: RequestPriority;
-    metadata?: Record<string, unknown>;
+    type:         RequestType;
+    title:        string;
+    description:  string;
+    priority?:    RequestPriority;
+    task_source?: TaskSource;
+    metadata?:    Record<string, unknown>;
   }): Promise<AdmRequest> {
     const { data } = await api.post('/requests', payload);
+    return data;
+  },
+
+  async take(id: string): Promise<AdmRequest> {
+    const { data } = await api.post(`/requests/${id}/take`);
+    return data;
+  },
+
+  async updateProgress(id: string, status: 'in_progress' | 'completed'): Promise<AdmRequest> {
+    const { data } = await api.patch(`/requests/${id}/progress`, { status });
     return data;
   },
 

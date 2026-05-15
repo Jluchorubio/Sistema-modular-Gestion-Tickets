@@ -58,12 +58,14 @@ export class RequestsController {
   @ApiOperation({ summary: 'Listar todas las solicitudes. Superadmin / admin_modulo.' })
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'type',   required: false })
+  @ApiQuery({ name: 'source', required: false })
   @ApiQuery({ name: 'page',   required: false, type: Number })
   @ApiQuery({ name: 'limit',  required: false, type: Number })
-  findAll(@Query() q: { status?: string; type?: string; page?: string; limit?: string }) {
+  findAll(@Query() q: { status?: string; type?: string; source?: string; page?: string; limit?: string }) {
     return this.service.findAll({
       status: q.status,
       type:   q.type,
+      source: q.source,
       page:   q.page  ? parseInt(q.page,  10) : 1,
       limit:  q.limit ? parseInt(q.limit, 10) : 20,
     });
@@ -79,6 +81,26 @@ export class RequestsController {
     @Body() dto: ReviewRequestDto,
   ) {
     return this.service.review(req.user.sub, id, dto);
+  }
+
+  @Post(':id/take')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Tomar solicitud pendiente — inicia SLA de 4 horas.' })
+  take(@Req() req: any, @Param('id') id: string) {
+    return this.service.take(req.user.sub, id);
+  }
+
+  @Patch(':id/progress')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Actualizar progreso: in_progress | completed.' })
+  updateProgress(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { status: 'in_progress' | 'completed' },
+  ) {
+    return this.service.updateProgress(req.user.sub, id, body.status);
   }
 
   @Get(':id/timeline')

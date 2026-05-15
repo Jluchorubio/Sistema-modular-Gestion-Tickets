@@ -136,6 +136,16 @@ export class UsersController {
     return this.service.getUsersByModule(moduleId);
   }
 
+  // ─── System stats (superadmin) ───────────────────────────────────────────────
+
+  @Get('stats')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Estadísticas globales del sistema. Solo superadmin.' })
+  getSystemStats() {
+    return this.service.getSystemStats();
+  }
+
   // ─── Roles globales ──────────────────────────────────────────────────────────
 
   @Get('global-roles')

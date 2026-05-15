@@ -14,6 +14,9 @@ export const REQUEST_TYPE_LABELS: Record<string, string> = {
 
 export const REQUEST_STATUS_LABELS: Record<string, string> = {
   pending:      'Pendiente',
+  taken:        'Tomado',
+  in_progress:  'En proceso',
+  completed:    'Finalizado',
   under_review: 'En revisión',
   approved:     'Aprobada',
   rejected:     'Rechazada',
@@ -22,7 +25,10 @@ export const REQUEST_STATUS_LABELS: Record<string, string> = {
 
 export const REQUEST_STATUS_COLORS: Record<string, string> = {
   pending:      '#F59E0B',
-  under_review: '#3B82F6',
+  taken:        '#8B5CF6',
+  in_progress:  '#3B82F6',
+  completed:    '#22C55E',
+  under_review: '#0EA5E9',
   approved:     '#22C55E',
   rejected:     '#EF4444',
   cancelled:    '#94A3B8',

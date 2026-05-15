@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Eye, EyeOff, ShieldCheck, ShieldOff, Smartphone, Copy, Check, Monitor, Globe } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, ShieldOff, Monitor, Globe } from 'lucide-react';
 import { usersService } from '@/services/users.service';
 import { authService } from '@/services/auth.service';
 import { fmtDate, fmtRelative, type ProfileUser } from './profile.types';
@@ -37,12 +37,6 @@ const pwdSchema = z.object({
 });
 type PwdForm = z.infer<typeof pwdSchema>;
 
-type TotpStep =
-  | 'idle'       // show activate / deactivate button
-  | 'scanning'   // QR code visible, waiting for user to scan
-  | 'verifying'  // code input to confirm activation
-  | 'disabling'; // code input to confirm deactivation
-
 interface Props {
   user:          ProfileUser;
   isOwnProfile:  boolean;
@@ -57,17 +51,10 @@ export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props)
     staleTime: 60_000,
   });
 
+  // ── Password change ───────────────────────────────────────────────────────────
   const [showPwd,     setShowPwd]     = useState({ current: false, newPwd: false, confirm: false });
   const [pwdStrength, setPwdStrength] = useState(0);
   const [pwdMsg,      setPwdMsg]      = useState<{ ok: boolean; text: string } | null>(null);
-
-  // TOTP state
-  const [totpStep,    setTotpStep]    = useState<TotpStep>('idle');
-  const [qrDataUrl,   setQrDataUrl]   = useState<string | null>(null);
-  const [totpSecret,  setTotpSecret]  = useState<string | null>(null);
-  const [totpCode,    setTotpCode]    = useState('');
-  const [totpMsg,     setTotpMsg]     = useState<{ ok: boolean; text: string } | null>(null);
-  const [secretCopied,setSecretCopied]= useState(false);
 
   const { register: regPwd, handleSubmit: submitPwd, reset: resetPwd, watch: watchPwd,
     formState: { errors: pwdErr, isSubmitting: pwdPending } } =
@@ -97,62 +84,43 @@ export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props)
     onError: (e: Error) => setPwdMsg({ ok: false, text: e.message ?? 'Error al cambiar contraseña' }),
   });
 
-  const setupTotpMut = useMutation({
-    mutationFn: () => authService.setupTotp(),
-    onSuccess: ({ qr, secret }) => {
-      setQrDataUrl(qr);
-      setTotpSecret(secret);
-      setTotpStep('scanning');
-      setTotpMsg(null);
-      setTotpCode('');
-    },
-    onError: () => setTotpMsg({ ok: false, text: 'Error al generar el código QR' }),
-  });
+  // ── Email OTP 2FA toggle ──────────────────────────────────────────────────────
+  const [otpEnabled,   setOtpEnabled]   = useState(user.otp_enabled ?? true);
+  const [disableStep,  setDisableStep]  = useState<'idle' | 'confirm'>('idle');
+  const [disablePwd,   setDisablePwd]   = useState('');
+  const [showDisPwd,   setShowDisPwd]   = useState(false);
+  const [otpMsg,       setOtpMsg]       = useState<{ ok: boolean; text: string } | null>(null);
 
-  const enableTotpMut = useMutation({
-    mutationFn: (code: string) => authService.enableTotp(code),
+  const enableOtpMut = useMutation({
+    mutationFn: () => authService.setOtpSetting(true),
     onSuccess: () => {
-      setTotpMsg({ ok: true, text: '2FA activado correctamente' });
-      setTotpStep('idle');
-      setTotpCode('');
-      setQrDataUrl(null);
-      setTotpSecret(null);
+      setOtpEnabled(true);
+      setOtpMsg({ ok: true, text: '2FA activado. Tu próximo inicio de sesión requerirá verificación por email.' });
       onTotpToggled(true);
     },
-    onError: () => setTotpMsg({ ok: false, text: 'Código incorrecto. Verifica tu aplicación.' }),
+    onError: () => setOtpMsg({ ok: false, text: 'Error al activar 2FA. Intenta de nuevo.' }),
   });
 
-  const disableTotpMut = useMutation({
-    mutationFn: (code: string) => authService.disableTotp(code),
+  const disableOtpMut = useMutation({
+    mutationFn: async (pwd: string) => {
+      await authService.verifyCredentials(pwd);
+      await authService.setOtpSetting(false);
+    },
     onSuccess: () => {
-      setTotpMsg({ ok: true, text: '2FA desactivado' });
-      setTotpStep('idle');
-      setTotpCode('');
+      setOtpEnabled(false);
+      setDisableStep('idle');
+      setDisablePwd('');
+      setOtpMsg({ ok: true, text: '2FA desactivado. El inicio de sesión ya no requerirá verificación por email.' });
       onTotpToggled(false);
     },
-    onError: () => setTotpMsg({ ok: false, text: 'Código incorrecto. Verifica tu aplicación.' }),
+    onError: (e: Error) => setOtpMsg({ ok: false, text: e.message?.includes('ncorrecta') ? 'Contraseña incorrecta.' : (e.message ?? 'Error al desactivar 2FA') }),
   });
 
-  function handleTotpCodeInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setTotpCode(val);
-    setTotpMsg(null);
-  }
-
-  function cancelTotp() {
-    setTotpStep('idle');
-    setTotpCode('');
-    setQrDataUrl(null);
-    setTotpSecret(null);
-    setTotpMsg(null);
-  }
-
-  function copySecret() {
-    if (!totpSecret) return;
-    navigator.clipboard.writeText(totpSecret).then(() => {
-      setSecretCopied(true);
-      setTimeout(() => setSecretCopied(false), 2000);
-    });
+  function cancelDisable() {
+    setDisableStep('idle');
+    setDisablePwd('');
+    setShowDisPwd(false);
+    setOtpMsg(null);
   }
 
   return (
@@ -212,195 +180,127 @@ export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props)
         </div>
       </div>
 
-      {/* ── 2FA / TOTP ── */}
+      {/* ── 2FA via email OTP ── */}
       <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
         <div className={styles.sectionHeader}>
           <p className={styles.sectionTitle}>Autenticación de dos factores (2FA)</p>
-          <span className={`${styles.badge} ${user.totp_enabled ? styles.badgeGreen : styles.badgeYellow}`}>
-            {user.totp_enabled ? 'Activo' : 'Inactivo'}
+          <span className={`${styles.badge} ${otpEnabled ? styles.badgeGreen : styles.badgeYellow}`}>
+            {otpEnabled ? 'Activo' : 'Inactivo'}
           </span>
         </div>
 
         <div style={{ padding: '16px 22px 20px' }}>
+          <p style={{ fontSize: 13, color: '#475569', marginBottom: 16, lineHeight: 1.6 }}>
+            {otpEnabled
+              ? 'Tu cuenta está protegida con verificación en dos pasos. Al iniciar sesión recibirás un código de 6 dígitos en tu correo electrónico.'
+              : 'La verificación en dos pasos está desactivada. Actívala para recibir un código de verificación por email cada vez que inicies sesión.'}
+          </p>
 
-          {/* ── Idle: show status + action button ── */}
-          {totpStep === 'idle' && (
+          {otpMsg && (
+            <p className={otpMsg.ok ? styles.msgOk : styles.msgErr} style={{ marginBottom: 14 }}>
+              {otpMsg.text}
+            </p>
+          )}
+
+          {/* ── Idle — show toggle button ── */}
+          {disableStep === 'idle' && (
             <>
-              <p style={{ fontSize: 13, color: '#475569', marginBottom: 16, lineHeight: 1.5 }}>
-                {user.totp_enabled
-                  ? 'Tu cuenta está protegida con TOTP. Usa tu aplicación de autenticación para generar códigos de 6 dígitos.'
-                  : 'Protege tu cuenta con Google Authenticator, Authy u otra aplicación TOTP. Recibirás un código de 6 dígitos cada 30 segundos.'}
-              </p>
-              {totpMsg && (
-                <p className={totpMsg.ok ? styles.msgOk : styles.msgErr} style={{ marginBottom: 12 }}>
-                  {totpMsg.text}
-                </p>
-              )}
-              {user.totp_enabled ? (
+              {otpEnabled ? (
                 <button
+                  type="button"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '8px 16px', background: '#FEF2F2', color: '#B91C1C',
                     border: '1px solid #FECACA', borderRadius: 8,
                     fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                   }}
-                  onClick={() => { setTotpStep('disabling'); setTotpMsg(null); setTotpCode(''); }}
+                  onClick={() => { setDisableStep('confirm'); setOtpMsg(null); }}
                 >
                   <ShieldOff size={15} /> Desactivar 2FA
                 </button>
               ) : (
                 <button
+                  type="button"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '8px 16px', background: '#F0FDF4', color: '#15803D',
                     border: '1px solid #BBF7D0', borderRadius: 8,
                     fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                   }}
-                  disabled={setupTotpMut.isPending}
-                  onClick={() => setupTotpMut.mutate()}
+                  disabled={enableOtpMut.isPending}
+                  onClick={() => { setOtpMsg(null); enableOtpMut.mutate(); }}
                 >
                   <ShieldCheck size={15} />
-                  {setupTotpMut.isPending ? 'Generando QR…' : 'Activar 2FA'}
+                  {enableOtpMut.isPending ? 'Activando…' : 'Activar 2FA'}
                 </button>
               )}
             </>
           )}
 
-          {/* ── Scanning: show QR code ── */}
-          {totpStep === 'scanning' && qrDataUrl && (
+          {/* ── Confirm disable — require password ── */}
+          {disableStep === 'confirm' && (
             <div>
-              <p style={{ fontSize: 13, color: '#475569', marginBottom: 16, lineHeight: 1.5 }}>
-                <strong>Paso 1:</strong> Abre Google Authenticator, Authy u otra aplicación TOTP
-                y escanea el código QR.
+              <p style={{ fontSize: 13, color: '#475569', marginBottom: 12, lineHeight: 1.5 }}>
+                Ingresa tu contraseña actual para confirmar la desactivación del 2FA.
               </p>
-
-              <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
-                <div style={{
-                  background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12,
-                  padding: 12, display: 'inline-block',
-                }}>
-                  <img src={qrDataUrl} alt="QR 2FA" style={{ width: 160, height: 160, display: 'block' }} />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+                <div className={styles.pwdWrap} style={{ flex: 1, minWidth: 200 }}>
+                  <input
+                    className={styles.formInput}
+                    type={showDisPwd ? 'text' : 'password'}
+                    placeholder="Contraseña actual"
+                    autoFocus
+                    value={disablePwd}
+                    onChange={e => { setDisablePwd(e.target.value); setOtpMsg(null); }}
+                    onKeyDown={e => { if (e.key === 'Enter' && disablePwd) disableOtpMut.mutate(disablePwd); }}
+                  />
+                  <button
+                    type="button"
+                    className={styles.pwdEye}
+                    onClick={() => setShowDisPwd(p => !p)}
+                  >
+                    {showDisPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
-
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <p style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>
-                    ¿No puedes escanear? Introduce este código manualmente:
-                  </p>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    background: '#F8FAFC', border: '1px solid #E2E8F0',
-                    borderRadius: 8, padding: '8px 12px',
-                  }}>
-                    <Smartphone size={14} style={{ color: '#94A3B8', flexShrink: 0 }} />
-                    <code style={{ fontSize: 12, color: '#0F172A', letterSpacing: 2, flex: 1, wordBreak: 'break-all' }}>
-                      {totpSecret}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={copySecret}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366F1', padding: 2 }}
-                      title="Copiar"
-                    >
-                      {secretCopied ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <p style={{ fontSize: 13, color: '#475569', marginBottom: 12 }}>
-                <strong>Paso 2:</strong> Introduce el código de 6 dígitos que muestra tu app para confirmar.
-              </p>
-
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <input
-                  value={totpCode}
-                  onChange={handleTotpCodeInput}
-                  placeholder="000000"
-                  maxLength={6}
-                  inputMode="numeric"
-                  style={{
-                    width: 130, padding: '10px 14px', fontSize: 22, letterSpacing: 6,
-                    textAlign: 'center', border: '1px solid #E2E8F0', borderRadius: 8,
-                    fontFamily: 'monospace', outline: 'none', background: '#fff',
-                  }}
-                />
-                <button
-                  className={styles.btnPrimary}
-                  style={{ padding: '10px 20px' }}
-                  disabled={totpCode.length < 6 || enableTotpMut.isPending}
-                  onClick={() => enableTotpMut.mutate(totpCode)}
-                >
-                  {enableTotpMut.isPending ? 'Verificando…' : 'Confirmar y activar'}
-                </button>
                 <button
                   type="button"
-                  onClick={cancelTotp}
                   style={{
-                    padding: '10px 16px', background: 'none', border: '1px solid #E2E8F0',
-                    borderRadius: 8, fontSize: 13, color: '#64748B', cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  Cancelar
-                </button>
-              </div>
-              {totpMsg && (
-                <p className={totpMsg.ok ? styles.msgOk : styles.msgErr} style={{ marginTop: 10 }}>
-                  {totpMsg.text}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* ── Disabling: verify code before disabling ── */}
-          {totpStep === 'disabling' && (
-            <div>
-              <p style={{ fontSize: 13, color: '#475569', marginBottom: 16, lineHeight: 1.5 }}>
-                Introduce el código de tu aplicación para <strong>confirmar la desactivación</strong> del 2FA.
-              </p>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <input
-                  value={totpCode}
-                  onChange={handleTotpCodeInput}
-                  placeholder="000000"
-                  maxLength={6}
-                  inputMode="numeric"
-                  autoFocus
-                  style={{
-                    width: 130, padding: '10px 14px', fontSize: 22, letterSpacing: 6,
-                    textAlign: 'center', border: '1px solid #E2E8F0', borderRadius: 8,
-                    fontFamily: 'monospace', outline: 'none', background: '#fff',
-                  }}
-                />
-                <button
-                  style={{
-                    padding: '10px 20px', background: '#B91C1C', color: '#fff',
+                    padding: '10px 16px', background: '#B91C1C', color: '#fff',
                     border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                    cursor: 'pointer', fontFamily: 'inherit',
+                    cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                    opacity: (!disablePwd || disableOtpMut.isPending) ? 0.6 : 1,
                   }}
-                  disabled={totpCode.length < 6 || disableTotpMut.isPending}
-                  onClick={() => disableTotpMut.mutate(totpCode)}
+                  disabled={!disablePwd || disableOtpMut.isPending}
+                  onClick={() => disableOtpMut.mutate(disablePwd)}
                 >
-                  {disableTotpMut.isPending ? 'Verificando…' : 'Confirmar desactivación'}
+                  {disableOtpMut.isPending ? 'Verificando…' : 'Confirmar desactivación'}
                 </button>
                 <button
                   type="button"
-                  onClick={cancelTotp}
+                  onClick={cancelDisable}
                   style={{
                     padding: '10px 16px', background: 'none', border: '1px solid #E2E8F0',
-                    borderRadius: 8, fontSize: 13, color: '#64748B', cursor: 'pointer', fontFamily: 'inherit',
+                    borderRadius: 8, fontSize: 13, color: '#64748B', cursor: 'pointer',
+                    fontFamily: 'inherit', flexShrink: 0,
                   }}
                 >
                   Cancelar
                 </button>
               </div>
-              {totpMsg && (
-                <p className={totpMsg.ok ? styles.msgOk : styles.msgErr} style={{ marginTop: 10 }}>
-                  {totpMsg.text}
-                </p>
+              {otpMsg && (
+                <p className={otpMsg.ok ? styles.msgOk : styles.msgErr}>{otpMsg.text}</p>
               )}
             </div>
           )}
 
+          <div style={{
+            marginTop: 20, padding: '12px 14px', background: '#F8FAFC',
+            border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12, color: '#64748B', lineHeight: 1.6,
+          }}>
+            <strong style={{ color: '#0F172A' }}>¿Cómo funciona?</strong><br />
+            Cuando está activo, después de ingresar tu contraseña recibirás un código de 6 dígitos
+            en <strong>{user.email}</strong>. El código expira en 10 minutos y solo puede usarse una vez.
+          </div>
         </div>
       </div>
 
@@ -411,7 +311,6 @@ export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props)
           <span style={{ fontSize: 10, color: '#94A3B8' }}>Últimas 30</span>
         </div>
 
-        {/* static baseline row */}
         <div className={styles.securityItem}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Globe size={14} style={{ color: '#94A3B8', flexShrink: 0 }} />

@@ -19,15 +19,19 @@ type Stage = 'loading' | 'form' | 'security' | 'success';
 type StepState = 'default' | 'active' | 'done';
 
 const profileSchema = z.object({
-  phone: z.string().min(7, 'Mínimo 7 dígitos'),
+  phone_prefix:  z.string().max(10).optional(),
+  phone:         z.string().min(7, 'Mínimo 7 dígitos'),
   username: z.string().optional().refine(
     (v) => !v || (v.length >= 3 && /^[a-z0-9_]+$/.test(v)),
     'Mínimo 3 caracteres, solo letras minúsculas, números y _',
   ),
-  job_title:    z.string().min(2, 'Mínimo 2 caracteres'),
-  department:   z.string().min(1, 'Requerido'),
-  primary_sede: z.string().min(1, 'Selecciona una sede'),
-  address:      z.string().min(5, 'Mínimo 5 caracteres'),
+  job_title:      z.string().min(2, 'Mínimo 2 caracteres'),
+  department:     z.string().min(1, 'Requerido'),
+  primary_sede:   z.string().min(1, 'Selecciona una sede'),
+  address:        z.string().min(5, 'Mínimo 5 caracteres'),
+  country:        z.string().max(100).optional(),
+  state_province: z.string().max(150).optional(),
+  city:           z.string().max(150).optional(),
 });
 
 const securitySchema = z.object({
@@ -81,12 +85,16 @@ export function CompleteProfileClient() {
       if (user.profile_complete) { router.replace(ROUTES.APP.DASHBOARD); return; }
       setForcePwChange(user.force_password_change);
       profileForm.reset({
-        phone:        user.phone        ?? '',
-        username:     user.username     ?? '',
-        job_title:    user.job_title    ?? '',
-        department:   user.department   ?? '',
-        primary_sede: user.primary_sede ?? '',
-        address:      user.address      ?? '',
+        phone_prefix:  user.phone_prefix  ?? '',
+        phone:         user.phone         ?? '',
+        username:      user.username      ?? '',
+        job_title:     user.job_title     ?? '',
+        department:    user.department    ?? '',
+        primary_sede:  user.primary_sede  ?? '',
+        address:       user.address       ?? '',
+        country:       user.country       ?? '',
+        state_province: user.state_province ?? '',
+        city:           user.city           ?? '',
       });
       setStage('form');
     }).catch(() => router.replace(ROUTES.AUTH.LOGIN));
@@ -98,12 +106,16 @@ export function CompleteProfileClient() {
     setIsSubmitting(true);
     try {
       await usersService.completeProfile({
-        phone:        values.phone,
-        username:     values.username || undefined,
-        job_title:    values.job_title,
-        department:   values.department,
-        primary_sede: values.primary_sede,
-        address:      values.address,
+        phone_prefix:  values.phone_prefix  || undefined,
+        phone:         values.phone,
+        username:      values.username       || undefined,
+        job_title:     values.job_title,
+        department:    values.department,
+        primary_sede:  values.primary_sede,
+        address:       values.address,
+        country:       values.country        || undefined,
+        state_province: values.state_province || undefined,
+        city:           values.city           || undefined,
       });
       setStage('security');
     } catch (err: unknown) {

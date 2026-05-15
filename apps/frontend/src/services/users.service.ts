@@ -33,34 +33,60 @@ export interface AdminCreateUserDto {
 }
 
 export interface AdminUpdateUserDto {
-  first_name?:     string;
-  last_name?:      string;
-  phone?:          string;
-  username?:       string;
-  job_title?:      string;
-  department?:     string;
-  primary_sede?:   string;
-  address?:        string;
-  is_superadmin?:  boolean;
-  is_active?:      boolean;
-  global_role_id?: string;
+  first_name?:              string;
+  last_name?:               string;
+  phone_prefix?:            string;
+  phone?:                   string;
+  username?:                string;
+  job_title?:               string;
+  department?:              string;
+  primary_sede?:            string;
+  address?:                 string;
+  country?:                 string;
+  state_province?:          string;
+  city?:                    string;
+  birth_date?:              string;
+  national_id?:             string;
+  gender?:                  string;
+  emergency_contact_name?:  string;
+  emergency_contact_phone?: string;
+  is_superadmin?:           boolean;
+  is_active?:               boolean;
+  global_role_id?:          string;
 }
 
 export interface UpdateMeDto {
-  first_name?: string;
-  last_name?:  string;
-  phone?:      string;
-  address?:    string;
-  avatar_url?: string | null;
+  first_name?:              string;
+  last_name?:               string;
+  phone_prefix?:            string;
+  phone?:                   string;
+  username?:                string;
+  address?:                 string;
+  country?:                 string;
+  state_province?:          string;
+  city?:                    string;
+  birth_date?:              string;
+  national_id?:             string;
+  gender?:                  string;
+  emergency_contact_name?:  string;
+  emergency_contact_phone?: string;
+  job_title?:               string;
+  department?:              string;
+  primary_sede?:            string;
+  avatar_url?:              string | null;
 }
 
 export interface CompleteProfileDto {
-  phone:        string;
-  username?:    string;
-  job_title:    string;
-  department:   string;
-  primary_sede: string;
-  address:      string;
+  phone:          string;
+  username?:      string;
+  job_title:      string;
+  department:     string;
+  primary_sede:   string;
+  address:        string;
+  phone_prefix?:  string;
+  country?:       string;
+  state_province?: string;
+  city?:          string;
 }
 
 export const usersService = {
@@ -160,11 +186,30 @@ export const usersService = {
     return data;
   },
 
+  async getUserRoles(userId: string): Promise<UserModuleRole[]> {
+    const { data } = await api.get(`/users/${userId}/roles`);
+    return data;
+  },
+
   async assignUserRole(userId: string, moduleId: string, roleId: string): Promise<UserModuleRole> {
     const { data } = await api.post(`/users/${userId}/roles`, {
       module_id: moduleId,
       role_id:   roleId,
     });
+    return data;
+  },
+
+  async removeRole(userId: string, umrId: string): Promise<void> {
+    await api.delete(`/users/${userId}/roles/${umrId}`);
+  },
+
+  async getSystemStats(): Promise<{
+    users:    { total: number; active: number; inactive: number };
+    modules:  { total: number; active: number; inactive: number };
+    tickets:  { total: number; open: number };
+    requests: { total: number; pending: number; in_progress: number };
+  }> {
+    const { data } = await api.get('/users/stats');
     return data;
   },
 

@@ -123,14 +123,21 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
         </div>
         <div className={styles.infoGrid}>
           {([
-            ['Nombre completo',    fullName],
-            ['Nombre de usuario',  user.username ? `@${user.username}` : '—'],
-            ['Correo electrónico', user.email        || '—'],
-            ['Teléfono celular',   user.phone        || '—'],
-            ['Área / Departamento',user.department   || '—'],
-            ['Cargo actual',       user.job_title    || '—'],
-            ['Sede principal',     user.primary_sede || '—'],
-            ['Dirección',          user.address      || '—'],
+            ['Nombre completo',       fullName],
+            ['Nombre de usuario',     user.username ? `@${user.username}` : '—'],
+            ['Correo electrónico',    user.email          || '—'],
+            ['Teléfono celular',      user.phone ? `${user.phone_prefix ? user.phone_prefix + ' ' : ''}${user.phone}` : '—'],
+            ['Género',                user.gender         ? (({masculino:'Masculino',femenino:'Femenino',no_binario:'No binario',prefiero_no_decir:'Prefiero no decir',otro:'Otro'} as Record<string,string>)[user.gender] ?? user.gender) : '—'],
+            ['Fecha de nacimiento',   user.birth_date     ? new Date(user.birth_date).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'],
+            ['Nro. documento',        user.national_id    || '—'],
+            ['País',                  user.country        || '—'],
+            ['Departamento / Estado', user.state_province || '—'],
+            ['Ciudad',                user.city           || '—'],
+            ['Dirección',             user.address        || '—'],
+            ['Área / Departamento',   user.department     || '—'],
+            ['Cargo actual',          user.job_title      || '—'],
+            ['Sede principal',        user.primary_sede   || '—'],
+            ['Contacto emergencia',   user.emergency_contact_name ? `${user.emergency_contact_name}${user.emergency_contact_phone ? ' · ' + user.emergency_contact_phone : ''}` : '—'],
           ] as [string, string][]).map(([label, value]) => (
             <div key={label}>
               <p className={styles.infoLabel}>{label}</p>

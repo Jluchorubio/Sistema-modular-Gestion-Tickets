@@ -60,6 +60,10 @@ export const modulesService = {
     await api.delete(`/system-modules/${id}`);
   },
 
+  async toggleMaintenance(id: string, enabled: boolean, message?: string): Promise<void> {
+    await api.patch(`/system-modules/${id}/maintenance`, { enabled, message });
+  },
+
   async getModuleRoles(moduleId: string): Promise<{ id: string; name: string; description: string | null }[]> {
     const { data } = await api.get(`/system-modules/${moduleId}/roles`);
     return data;

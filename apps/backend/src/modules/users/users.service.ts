@@ -217,9 +217,18 @@ export class UsersService {
               p.first_name,
               p.last_name,
               p.display_email,
+              p.phone_prefix,
               p.phone,
               p.username,
               p.address,
+              p.country,
+              p.state_province,
+              p.city,
+              p.birth_date,
+              p.national_id,
+              p.gender,
+              p.emergency_contact_name,
+              p.emergency_contact_phone,
               p.job_title,
               p.department,
               p.primary_sede,
@@ -353,6 +362,7 @@ export class UsersService {
       `SELECT p.id,
               p.first_name,
               p.last_name,
+              p.phone_prefix,
               p.phone,
               p.avatar_url,
               p.is_superadmin,
@@ -361,10 +371,19 @@ export class UsersService {
               p.updated_at,
               p.username,
               p.address,
+              p.country,
+              p.state_province,
+              p.city,
+              p.birth_date,
+              p.national_id,
+              p.gender,
+              p.emergency_contact_name,
+              p.emergency_contact_phone,
               p.job_title,
               p.department,
               p.primary_sede,
               p.profile_complete,
+              p.display_email,
               c.email,
               c.last_login_at,
               pref.language,
@@ -372,7 +391,8 @@ export class UsersService {
               pref.notification_email,
               pref.notification_whatsapp,
               pref.notification_in_app,
-              COALESCE(mfa.totp_enabled, false) AS totp_enabled,
+              COALESCE(mfa.totp_enabled, false)  AS totp_enabled,
+              COALESCE(c.otp_enabled,   true)    AS otp_enabled,
               COALESCE(
                 json_agg(
                   json_build_object(
@@ -394,7 +414,7 @@ export class UsersService {
        LEFT JOIN modules.modules           m   ON m.id        = umr.module_id
        LEFT JOIN modules.module_roles      mr  ON mr.id       = umr.role_id
        WHERE  p.id = $1 AND p.deleted_at IS NULL
-       GROUP  BY p.id, c.email, c.last_login_at, pref.id, mfa.totp_enabled`,
+       GROUP  BY p.id, c.email, c.last_login_at, pref.id, mfa.totp_enabled, c.otp_enabled`,
       [userId],
     );
 
@@ -420,6 +440,10 @@ export class UsersService {
            department       = $4,
            job_title        = $5,
            username         = COALESCE($6, username),
+           phone_prefix     = COALESCE($8, phone_prefix),
+           country          = COALESCE($9, country),
+           state_province   = COALESCE($10, state_province),
+           city             = COALESCE($11, city),
            profile_complete = true,
            updated_at       = now()
        WHERE id = $7 AND deleted_at IS NULL`,
@@ -431,6 +455,10 @@ export class UsersService {
         dto.job_title.trim(),
         dto.username ? dto.username.toLowerCase().trim() : null,
         userId,
+        dto.phone_prefix   ?? null,
+        dto.country        ?? null,
+        dto.state_province ?? null,
+        dto.city           ?? null,
       ],
     );
 
@@ -459,14 +487,23 @@ export class UsersService {
       add('username', normalized);
     }
 
-    if (dto.first_name   !== undefined) add('first_name',   dto.first_name);
-    if (dto.last_name    !== undefined) add('last_name',     dto.last_name);
-    if (dto.phone        !== undefined) add('phone',         dto.phone);
-    if (dto.avatar_url   !== undefined) add('avatar_url',    dto.avatar_url);
-    if (dto.address      !== undefined) add('address',       dto.address);
-    if (dto.job_title    !== undefined) add('job_title',     dto.job_title);
-    if (dto.department   !== undefined) add('department',    dto.department);
-    if (dto.primary_sede !== undefined) add('primary_sede',  dto.primary_sede);
+    if (dto.first_name              !== undefined) add('first_name',              dto.first_name);
+    if (dto.last_name               !== undefined) add('last_name',               dto.last_name);
+    if (dto.phone_prefix            !== undefined) add('phone_prefix',            dto.phone_prefix);
+    if (dto.phone                   !== undefined) add('phone',                   dto.phone);
+    if (dto.avatar_url              !== undefined) add('avatar_url',              dto.avatar_url);
+    if (dto.address                 !== undefined) add('address',                 dto.address);
+    if (dto.country                 !== undefined) add('country',                 dto.country);
+    if (dto.state_province          !== undefined) add('state_province',          dto.state_province);
+    if (dto.city                    !== undefined) add('city',                    dto.city);
+    if (dto.birth_date              !== undefined) add('birth_date',              dto.birth_date);
+    if (dto.national_id             !== undefined) add('national_id',             dto.national_id);
+    if (dto.gender                  !== undefined) add('gender',                  dto.gender);
+    if (dto.emergency_contact_name  !== undefined) add('emergency_contact_name',  dto.emergency_contact_name);
+    if (dto.emergency_contact_phone !== undefined) add('emergency_contact_phone', dto.emergency_contact_phone);
+    if (dto.job_title               !== undefined) add('job_title',               dto.job_title);
+    if (dto.department              !== undefined) add('department',               dto.department);
+    if (dto.primary_sede            !== undefined) add('primary_sede',             dto.primary_sede);
 
     if (fields.length === 0) throw new BadRequestException('Sin campos para actualizar');
 
@@ -682,6 +719,76 @@ export class UsersService {
   }
 
   // ─── Roles globales ──────────────────────────────────────────────────────────
+
+  async getSystemStats() {
+    const [userStats] = await this.db.query<{
+      total_users: string; active_users: string; inactive_users: string;
+    }[]>(`
+      SELECT
+        COUNT(*)                                        AS total_users,
+        COUNT(*) FILTER (WHERE is_active = true)        AS active_users,
+        COUNT(*) FILTER (WHERE is_active = false)       AS inactive_users
+      FROM users.profiles
+      WHERE deleted_at IS NULL
+    `);
+
+    const [moduleStats] = await this.db.query<{
+      total_modules: string; active_modules: string; inactive_modules: string;
+    }[]>(`
+      SELECT
+        COUNT(*)                                        AS total_modules,
+        COUNT(*) FILTER (WHERE is_active = true)        AS active_modules,
+        COUNT(*) FILTER (WHERE is_active = false)       AS inactive_modules
+      FROM modules.modules
+      WHERE deleted_at IS NULL
+    `);
+
+    const [ticketStats] = await this.db.query<{
+      total_tickets: string; open_tickets: string;
+    }[]>(`
+      SELECT
+        COUNT(*)                                             AS total_tickets,
+        COUNT(*) FILTER (WHERE s.is_final = false)           AS open_tickets
+      FROM tickets.tickets t
+      JOIN tickets.states s ON s.id = t.current_state_id
+      WHERE t.deleted_at IS NULL
+    `);
+
+    const [requestStats] = await this.db.query<{
+      total_requests: string; pending_requests: string; in_progress_requests: string;
+    }[]>(`
+      SELECT
+        COUNT(*)                                                                        AS total_requests,
+        COUNT(*) FILTER (WHERE status IN ('pending', 'taken', 'in_progress'))           AS pending_requests,
+        COUNT(*) FILTER (WHERE status IN ('taken', 'in_progress'))                      AS in_progress_requests
+      FROM requests.admin_requests
+      WHERE deleted_at IS NULL
+    `);
+
+    const totalModules = parseInt(moduleStats?.total_modules ?? '0', 10);
+
+    return {
+      users: {
+        total:    parseInt(userStats?.total_users    ?? '0', 10),
+        active:   parseInt(userStats?.active_users   ?? '0', 10),
+        inactive: parseInt(userStats?.inactive_users ?? '0', 10),
+      },
+      modules: {
+        total:    totalModules,
+        active:   totalModules,
+        inactive: 0,
+      },
+      tickets: {
+        total: parseInt(ticketStats?.total_tickets ?? '0', 10),
+        open:  parseInt(ticketStats?.open_tickets  ?? '0', 10),
+      },
+      requests: {
+        total:       parseInt(requestStats?.total_requests       ?? '0', 10),
+        pending:     parseInt(requestStats?.pending_requests     ?? '0', 10),
+        in_progress: parseInt(requestStats?.in_progress_requests ?? '0', 10),
+      },
+    };
+  }
 
   async listGlobalRoles() {
     return this.db.query<any[]>(

@@ -8,6 +8,9 @@ export interface SystemModule {
   color: string | null;
   is_active: boolean;
   has_access?: boolean;
+  maintenance_mode?:    boolean;
+  maintenance_since?:   string | null;
+  maintenance_message?: string | null;
   created_at: string;
   deleted_at: string | null;
 }

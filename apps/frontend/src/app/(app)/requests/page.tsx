@@ -1,10 +1,10 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, X, Clock, CheckCircle2, Play, Loader2, AlertTriangle } from 'lucide-react';
 import {
   requestsService,
   type AdmRequest,
@@ -28,14 +28,64 @@ import { Spinner } from '@/components/ui/Spinner';
 import styles from './requests.module.css';
 import mstyles from '@/components/ui/modal.module.css';
 
-/* ── Constants ─────────────────────────────────────────────────────────────── */
+/* ── Status pill map ─────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<string, string> = {
   pending:      styles.pillPending,
+  taken:        styles.pillTaken,
+  in_progress:  styles.pillUnderReview,
+  completed:    styles.pillApproved,
   under_review: styles.pillUnderReview,
   approved:     styles.pillApproved,
   rejected:     styles.pillRejected,
   cancelled:    styles.pillCancelled,
 };
+
+/* ── SLA Countdown ────────────────────────────────────────────────────────── */
+function SlaCountdown({ sla_due_at }: { sla_due_at: string }) {
+  const [label, setLabel] = useState('');
+  const [overdue, setOverdue] = useState(false);
+
+  useEffect(() => {
+    function tick() {
+      const diff = new Date(sla_due_at).getTime() - Date.now();
+      if (diff <= 0) {
+        setOverdue(true);
+        const abs = Math.abs(diff);
+        const h = Math.floor(abs / 3_600_000);
+        const m = Math.floor((abs % 3_600_000) / 60_000);
+        setLabel(`Vencido +${h}h ${m}m`);
+      } else {
+        setOverdue(false);
+        const h = Math.floor(diff / 3_600_000);
+        const m = Math.floor((diff % 3_600_000) / 60_000);
+        const s = Math.floor((diff % 60_000) / 1_000);
+        setLabel(`SLA: ${h}h ${m.toString().padStart(2,'0')}m ${s.toString().padStart(2,'0')}s`);
+      }
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [sla_due_at]);
+
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 11, fontWeight: 700, fontFamily: 'monospace',
+      color: overdue ? '#EF4444' : diff_pct(sla_due_at) < 0.25 ? '#F59E0B' : '#22C55E',
+      background: overdue ? '#450a0a' : diff_pct(sla_due_at) < 0.25 ? '#451a03' : '#052e16',
+      border: `1px solid ${overdue ? '#7f1d1d' : diff_pct(sla_due_at) < 0.25 ? '#78350f' : '#14532d'}`,
+      padding: '2px 8px', borderRadius: 6,
+    }}>
+      {overdue ? <AlertTriangle size={10} /> : <Clock size={10} />}
+      {label}
+    </span>
+  );
+}
+function diff_pct(sla_due_at: string): number {
+  const total = 4 * 3_600_000;
+  const left  = new Date(sla_due_at).getTime() - Date.now();
+  return Math.max(0, left / total);
+}
 
 /* ── Schemas ─────────────────────────────────────────────────────────────── */
 const createSchema = z.object({
@@ -51,7 +101,6 @@ type CreateForm = z.infer<typeof createSchema>;
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-
 function fmtRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   if (diff < 60_000)     return 'Hace un momento';
@@ -61,11 +110,14 @@ function fmtRelative(iso: string): string {
 }
 
 const TIMELINE_ACTION_LABELS: Record<string, string> = {
-  created:             'Solicitud creada',
+  created:               'Solicitud creada',
+  taken:                 'Tomada por admin',
+  progress_in_progress:  'Puesta en proceso',
+  progress_completed:    'Finalizada',
   reviewed_under_review: 'Puesta en revisión',
-  reviewed_approved:   'Aprobada',
-  reviewed_rejected:   'Rechazada',
-  cancelled:           'Cancelada por el solicitante',
+  reviewed_approved:     'Aprobada',
+  reviewed_rejected:     'Rechazada',
+  cancelled:             'Cancelada por el solicitante',
 };
 
 /* ── Timeline ─────────────────────────────────────────────────────────────── */
@@ -75,9 +127,7 @@ function TimelinePanel({ requestId }: { requestId: string }) {
     queryFn:  () => requestsService.getTimeline(requestId),
     staleTime: 30_000,
   });
-
   if (isLoading) return <div style={{ padding: '12px 0', textAlign: 'center' }}><Spinner /></div>;
-
   const entries: RequestTimelineEntry[] = data ?? [];
   return (
     <div className={styles.timeline}>
@@ -86,17 +136,13 @@ function TimelinePanel({ requestId }: { requestId: string }) {
           <div className={styles.timelineDotWrap}>
             <div
               className={styles.timelineDot}
-              style={{ background: e.new_status ? REQUEST_STATUS_COLORS[e.new_status] : '#6366F1' }}
+              style={{ background: e.new_status ? (REQUEST_STATUS_COLORS[e.new_status] ?? '#6366F1') : '#6366F1' }}
             />
             {i < entries.length - 1 && <div className={styles.timelineLine} />}
           </div>
           <div className={styles.timelineContent}>
-            <div className={styles.timelineAction}>
-              {TIMELINE_ACTION_LABELS[e.action] ?? e.action}
-            </div>
-            <div className={styles.timelineMeta}>
-              {e.actor_name} · {fmtRelative(e.created_at)}
-            </div>
+            <div className={styles.timelineAction}>{TIMELINE_ACTION_LABELS[e.action] ?? e.action}</div>
+            <div className={styles.timelineMeta}>{e.actor_name} · {fmtRelative(e.created_at)}</div>
             {e.notes && <div className={styles.timelineNotes}>"{e.notes}"</div>}
           </div>
         </div>
@@ -111,21 +157,18 @@ export default function RequestsPage() {
   const { user }     = useAuthStore();
   const isSuperadmin = user?.is_superadmin ?? false;
 
-  /* ── Filter state ── */
   const [statusFilter, setStatusFilter] = useState<RequestStatus | ''>('');
   const [typeFilter,   setTypeFilter]   = useState<RequestType   | ''>('');
   const [onlyMine,     setOnlyMine]     = useState(false);
 
-  /* ── Modal state ── */
-  const [createOpen,    setCreateOpen]    = useState(false);
-  const [serverMsg,     setServerMsg]     = useState<{ ok: boolean; text: string } | null>(null);
-  const [rejectOpen,    setRejectOpen]    = useState(false);
-  const [rejectTarget,  setRejectTarget]  = useState<string | null>(null);
-  const [rejectNotes,   setRejectNotes]   = useState('');
-  const [expandedId,    setExpandedId]    = useState<string | null>(null);
-  const [cancelTarget,  setCancelTarget]  = useState<string | null>(null);
+  const [createOpen,   setCreateOpen]   = useState(false);
+  const [serverMsg,    setServerMsg]    = useState<{ ok: boolean; text: string } | null>(null);
+  const [rejectOpen,   setRejectOpen]   = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+  const [rejectNotes,  setRejectNotes]  = useState('');
+  const [expandedId,   setExpandedId]   = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
-  /* ── Query ── */
   const queryKey = isSuperadmin && !onlyMine
     ? ['requests', { statusFilter, typeFilter }]
     : ['requests', 'mine'];
@@ -138,21 +181,19 @@ export default function RequestsPage() {
         : requestsService.getMine(),
   });
 
-  /* ── Create form ── */
-  const {
-    register, handleSubmit, reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CreateForm>({
-    resolver: zodResolver(createSchema),
-    defaultValues: { type: 'role_change', priority: 'media', title: '', description: '' },
-  });
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } =
+    useForm<CreateForm>({
+      resolver: zodResolver(createSchema),
+      defaultValues: { type: 'role_change', priority: 'media', title: '', description: '' },
+    });
 
-  /* ── Mutations ── */
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['requests'] });
+
   const createMut = useMutation({
     mutationFn: (dto: CreateForm) => requestsService.create(dto),
     onSuccess: () => {
       setServerMsg({ ok: true, text: 'Solicitud enviada' });
-      qc.invalidateQueries({ queryKey: ['requests'] });
+      invalidate();
       setTimeout(() => { setCreateOpen(false); reset(); setServerMsg(null); }, 800);
     },
     onError: (e: Error) => setServerMsg({ ok: false, text: e.message ?? 'Error al enviar' }),
@@ -161,18 +202,25 @@ export default function RequestsPage() {
   const reviewMut = useMutation({
     mutationFn: ({ id, status, notes }: { id: string; status: RequestStatus; notes?: string }) =>
       requestsService.review(id, status, notes),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['requests'] }),
+    onSuccess: invalidate,
+  });
+
+  const takeMut = useMutation({
+    mutationFn: (id: string) => requestsService.take(id),
+    onSuccess: invalidate,
+  });
+
+  const progressMut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'in_progress' | 'completed' }) =>
+      requestsService.updateProgress(id, status),
+    onSuccess: invalidate,
   });
 
   const cancelMut = useMutation({
     mutationFn: (id: string) => requestsService.cancel(id),
-    onSuccess: () => {
-      setCancelTarget(null);
-      qc.invalidateQueries({ queryKey: ['requests'] });
-    },
+    onSuccess: () => { setCancelTarget(null); invalidate(); },
   });
 
-  /* ── Handlers ── */
   const handleReview = useCallback((req: AdmRequest, status: RequestStatus) => {
     if (status === 'rejected') {
       setRejectTarget(req.id);
@@ -190,16 +238,11 @@ export default function RequestsPage() {
     setRejectTarget(null);
   }, [rejectTarget, rejectNotes, reviewMut]);
 
-  const openCreate = useCallback(() => {
-    reset();
-    setServerMsg(null);
-    setCreateOpen(true);
-  }, [reset]);
+  const openCreate = useCallback(() => { reset(); setServerMsg(null); setCreateOpen(true); }, [reset]);
 
-  /* ── Render ── */
   const rows        = data?.data ?? [];
   const total       = data?.meta.total ?? rows.length;
-  const showActions = isSuperadmin && !onlyMine;
+  const showAdminActions = isSuperadmin && !onlyMine;
 
   return (
     <>
@@ -228,8 +271,9 @@ export default function RequestsPage() {
           >
             <option value="">Estado: Todos</option>
             <option value="pending">Pendiente</option>
-            <option value="under_review">En revisión</option>
-            <option value="approved">Aprobado</option>
+            <option value="taken">Tomado</option>
+            <option value="in_progress">En proceso</option>
+            <option value="completed">Finalizado</option>
             <option value="rejected">Rechazado</option>
             <option value="cancelled">Cancelado</option>
           </select>
@@ -257,7 +301,6 @@ export default function RequestsPage() {
         </div>
       )}
 
-      {/* List */}
       {isLoading && <Spinner />}
       {error     && <div className={styles.errorMsg}>Error cargando solicitudes</div>}
 
@@ -268,6 +311,8 @@ export default function RequestsPage() {
       {rows.map(req => {
         const isExpanded = expandedId === req.id;
         const canCancel  = !isSuperadmin && ['pending', 'under_review'].includes(req.status);
+        const statusColor = REQUEST_STATUS_COLORS[req.status] ?? '#94a3b8';
+        const hasSla      = (req.status === 'taken' || req.status === 'in_progress') && req.sla_due_at;
 
         return (
           <div key={req.id} className={styles.card}>
@@ -285,21 +330,23 @@ export default function RequestsPage() {
                     style={{ background: REQUEST_PRIORITY_COLORS[req.priority] }}
                     title={`Prioridad: ${REQUEST_PRIORITY_LABELS[req.priority]}`}
                   />
-                  <span style={{ fontSize: 11, color: '#64748B' }}>
-                    {REQUEST_PRIORITY_LABELS[req.priority]}
-                  </span>
+                  <span style={{ fontSize: 11, color: '#64748B' }}>{REQUEST_PRIORITY_LABELS[req.priority]}</span>
+                  {req.taken_by_name && (
+                    <><span>·</span><span style={{ fontSize: 11, color: '#8B5CF6' }}>Tomado por {req.taken_by_name}</span></>
+                  )}
                 </div>
+                {hasSla && <div style={{ marginTop: 6 }}><SlaCountdown sla_due_at={req.sla_due_at!} /></div>}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className={`${styles.pill} ${STATUS_PILL[req.status] ?? ''}`}>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <span
+                  className={`${styles.pill} ${STATUS_PILL[req.status] ?? ''}`}
+                  style={{ background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44` }}
+                >
                   {REQUEST_STATUS_LABELS[req.status] ?? req.status}
                 </span>
                 {canCancel && (
-                  <button
-                    className={styles.cancelBtn}
-                    title="Cancelar solicitud"
-                    onClick={() => setCancelTarget(req.id)}
-                  >
+                  <button className={styles.cancelBtn} title="Cancelar solicitud" onClick={() => setCancelTarget(req.id)}>
                     <X size={13} />
                   </button>
                 )}
@@ -322,29 +369,76 @@ export default function RequestsPage() {
               </div>
             )}
 
-            {showActions && req.status === 'pending' && (
+            {/* Admin actions — Gestión Administrativa flow */}
+            {showAdminActions && req.type !== 'task' && (
               <div className={styles.reviewActions}>
-                <button
-                  className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
-                  onClick={() => handleReview(req, 'under_review')}
-                  disabled={reviewMut.isPending}
-                >
-                  En revisión
-                </button>
-                <button
-                  className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
-                  onClick={() => handleReview(req, 'approved')}
-                  disabled={reviewMut.isPending}
-                >
-                  Aprobar
-                </button>
-                <button
-                  className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
-                  onClick={() => handleReview(req, 'rejected')}
-                  disabled={reviewMut.isPending}
-                >
-                  Rechazar
-                </button>
+                {/* Pending → take */}
+                {req.status === 'pending' && (
+                  <>
+                    <button
+                      className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
+                      style={{ background: '#4C1D95', color: '#DDD6FE', border: '1px solid #6D28D9' }}
+                      onClick={() => takeMut.mutate(req.id)}
+                      disabled={takeMut.isPending}
+                    >
+                      <Play size={12} /> Tomar solicitud
+                    </button>
+                    <button
+                      className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
+                      onClick={() => handleReview(req, 'rejected')}
+                      disabled={reviewMut.isPending}
+                    >
+                      <X size={12} /> Rechazar
+                    </button>
+                  </>
+                )}
+
+                {/* Taken → in_progress | complete | reject */}
+                {req.status === 'taken' && (
+                  <>
+                    <button
+                      className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
+                      onClick={() => progressMut.mutate({ id: req.id, status: 'in_progress' })}
+                      disabled={progressMut.isPending}
+                    >
+                      <Loader2 size={12} /> En proceso
+                    </button>
+                    <button
+                      className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
+                      onClick={() => progressMut.mutate({ id: req.id, status: 'completed' })}
+                      disabled={progressMut.isPending}
+                    >
+                      <CheckCircle2 size={12} /> Finalizar
+                    </button>
+                    <button
+                      className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
+                      onClick={() => handleReview(req, 'rejected')}
+                      disabled={reviewMut.isPending}
+                    >
+                      <X size={12} /> Rechazar
+                    </button>
+                  </>
+                )}
+
+                {/* In progress → complete */}
+                {req.status === 'in_progress' && (
+                  <>
+                    <button
+                      className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
+                      onClick={() => progressMut.mutate({ id: req.id, status: 'completed' })}
+                      disabled={progressMut.isPending}
+                    >
+                      <CheckCircle2 size={12} /> Finalizar
+                    </button>
+                    <button
+                      className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
+                      onClick={() => handleReview(req, 'rejected')}
+                      disabled={reviewMut.isPending}
+                    >
+                      <X size={12} /> Rechazar
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
@@ -420,7 +514,7 @@ export default function RequestsPage() {
         </form>
       </Modal>
 
-      {/* Reject notes modal */}
+      {/* Reject modal */}
       <Modal open={rejectOpen} title="Rechazar solicitud" onClose={() => setRejectOpen(false)}>
         <div style={{ padding: '0 0 4px' }}>
           <label className={mstyles.fieldLabel}>Motivo del rechazo (opcional)</label>
@@ -446,7 +540,7 @@ export default function RequestsPage() {
         </div>
       </Modal>
 
-      {/* Cancel confirm modal */}
+      {/* Cancel modal */}
       <Modal open={!!cancelTarget} title="Cancelar solicitud" onClose={() => setCancelTarget(null)}>
         <p style={{ fontSize: 14, color: '#374151', marginBottom: 4 }}>
           ¿Seguro que quieres cancelar esta solicitud? Esta acción no se puede deshacer.

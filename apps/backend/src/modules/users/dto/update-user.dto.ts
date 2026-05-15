@@ -4,8 +4,12 @@ import {
   IsOptional,
   IsBoolean,
   IsUUID,
+  IsIn,
+  IsDateString,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+const GENDERS = ['masculino', 'femenino', 'no_binario', 'prefiero_no_decir', 'otro'] as const;
 
 export class UpdateUserDto {
   @ApiPropertyOptional()
@@ -23,6 +27,12 @@ export class UpdateUserDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(10)
+  phone_prefix?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   @MaxLength(30)
   phone?: string;
 
@@ -36,6 +46,52 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  country?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  state_province?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  birth_date?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  national_id?: string;
+
+  @ApiPropertyOptional({ enum: GENDERS })
+  @IsOptional()
+  @IsIn(GENDERS)
+  gender?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  emergency_contact_name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  emergency_contact_phone?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

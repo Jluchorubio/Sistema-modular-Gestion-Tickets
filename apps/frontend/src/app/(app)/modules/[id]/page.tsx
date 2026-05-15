@@ -8,6 +8,7 @@ import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { getInitials } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
+import { Construction } from 'lucide-react';
 import { AssignUsersModal } from './AssignUsersModal';
 import styles from './module-detail.module.css';
 
@@ -63,6 +64,36 @@ export default function ModuleDetailPage() {
     return <p className={styles.errorMsg}>Error cargando módulo.</p>;
   }
 
+  // Block non-admin access during maintenance
+  if ((mod as any).maintenance_mode && !isSuperadmin) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', minHeight: '60vh', textAlign: 'center', gap: 16,
+      }}>
+        <Construction size={56} color="#f59e0b" strokeWidth={1.5} />
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', margin: 0 }}>
+          Módulo en mantenimiento
+        </h2>
+        <p style={{ fontSize: 15, color: '#64748b', maxWidth: 420, margin: 0 }}>
+          {(mod as any).maintenance_message
+            || 'Este módulo está temporalmente fuera de servicio por mantenimiento. Vuelve más tarde.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard')}
+          style={{
+            marginTop: 8, padding: '10px 24px', background: '#6366f1', color: '#fff',
+            border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Volver al dashboard
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className={styles.breadcrumb}>
@@ -72,6 +103,20 @@ export default function ModuleDetailPage() {
         <span>›</span>
         <span>{mod.name}</span>
       </div>
+
+      {/* Maintenance banner for superadmin */}
+      {(mod as any).maintenance_mode && isSuperadmin && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: '#451a03', border: '1px solid #78350f',
+          borderRadius: 10, padding: '10px 16px', marginBottom: 20,
+        }}>
+          <Construction size={16} color="#fbbf24" />
+          <span style={{ fontSize: 13, color: '#fde68a', fontWeight: 600 }}>
+            Modo mantenimiento activo — los usuarios no pueden acceder a este módulo.
+          </span>
+        </div>
+      )}
 
       <div className={styles.header}>
         <div>

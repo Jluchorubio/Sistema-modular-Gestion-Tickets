@@ -14,6 +14,8 @@ import {
   Pause,
   Play,
   Trash2,
+  Construction,
+  WrenchIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { SystemModule } from '@/types/module.types';
@@ -42,12 +44,13 @@ const FALLBACK_CONFIG: TypeConfig = {
 };
 
 interface ModuleCardProps {
-  module:          SystemModule;
-  isSuperadmin:    boolean;
-  onClick:         () => void;
-  onEdit?:         () => void;
-  onToggleActive?: () => void;
-  onDelete?:       () => void;
+  module:                SystemModule;
+  isSuperadmin:          boolean;
+  onClick:               () => void;
+  onEdit?:               () => void;
+  onToggleActive?:       () => void;
+  onDelete?:             () => void;
+  onToggleMaintenance?:  () => void;
 }
 
 export const ModuleCard = memo(function ModuleCard({
@@ -57,6 +60,7 @@ export const ModuleCard = memo(function ModuleCard({
   onEdit,
   onToggleActive,
   onDelete,
+  onToggleMaintenance,
 }: ModuleCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef  = useRef<HTMLDivElement>(null);
@@ -74,14 +78,19 @@ export const ModuleCard = memo(function ModuleCard({
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [menuOpen]);
 
+  const inMaintenance = !!m.maintenance_mode;
+
   const cardCls = [
     styles.card,
-    isLocked     ? styles.locked   : '',
-    !m.is_active ? styles.inactive : '',
+    isLocked        ? styles.locked          : '',
+    !m.is_active    ? styles.inactive        : '',
+    inMaintenance   ? styles.maintenance     : '',
+    menuOpen        ? styles.cardMenuOpen    : '',
   ].filter(Boolean).join(' ');
 
   function handleCardClick() {
     if (!m.is_active || isLocked) return;
+    if (inMaintenance && !isSuperadmin) return;
     onClick();
   }
 
@@ -115,6 +124,13 @@ export const ModuleCard = memo(function ModuleCard({
         {/* Inactive badge */}
         {!m.is_active && (
           <span className={styles.inactiveBadge}>Inactivo</span>
+        )}
+
+        {/* Maintenance badge */}
+        {inMaintenance && (
+          <span className={styles.maintenanceBadge}>
+            <Construction size={10} /> Mantenimiento
+          </span>
         )}
       </div>
 
@@ -151,6 +167,16 @@ export const ModuleCard = memo(function ModuleCard({
                 {m.is_active
                   ? <><Pause size={13} /> Desactivar</>
                   : <><Play  size={13} /> Activar</>
+                }
+              </button>
+              <button
+                type="button"
+                className={styles.ddItem}
+                onClick={() => { setMenuOpen(false); onToggleMaintenance?.(); }}
+              >
+                {inMaintenance
+                  ? <><WrenchIcon size={13} /> Desactivar mantenimiento</>
+                  : <><WrenchIcon size={13} /> Modo mantenimiento</>
                 }
               </button>
               <div className={styles.ddSep} />

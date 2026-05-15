@@ -8,7 +8,7 @@ import esLocale from '@fullcalendar/core/locales/es';
 import type { EventClickArg } from '@fullcalendar/core';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, CheckCircle2, XCircle, Clock, Filter, Plus } from 'lucide-react';
+import { X, CheckCircle2, XCircle, Clock, Filter, Plus, Settings, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   requestsService,
@@ -16,6 +16,7 @@ import {
   type RequestStatus,
   type RequestType,
   type RequestPriority,
+  type TaskSource,
 } from '@/services/requests.service';
 import {
   REQUEST_STATUS_LABELS,
@@ -47,25 +48,51 @@ const ROLE_LABELS: Record<CalendarRole, string> = {
   user:       'Mis solicitudes',
 };
 
+/* ── Source colors ──────────────────────────────────────────────────────── */
+const SOURCE_COLORS = {
+  system_task: '#8B5CF6',
+  user_task:   '#6366F1',
+};
+
+function eventColor(req: AdmRequest): string {
+  if (req.type === 'task') {
+    return req.task_source === 'system' ? SOURCE_COLORS.system_task : SOURCE_COLORS.user_task;
+  }
+  return REQUEST_STATUS_COLORS[req.status] ?? '#94a3b8';
+}
+
+/* ── Source filter type ─────────────────────────────────────────────────── */
+type CalendarSourceFilter = '' | 'system_tasks' | 'user_tasks' | 'requests';
+
+const SOURCE_FILTER_LABELS: Record<CalendarSourceFilter, string> = {
+  '':           'Origen: Todos',
+  system_tasks: 'Tareas del sistema',
+  user_tasks:   'Mis tareas',
+  requests:     'Solicitudes',
+};
+
 /* ── Stats bar ─────────────────────────────────────────────────────────── */
 function StatsBar({ requests }: { requests: AdmRequest[] }) {
   const counts = useMemo(() => ({
-    total:        requests.length,
-    pending:      requests.filter((r) => r.status === 'pending').length,
-    under_review: requests.filter((r) => r.status === 'under_review').length,
-    approved:     requests.filter((r) => r.status === 'approved').length,
-    rejected:     requests.filter((r) => r.status === 'rejected').length,
-    cancelled:    requests.filter((r) => r.status === 'cancelled').length,
+    total:       requests.length,
+    pending:     requests.filter((r) => r.status === 'pending').length,
+    taken:       requests.filter((r) => r.status === 'taken').length,
+    in_progress: requests.filter((r) => r.status === 'in_progress').length,
+    completed:   requests.filter((r) => r.status === 'completed').length,
+    approved:    requests.filter((r) => r.status === 'approved').length,
+    rejected:    requests.filter((r) => r.status === 'rejected').length,
   }), [requests]);
 
   return (
     <div className={styles.statsBar}>
       {([
-        { label: 'Total',      value: counts.total,        color: '#0f172a' },
-        { label: 'Pendientes', value: counts.pending,       color: REQUEST_STATUS_COLORS.pending },
-        { label: 'En revisión',value: counts.under_review,  color: REQUEST_STATUS_COLORS.under_review },
-        { label: 'Aprobadas',  value: counts.approved,      color: REQUEST_STATUS_COLORS.approved },
-        { label: 'Rechazadas', value: counts.rejected,      color: REQUEST_STATUS_COLORS.rejected },
+        { label: 'Total',       value: counts.total,       color: '#0f172a' },
+        { label: 'Pendientes',  value: counts.pending,      color: REQUEST_STATUS_COLORS.pending },
+        { label: 'Tomados',     value: counts.taken,        color: REQUEST_STATUS_COLORS.taken },
+        { label: 'En proceso',  value: counts.in_progress,  color: REQUEST_STATUS_COLORS.in_progress },
+        { label: 'Finalizados', value: counts.completed,    color: REQUEST_STATUS_COLORS.completed },
+        { label: 'Aprobadas',   value: counts.approved,     color: REQUEST_STATUS_COLORS.approved },
+        { label: 'Rechazadas',  value: counts.rejected,     color: REQUEST_STATUS_COLORS.rejected },
       ] as { label: string; value: number; color: string }[]).map(({ label, value, color }) => (
         <div key={label} className={styles.statCard}>
           <span className={styles.statValue} style={{ color }}>{value}</span>
@@ -78,25 +105,28 @@ function StatsBar({ requests }: { requests: AdmRequest[] }) {
 
 /* ── New task modal ─────────────────────────────────────────────────────── */
 interface NewTaskModalProps {
-  onClose:   () => void;
-  onCreated: () => void;
+  onClose:      () => void;
+  onCreated:    () => void;
+  isSuperadmin: boolean;
 }
 
-function NewTaskModal({ onClose, onCreated }: NewTaskModalProps) {
+function NewTaskModal({ onClose, onCreated, isSuperadmin }: NewTaskModalProps) {
   const qc = useQueryClient();
-  const [title,    setTitle]    = useState('');
-  const [desc,     setDesc]     = useState('');
-  const [priority, setPriority] = useState<RequestPriority>('media');
-  const [dueDate,  setDueDate]  = useState('');
-  const [error,    setError]    = useState('');
+  const [title,      setTitle]      = useState('');
+  const [desc,       setDesc]       = useState('');
+  const [priority,   setPriority]   = useState<RequestPriority>('media');
+  const [dueDate,    setDueDate]    = useState('');
+  const [taskSource, setTaskSource] = useState<TaskSource>('user');
+  const [error,      setError]      = useState('');
 
   const createMut = useMutation({
     mutationFn: () => requestsService.create({
-      type:     'task',
-      title:    title.trim(),
+      type:        'task',
+      title:       title.trim(),
       description: desc.trim() || 'Tarea de calendario.',
       priority,
-      metadata: dueDate ? { due_date: dueDate } : undefined,
+      task_source: taskSource,
+      metadata:    dueDate ? { due_date: dueDate } : undefined,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['calendar-requests'] });
@@ -126,6 +156,38 @@ function NewTaskModal({ onClose, onCreated }: NewTaskModalProps) {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {isSuperadmin && (
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
+                Tipo de tarea
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['user', 'system'] as TaskSource[]).map((src) => {
+                  const active = taskSource === src;
+                  const c = src === 'system' ? '#8B5CF6' : '#6366F1';
+                  return (
+                    <button
+                      key={src}
+                      type="button"
+                      onClick={() => setTaskSource(src)}
+                      style={{
+                        flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        border: `2px solid ${active ? c : '#E2E8F0'}`,
+                        background: active ? `${c}18` : '#fff',
+                        color: active ? c : '#64748B',
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      }}
+                    >
+                      {src === 'system' ? <Settings size={13} /> : <User size={13} />}
+                      {src === 'system' ? 'Del sistema' : 'Personal'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div>
             <label style={{ fontSize: 11, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
               Título *
@@ -198,9 +260,7 @@ function NewTaskModal({ onClose, onCreated }: NewTaskModalProps) {
             </div>
           </div>
 
-          {error && (
-            <p style={{ fontSize: 12, color: '#EF4444', margin: 0 }}>{error}</p>
-          )}
+          {error && <p style={{ fontSize: 12, color: '#EF4444', margin: 0 }}>{error}</p>}
 
           <div className={styles.popupActions} style={{ marginTop: 4 }}>
             <button
@@ -233,12 +293,13 @@ interface PopupProps {
 }
 
 function EventPopup({ req, role, onClose, onRefresh }: PopupProps) {
-  const qc        = useQueryClient();
-  const isTask    = req.type === 'task';
-  const canReview = !isTask && (role === 'superadmin' || role === 'admin');
-  const canCancel = !isTask && role === 'user' && ['pending', 'under_review'].includes(req.status);
-  const canComplete = isTask && req.status === 'pending';
-  const canCancelTask = isTask && req.status === 'pending';
+  const qc           = useQueryClient();
+  const isTask       = req.type === 'task';
+  const isSystemTask = isTask && req.task_source === 'system';
+  const canReview    = !isTask && (role === 'superadmin' || role === 'admin');
+  const canCancel    = !isTask && role === 'user' && ['pending', 'under_review'].includes(req.status);
+  const canComplete  = isTask && !isSystemTask && req.status === 'pending';
+  const canCancelTask = isTask && !isSystemTask && req.status === 'pending';
 
   const [rejectNotes, setRejectNotes] = useState('');
   const [showReject,  setShowReject]  = useState(false);
@@ -262,6 +323,9 @@ function EventPopup({ req, role, onClose, onRefresh }: PopupProps) {
   const statusColor   = REQUEST_STATUS_COLORS[req.status] ?? '#94a3b8';
   const priorityColor = REQUEST_PRIORITY_COLORS[req.priority] ?? '#94a3b8';
   const dueDate       = req.metadata?.due_date ? String(req.metadata.due_date) : null;
+  const srcColor      = isTask
+    ? (isSystemTask ? SOURCE_COLORS.system_task : SOURCE_COLORS.user_task)
+    : null;
 
   return (
     <div className={styles.popupOverlay} onClick={onClose}>
@@ -271,19 +335,25 @@ function EventPopup({ req, role, onClose, onRefresh }: PopupProps) {
         </button>
 
         <div className={styles.popupType}>
-          {isTask ? 'Tarea' : (REQUEST_TYPE_LABELS[req.type] ?? req.type)}
+          {isTask
+            ? (isSystemTask ? '⚙ Tarea del sistema' : '✓ Tarea personal')
+            : (REQUEST_TYPE_LABELS[req.type] ?? req.type)}
         </div>
 
         <div className={styles.popupTitle}>{req.title}</div>
 
         <div className={styles.popupBadges}>
+          {srcColor && (
+            <span
+              className={styles.popupStatusBadge}
+              style={{ background: `${srcColor}22`, color: srcColor, border: `1px solid ${srcColor}44` }}
+            >
+              {isSystemTask ? 'Sistema' : 'Personal'}
+            </span>
+          )}
           <span
             className={styles.popupStatusBadge}
-            style={{
-              background: `${statusColor}22`,
-              color:       statusColor,
-              border:      `1px solid ${statusColor}44`,
-            }}
+            style={{ background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44` }}
           >
             {REQUEST_STATUS_LABELS[req.status] ?? req.status}
           </span>
@@ -295,9 +365,7 @@ function EventPopup({ req, role, onClose, onRefresh }: PopupProps) {
           </span>
         </div>
 
-        {req.description && (
-          <p className={styles.popupDesc}>{req.description}</p>
-        )}
+        {req.description && <p className={styles.popupDesc}>{req.description}</p>}
 
         <div className={styles.popupMeta}>
           {dueDate ? (
@@ -323,7 +391,6 @@ function EventPopup({ req, role, onClose, onRefresh }: PopupProps) {
           </div>
         )}
 
-        {/* ── Task actions ── */}
         {canComplete && (
           <div className={styles.popupActions}>
             <button
@@ -348,7 +415,6 @@ function EventPopup({ req, role, onClose, onRefresh }: PopupProps) {
           </div>
         )}
 
-        {/* ── Review actions (admin) ── */}
         {canReview && req.status === 'pending' && !showReject && (
           <div className={styles.popupActions}>
             <button
@@ -420,7 +486,6 @@ function EventPopup({ req, role, onClose, onRefresh }: PopupProps) {
           </div>
         )}
 
-        {/* ── Cancel (user non-task) ── */}
         {canCancel && (
           <div className={styles.popupActions}>
             <button
@@ -441,12 +506,14 @@ function EventPopup({ req, role, onClose, onRefresh }: PopupProps) {
 export function CalendarClient() {
   const role        = useCalendarRole();
   const canSeeAll   = role === 'superadmin' || role === 'admin';
+  const isSuperadmin = role === 'superadmin';
 
-  const [statusFilter,  setStatusFilter]  = useState<RequestStatus | ''>('');
-  const [typeFilter,    setTypeFilter]    = useState<RequestType   | ''>('');
-  const [showFilters,   setShowFilters]   = useState(false);
-  const [selectedReq,   setSelectedReq]  = useState<AdmRequest | null>(null);
-  const [showNewTask,   setShowNewTask]   = useState(false);
+  const [statusFilter, setStatusFilter] = useState<RequestStatus | ''>('');
+  const [typeFilter,   setTypeFilter]   = useState<RequestType   | ''>('');
+  const [sourceFilter, setSourceFilter] = useState<CalendarSourceFilter>('');
+  const [showFilters,  setShowFilters]  = useState(false);
+  const [selectedReq,  setSelectedReq] = useState<AdmRequest | null>(null);
+  const [showNewTask,  setShowNewTask]  = useState(false);
 
   const queryKey = ['calendar-requests', role, statusFilter, typeFilter];
 
@@ -461,22 +528,32 @@ export function CalendarClient() {
 
   const requests = data?.data ?? [];
 
-  const events = useMemo(() => requests.map((req) => {
-    const color = REQUEST_PRIORITY_COLORS[req.priority] ?? '#94a3b8';
+  const filteredRequests = useMemo(() => {
+    if (!sourceFilter) return requests;
+    if (sourceFilter === 'system_tasks') return requests.filter((r) => r.task_source === 'system');
+    if (sourceFilter === 'user_tasks')   return requests.filter((r) => r.task_source === 'user' && r.type === 'task');
+    if (sourceFilter === 'requests')     return requests.filter((r) => r.type !== 'task');
+    return requests;
+  }, [requests, sourceFilter]);
+
+  const events = useMemo(() => filteredRequests.map((req) => {
+    const color = eventColor(req);
     const startDate = req.type === 'task' && req.metadata?.due_date
       ? String(req.metadata.due_date)
       : req.created_at.slice(0, 10);
     return {
       id:              req.id,
-      title:           req.type === 'task' ? `✓ ${req.title}` : req.title,
+      title:           req.type === 'task'
+        ? (req.task_source === 'system' ? `⚙ ${req.title}` : `✓ ${req.title}`)
+        : req.title,
       start:           startDate,
       allDay:          true,
-      backgroundColor: req.status === 'approved' ? '#22C55E' : req.status === 'cancelled' ? '#94a3b8' : color,
-      borderColor:     req.status === 'approved' ? '#22C55E' : req.status === 'cancelled' ? '#94a3b8' : color,
+      backgroundColor: color,
+      borderColor:     color,
       textColor:       '#ffffff',
       extendedProps:   { req },
     };
-  }), [requests]);
+  }), [filteredRequests]);
 
   function handleEventClick(info: EventClickArg) {
     info.jsEvent.preventDefault();
@@ -493,12 +570,22 @@ export function CalendarClient() {
         </div>
         <div className={styles.headerRight}>
           <div className={styles.legend}>
-            {(['baja', 'media', 'alta', 'critica'] as const).map((p) => (
-              <span key={p} className={styles.legendItem}>
-                <span className={styles.legendDot} style={{ background: REQUEST_PRIORITY_COLORS[p] }} />
-                {REQUEST_PRIORITY_LABELS[p]}
-              </span>
-            ))}
+            <span className={styles.legendItem}>
+              <span className={styles.legendDot} style={{ background: SOURCE_COLORS.system_task }} />
+              Sistema
+            </span>
+            <span className={styles.legendItem}>
+              <span className={styles.legendDot} style={{ background: SOURCE_COLORS.user_task }} />
+              Personal
+            </span>
+            <span className={styles.legendItem}>
+              <span className={styles.legendDot} style={{ background: REQUEST_STATUS_COLORS.pending }} />
+              Pendiente
+            </span>
+            <span className={styles.legendItem}>
+              <span className={styles.legendDot} style={{ background: REQUEST_STATUS_COLORS.approved }} />
+              Aprobada
+            </span>
           </div>
           <button
             onClick={() => setShowNewTask(true)}
@@ -545,10 +632,19 @@ export function CalendarClient() {
               <option key={t} value={t}>{REQUEST_TYPE_LABELS[t] ?? t}</option>
             ))}
           </select>
-          {(statusFilter || typeFilter) && (
+          <select
+            className={styles.filterSelect}
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as CalendarSourceFilter)}
+          >
+            {(Object.keys(SOURCE_FILTER_LABELS) as CalendarSourceFilter[]).map((k) => (
+              <option key={k} value={k}>{SOURCE_FILTER_LABELS[k]}</option>
+            ))}
+          </select>
+          {(statusFilter || typeFilter || sourceFilter) && (
             <button
               className={styles.clearFilters}
-              onClick={() => { setStatusFilter(''); setTypeFilter(''); }}
+              onClick={() => { setStatusFilter(''); setTypeFilter(''); setSourceFilter(''); }}
             >
               <X size={12} /> Limpiar
             </button>
@@ -561,9 +657,7 @@ export function CalendarClient() {
 
       {/* ── Calendar ── */}
       <div className={styles.calWrap}>
-        {isLoading && (
-          <div className={styles.loadOverlay}>Cargando…</div>
-        )}
+        {isLoading && <div className={styles.loadOverlay}>Cargando…</div>}
         <FullCalendar
           plugins={[dayGridPlugin, listPlugin, interactionPlugin]}
           initialView="dayGridMonth"
@@ -575,12 +669,7 @@ export function CalendarClient() {
             center: 'title',
             right:  'dayGridMonth,dayGridWeek,listMonth',
           }}
-          buttonText={{
-            today: 'Hoy',
-            month: 'Mes',
-            week:  'Semana',
-            list:  'Lista',
-          }}
+          buttonText={{ today: 'Hoy', month: 'Mes', week: 'Semana', list: 'Lista' }}
           views={{
             listMonth:   { buttonText: 'Agenda' },
             dayGridWeek: { buttonText: 'Semana' },
@@ -594,15 +683,14 @@ export function CalendarClient() {
         />
       </div>
 
-      {/* ── New task modal ── */}
       {showNewTask && (
         <NewTaskModal
           onClose={() => setShowNewTask(false)}
           onCreated={() => refetch()}
+          isSuperadmin={isSuperadmin}
         />
       )}
 
-      {/* ── Event popup ── */}
       {selectedReq && (
         <EventPopup
           req={selectedReq}

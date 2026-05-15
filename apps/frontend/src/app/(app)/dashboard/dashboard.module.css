@@ -1,3 +1,61 @@
+/* ── Stats strip (superadmin, #12) ── */
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.statCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.statCard:hover {
+  border-color: #6366f1;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.10);
+}
+
+.statCardIcon {
+  color: #6366f1;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.statCardValue {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.statCardLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.statCardSub {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+@media (max-width: 900px) {
+  .statsStrip { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .statsStrip { grid-template-columns: 1fr; }
+}
+
 .welcome {
   font-size: 20px;
   font-weight: 600;

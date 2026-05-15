@@ -12,13 +12,14 @@ import styles from './profile.module.css';
 export type { ProfileUser };
 
 interface ProfileViewProps {
-  user:           ProfileUser;
-  isOwnProfile:   boolean;
-  onBack?:        () => void;
-  onUserUpdated?: (u: ProfileUser) => void;
+  user:                ProfileUser;
+  isOwnProfile:        boolean;
+  viewerIsSuperadmin?: boolean;
+  onBack?:             () => void;
+  onUserUpdated?:      (u: ProfileUser) => void;
 }
 
-export function ProfileView({ user: initialUser, isOwnProfile, onBack, onUserUpdated }: ProfileViewProps) {
+export function ProfileView({ user: initialUser, isOwnProfile, viewerIsSuperadmin = false, onBack, onUserUpdated }: ProfileViewProps) {
   const [user,      setLocalUser] = useState<ProfileUser>(initialUser);
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
 
@@ -31,7 +32,7 @@ export function ProfileView({ user: initialUser, isOwnProfile, onBack, onUserUpd
   }, [user, onUserUpdated]);
 
   const handleTotpToggled = useCallback((enabled: boolean) => {
-    setLocalUser(prev => ({ ...prev, totp_enabled: enabled }));
+    setLocalUser(prev => ({ ...prev, otp_enabled: enabled }));
   }, []);
 
   return (
@@ -58,7 +59,7 @@ export function ProfileView({ user: initialUser, isOwnProfile, onBack, onUserUpd
             >
               <LayoutGrid size={13} />Overview
             </button>
-            {isOwnProfile && (
+            {(isOwnProfile || viewerIsSuperadmin) && (
               <>
                 <button
                   className={`${styles.navTab}${activeTab === 'security' ? ` ${styles.navTabActive}` : ''}`}
@@ -79,10 +80,10 @@ export function ProfileView({ user: initialUser, isOwnProfile, onBack, onUserUpd
           {activeTab === 'overview' && (
             <ProfileOverviewTab user={user} isOwnProfile={isOwnProfile} fullName={fullName} />
           )}
-          {isOwnProfile && activeTab === 'security' && (
+          {(isOwnProfile || viewerIsSuperadmin) && activeTab === 'security' && (
             <ProfileSecurityTab user={user} isOwnProfile={isOwnProfile} onTotpToggled={handleTotpToggled} />
           )}
-          {isOwnProfile && activeTab === 'settings' && (
+          {(isOwnProfile || viewerIsSuperadmin) && activeTab === 'settings' && (
             <ProfileSettingsTab user={user} />
           )}
         </div>

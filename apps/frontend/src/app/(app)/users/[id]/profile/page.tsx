@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { usersService } from '@/services/users.service';
+import { useAuthStore } from '@/stores/auth.store';
 import { ProfileView, type ProfileUser } from '@/components/profile/ProfileView';
 import { SkeletonProfileLeft, SkeletonProfileRight } from '@/components/ui/Skeleton';
 
@@ -16,8 +17,9 @@ function ProfileSkeleton() {
 }
 
 export default function UserProfilePage() {
-  const { id }  = useParams<{ id: string }>();
-  const router  = useRouter();
+  const { id }     = useParams<{ id: string }>();
+  const router     = useRouter();
+  const { user: viewer } = useAuthStore();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['user', id],
@@ -30,10 +32,14 @@ export default function UserProfilePage() {
   if (error)     return <p style={{ color: '#ef4444', padding: 20 }}>Error cargando perfil del usuario</p>;
   if (!data)     return null;
 
+  const isOwnProfile        = viewer?.id === id;
+  const viewerIsSuperadmin  = viewer?.is_superadmin === true;
+
   return (
     <ProfileView
       user={data as ProfileUser}
-      isOwnProfile={false}
+      isOwnProfile={isOwnProfile}
+      viewerIsSuperadmin={viewerIsSuperadmin}
       onBack={() => router.push('/users')}
     />
   );

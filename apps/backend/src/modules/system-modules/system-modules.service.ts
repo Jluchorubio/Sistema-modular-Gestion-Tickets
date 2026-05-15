@@ -14,12 +14,26 @@ export class SystemModulesService {
 
     if (profile?.is_superadmin) {
       return this.db.query<any[]>(
-        `SELECT id, name, slug, description, type, image_url, color, is_active, created_at
+        `SELECT id, name, slug, description, type, image_url, color, is_active,
+                maintenance_mode, maintenance_since, maintenance_message, created_at
          FROM modules.modules
          WHERE deleted_at IS NULL
          ORDER BY is_active DESC, name`,
       );
     }
+
+    // Non-superadmin: only modules assigned to user
+    return this.db.query<any[]>(
+      `SELECT DISTINCT m.id, m.name, m.slug, m.description, m.type, m.image_url,
+              m.color, m.is_active, m.maintenance_mode, m.maintenance_message, m.created_at
+       FROM   modules.modules           m
+       JOIN   modules.user_module_roles umr ON umr.module_id = m.id
+                                           AND umr.user_id   = $1
+                                           AND umr.is_active = true
+       WHERE  m.deleted_at IS NULL AND m.is_active = true
+       ORDER  BY m.name`,
+      [userId],
+    );
   }
 
   async findOne(id: string) {
@@ -142,6 +156,26 @@ export class SystemModulesService {
       message: `Módulo "${mod.name}" eliminado. Se conservará durante 90 días antes del borrado definitivo.`,
       module: { id: mod.id, name: mod.name },
     };
+  }
+
+  async toggleMaintenance(id: string, userId: string, enabled: boolean, message?: string) {
+    const [mod] = await this.db.query<{ id: string; name: string }[]>(
+      `SELECT id, name FROM modules.modules WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    if (!mod) throw new NotFoundException(`Módulo ${id} no encontrado`);
+
+    await this.db.query(
+      `UPDATE modules.modules
+       SET maintenance_mode    = $1,
+           maintenance_by      = $2,
+           maintenance_since   = CASE WHEN $1 THEN now() ELSE NULL END,
+           maintenance_message = $3
+       WHERE id = $4`,
+      [enabled, enabled ? userId : null, message ?? null, id],
+    );
+
+    return { ok: true, maintenance_mode: enabled, module: { id: mod.id, name: mod.name } };
   }
 
   async restoreModule(id: string) {

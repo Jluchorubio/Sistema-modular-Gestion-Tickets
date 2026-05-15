@@ -36,4 +36,28 @@ export class CompleteProfileDto {
   @MinLength(3)
   @MaxLength(100)
   username?: string;
+
+  @ApiPropertyOptional({ example: '+57' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(10)
+  phone_prefix?: string;
+
+  @ApiPropertyOptional({ example: 'Colombia' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  country?: string;
+
+  @ApiPropertyOptional({ example: 'Cundinamarca' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(150)
+  state_province?: string;
+
+  @ApiPropertyOptional({ example: 'Bogotá' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(150)
+  city?: string;
 }

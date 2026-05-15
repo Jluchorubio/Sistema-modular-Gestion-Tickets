@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { CreateRequestDto } from './dto/create-request.dto';
@@ -8,13 +8,14 @@ import { ReviewRequestDto } from './dto/review-request.dto';
 export class RequestsService {
   constructor(@InjectDataSource() private readonly db: DataSource) {}
 
-  async create(requesterId: string, dto: CreateRequestDto) {
-    const metaJson = dto.metadata ? JSON.stringify(dto.metadata) : null;
+  async create(requesterId: string, dto: CreateRequestDto & { task_source?: 'user' | 'system' }) {
+    const metaJson   = dto.metadata ? JSON.stringify(dto.metadata) : null;
+    const taskSource = dto.task_source === 'system' ? 'system' : 'user';
     const [row] = await this.db.query<any[]>(
-      `INSERT INTO requests.admin_requests (requester_id, type, title, description, priority, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO requests.admin_requests (requester_id, type, title, description, priority, metadata, task_source)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [requesterId, dto.type, dto.title.trim(), dto.description.trim(), dto.priority ?? 'media', metaJson],
+      [requesterId, dto.type, dto.title.trim(), dto.description.trim(), dto.priority ?? 'media', metaJson, taskSource],
     );
     await this.db.query(
       `INSERT INTO requests.request_timeline (request_id, actor_id, action, new_status)
@@ -45,7 +46,7 @@ export class RequestsService {
     return { ok: true };
   }
 
-  async findAll(opts: { status?: string; type?: string; page?: number; limit?: number }) {
+  async findAll(opts: { status?: string; type?: string; source?: string; page?: number; limit?: number }) {
     const page   = Math.max(1, opts.page  ?? 1);
     const limit  = Math.min(100, Math.max(1, opts.limit ?? 20));
     const offset = (page - 1) * limit;
@@ -53,8 +54,9 @@ export class RequestsService {
     const conditions: string[] = ['r.deleted_at IS NULL'];
     const params: unknown[]    = [];
 
-    if (opts.status) { params.push(opts.status); conditions.push(`r.status = $${params.length}`); }
-    if (opts.type)   { params.push(opts.type);   conditions.push(`r.type   = $${params.length}`); }
+    if (opts.status) { params.push(opts.status); conditions.push(`r.status      = $${params.length}`); }
+    if (opts.type)   { params.push(opts.type);   conditions.push(`r.type        = $${params.length}`); }
+    if (opts.source) { params.push(opts.source); conditions.push(`r.task_source = $${params.length}`); }
 
     const where = `WHERE ${conditions.join(' AND ')}`;
 
@@ -65,14 +67,17 @@ export class RequestsService {
     const rows = await this.db.query<any[]>(
       `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
               r.metadata, r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
+              r.taken_at, r.sla_due_at, r.task_source,
               p.first_name || ' ' || p.last_name AS requester_name,
               p.id                               AS requester_id,
               c.email                            AS requester_email,
-              rv.first_name || ' ' || rv.last_name AS reviewer_name
+              rv.first_name || ' ' || rv.last_name AS reviewer_name,
+              tb.first_name || ' ' || tb.last_name AS taken_by_name
        FROM   requests.admin_requests r
        JOIN   users.profiles          p  ON p.id = r.requester_id
        JOIN   auth.credentials        c  ON c.user_id = p.id
        LEFT JOIN users.profiles       rv ON rv.id = r.reviewed_by
+       LEFT JOIN users.profiles       tb ON tb.id = r.taken_by
        ${where}
        ORDER  BY r.created_at DESC
        LIMIT  $${li} OFFSET $${oi}`,
@@ -108,9 +113,12 @@ export class RequestsService {
     const rows = await this.db.query<any[]>(
       `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
               r.metadata, r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
-              rv.first_name || ' ' || rv.last_name AS reviewer_name
+              r.taken_at, r.sla_due_at, r.task_source,
+              rv.first_name || ' ' || rv.last_name AS reviewer_name,
+              tb.first_name || ' ' || tb.last_name AS taken_by_name
        FROM   requests.admin_requests r
        LEFT JOIN users.profiles rv ON rv.id = r.reviewed_by
+       LEFT JOIN users.profiles tb ON tb.id = r.taken_by
        ${where}
        ORDER  BY r.created_at DESC
        LIMIT  $${li} OFFSET $${oi}`,
@@ -151,6 +159,66 @@ export class RequestsService {
          (request_id, actor_id, action, old_status, new_status, notes)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [requestId, reviewerId, `reviewed_${dto.status}`, req.status, dto.status, dto.review_notes ?? null],
+    );
+    return updated;
+  }
+
+  async take(userId: string, requestId: string) {
+    const [req] = await this.db.query<{ id: string; status: string }[]>(
+      `SELECT id, status FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
+      [requestId],
+    );
+    if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
+    if (req.status !== 'pending') throw new BadRequestException('Solo se pueden tomar solicitudes pendientes');
+
+    const [updated] = await this.db.query<any[]>(
+      `UPDATE requests.admin_requests
+       SET status     = 'taken',
+           taken_at   = now(),
+           taken_by   = $1,
+           sla_due_at = now() + INTERVAL '4 hours',
+           updated_at = now()
+       WHERE id = $2
+       RETURNING *`,
+      [userId, requestId],
+    );
+    await this.db.query(
+      `INSERT INTO requests.request_timeline (request_id, actor_id, action, old_status, new_status)
+       VALUES ($1, $2, 'taken', 'pending', 'taken')`,
+      [requestId, userId],
+    );
+    return updated;
+  }
+
+  async updateProgress(userId: string, requestId: string, status: 'in_progress' | 'completed') {
+    const [req] = await this.db.query<{ id: string; status: string }[]>(
+      `SELECT id, status FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
+      [requestId],
+    );
+    if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
+
+    const validFrom: Record<string, string[]> = {
+      in_progress: ['taken'],
+      completed:   ['taken', 'in_progress'],
+    };
+    if (!validFrom[status]?.includes(req.status)) {
+      throw new BadRequestException(`No se puede mover de "${req.status}" a "${status}"`);
+    }
+
+    const [updated] = await this.db.query<any[]>(
+      `UPDATE requests.admin_requests
+       SET status      = $1,
+           reviewed_by = $2,
+           reviewed_at = now(),
+           updated_at  = now()
+       WHERE id = $3
+       RETURNING *`,
+      [status, userId, requestId],
+    );
+    await this.db.query(
+      `INSERT INTO requests.request_timeline (request_id, actor_id, action, old_status, new_status)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [requestId, userId, `progress_${status}`, req.status, status],
     );
     return updated;
   }
