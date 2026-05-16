@@ -6,65 +6,36 @@ import {
   LayoutGrid,
   Users,
   Tag,
-  ClipboardList,
   Trash2,
   User,
   ChevronRight,
   ArrowLeft,
-  Layers,
-  Ticket,
-  Package,
   BarChart2,
+  type LucideIcon,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
 import { useAuthStore } from '@/stores/auth.store';
+import type { ModuleNavItem } from '@/types/nav.types';
 import styles from './sidebar.module.css';
 
 /* ── Role helpers ──────────────────────────────────────────────────────────── */
 
 function useSidebarRoles() {
-  const user = useAuthStore((s) => s.user);
+  const user         = useAuthStore((s) => s.user);
   const isSuperadmin = user?.is_superadmin ?? false;
   const activeRoles  = user?.module_roles?.filter((r) => r.status === 'active').map((r) => r.role_name) ?? [];
   const isAdmin      = isSuperadmin || activeRoles.includes('admin_modulo');
-  const isElevated   = isAdmin      || activeRoles.includes('jefe_tecnico');
-  return { isSuperadmin, isAdmin, isElevated };
+  return { isSuperadmin, isAdmin };
 }
 
-/* ── Nav definitions ───────────────────────────────────────────────────────── */
-
-const PERSONAL_NAV = [
-  { key: 'modules',  label: 'Dashboard',   Icon: LayoutGrid,    href: '/dashboard' },
-  { key: 'tickets',   label: 'Tickets',     Icon: Ticket,        href: '/tickets'    },
-  { key: 'inventory', label: 'Inventario',  Icon: Package,       href: '/inventory'  },
-  { key: 'requests',  label: 'Solicitudes', Icon: ClipboardList, href: '/requests'   },
-] as const;
+/* ── Nav definitions (global admin) ───────────────────────────────────────── */
 
 const ADMIN_NAV = [
-  { key: 'reports', label: 'Reportes',       Icon: BarChart2, href: '/reports' },
-  { key: 'users',   label: 'Usuarios',       Icon: Users,     href: '/users'   },
-  { key: 'roles',   label: 'Roles Globales', Icon: Tag,       href: '/roles'   },
-  { key: 'trash',   label: 'Papelera',       Icon: Trash2,    href: '/trash'   },
+  { key: 'reports', label: 'Reportes', Icon: BarChart2, href: '/reports' },
+  { key: 'users',   label: 'Usuarios', Icon: Users,     href: '/users'   },
+  { key: 'roles',   label: 'Roles',    Icon: Tag,       href: '/roles'   },
+  { key: 'trash',   label: 'Papelera', Icon: Trash2,    href: '/trash'   },
 ] as const;
-
-/* ── Module context mini-header ────────────────────────────────────────────── */
-
-function ModuleContextHeader({ expanded }: { expanded: boolean }) {
-  return (
-    <div className={styles.moduleCtx}>
-      <Link href="/dashboard" className={styles.moduleCtxBack} title="Volver al Dashboard">
-        <ArrowLeft size={14} />
-        {expanded && <span>Dashboard</span>}
-      </Link>
-      {expanded && (
-        <div className={styles.moduleCtxLabel}>
-          <Layers size={11} />
-          <span>Módulo activo</span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── Section divider ───────────────────────────────────────────────────────── */
 
@@ -77,15 +48,88 @@ function SectionDivider({ label, expanded }: { label: string; expanded: boolean 
   );
 }
 
+/* ── Nav group ─────────────────────────────────────────────────────────────── */
+
+function NavGroup({
+  items,
+  isActive,
+}: {
+  items: ReadonlyArray<{ key: string; label: string; Icon: LucideIcon; href: string }>;
+  isActive: (href: string) => boolean;
+}) {
+  return (
+    <>
+      {items.map(({ key, label, Icon, href }) => (
+        <Link
+          key={key}
+          href={href}
+          title={label}
+          aria-label={label}
+          className={`${styles.navItem}${isActive(href) ? ` ${styles.navItemActive}` : ''}`}
+        >
+          <Icon className={styles.navIcon} aria-hidden="true" />
+          <span className={styles.navLabel}>{label}</span>
+        </Link>
+      ))}
+    </>
+  );
+}
+
+/* ── Module nav (dynamic) ──────────────────────────────────────────────────── */
+
+function ModuleNav({
+  name,
+  items,
+  expanded,
+  isSuperadmin,
+  isActive,
+}: {
+  name:         string;
+  items:        ModuleNavItem[];
+  expanded:     boolean;
+  isSuperadmin: boolean;
+  isActive:     (href: string) => boolean;
+}) {
+  const visible = items.filter((item) => !item.superadminOnly || isSuperadmin);
+
+  return (
+    <>
+      <Link href="/dashboard" className={styles.moduleCtxBack} title="Volver al Dashboard">
+        <ArrowLeft size={14} />
+        {expanded && <span>Dashboard</span>}
+      </Link>
+
+      {expanded && (
+        <div className={styles.moduleCtxName}>{name}</div>
+      )}
+
+      <SectionDivider label="MÓDULO" expanded={expanded} />
+
+      {visible.map(({ key, label, Icon, href }) => (
+        <Link
+          key={key}
+          href={href}
+          title={label}
+          aria-label={label}
+          className={`${styles.navItem}${isActive(href) ? ` ${styles.navItemActive}` : ''}`}
+        >
+          <Icon className={styles.navIcon} aria-hidden="true" />
+          <span className={styles.navLabel}>{label}</span>
+        </Link>
+      ))}
+    </>
+  );
+}
+
 /* ── Main component ────────────────────────────────────────────────────────── */
 
 export function AppSidebar() {
   const expanded      = useUIStore((s) => s.sidebarExpanded);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const moduleNav     = useUIStore((s) => s.moduleNav);
+  const moduleName    = useUIStore((s) => s.moduleName);
   const pathname      = usePathname();
-  const { isAdmin }   = useSidebarRoles();
-
-  const inModule = pathname.startsWith('/modules/');
+  const { isSuperadmin, isAdmin } = useSidebarRoles();
 
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
@@ -95,48 +139,42 @@ export function AppSidebar() {
   return (
     <aside className={`${styles.sidebar}${expanded ? ` ${styles.expanded}` : ''}`}>
       {/* ── Brand ── */}
-      <div className={styles.brand} aria-label="Tickets System">
+      <div className={styles.brand} aria-label="Sistema de Tickets">
         <div className={styles.brandMark} aria-hidden="true">
           <span className={styles.brandDot} />
         </div>
       </div>
 
-      {/* ── Module context header ── */}
-      {inModule && <ModuleContextHeader expanded={expanded} />}
-
       {/* ── Nav ── */}
       <nav className={styles.nav} aria-label="Panel principal">
-        {/* Personal section */}
-        {expanded && <span className={styles.sectionLabel} style={{ paddingLeft: 4, marginBottom: 2 }}>GENERAL</span>}
-        {PERSONAL_NAV.map(({ key, label, Icon, href }) => (
-          <Link
-            key={key}
-            href={href}
-            title={label}
-            aria-label={label}
-            className={`${styles.navItem}${isActive(href) ? ` ${styles.navItemActive}` : ''}`}
-          >
-            <Icon className={styles.navIcon} aria-hidden="true" />
-            <span className={styles.navLabel}>{label}</span>
-          </Link>
-        ))}
-
-        {/* Admin section */}
-        {isAdmin && (
+        {moduleNav ? (
+          /* ── Module context nav ── */
+          <ModuleNav
+            name={moduleName ?? ''}
+            items={moduleNav}
+            expanded={expanded}
+            isSuperadmin={isSuperadmin}
+            isActive={isActive}
+          />
+        ) : (
+          /* ── Global nav ── */
           <>
-            <SectionDivider label="ADMINISTRACIÓN" expanded={expanded} />
-            {ADMIN_NAV.map(({ key, label, Icon, href }) => (
-              <Link
-                key={key}
-                href={href}
-                title={label}
-                aria-label={label}
-                className={`${styles.navItem}${isActive(href) ? ` ${styles.navItemActive}` : ''}`}
-              >
-                <Icon className={styles.navIcon} aria-hidden="true" />
-                <span className={styles.navLabel}>{label}</span>
-              </Link>
-            ))}
+            <Link
+              href="/dashboard"
+              title="Dashboard"
+              aria-label="Dashboard"
+              className={`${styles.navItem}${isActive('/dashboard') ? ` ${styles.navItemActive}` : ''}`}
+            >
+              <LayoutGrid className={styles.navIcon} aria-hidden="true" />
+              <span className={styles.navLabel}>Dashboard</span>
+            </Link>
+
+            {isAdmin && (
+              <>
+                <SectionDivider label="ADMINISTRACIÓN" expanded={expanded} />
+                <NavGroup items={ADMIN_NAV} isActive={isActive} />
+              </>
+            )}
           </>
         )}
       </nav>

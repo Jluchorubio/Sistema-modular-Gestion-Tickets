@@ -15,17 +15,9 @@ import { notificationsService, type AppNotification } from '@/services/notificat
 import { requestsService, type AdmRequest } from '@/services/requests.service';
 import { tokens } from '@/lib/tokens';
 import { getInitials } from '@/lib/utils';
+import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
+import { REQUEST_STATUS_COLORS as STATUS_COLORS, REQUEST_STATUS_LABELS as STATUS_LABELS } from '@/constants/requests';
 import styles from './header.module.css';
-
-function fmtRelative(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60_000);
-  if (m < 1)  return 'ahora';
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
-}
 
 function getNotifMessage(n: AppNotification): string {
   const p = n.payload;
@@ -34,26 +26,6 @@ function getNotifMessage(n: AppNotification): string {
   if (typeof p.subject === 'string') return p.subject;
   return n.event_type.replace(/_/g, ' ');
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  pending:     '#F59E0B',
-  taken:       '#8B5CF6',
-  in_progress: '#3B82F6',
-  completed:   '#22C55E',
-  approved:    '#16A34A',
-  rejected:    '#EF4444',
-  cancelled:   '#94A3B8',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending:     'Pendiente',
-  taken:       'Tomado',
-  in_progress: 'En proceso',
-  completed:   'Finalizado',
-  approved:    'Aprobado',
-  rejected:    'Rechazado',
-  cancelled:   'Cancelado',
-};
 
 interface Props {
   noSidebar?: boolean;

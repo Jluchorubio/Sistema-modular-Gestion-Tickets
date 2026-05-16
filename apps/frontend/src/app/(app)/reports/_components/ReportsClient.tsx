@@ -5,25 +5,16 @@ import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, ShieldCheck, Ticket, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { reportingService, type DailyTrend, type SlaByPriority } from '@/services/reporting.service';
+import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
+
+const PRIORITY_COLORS = TICKET_PRIORITY_COLORS as Record<string, string>;
+const PRIORITY_LABELS = TICKET_PRIORITY_LABELS as Record<string, string>;
+import { fmtDay } from '@/lib/formatters';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
-const PRIORITY_COLORS: Record<string, string> = {
-  baja:    '#94A3B8',
-  media:   '#3B82F6',
-  alta:    '#F59E0B',
-  critica: '#EF4444',
-};
-const PRIORITY_LABELS: Record<string, string> = {
-  baja: 'Baja', media: 'Media', alta: 'Alta', critica: 'Crítica',
-};
-
 function num(v: string | null | undefined): number {
   return v ? parseFloat(v) : 0;
-}
-
-function fmtDay(iso: string) {
-  return new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'short' });
 }
 
 /* ── Stat card ───────────────────────────────────────────────────────────── */

@@ -4,9 +4,11 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, X, ChevronRight, Clock, AlertTriangle, CheckCircle2,
-  Ticket, Filter, RotateCcw,
+  Ticket, Filter, RotateCcw, LayoutList, Calendar, BarChart2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
+import { useModuleNav } from '@/hooks/useModuleNav';
+import type { ModuleNavItem } from '@/types/nav.types';
 import {
   ticketsService,
   type TicketListItem, type TicketDetail, type TicketPriority,
@@ -14,26 +16,16 @@ import {
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
 } from '@/services/tickets.service';
-
-/* ── Helpers ────────────────────────────────────────────────────────────── */
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  });
-}
-
-function fmtRelative(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60_000);
-  if (m < 1)  return 'ahora';
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
-}
+import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 
 const PRIORITIES: TicketPriority[] = ['baja', 'media', 'alta', 'critica'];
+
+const HELPDESK_NAV: ModuleNavItem[] = [
+  { key: 'all-tickets', label: 'Todos los Tickets', Icon: LayoutList, href: '/tickets'    },
+  { key: 'my-tickets',  label: 'Mis Tickets',       Icon: Ticket,     href: '/my-tickets' },
+  { key: 'calendar',    label: 'Calendario',         Icon: Calendar,   href: '/calendar'   },
+  { key: 'reports',     label: 'Reportes',           Icon: BarChart2,  href: '/reports'    },
+];
 
 /* ── Priority badge ─────────────────────────────────────────────────────── */
 
@@ -468,6 +460,8 @@ function TicketRow({ ticket, onClick }: { ticket: TicketListItem; onClick: () =>
 /* ── Main component ─────────────────────────────────────────────────────── */
 
 export function TicketsClient() {
+  useModuleNav('Mesa de Ayuda', HELPDESK_NAV);
+
   const user         = useAuthStore((s) => s.user);
   const isSuperadmin = user?.is_superadmin ?? false;
 
@@ -534,7 +528,7 @@ export function TicketsClient() {
       {/* ── Page header ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0D1B2A', margin: 0 }}>Tickets</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0D1B2A', margin: 0 }}>Mesa de Ayuda</h1>
           <p style={{ fontSize: 13, color: '#64748B', margin: '4px 0 0' }}>
             {total > 0 ? `${total} ticket${total !== 1 ? 's' : ''}` : 'Sin tickets'}
             {selectedModule && activeModules.find((m) => m.module_id === selectedModule) && (

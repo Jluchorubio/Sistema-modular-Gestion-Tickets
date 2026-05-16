@@ -4,14 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { usersService } from '@/services/users.service';
-
-const PRIORITY_COLOR: Record<string, string> = {
-  baja: '#94A3B8', media: '#3B82F6', alta: '#F59E0B', critica: '#EF4444',
-};
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
-}
+import { fmtDate } from '@/lib/formatters';
+import { TICKET_PRIORITY_COLORS as PRIORITY_COLOR } from '@/services/tickets.service';
 
 export default function MyTicketsPage() {
   const router = useRouter();
@@ -57,7 +51,7 @@ export default function MyTicketsPage() {
         )}
 
         {tickets && tickets.length > 0 && tickets.map((t, i) => {
-          const pColor = PRIORITY_COLOR[t.priority] ?? '#94A3B8';
+          const pColor = (PRIORITY_COLOR as Record<string, string>)[t.priority] ?? '#94A3B8';
           return (
             <div
               key={t.id}

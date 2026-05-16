@@ -114,7 +114,7 @@ const SOURCE_FILTER_LABELS: Record<CalendarSourceFilter, string> = {
   '':           'Origen: Todos',
   system_tasks: 'Tareas del sistema',
   user_tasks:   'Mis tareas',
-  requests:     'Solicitudes',
+  requests:     'Gestión Administrativa',
 };
 
 /* ── Stats bar ─────────────────────────────────────────────────────────── */

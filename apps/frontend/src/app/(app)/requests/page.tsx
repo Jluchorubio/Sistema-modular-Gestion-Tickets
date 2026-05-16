@@ -1,181 +1,50 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Plus, ChevronDown, ChevronUp, X, Clock, CheckCircle2, Play, Loader2, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, TrendingUp, ClipboardList, Users, Tag, Trash2, BarChart2 } from 'lucide-react';
 import {
   requestsService,
-  type AdmRequest,
-  type RequestType,
-  type RequestStatus,
-  type RequestPriority,
-  type RequestTimelineEntry,
+  type AdmRequest, type RequestType, type RequestStatus,
 } from '@/services/requests.service';
-import {
-  REQUEST_TYPE_LABELS,
-  REQUEST_STATUS_LABELS,
-  REQUEST_STATUS_COLORS,
-  REQUEST_TYPES,
-  REQUEST_PRIORITY_LABELS,
-  REQUEST_PRIORITY_COLORS,
-  REQUEST_PRIORITIES,
-} from '@/constants/requests';
-import { modulesService } from '@/services/modules.service';
+import { REQUEST_TYPE_LABELS, REQUEST_TYPES } from '@/constants/requests';
 import { useAuthStore } from '@/stores/auth.store';
-import { Modal } from '@/components/ui/Modal';
+import { useModuleNav } from '@/hooks/useModuleNav';
+import type { ModuleNavItem } from '@/types/nav.types';
 import { Spinner } from '@/components/ui/Spinner';
+import { RequestCard } from './_components/RequestCard';
+import { CreateRequestModal } from './_components/CreateRequestModal';
+import { RejectRequestModal } from './_components/RejectRequestModal';
+import { CancelRequestModal } from './_components/CancelRequestModal';
+import { EscalateRequestModal } from './_components/EscalateRequestModal';
 import styles from './requests.module.css';
-import mstyles from '@/components/ui/modal.module.css';
 
-const MODULE_REQUEST_TYPES: RequestType[] = [
-  'module_access', 'role_change', 'permission_adjustment',
+const GESTION_NAV: ModuleNavItem[] = [
+  { key: 'requests', label: 'Solicitudes', Icon: ClipboardList, href: '/requests' },
+  { key: 'users',    label: 'Usuarios',    Icon: Users,         href: '/users'    },
+  { key: 'roles',    label: 'Roles',       Icon: Tag,           href: '/roles'    },
+  { key: 'trash',    label: 'Papelera',    Icon: Trash2,        href: '/trash'    },
+  { key: 'reports',  label: 'Reportes',    Icon: BarChart2,     href: '/reports'  },
 ];
 
-/* ── Status pill map ─────────────────────────────────────────────────────── */
-const STATUS_PILL: Record<string, string> = {
-  pending:      styles.pillPending,
-  taken:        styles.pillTaken,
-  in_progress:  styles.pillUnderReview,
-  completed:    styles.pillApproved,
-  under_review: styles.pillUnderReview,
-  approved:     styles.pillApproved,
-  rejected:     styles.pillRejected,
-  cancelled:    styles.pillCancelled,
-};
-
-/* ── SLA Countdown ────────────────────────────────────────────────────────── */
-function SlaCountdown({ sla_due_at }: { sla_due_at: string }) {
-  const [label, setLabel] = useState('');
-  const [overdue, setOverdue] = useState(false);
-
-  useEffect(() => {
-    function tick() {
-      const diff = new Date(sla_due_at).getTime() - Date.now();
-      if (diff <= 0) {
-        setOverdue(true);
-        const abs = Math.abs(diff);
-        const h = Math.floor(abs / 3_600_000);
-        const m = Math.floor((abs % 3_600_000) / 60_000);
-        setLabel(`Vencido +${h}h ${m}m`);
-      } else {
-        setOverdue(false);
-        const h = Math.floor(diff / 3_600_000);
-        const m = Math.floor((diff % 3_600_000) / 60_000);
-        const s = Math.floor((diff % 60_000) / 1_000);
-        setLabel(`SLA: ${h}h ${m.toString().padStart(2,'0')}m ${s.toString().padStart(2,'0')}s`);
-      }
-    }
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [sla_due_at]);
-
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      fontSize: 11, fontWeight: 700, fontFamily: 'monospace',
-      color: overdue ? '#EF4444' : diff_pct(sla_due_at) < 0.25 ? '#F59E0B' : '#22C55E',
-      background: overdue ? '#450a0a' : diff_pct(sla_due_at) < 0.25 ? '#451a03' : '#052e16',
-      border: `1px solid ${overdue ? '#7f1d1d' : diff_pct(sla_due_at) < 0.25 ? '#78350f' : '#14532d'}`,
-      padding: '2px 8px', borderRadius: 6,
-    }}>
-      {overdue ? <AlertTriangle size={10} /> : <Clock size={10} />}
-      {label}
-    </span>
-  );
-}
-function diff_pct(sla_due_at: string): number {
-  const total = 4 * 3_600_000;
-  const left  = new Date(sla_due_at).getTime() - Date.now();
-  return Math.max(0, left / total);
-}
-
-/* ── Schemas ─────────────────────────────────────────────────────────────── */
-const createSchema = z.object({
-  type:        z.enum(['role_change', 'module_access', 'info_correction', 'sede_change',
-                        'permission_adjustment', 'account_issue', 'reactivation', 'other']),
-  priority:    z.enum(['baja', 'media', 'alta', 'critica']),
-  title:       z.string().min(5, 'Mínimo 5 caracteres'),
-  description: z.string().min(10, 'Mínimo 10 caracteres'),
-  module_id:   z.string().uuid('ID de módulo inválido').optional().or(z.literal('')),
-});
-type CreateForm = z.infer<typeof createSchema>;
-
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-function fmtRelative(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 60_000)     return 'Hace un momento';
-  if (diff < 3_600_000)  return `Hace ${Math.floor(diff / 60_000)} min`;
-  if (diff < 86_400_000) return `Hace ${Math.floor(diff / 3_600_000)}h`;
-  return fmtDate(iso);
-}
-
-const TIMELINE_ACTION_LABELS: Record<string, string> = {
-  created:               'Solicitud creada',
-  taken:                 'Tomada por admin',
-  progress_in_progress:  'Puesta en proceso',
-  progress_completed:    'Finalizada',
-  reviewed_under_review: 'Puesta en revisión',
-  reviewed_approved:     'Aprobada',
-  reviewed_rejected:     'Rechazada',
-  cancelled:             'Cancelada por el solicitante',
-  escalated:             'Escalada al superadmin',
-  deescalated:           'Escalación resuelta',
-};
-
-/* ── Timeline ─────────────────────────────────────────────────────────────── */
-function TimelinePanel({ requestId }: { requestId: string }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['request-timeline', requestId],
-    queryFn:  () => requestsService.getTimeline(requestId),
-    staleTime: 30_000,
-  });
-  if (isLoading) return <div style={{ padding: '12px 0', textAlign: 'center' }}><Spinner /></div>;
-  const entries: RequestTimelineEntry[] = data ?? [];
-  return (
-    <div className={styles.timeline}>
-      {entries.map((e, i) => (
-        <div key={e.id} className={styles.timelineEntry}>
-          <div className={styles.timelineDotWrap}>
-            <div
-              className={styles.timelineDot}
-              style={{ background: e.new_status ? (REQUEST_STATUS_COLORS[e.new_status] ?? '#6366F1') : '#6366F1' }}
-            />
-            {i < entries.length - 1 && <div className={styles.timelineLine} />}
-          </div>
-          <div className={styles.timelineContent}>
-            <div className={styles.timelineAction}>{TIMELINE_ACTION_LABELS[e.action] ?? e.action}</div>
-            <div className={styles.timelineMeta}>{e.actor_name} · {fmtRelative(e.created_at)}</div>
-            {e.notes && <div className={styles.timelineNotes}>"{e.notes}"</div>}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ── Component ───────────────────────────────────────────────────────────── */
 export default function RequestsPage() {
-  const qc           = useQueryClient();
-  const { user }     = useAuthStore();
+  useModuleNav('Gestión Administrativa', GESTION_NAV);
+
+  const qc            = useQueryClient();
+  const { user }      = useAuthStore();
   const isSuperadmin  = user?.is_superadmin ?? false;
   const isAdminModulo = user?.module_roles?.some(
     (r) => r.status === 'active' && r.role_name === 'admin_modulo'
   ) ?? false;
   const hasAdminAccess = isSuperadmin || isAdminModulo;
 
-  const [statusFilter,    setStatusFilter]    = useState<RequestStatus | ''>('');
-  const [typeFilter,      setTypeFilter]      = useState<RequestType   | ''>('');
-  const [onlyMine,        setOnlyMine]        = useState(false);
-  const [onlyEscalated,   setOnlyEscalated]   = useState(false);
+  /* ── Tabs + filters ── */
+  const [activeTab,     setActiveTab]     = useState<'mine' | 'inbox'>(hasAdminAccess ? 'inbox' : 'mine');
+  const [statusFilter,  setStatusFilter]  = useState<RequestStatus | ''>('');
+  const [typeFilter,    setTypeFilter]    = useState<RequestType   | ''>('');
+  const [onlyEscalated, setOnlyEscalated] = useState(false);
 
+  /* ── Modal state ── */
   const [createOpen,     setCreateOpen]     = useState(false);
-  const [serverMsg,      setServerMsg]      = useState<{ ok: boolean; text: string } | null>(null);
   const [rejectOpen,     setRejectOpen]     = useState(false);
   const [rejectTarget,   setRejectTarget]   = useState<string | null>(null);
   const [rejectNotes,    setRejectNotes]    = useState('');
@@ -185,52 +54,18 @@ export default function RequestsPage() {
   const [escalateTarget, setEscalateTarget] = useState<string | null>(null);
   const [escalateNote,   setEscalateNote]   = useState('');
 
-  const queryKey = hasAdminAccess && !onlyMine
-    ? ['requests', { statusFilter, typeFilter, onlyEscalated }]
-    : ['requests', 'mine'];
-
+  /* ── Data ── */
   const { data, isLoading, error } = useQuery({
-    queryKey,
-    queryFn: () =>
-      hasAdminAccess && !onlyMine
-        ? requestsService.getAll({ status: statusFilter, type: typeFilter, escalated: onlyEscalated || undefined })
-        : requestsService.getMine(),
+    queryKey: activeTab === 'inbox'
+      ? ['requests', 'inbox', statusFilter, typeFilter, onlyEscalated]
+      : ['requests', 'mine'],
+    queryFn: () => activeTab === 'inbox'
+      ? requestsService.getAll({ status: statusFilter, type: typeFilter, escalated: onlyEscalated || undefined })
+      : requestsService.getMine(),
   });
 
-  // Modules list for the selector in the create form
-  const { data: allModules = [] } = useQuery({
-    queryKey: ['modules-all'],
-    queryFn:  () => modulesService.getModules(),
-    staleTime: 120_000,
-    enabled:   createOpen,
-  });
-
-  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } =
-    useForm<CreateForm>({
-      resolver: zodResolver(createSchema),
-      defaultValues: { type: 'role_change', priority: 'media', title: '', description: '', module_id: '' },
-    });
-
-  const watchedType = watch('type') as RequestType;
-  const showModuleSelector = MODULE_REQUEST_TYPES.includes(watchedType);
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['requests'] });
-
-  const createMut = useMutation({
-    mutationFn: (dto: CreateForm) => requestsService.create({
-      type:        dto.type,
-      title:       dto.title,
-      description: dto.description,
-      priority:    dto.priority,
-      metadata:    dto.module_id ? { module_id: dto.module_id } : undefined,
-    }),
-    onSuccess: () => {
-      setServerMsg({ ok: true, text: 'Solicitud enviada' });
-      invalidate();
-      setTimeout(() => { setCreateOpen(false); reset(); setServerMsg(null); }, 800);
-    },
-    onError: (e: Error) => setServerMsg({ ok: false, text: e.message ?? 'Error al enviar' }),
-  });
+  /* ── Mutations ── */
+  const invalidate = useCallback(() => qc.invalidateQueries({ queryKey: ['requests'] }), [qc]);
 
   const reviewMut = useMutation({
     mutationFn: ({ id, status, notes }: { id: string; status: RequestStatus; notes?: string }) =>
@@ -256,7 +91,12 @@ export default function RequestsPage() {
 
   const escalateMut = useMutation({
     mutationFn: ({ id, note }: { id: string; note?: string }) => requestsService.escalate(id, note),
-    onSuccess: () => { setEscalateOpen(false); setEscalateTarget(null); setEscalateNote(''); invalidate(); },
+    onSuccess: () => {
+      setEscalateOpen(false);
+      setEscalateTarget(null);
+      setEscalateNote('');
+      invalidate();
+    },
   });
 
   const deescalateMut = useMutation({
@@ -264,15 +104,12 @@ export default function RequestsPage() {
     onSuccess: invalidate,
   });
 
-  const handleReview = useCallback((req: AdmRequest, status: RequestStatus) => {
-    if (status === 'rejected') {
-      setRejectTarget(req.id);
-      setRejectNotes('');
-      setRejectOpen(true);
-    } else {
-      reviewMut.mutate({ id: req.id, status });
-    }
-  }, [reviewMut]);
+  /* ── Handlers ── */
+  const handleReject = useCallback((req: AdmRequest) => {
+    setRejectTarget(req.id);
+    setRejectNotes('');
+    setRejectOpen(true);
+  }, []);
 
   const confirmReject = useCallback(() => {
     if (!rejectTarget) return;
@@ -281,31 +118,46 @@ export default function RequestsPage() {
     setRejectTarget(null);
   }, [rejectTarget, rejectNotes, reviewMut]);
 
-  const openCreate = useCallback(() => { reset(); setServerMsg(null); setCreateOpen(true); }, [reset]);
-
-  const rows        = data?.data ?? [];
-  const total       = data?.meta.total ?? rows.length;
-  const showAdminActions = isSuperadmin && !onlyMine;
+  const rows             = data?.data ?? [];
+  const total            = data?.meta.total ?? rows.length;
+  const showAdminActions = hasAdminAccess && activeTab === 'inbox';
 
   return (
     <>
+      {/* ── Page header ── */}
       <div className={styles.header}>
         <div>
-          <div className={styles.title}>Solicitudes</div>
-          {data && (
-            <div className={styles.count}>
-              {total} solicitud{total !== 1 ? 'es' : ''}
-            </div>
-          )}
+          <div className={styles.title}>Gestión Administrativa</div>
+          {data && <div className={styles.count}>{total} solicitud{total !== 1 ? 'es' : ''}</div>}
         </div>
-        <button className={styles.btnPrimary} onClick={openCreate}>
+        <button className={styles.btnPrimary} onClick={() => setCreateOpen(true)}>
           <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
           Nueva solicitud
         </button>
       </div>
 
-      {/* Admin filter bar */}
-      {isSuperadmin && (
+      {/* ── Tab bar (admin only) ── */}
+      {hasAdminAccess && (
+        <div className={styles.tabBar}>
+          <button
+            type="button"
+            className={`${styles.tab}${activeTab === 'mine' ? ` ${styles.tabActive}` : ''}`}
+            onClick={() => setActiveTab('mine')}
+          >
+            Mis Solicitudes
+          </button>
+          <button
+            type="button"
+            className={`${styles.tab}${activeTab === 'inbox' ? ` ${styles.tabActive}` : ''}`}
+            onClick={() => setActiveTab('inbox')}
+          >
+            Bandeja de Entrada
+          </button>
+        </div>
+      )}
+
+      {/* ── Filter bar (inbox tab only) ── */}
+      {hasAdminAccess && activeTab === 'inbox' && (
         <div className={styles.filterBar}>
           <select
             className={styles.filterSelect}
@@ -320,7 +172,6 @@ export default function RequestsPage() {
             <option value="rejected">Rechazado</option>
             <option value="cancelled">Cancelado</option>
           </select>
-
           <select
             className={styles.filterSelect}
             value={typeFilter}
@@ -331,16 +182,6 @@ export default function RequestsPage() {
               <option key={t} value={t}>{REQUEST_TYPE_LABELS[t]}</option>
             ))}
           </select>
-
-          <label className={styles.onlyMine}>
-            <input
-              type="checkbox"
-              className={styles.onlyMineCb}
-              checked={onlyMine}
-              onChange={e => setOnlyMine(e.target.checked)}
-            />
-            Solo las mías
-          </label>
           <label className={styles.onlyMine} style={{ color: '#F97316' }}>
             <input
               type="checkbox"
@@ -353,335 +194,68 @@ export default function RequestsPage() {
         </div>
       )}
 
+      {/* ── List ── */}
       {isLoading && <Spinner />}
       {error     && <div className={styles.errorMsg}>Error cargando solicitudes</div>}
 
       {!isLoading && !error && rows.length === 0 && (
-        <div className={styles.emptyMsg}>No hay solicitudes.</div>
+        <div className={styles.emptyMsg}>
+          {activeTab === 'mine'
+            ? 'No has creado ninguna solicitud todavía.'
+            : 'No hay solicitudes en la bandeja.'}
+        </div>
       )}
 
-      {rows.map(req => {
-        const isExpanded  = expandedId === req.id;
-        const canCancel   = !isSuperadmin && ['pending', 'under_review'].includes(req.status);
-        const statusColor = REQUEST_STATUS_COLORS[req.status] ?? '#94a3b8';
-        const hasSla      = (req.status === 'taken' || req.status === 'in_progress') && req.sla_due_at;
-        const isEscalated = req.escalated === true;
-        const canEscalate = hasAdminAccess && !onlyMine && !isEscalated
-          && ['pending', 'taken', 'in_progress', 'under_review'].includes(req.status);
-        const canDeescalate = isSuperadmin && isEscalated;
+      {rows.map(req => (
+        <RequestCard
+          key={req.id}
+          req={req}
+          isExpanded={expandedId === req.id}
+          showAdminActions={showAdminActions}
+          isSuperadmin={isSuperadmin}
+          activeTab={activeTab}
+          onToggleExpand={() => setExpandedId(expandedId === req.id ? null : req.id)}
+          onCancel={() => setCancelTarget(req.id)}
+          onTake={() => takeMut.mutate(req.id)}
+          onProgress={status => progressMut.mutate({ id: req.id, status })}
+          onReject={() => handleReject(req)}
+          onEscalate={() => { setEscalateTarget(req.id); setEscalateNote(''); setEscalateOpen(true); }}
+          onDeescalate={() => deescalateMut.mutate(req.id)}
+          isTakePending={takeMut.isPending}
+          isProgressPending={progressMut.isPending}
+          isReviewPending={reviewMut.isPending}
+          isDeescalatePending={deescalateMut.isPending}
+        />
+      ))}
 
-        return (
-          <div
-            key={req.id}
-            className={styles.card}
-            style={isEscalated ? { borderColor: '#F97316', boxShadow: '0 0 0 1px #F9731644' } : undefined}
-          >
-            {isEscalated && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', background: '#431407', borderBottom: '1px solid #7c2d12',
-                fontSize: 11, fontWeight: 700, color: '#FB923C', borderRadius: '8px 8px 0 0',
-              }}>
-                <TrendingUp size={11} />
-                ESCALADA{req.escalated_by_name ? ` por ${req.escalated_by_name}` : ''}
-                {req.escalation_note && <span style={{ fontWeight: 400, color: '#FED7AA' }}>· "{req.escalation_note}"</span>}
-              </div>
-            )}
-            <div className={styles.cardHeader}>
-              <div>
-                <div className={styles.cardTitle}>{req.title}</div>
-                <div className={styles.cardMeta}>
-                  <span className={styles.typeLabel}>{REQUEST_TYPE_LABELS[req.type] ?? req.type}</span>
-                  {req.requester_name && <><span>·</span><span>{req.requester_name}</span></>}
-                  <span>·</span>
-                  <span>{fmtDate(req.created_at)}</span>
-                  <span>·</span>
-                  <span
-                    className={styles.priorityDot}
-                    style={{ background: REQUEST_PRIORITY_COLORS[req.priority] }}
-                    title={`Prioridad: ${REQUEST_PRIORITY_LABELS[req.priority]}`}
-                  />
-                  <span style={{ fontSize: 11, color: '#64748B' }}>{REQUEST_PRIORITY_LABELS[req.priority]}</span>
-                  {req.taken_by_name && (
-                    <><span>·</span><span style={{ fontSize: 11, color: '#8B5CF6' }}>Tomado por {req.taken_by_name}</span></>
-                  )}
-                </div>
-                {hasSla && <div style={{ marginTop: 6 }}><SlaCountdown sla_due_at={req.sla_due_at!} /></div>}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                <span
-                  className={`${styles.pill} ${STATUS_PILL[req.status] ?? ''}`}
-                  style={{ background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44` }}
-                >
-                  {REQUEST_STATUS_LABELS[req.status] ?? req.status}
-                </span>
-                {canCancel && (
-                  <button className={styles.cancelBtn} title="Cancelar solicitud" onClick={() => setCancelTarget(req.id)}>
-                    <X size={13} />
-                  </button>
-                )}
-                <button
-                  className={styles.expandBtn}
-                  title={isExpanded ? 'Ocultar historial' : 'Ver historial'}
-                  onClick={() => setExpandedId(isExpanded ? null : req.id)}
-                >
-                  {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.cardDesc}>{req.description}</div>
-
-            {req.reviewer_name && (
-              <div className={styles.cardReview}>
-                Revisado por <strong>{req.reviewer_name}</strong>
-                {req.review_notes && ` · "${req.review_notes}"`}
-              </div>
-            )}
-
-            {/* Admin actions — Gestión Administrativa flow */}
-            {showAdminActions && req.type !== 'task' && (
-              <div className={styles.reviewActions}>
-                {/* Pending → take */}
-                {req.status === 'pending' && (
-                  <>
-                    <button
-                      className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
-                      style={{ background: '#4C1D95', color: '#DDD6FE', border: '1px solid #6D28D9' }}
-                      onClick={() => takeMut.mutate(req.id)}
-                      disabled={takeMut.isPending}
-                    >
-                      <Play size={12} /> Tomar solicitud
-                    </button>
-                    <button
-                      className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
-                      onClick={() => handleReview(req, 'rejected')}
-                      disabled={reviewMut.isPending}
-                    >
-                      <X size={12} /> Rechazar
-                    </button>
-                  </>
-                )}
-
-                {/* Taken → in_progress | complete | reject */}
-                {req.status === 'taken' && (
-                  <>
-                    <button
-                      className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
-                      onClick={() => progressMut.mutate({ id: req.id, status: 'in_progress' })}
-                      disabled={progressMut.isPending}
-                    >
-                      <Loader2 size={12} /> En proceso
-                    </button>
-                    <button
-                      className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
-                      onClick={() => progressMut.mutate({ id: req.id, status: 'completed' })}
-                      disabled={progressMut.isPending}
-                    >
-                      <CheckCircle2 size={12} /> Finalizar
-                    </button>
-                    <button
-                      className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
-                      onClick={() => handleReview(req, 'rejected')}
-                      disabled={reviewMut.isPending}
-                    >
-                      <X size={12} /> Rechazar
-                    </button>
-                  </>
-                )}
-
-                {/* In progress → complete */}
-                {req.status === 'in_progress' && (
-                  <>
-                    <button
-                      className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
-                      onClick={() => progressMut.mutate({ id: req.id, status: 'completed' })}
-                      disabled={progressMut.isPending}
-                    >
-                      <CheckCircle2 size={12} /> Finalizar
-                    </button>
-                    <button
-                      className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
-                      onClick={() => handleReview(req, 'rejected')}
-                      disabled={reviewMut.isPending}
-                    >
-                      <X size={12} /> Rechazar
-                    </button>
-                  </>
-                )}
-
-                {/* Escalar / De-escalar */}
-                {canEscalate && (
-                  <button
-                    className={styles.reviewBtn}
-                    style={{ background: '#431407', color: '#FB923C', border: '1px solid #7c2d12' }}
-                    onClick={() => { setEscalateTarget(req.id); setEscalateNote(''); setEscalateOpen(true); }}
-                  >
-                    <TrendingUp size={12} /> Escalar
-                  </button>
-                )}
-                {canDeescalate && (
-                  <button
-                    className={styles.reviewBtn}
-                    style={{ background: '#052e16', color: '#22C55E', border: '1px solid #14532d' }}
-                    onClick={() => deescalateMut.mutate(req.id)}
-                    disabled={deescalateMut.isPending}
-                  >
-                    <TrendingDown size={12} /> Resolver escalación
-                  </button>
-                )}
-              </div>
-            )}
-
-            {isExpanded && (
-              <div className={styles.timelineWrap}>
-                <TimelinePanel requestId={req.id} />
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      {/* Create modal */}
-      <Modal open={createOpen} title="Nueva solicitud" onClose={() => setCreateOpen(false)}>
-        <form onSubmit={handleSubmit(data => { setServerMsg(null); createMut.mutate(data); })}>
-          <label className={mstyles.fieldLabel}>Tipo de solicitud</label>
-          <select className={mstyles.fieldInput} {...register('type')}>
-            {REQUEST_TYPES.map(t => (
-              <option key={t} value={t}>{REQUEST_TYPE_LABELS[t]}</option>
-            ))}
-          </select>
-
-          <label className={mstyles.fieldLabel}>Prioridad</label>
-          <select className={mstyles.fieldInput} {...register('priority')}>
-            {REQUEST_PRIORITIES.map(p => (
-              <option key={p} value={p}>{REQUEST_PRIORITY_LABELS[p]}</option>
-            ))}
-          </select>
-
-          <label className={mstyles.fieldLabel}>Título *</label>
-          <input
-            className={mstyles.fieldInput}
-            placeholder="Resumen breve de tu solicitud…"
-            {...register('title')}
-          />
-          {errors.title && (
-            <div className={mstyles.msgErr} style={{ padding: '6px 10px', marginTop: 4 }}>
-              {errors.title.message}
-            </div>
-          )}
-
-          <label className={mstyles.fieldLabel}>Descripción *</label>
-          <textarea
-            className={mstyles.fieldInput}
-            placeholder="Explica tu solicitud con detalle…"
-            style={{ minHeight: 100, resize: 'vertical' }}
-            {...register('description')}
-          />
-          {errors.description && (
-            <div className={mstyles.msgErr} style={{ padding: '6px 10px', marginTop: 4 }}>
-              {errors.description.message}
-            </div>
-          )}
-
-          {serverMsg && (
-            <div className={serverMsg.ok ? mstyles.msgOk : mstyles.msgErr}>
-              {serverMsg.text}
-            </div>
-          )}
-
-          <div className={mstyles.actions}>
-            <button type="button" className={mstyles.actCancel} onClick={() => setCreateOpen(false)}>
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className={mstyles.actConfirm}
-              disabled={isSubmitting || createMut.isPending}
-            >
-              Enviar solicitud
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Reject modal */}
-      <Modal open={rejectOpen} title="Rechazar solicitud" onClose={() => setRejectOpen(false)}>
-        <div style={{ padding: '0 0 4px' }}>
-          <label className={mstyles.fieldLabel}>Motivo del rechazo (opcional)</label>
-          <textarea
-            className={styles.rejectNotes}
-            placeholder="Explica el motivo del rechazo…"
-            value={rejectNotes}
-            onChange={e => setRejectNotes(e.target.value)}
-          />
-        </div>
-        <div className={mstyles.actions}>
-          <button type="button" className={mstyles.actCancel} onClick={() => setRejectOpen(false)}>
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className={mstyles.actDanger}
-            onClick={confirmReject}
-            disabled={reviewMut.isPending}
-          >
-            Confirmar rechazo
-          </button>
-        </div>
-      </Modal>
-
-      {/* Cancel modal */}
-      <Modal open={!!cancelTarget} title="Cancelar solicitud" onClose={() => setCancelTarget(null)}>
-        <p style={{ fontSize: 14, color: '#374151', marginBottom: 4 }}>
-          ¿Seguro que quieres cancelar esta solicitud? Esta acción no se puede deshacer.
-        </p>
-        <div className={mstyles.actions}>
-          <button type="button" className={mstyles.actCancel} onClick={() => setCancelTarget(null)}>
-            Volver
-          </button>
-          <button
-            type="button"
-            className={mstyles.actDanger}
-            onClick={() => cancelTarget && cancelMut.mutate(cancelTarget)}
-            disabled={cancelMut.isPending}
-          >
-            Confirmar cancelación
-          </button>
-        </div>
-      </Modal>
-
-      {/* Escalate modal */}
-      <Modal open={escalateOpen} title="Escalar solicitud al superadmin" onClose={() => setEscalateOpen(false)}>
-        <div style={{ padding: '0 0 4px' }}>
-          <p style={{ fontSize: 13, color: '#94A3B8', marginBottom: 12 }}>
-            La solicitud quedará marcada como escalada y el superadmin será notificado.
-          </p>
-          <label className={mstyles.fieldLabel}>Motivo de la escalación (opcional)</label>
-          <textarea
-            className={styles.rejectNotes}
-            placeholder="Explica por qué necesitas intervención del superadmin…"
-            value={escalateNote}
-            onChange={e => setEscalateNote(e.target.value)}
-          />
-        </div>
-        <div className={mstyles.actions}>
-          <button type="button" className={mstyles.actCancel} onClick={() => setEscalateOpen(false)}>
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className={mstyles.actConfirm}
-            style={{ background: '#ea580c' }}
-            onClick={() => escalateTarget && escalateMut.mutate({ id: escalateTarget, note: escalateNote || undefined })}
-            disabled={escalateMut.isPending}
-          >
-            <TrendingUp size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-            Confirmar escalación
-          </button>
-        </div>
-      </Modal>
+      {/* ── Modals ── */}
+      <CreateRequestModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={invalidate}
+      />
+      <RejectRequestModal
+        open={rejectOpen}
+        notes={rejectNotes}
+        isPending={reviewMut.isPending}
+        onChangeNotes={setRejectNotes}
+        onClose={() => setRejectOpen(false)}
+        onConfirm={confirmReject}
+      />
+      <CancelRequestModal
+        open={!!cancelTarget}
+        isPending={cancelMut.isPending}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={() => cancelTarget && cancelMut.mutate(cancelTarget)}
+      />
+      <EscalateRequestModal
+        open={escalateOpen}
+        note={escalateNote}
+        isPending={escalateMut.isPending}
+        onChangeNote={setEscalateNote}
+        onClose={() => { setEscalateOpen(false); setEscalateTarget(null); setEscalateNote(''); }}
+        onConfirm={() => escalateTarget && escalateMut.mutate({ id: escalateTarget, note: escalateNote || undefined })}
+      />
     </>
   );
 }

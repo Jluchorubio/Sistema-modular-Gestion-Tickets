@@ -4,18 +4,19 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, QrCode, Package, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
+import { useModuleNav } from '@/hooks/useModuleNav';
+import type { ModuleNavItem } from '@/types/nav.types';
 import {
   inventoryService,
   type AssetListItem, type AssetDetail, type AssetStatus, type CreateAssetDto,
   ASSET_STATUS_LABELS, ASSET_STATUS_COLORS, ASSET_STATUSES,
 } from '@/services/inventory.service';
 import { ticketsService } from '@/services/tickets.service';
+import { fmtDate } from '@/lib/formatters';
 
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
-}
+const INVENTORY_NAV: ModuleNavItem[] = [
+  { key: 'inventory', label: 'Inventario', Icon: Package, href: '/inventory' },
+];
 
 /* ── Status badge ────────────────────────────────────────────────────────── */
 
@@ -383,6 +384,8 @@ function AssetCard({ asset, onClick }: { asset: AssetListItem; onClick: () => vo
 /* ── Main ────────────────────────────────────────────────────────────────── */
 
 export function InventoryClient() {
+  useModuleNav('Inventario', INVENTORY_NAV);
+
   const user         = useAuthStore((s) => s.user);
   const isSuperadmin = user?.is_superadmin ?? false;
 

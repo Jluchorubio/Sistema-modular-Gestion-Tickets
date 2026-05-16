@@ -15,7 +15,41 @@ import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import type { SystemModule } from '@/types/module.types';
 
-// Virtual pinned system module — always visible to all users
+// Pinned built-in system modules — always visible to all users
+const HELPDESK_MODULE: SystemModule = {
+  id:                  '__helpdesk__',
+  name:                'Mesa de Ayuda',
+  slug:                'helpdesk',
+  description:         'Gestión de tickets de soporte técnico, incidencias y solicitudes de servicio',
+  type:                'helpdesk',
+  image_url:           null,
+  color:               '#3B82F6',
+  is_active:           true,
+  has_access:          true,
+  maintenance_mode:    false,
+  maintenance_since:   null,
+  maintenance_message: null,
+  created_at:          new Date(0).toISOString(),
+  deleted_at:          null,
+};
+
+const INVENTORY_MODULE: SystemModule = {
+  id:                  '__inventory__',
+  name:                'Inventario',
+  slug:                'inventario',
+  description:         'Control de activos, equipos, materiales y recursos físicos de la organización',
+  type:                'inventario',
+  image_url:           null,
+  color:               '#10B981',
+  is_active:           true,
+  has_access:          true,
+  maintenance_mode:    false,
+  maintenance_since:   null,
+  maintenance_message: null,
+  created_at:          new Date(0).toISOString(),
+  deleted_at:          null,
+};
+
 const GESTION_MODULE: SystemModule = {
   id:                  '__gestion__',
   name:                'Gestión Administrativa',
@@ -40,7 +74,11 @@ export function DashboardClient() {
   const qc                                                 = useQueryClient();
   const { user }                                           = useCurrentUser();
   const authUser                                           = useAuthStore(s => s.user);
-  const { modules, active, inactive, isLoading, isError } = useModules();
+  const { modules, active: activeRaw, inactive: inactiveRaw, isLoading, isError } = useModules();
+
+  const BUILTIN_SLUGS = new Set(['helpdesk', 'inventario', 'gestion', 'tickets', 'inventory']);
+  const active   = activeRaw.filter((m)   => !BUILTIN_SLUGS.has(m.slug));
+  const inactive = inactiveRaw.filter((m) => !BUILTIN_SLUGS.has(m.slug));
 
   const firstName    = user?.first_name    ?? '';
   const isSuperadmin = user?.is_superadmin ?? false;
@@ -196,16 +234,25 @@ export function DashboardClient() {
         <>
           <div className={styles.sectionTitle}>Módulos disponibles</div>
           <div className={styles.grid}>
-            {/* ── Pinned system module — always first ── */}
+            {/* ── Built-in system modules — always visible, no admin controls ── */}
             <ModuleCard
-              key="__gestion__"
+              module={HELPDESK_MODULE}
+              isSuperadmin={false}
+              onClick={() => router.push('/tickets')}
+            />
+            <ModuleCard
+              module={INVENTORY_MODULE}
+              isSuperadmin={false}
+              onClick={() => router.push('/inventory')}
+            />
+            <ModuleCard
               module={GESTION_MODULE}
               isSuperadmin={false}
               onClick={() => router.push('/requests')}
             />
 
             {!active.length && !isSuperadmin && (
-              <span className={styles.emptyMsg}>No tienes módulos asignados.</span>
+              <span className={styles.emptyMsg}>No tienes módulos personalizados asignados.</span>
             )}
             {active.map((m) => (
               <ModuleCard
