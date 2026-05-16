@@ -121,6 +121,20 @@ export class UsersController {
     return this.service.getMyRecentTickets(req.user.sub, limit ? parseInt(limit, 10) : 6);
   }
 
+  @Get('me/activity-feed')
+  @SkipProfileCheck()
+  @ApiOperation({ summary: 'Feed de actividad propia — últimos 20 eventos.' })
+  getMyActivityFeed(@Req() req: any) {
+    return this.service.getActivityFeed(req.user.sub);
+  }
+
+  @Get('me/request-stats')
+  @SkipProfileCheck()
+  @ApiOperation({ summary: 'Estadísticas de solicitudes y tickets propios.' })
+  getMyRequestStats(@Req() req: any) {
+    return this.service.getUserRequestStats(req.user.sub);
+  }
+
   @Put('me/preferences')
   @SkipProfileCheck()
   @ApiOperation({ summary: 'Actualizar preferencias propias.' })
@@ -207,6 +221,22 @@ export class UsersController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   getUserRecentTickets(@Param('id', ParseUUIDPipe) id: string, @Query('limit') limit?: string) {
     return this.service.getMyRecentTickets(id, limit ? parseInt(limit, 10) : 6);
+  }
+
+  @Get(':id/activity-feed')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Feed de actividad de un usuario — últimos 20 eventos.' })
+  getUserActivityFeed(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.getActivityFeed(id);
+  }
+
+  @Get(':id/request-stats')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Estadísticas de solicitudes y tickets de un usuario.' })
+  getUserRequestStats(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.getUserRequestStats(id);
   }
 
   @Get(':id')

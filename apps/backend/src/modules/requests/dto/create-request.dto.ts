@@ -1,6 +1,8 @@
 import { IsString, IsIn, IsOptional, IsObject, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export const TASK_SOURCES = ['user', 'system'] as const;
+
 export const REQUEST_TYPES = [
   'role_change',
   'module_access',
@@ -35,6 +37,11 @@ export class CreateRequestDto {
   @IsIn(PRIORITY_LEVELS)
   @IsOptional()
   priority?: string;
+
+  @ApiPropertyOptional({ enum: TASK_SOURCES, default: 'user' })
+  @IsIn(TASK_SOURCES)
+  @IsOptional()
+  task_source?: 'user' | 'system';
 
   @ApiPropertyOptional({ description: 'Metadata JSON (ej: { due_date: "2026-05-20" } para tasks)' })
   @IsObject()

@@ -29,16 +29,62 @@ import {
 } from '@/constants/requests';
 import styles from '../calendar.module.css';
 
-/* ── Role detection ─────────────────────────────────────────────────────── */
+/* ── Role + context ──────────────────────────────────────────────────────── */
 type CalendarRole = 'superadmin' | 'admin' | 'jefe' | 'user';
 
-function useCalendarRole(): CalendarRole {
+interface CalendarContext {
+  id:       string;
+  label:    string;
+  sublabel: string;
+  role:     CalendarRole;
+  moduleId?: string;
+}
+
+const ROLE_NAME_MAP: Record<string, CalendarRole> = {
+  admin_modulo: 'admin',
+  jefe_tecnico: 'jefe',
+  tecnico:      'user',
+  usuario:      'user',
+};
+
+const ROLE_DISPLAY: Record<string, string> = {
+  admin_modulo: 'Admin de módulo',
+  jefe_tecnico: 'Jefe técnico',
+  tecnico:      'Técnico',
+  usuario:      'Usuario',
+};
+
+function useCalendarContexts(): CalendarContext[] {
   const user = useAuthStore((s) => s.user);
-  if (user?.is_superadmin) return 'superadmin';
-  const roles = user?.module_roles?.filter((r) => r.status === 'active').map((r) => r.role_name) ?? [];
-  if (roles.includes('admin_modulo'))  return 'admin';
-  if (roles.includes('jefe_tecnico'))  return 'jefe';
-  return 'user';
+
+  if (user?.is_superadmin) {
+    return [{ id: 'global', label: 'Vista global', sublabel: 'Todas las solicitudes', role: 'superadmin' }];
+  }
+
+  const active = user?.module_roles?.filter((r) => r.status === 'active') ?? [];
+  if (active.length === 0) {
+    return [{ id: 'personal', label: 'Mis solicitudes', sublabel: 'Vista personal', role: 'user' }];
+  }
+
+  const seen = new Set<string>();
+  const contexts: CalendarContext[] = [];
+
+  for (const r of active) {
+    const key = `${r.module_id}-${r.role_name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    contexts.push({
+      id:       key,
+      label:    r.module_name ?? r.module_id,
+      sublabel: ROLE_DISPLAY[r.role_name] ?? r.role_name,
+      role:     ROLE_NAME_MAP[r.role_name] ?? 'user',
+      moduleId: r.module_id,
+    });
+  }
+
+  // Always add personal view at end for non-superadmin
+  contexts.push({ id: 'personal', label: 'Personal', sublabel: 'Mis tareas y solicitudes', role: 'user' });
+  return contexts;
 }
 
 const ROLE_LABELS: Record<CalendarRole, string> = {
@@ -504,9 +550,12 @@ function EventPopup({ req, role, onClose, onRefresh }: PopupProps) {
 
 /* ── Main component ─────────────────────────────────────────────────────── */
 export function CalendarClient() {
-  const role        = useCalendarRole();
-  const canSeeAll   = role === 'superadmin' || role === 'admin';
-  const isSuperadmin = role === 'superadmin';
+  const contexts         = useCalendarContexts();
+  const [selectedCtxIdx, setSelectedCtxIdx] = useState(0);
+  const ctx              = contexts[selectedCtxIdx] ?? contexts[0];
+  const role             = ctx.role;
+  const canSeeAll        = role === 'superadmin' || role === 'admin' || role === 'jefe';
+  const isSuperadmin     = role === 'superadmin';
 
   const [statusFilter, setStatusFilter] = useState<RequestStatus | ''>('');
   const [typeFilter,   setTypeFilter]   = useState<RequestType   | ''>('');
@@ -515,7 +564,7 @@ export function CalendarClient() {
   const [selectedReq,  setSelectedReq] = useState<AdmRequest | null>(null);
   const [showNewTask,  setShowNewTask]  = useState(false);
 
-  const queryKey = ['calendar-requests', role, statusFilter, typeFilter];
+  const queryKey = ['calendar-requests', selectedCtxIdx, statusFilter, typeFilter];
 
   const { data, isLoading, refetch } = useQuery({
     queryKey,
@@ -529,12 +578,16 @@ export function CalendarClient() {
   const requests = data?.data ?? [];
 
   const filteredRequests = useMemo(() => {
-    if (!sourceFilter) return requests;
-    if (sourceFilter === 'system_tasks') return requests.filter((r) => r.task_source === 'system');
-    if (sourceFilter === 'user_tasks')   return requests.filter((r) => r.task_source === 'user' && r.type === 'task');
-    if (sourceFilter === 'requests')     return requests.filter((r) => r.type !== 'task');
-    return requests;
-  }, [requests, sourceFilter]);
+    let result = requests;
+    if (ctx.moduleId && role !== 'superadmin') {
+      result = result.filter((r) => r.metadata?.module_id === ctx.moduleId);
+    }
+    if (!sourceFilter) return result;
+    if (sourceFilter === 'system_tasks') return result.filter((r) => r.task_source === 'system');
+    if (sourceFilter === 'user_tasks')   return result.filter((r) => r.task_source === 'user' && r.type === 'task');
+    if (sourceFilter === 'requests')     return result.filter((r) => r.type !== 'task');
+    return result;
+  }, [requests, sourceFilter, ctx.moduleId, role]);
 
   const events = useMemo(() => filteredRequests.map((req) => {
     const color = eventColor(req);
@@ -567,6 +620,28 @@ export function CalendarClient() {
         <div>
           <div className={styles.title}>Calendario</div>
           <div className={styles.subtitle}>{ROLE_LABELS[role]}</div>
+          {contexts.length > 1 && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+              {contexts.map((c, i) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setSelectedCtxIdx(i)}
+                  style={{
+                    padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                    border: `1.5px solid ${selectedCtxIdx === i ? '#6366F1' : '#E2E8F0'}`,
+                    background: selectedCtxIdx === i ? '#6366F118' : '#fff',
+                    color: selectedCtxIdx === i ? '#6366F1' : '#64748B',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  <span>{c.label}</span>
+                  <span style={{ opacity: 0.7, fontWeight: 400 }}>· {c.sublabel}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className={styles.headerRight}>
           <div className={styles.legend}>

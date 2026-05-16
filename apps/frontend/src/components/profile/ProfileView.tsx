@@ -78,7 +78,13 @@ export function ProfileView({ user: initialUser, isOwnProfile, viewerIsSuperadmi
           </div>
 
           {activeTab === 'overview' && (
-            <ProfileOverviewTab user={user} isOwnProfile={isOwnProfile} fullName={fullName} />
+            <ProfileOverviewTab
+              user={user}
+              isOwnProfile={isOwnProfile}
+              fullName={fullName}
+              viewerIsSuperadmin={viewerIsSuperadmin}
+              targetUserId={user.id}
+            />
           )}
           {(isOwnProfile || viewerIsSuperadmin) && activeTab === 'security' && (
             <ProfileSecurityTab user={user} isOwnProfile={isOwnProfile} onTotpToggled={handleTotpToggled} />

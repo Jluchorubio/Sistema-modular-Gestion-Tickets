@@ -1,11 +1,13 @@
 'use client';
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import { Controller, UseFormReturn } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import {
   Smartphone, Briefcase, Building2, MapPin, Home, ChevronDown, Globe,
 } from 'lucide-react';
 import { modulesService } from '@/services/modules.service';
+import { useGeoData } from '@/hooks/useGeoData';
+import { GeoCombobox } from '@/components/ui/GeoCombobox';
 import styles from '../complete-profile.module.css';
 
 type ProfileForm = {
@@ -49,14 +51,19 @@ interface Props {
 }
 
 export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, onSubmit }: Props) {
-  const { register, formState: { errors }, watch, setValue } = form;
-  const sede = watch('primary_sede', '');
+  const { register, control, formState: { errors }, watch, setValue } = form;
+  const sede           = watch('primary_sede', '');
+  const watchedCountry = watch('country', '');
+  const watchedState   = watch('state_province', '');
 
   const [countries,    setCountries]    = useState<CountryOption[]>([]);
   const [prefixOpen,   setPrefixOpen]   = useState(false);
   const [prefixSearch, setPrefixSearch] = useState('');
   const prefixRef = useRef<HTMLDivElement>(null);
   const watchedPrefix = watch('phone_prefix', '');
+
+  const { countryOptions, stateOptions, cityOptions, statesLoading, citiesLoading } =
+    useGeoData(watchedCountry ?? '', watchedState ?? '');
 
   useEffect(() => { loadCountries().then(setCountries).catch(() => {}); }, []);
 
@@ -78,8 +85,6 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
       c.dialCode.includes(prefixSearch)
     ).slice(0, 60),
   [countries, prefixSearch]);
-
-  const countryNames = useMemo(() => countries.map(c => c.name), [countries]);
 
   const { data: locations = [] } = useQuery({
     queryKey: ['locations'],
@@ -339,56 +344,75 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
           </div>
 
           <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="country">
+            <label className={styles.fieldLabel}>
               País <span className={styles.opt}>opcional</span>
             </label>
-            <div className={styles.inputWrap}>
-              <input
-                {...register('country')}
-                id="country"
-                type="text"
-                placeholder="Colombia"
-                list="country-list"
-                className={styles.fieldInput}
-              />
-              <span className={styles.fieldIcon}><Globe size={15} /></span>
-            </div>
-            <datalist id="country-list">
-              {countryNames.slice(0, 100).map(n => <option key={n} value={n} />)}
-            </datalist>
+            <Controller
+              control={control}
+              name="country"
+              render={({ field }) => (
+                <GeoCombobox
+                  value={field.value ?? ''}
+                  onChange={val => {
+                    field.onChange(val);
+                    setValue('state_province', '');
+                    setValue('city', '');
+                  }}
+                  options={countryOptions}
+                  placeholder="Colombia"
+                  icon={<Globe size={15} />}
+                  inputClass={styles.fieldInput}
+                />
+              )}
+            />
           </div>
 
           <div className={styles.fieldGrid}>
             <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="state_province">
+              <label className={styles.fieldLabel}>
                 Departamento / Estado <span className={styles.opt}>opcional</span>
               </label>
-              <div className={styles.inputWrap}>
-                <input
-                  {...register('state_province')}
-                  id="state_province"
-                  type="text"
-                  placeholder="Cundinamarca"
-                  className={styles.fieldInput}
-                />
-                <span className={styles.fieldIcon}><MapPin size={15} /></span>
-              </div>
+              <Controller
+                control={control}
+                name="state_province"
+                render={({ field }) => (
+                  <GeoCombobox
+                    value={field.value ?? ''}
+                    onChange={val => {
+                      field.onChange(val);
+                      setValue('city', '');
+                    }}
+                    options={stateOptions}
+                    loading={statesLoading}
+                    placeholder={watchedCountry ? 'Cundinamarca' : 'Selecciona un país primero'}
+                    disabled={!watchedCountry}
+                    icon={<MapPin size={15} />}
+                    inputClass={styles.fieldInput}
+                  />
+                )}
+              />
             </div>
 
             <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="city">
+              <label className={styles.fieldLabel}>
                 Ciudad <span className={styles.opt}>opcional</span>
               </label>
-              <div className={styles.inputWrap}>
-                <input
-                  {...register('city')}
-                  id="city"
-                  type="text"
-                  placeholder="Bogotá"
-                  className={styles.fieldInput}
-                />
-                <span className={styles.fieldIcon}><Building2 size={15} /></span>
-              </div>
+              <Controller
+                control={control}
+                name="city"
+                render={({ field }) => (
+                  <GeoCombobox
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    options={cityOptions}
+                    loading={citiesLoading}
+                    placeholder={watchedState ? 'Bogotá' : 'Selecciona un departamento'}
+                    disabled={!watchedState}
+                    icon={<Building2 size={15} />}
+                    inputClass={styles.fieldInput}
+                  />
+                )}
+              />
             </div>
           </div>
 

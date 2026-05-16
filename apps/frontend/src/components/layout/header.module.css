@@ -11,6 +11,11 @@
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* Full-width when no sidebar */
+.headerFull {
+  grid-column: 1 / -1;
+}
+
 .inner {
   max-width: 1400px;
   margin: 0 auto;
@@ -19,6 +24,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
 }
 
 /* ── Brand ── */
@@ -369,4 +375,211 @@
 @media (max-width: 640px) {
   .uname { display: none; }
   .notifDropdown { width: 290px; }
+}
+
+/* ── Center nav (no-sidebar users) ────────────────────────────────────── */
+.centerNav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.centerNavLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  text-decoration: none;
+  transition: background .12s, color .12s;
+}
+
+.centerNavLink:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.centerNavLinkActive {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* ── Calendar mini-popover ─────────────────────────────────────────────── */
+.calWrap {
+  position: relative;
+}
+
+.calBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  cursor: pointer;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all .12s;
+  font-family: inherit;
+}
+
+.calBtn:hover,
+.calBtnOpen {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.calBtnDay {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6366F1;
+  line-height: 1;
+}
+
+.calDropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  width: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.05);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.calDropdownOpen {
+  display: block;
+}
+
+.calHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.calTodayLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  text-transform: capitalize;
+}
+
+.calViewAll {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: #6366F1;
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity .12s;
+}
+
+.calViewAll:hover { opacity: .75; }
+
+.calList {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.calEmpty {
+  text-align: center;
+  padding: 28px 16px;
+  color: #94a3b8;
+  font-size: 13px;
+  margin: 0;
+}
+
+.calItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.calItem:last-child { border-bottom: none; }
+
+.calDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.calItemBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.calItemTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.calSla {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #F59E0B;
+  font-weight: 600;
+}
+
+.calFooter {
+  padding: 10px 12px;
+  border-top: 1px solid #f1f5f9;
+  background: #fafafa;
+}
+
+.calFooterBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 0;
+  background: #6366F1;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .12s;
+}
+
+.calFooterBtn:hover { background: #4F46E5; }
+
+@media (max-width: 640px) {
+  .calDropdown { width: 280px; right: -60px; }
+  .centerNav { display: none; }
 }

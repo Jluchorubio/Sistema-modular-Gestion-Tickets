@@ -10,9 +10,11 @@ import {
   Trash2,
   User,
   ChevronRight,
-  CalendarDays,
   ArrowLeft,
   Layers,
+  Ticket,
+  Package,
+  BarChart2,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
 import { useAuthStore } from '@/stores/auth.store';
@@ -32,15 +34,17 @@ function useSidebarRoles() {
 /* ── Nav definitions ───────────────────────────────────────────────────────── */
 
 const PERSONAL_NAV = [
-  { key: 'modules',  label: 'Dashboard',    Icon: LayoutGrid,    href: '/dashboard' },
-  { key: 'requests', label: 'Solicitudes',  Icon: ClipboardList, href: '/requests'  },
-  { key: 'calendar', label: 'Calendario',   Icon: CalendarDays,  href: '/calendar'  },
+  { key: 'modules',  label: 'Dashboard',   Icon: LayoutGrid,    href: '/dashboard' },
+  { key: 'tickets',   label: 'Tickets',     Icon: Ticket,        href: '/tickets'    },
+  { key: 'inventory', label: 'Inventario',  Icon: Package,       href: '/inventory'  },
+  { key: 'requests',  label: 'Solicitudes', Icon: ClipboardList, href: '/requests'   },
 ] as const;
 
 const ADMIN_NAV = [
-  { key: 'users',  label: 'Usuarios',       Icon: Users,  href: '/users' },
-  { key: 'roles',  label: 'Roles Globales', Icon: Tag,    href: '/roles' },
-  { key: 'trash',  label: 'Papelera',       Icon: Trash2, href: '/trash' },
+  { key: 'reports', label: 'Reportes',       Icon: BarChart2, href: '/reports' },
+  { key: 'users',   label: 'Usuarios',       Icon: Users,     href: '/users'   },
+  { key: 'roles',   label: 'Roles Globales', Icon: Tag,       href: '/roles'   },
+  { key: 'trash',   label: 'Papelera',       Icon: Trash2,    href: '/trash'   },
 ] as const;
 
 /* ── Module context mini-header ────────────────────────────────────────────── */

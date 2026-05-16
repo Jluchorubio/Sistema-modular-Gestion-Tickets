@@ -20,7 +20,8 @@ export type RequestStatus =
   | 'under_review'
   | 'approved'
   | 'rejected'
-  | 'cancelled';
+  | 'cancelled'
+  | 'escalated';
 
 export type RequestPriority = 'baja' | 'media' | 'alta' | 'critica';
 export type TaskSource      = 'user' | 'system';
@@ -36,41 +37,47 @@ export interface RequestTimelineEntry {
 }
 
 export interface AdmRequest {
-  id:              string;
-  type:            RequestType;
-  status:          RequestStatus;
-  priority:        RequestPriority;
-  task_source:     TaskSource;
-  title:           string;
-  description:     string;
-  requester_id?:   string | null;
-  requester_name?: string | null;
-  reviewer_name?:  string | null;
-  review_notes?:   string | null;
-  reviewed_at?:    string | null;
-  taken_at?:       string | null;
-  taken_by_name?:  string | null;
-  sla_due_at?:     string | null;
-  metadata?:       Record<string, unknown> | null;
-  created_at:      string;
-  updated_at:      string;
+  id:                 string;
+  type:               RequestType;
+  status:             RequestStatus;
+  priority:           RequestPriority;
+  task_source:        TaskSource;
+  title:              string;
+  description:        string;
+  requester_id?:      string | null;
+  requester_name?:    string | null;
+  reviewer_name?:     string | null;
+  review_notes?:      string | null;
+  reviewed_at?:       string | null;
+  taken_at?:          string | null;
+  taken_by_name?:     string | null;
+  sla_due_at?:        string | null;
+  escalated?:         boolean;
+  escalated_at?:      string | null;
+  escalation_note?:   string | null;
+  escalated_by_name?: string | null;
+  metadata?:          Record<string, unknown> | null;
+  created_at:         string;
+  updated_at:         string;
 }
 
 export interface RequestsFilter {
-  status?: RequestStatus | '';
-  type?:   RequestType   | '';
-  source?: TaskSource    | '';
-  limit?:  number;
-  page?:   number;
+  status?:    RequestStatus | '';
+  type?:      RequestType   | '';
+  source?:    TaskSource    | '';
+  escalated?: boolean;
+  limit?:     number;
+  page?:      number;
 }
 
 export const requestsService = {
   async getAll(filter: RequestsFilter = {}): Promise<PaginatedResponse<AdmRequest>> {
-    const params: Record<string, string | number> = { limit: filter.limit ?? 50 };
-    if (filter.status) params.status = filter.status;
-    if (filter.type)   params.type   = filter.type;
-    if (filter.source) params.source = filter.source;
-    if (filter.page)   params.page   = filter.page;
+    const params: Record<string, string | number | boolean> = { limit: filter.limit ?? 50 };
+    if (filter.status)            params.status    = filter.status;
+    if (filter.type)              params.type      = filter.type;
+    if (filter.source)            params.source    = filter.source;
+    if (filter.escalated === true) params.escalated = true;
+    if (filter.page)              params.page      = filter.page;
     const { data } = await api.get('/requests', { params });
     return data;
   },
@@ -121,6 +128,16 @@ export const requestsService = {
     const body: { status: RequestStatus; review_notes?: string } = { status };
     if (review_notes) body.review_notes = review_notes;
     const { data } = await api.patch(`/requests/${id}/review`, body);
+    return data;
+  },
+
+  async escalate(id: string, note?: string): Promise<{ ok: boolean }> {
+    const { data } = await api.post(`/requests/${id}/escalate`, { note });
+    return data;
+  },
+
+  async deescalate(id: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/requests/${id}/escalate`);
     return data;
   },
 };

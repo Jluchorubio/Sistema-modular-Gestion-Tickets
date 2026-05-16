@@ -14,6 +14,24 @@ import { ModuleFormModal } from '@/components/modules/ModuleFormModal';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import type { SystemModule } from '@/types/module.types';
+
+// Virtual pinned system module — always visible to all users
+const GESTION_MODULE: SystemModule = {
+  id:                  '__gestion__',
+  name:                'Gestión Administrativa',
+  slug:                'gestion',
+  description:         'Solicitudes de acceso, cambio de rol, corrección de perfil y escalaciones',
+  type:                'gestion',
+  image_url:           null,
+  color:               '#6366F1',
+  is_active:           true,
+  has_access:          true,
+  maintenance_mode:    false,
+  maintenance_since:   null,
+  maintenance_message: null,
+  created_at:          new Date(0).toISOString(),
+  deleted_at:          null,
+};
 import styles from '../dashboard.module.css';
 import mstyles from '@/components/ui/modal.module.css';
 
@@ -178,6 +196,14 @@ export function DashboardClient() {
         <>
           <div className={styles.sectionTitle}>Módulos disponibles</div>
           <div className={styles.grid}>
+            {/* ── Pinned system module — always first ── */}
+            <ModuleCard
+              key="__gestion__"
+              module={GESTION_MODULE}
+              isSuperadmin={false}
+              onClick={() => router.push('/requests')}
+            />
+
             {!active.length && !isSuperadmin && (
               <span className={styles.emptyMsg}>No tienes módulos asignados.</span>
             )}

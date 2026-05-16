@@ -8,6 +8,7 @@ import {
   UserCheck,
   Boxes,
   MessageSquare,
+  ClipboardList,
   Lock,
   MoreVertical,
   Pencil,
@@ -28,13 +29,14 @@ interface TypeConfig {
 }
 
 const TYPE_CONFIG: Record<string, TypeConfig> = {
-  tickets:    { Icon: Ticket,        panelCls: styles.imagePanelTickets,    iconColor: '#93c5fd' },
-  helpdesk:   { Icon: MessageSquare, panelCls: styles.imagePanelTickets,    iconColor: '#93c5fd' },
-  inventario: { Icon: Package,       panelCls: styles.imagePanelInventario, iconColor: '#6ee7b7' },
-  inventory:  { Icon: Package,       panelCls: styles.imagePanelInventario, iconColor: '#6ee7b7' },
-  crm:        { Icon: Users,         panelCls: styles.imagePanelCrm,        iconColor: '#c4b5fd' },
-  rrhh:       { Icon: UserCheck,     panelCls: styles.imagePanelRrhh,       iconColor: '#86efac' },
-  custom:     { Icon: Boxes,         panelCls: styles.imagePanelCustom,     iconColor: '#c4b5fd' },
+  tickets:    { Icon: Ticket,         panelCls: styles.imagePanelTickets,    iconColor: '#93c5fd' },
+  helpdesk:   { Icon: MessageSquare,  panelCls: styles.imagePanelTickets,    iconColor: '#93c5fd' },
+  inventario: { Icon: Package,        panelCls: styles.imagePanelInventario, iconColor: '#6ee7b7' },
+  inventory:  { Icon: Package,        panelCls: styles.imagePanelInventario, iconColor: '#6ee7b7' },
+  crm:        { Icon: Users,          panelCls: styles.imagePanelCrm,        iconColor: '#c4b5fd' },
+  rrhh:       { Icon: UserCheck,      panelCls: styles.imagePanelRrhh,       iconColor: '#86efac' },
+  custom:     { Icon: Boxes,          panelCls: styles.imagePanelCustom,     iconColor: '#c4b5fd' },
+  gestion:    { Icon: ClipboardList,  panelCls: styles.imagePanelGestion,    iconColor: '#a5b4fc' },
 };
 
 const FALLBACK_CONFIG: TypeConfig = {

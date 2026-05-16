@@ -71,4 +71,12 @@ export const authService = {
   async verifyCredentials(password: string): Promise<void> {
     await api.post('/auth/verify-credentials', { password });
   },
+
+  async heartbeat(): Promise<void> {
+    await api.patch('/auth/heartbeat');
+  },
+
+  async terminateSession(sessionId: string): Promise<void> {
+    await api.delete(`/auth/sessions/${sessionId}`);
+  },
 };

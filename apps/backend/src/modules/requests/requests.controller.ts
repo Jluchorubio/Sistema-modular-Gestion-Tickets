@@ -52,22 +52,36 @@ export class RequestsController {
     return this.service.completeMineTask(req.user.sub, id);
   }
 
+  @Get('user/:id')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Solicitudes de un usuario específico. Superadmin / admin_modulo.' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  findByUser(@Param('id') id: string, @Query('limit') limit?: string) {
+    return this.service.findByUser(id, limit ? parseInt(limit, 10) : 10);
+  }
+
   @Get()
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
   @ApiOperation({ summary: 'Listar todas las solicitudes. Superadmin / admin_modulo.' })
-  @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'type',   required: false })
-  @ApiQuery({ name: 'source', required: false })
-  @ApiQuery({ name: 'page',   required: false, type: Number })
-  @ApiQuery({ name: 'limit',  required: false, type: Number })
-  findAll(@Query() q: { status?: string; type?: string; source?: string; page?: string; limit?: string }) {
-    return this.service.findAll({
-      status: q.status,
-      type:   q.type,
-      source: q.source,
-      page:   q.page  ? parseInt(q.page,  10) : 1,
-      limit:  q.limit ? parseInt(q.limit, 10) : 20,
+  @ApiQuery({ name: 'status',    required: false })
+  @ApiQuery({ name: 'type',      required: false })
+  @ApiQuery({ name: 'source',    required: false })
+  @ApiQuery({ name: 'escalated', required: false, type: Boolean })
+  @ApiQuery({ name: 'page',      required: false, type: Number })
+  @ApiQuery({ name: 'limit',     required: false, type: Number })
+  findAll(
+    @Req() req: any,
+    @Query() q: { status?: string; type?: string; source?: string; escalated?: string; page?: string; limit?: string },
+  ) {
+    return this.service.findAll(req.user.sub, {
+      status:    q.status,
+      type:      q.type,
+      source:    q.source,
+      escalated: q.escalated === 'true' ? true : undefined,
+      page:      q.page  ? parseInt(q.page,  10) : 1,
+      limit:     q.limit ? parseInt(q.limit, 10) : 20,
     });
   }
 
@@ -101,6 +115,26 @@ export class RequestsController {
     @Body() body: { status: 'in_progress' | 'completed' },
   ) {
     return this.service.updateProgress(req.user.sub, id, body.status);
+  }
+
+  @Post(':id/escalate')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Escalar solicitud al superadmin.' })
+  escalate(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { note?: string },
+  ) {
+    return this.service.escalate(req.user.sub, id, body.note);
+  }
+
+  @Delete(':id/escalate')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Resolver escalación (superadmin).' })
+  deescalate(@Req() req: any, @Param('id') id: string) {
+    return this.service.deescalate(req.user.sub, id);
   }
 
   @Get(':id/timeline')

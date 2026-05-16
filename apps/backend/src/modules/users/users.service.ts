@@ -903,20 +903,37 @@ export class UsersService {
   // ─── Session history ─────────────────────────────────────────────────────────
 
   async getMySessions(userId: string) {
-    return this.db.query<any[]>(
+    const [profile] = await this.db.query<{ last_seen_at: string | null }[]>(
+      `SELECT last_seen_at FROM users.profiles WHERE id = $1`,
+      [userId],
+    );
+    const ts = profile?.last_seen_at ? new Date(profile.last_seen_at).getTime() : 0;
+    const is_online = ts > 0 && Date.now() - ts < 5 * 60 * 1000;
+
+    const sessions = await this.db.query<any[]>(
       `SELECT id,
-              ip_address::text  AS ip_address,
+              CASE WHEN ended_at IS NULL AND expires_at > now()
+                   THEN ip_address::text
+                   ELSE NULL
+              END                                         AS ip_address,
               user_agent,
               expires_at,
               ended_at,
               created_at,
-              (ended_at IS NULL AND expires_at > now()) AS is_active
+              geo_city,
+              geo_country,
+              geo_country_code,
+              geo_lat::float                              AS geo_lat,
+              geo_lon::float                              AS geo_lon,
+              (ended_at IS NULL AND expires_at > now())   AS is_active
        FROM   auth.sessions
        WHERE  user_id = $1
        ORDER  BY created_at DESC
-       LIMIT  30`,
+       LIMIT  20`,
       [userId],
     );
+
+    return { sessions, is_online, last_seen_at: profile?.last_seen_at ?? null };
   }
 
   // ─── Activity graph ──────────────────────────────────────────────────────────
@@ -950,6 +967,82 @@ export class UsersService {
        LIMIT  $2`,
       [userId, limit],
     );
+  }
+
+  // ─── Activity feed (composite: tickets + requests + logins) ──────────────────
+
+  async getActivityFeed(userId: string) {
+    return this.db.query<{
+      type: string; title: string; context: string; meta: string; ts: string;
+    }[]>(`
+      WITH tickets_cte AS (
+        SELECT 'ticket_created'::text AS type,
+               t.title::text          AS title,
+               m.name::text           AS context,
+               t.priority::text       AS meta,
+               t.created_at           AS ts
+        FROM   tickets.tickets t
+        JOIN   modules.modules m ON m.id = t.module_id
+        WHERE  t.created_by = $1
+          AND  t.created_at > now() - INTERVAL '90 days'
+        ORDER  BY t.created_at DESC LIMIT 6
+      ),
+      requests_cte AS (
+        SELECT ('request_' || r.status)::text          AS type,
+               r.title::text                           AS title,
+               r.type::text                            AS context,
+               r.priority::text                        AS meta,
+               GREATEST(r.updated_at, r.created_at)   AS ts
+        FROM   requests.admin_requests r
+        WHERE  r.requester_id = $1
+          AND  r.deleted_at IS NULL
+          AND  r.updated_at > now() - INTERVAL '90 days'
+        ORDER  BY r.updated_at DESC LIMIT 6
+      ),
+      sessions_cte AS (
+        SELECT 'login'::text AS type,
+               'Inicio de sesión'::text AS title,
+               COALESCE(geo_city || ', ' || geo_country, 'Desconocido')::text AS context,
+               ''::text AS meta,
+               created_at AS ts
+        FROM   auth.sessions
+        WHERE  user_id = $1
+          AND  created_at > now() - INTERVAL '90 days'
+        ORDER  BY created_at DESC LIMIT 3
+      )
+      SELECT * FROM (
+        SELECT * FROM tickets_cte
+        UNION ALL SELECT * FROM requests_cte
+        UNION ALL SELECT * FROM sessions_cte
+      ) combined
+      ORDER BY ts DESC
+      LIMIT 20
+    `, [userId]);
+  }
+
+  async getUserRequestStats(userId: string) {
+    const [tc] = await this.db.query<{ total: string }[]>(
+      `SELECT COUNT(*)::text AS total FROM tickets.tickets WHERE created_by = $1`,
+      [userId],
+    );
+    const reqRows = await this.db.query<{ status: string; cnt: string }[]>(
+      `SELECT status, COUNT(*)::text AS cnt
+       FROM   requests.admin_requests
+       WHERE  requester_id = $1 AND deleted_at IS NULL
+       GROUP  BY status`,
+      [userId],
+    );
+    const byStatus: Record<string, number> = {};
+    let reqTotal = 0;
+    for (const r of reqRows) {
+      byStatus[r.status] = parseInt(r.cnt, 10);
+      reqTotal += parseInt(r.cnt, 10);
+    }
+    return {
+      tickets_total:       parseInt(tc?.total ?? '0', 10),
+      requests_total:      reqTotal,
+      requests_by_status:  byStatus,
+    };
   }
 
   // ─── Helpers privados ────────────────────────────────────────────────────────

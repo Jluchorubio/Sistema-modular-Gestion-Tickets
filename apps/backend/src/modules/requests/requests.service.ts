@@ -46,17 +46,93 @@ export class RequestsService {
     return { ok: true };
   }
 
-  async findAll(opts: { status?: string; type?: string; source?: string; page?: number; limit?: number }) {
+  async escalate(userId: string, requestId: string, note?: string) {
+    const [req] = await this.db.query<{ id: string; status: string }[]>(
+      `SELECT id, status FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
+      [requestId],
+    );
+    if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
+    if (!['pending', 'taken', 'in_progress', 'under_review'].includes(req.status)) {
+      throw new BadRequestException(`No se puede escalar una solicitud en estado "${req.status}"`);
+    }
+
+    await this.db.query(
+      `UPDATE requests.admin_requests
+       SET escalated       = TRUE,
+           escalated_by    = $1,
+           escalated_at    = now(),
+           escalation_note = $2,
+           updated_at      = now()
+       WHERE id = $3`,
+      [userId, note ?? null, requestId],
+    );
+    await this.db.query(
+      `INSERT INTO requests.request_timeline (request_id, actor_id, action, old_status, new_status, notes)
+       VALUES ($1, $2, 'escalated', $3, $3, $4)`,
+      [requestId, userId, req.status, note ?? null],
+    );
+    return { ok: true };
+  }
+
+  async deescalate(userId: string, requestId: string) {
+    const [req] = await this.db.query<{ id: string; escalated: boolean }[]>(
+      `SELECT id, escalated FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
+      [requestId],
+    );
+    if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
+    if (!req.escalated) throw new BadRequestException('La solicitud no está escalada');
+
+    await this.db.query(
+      `UPDATE requests.admin_requests
+       SET escalated       = FALSE,
+           escalated_by    = NULL,
+           escalated_at    = NULL,
+           escalation_note = NULL,
+           updated_at      = now()
+       WHERE id = $1`,
+      [requestId],
+    );
+    await this.db.query(
+      `INSERT INTO requests.request_timeline (request_id, actor_id, action, notes)
+       VALUES ($1, $2, 'deescalated', 'Escalación resuelta')`,
+      [requestId, userId],
+    );
+    return { ok: true };
+  }
+
+  async findAll(userId: string, opts: { status?: string; type?: string; source?: string; escalated?: boolean; page?: number; limit?: number }) {
     const page   = Math.max(1, opts.page  ?? 1);
     const limit  = Math.min(100, Math.max(1, opts.limit ?? 20));
     const offset = (page - 1) * limit;
 
+    // Determine scope: superadmin sees all; admin_modulo sees only their modules' requests
+    const [profile] = await this.db.query<{ is_superadmin: boolean }[]>(
+      `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
+      [userId],
+    );
+    const isSuperadmin = profile?.is_superadmin ?? false;
+
     const conditions: string[] = ['r.deleted_at IS NULL'];
     const params: unknown[]    = [];
 
-    if (opts.status) { params.push(opts.status); conditions.push(`r.status      = $${params.length}`); }
-    if (opts.type)   { params.push(opts.type);   conditions.push(`r.type        = $${params.length}`); }
-    if (opts.source) { params.push(opts.source); conditions.push(`r.task_source = $${params.length}`); }
+    if (!isSuperadmin) {
+      params.push(userId);
+      conditions.push(`(
+        r.metadata->>'module_id' IN (
+          SELECT umr.module_id::text
+          FROM   modules.user_module_roles umr
+          JOIN   modules.module_roles      mr ON mr.id = umr.role_id
+          WHERE  umr.user_id   = $${params.length}
+            AND  umr.is_active = true
+            AND  mr.name       = 'admin_modulo'
+        )
+      )`);
+    }
+
+    if (opts.status)              { params.push(opts.status);  conditions.push(`r.status      = $${params.length}`); }
+    if (opts.type)                { params.push(opts.type);    conditions.push(`r.type        = $${params.length}`); }
+    if (opts.source)              { params.push(opts.source);  conditions.push(`r.task_source = $${params.length}`); }
+    if (opts.escalated === true)  { conditions.push(`r.escalated = TRUE`); }
 
     const where = `WHERE ${conditions.join(' AND ')}`;
 
@@ -68,18 +144,21 @@ export class RequestsService {
       `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
               r.metadata, r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
               r.taken_at, r.sla_due_at, r.task_source,
-              p.first_name || ' ' || p.last_name AS requester_name,
-              p.id                               AS requester_id,
-              c.email                            AS requester_email,
-              rv.first_name || ' ' || rv.last_name AS reviewer_name,
-              tb.first_name || ' ' || tb.last_name AS taken_by_name
+              r.escalated, r.escalated_at, r.escalation_note,
+              p.first_name || ' ' || p.last_name   AS requester_name,
+              p.id                                  AS requester_id,
+              c.email                               AS requester_email,
+              rv.first_name || ' ' || rv.last_name  AS reviewer_name,
+              tb.first_name || ' ' || tb.last_name  AS taken_by_name,
+              eb.first_name || ' ' || eb.last_name  AS escalated_by_name
        FROM   requests.admin_requests r
        JOIN   users.profiles          p  ON p.id = r.requester_id
        JOIN   auth.credentials        c  ON c.user_id = p.id
        LEFT JOIN users.profiles       rv ON rv.id = r.reviewed_by
        LEFT JOIN users.profiles       tb ON tb.id = r.taken_by
+       LEFT JOIN users.profiles       eb ON eb.id = r.escalated_by
        ${where}
-       ORDER  BY r.created_at DESC
+       ORDER  BY r.escalated DESC, r.created_at DESC
        LIMIT  $${li} OFFSET $${oi}`,
       params,
     );
@@ -114,6 +193,7 @@ export class RequestsService {
       `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
               r.metadata, r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
               r.taken_at, r.sla_due_at, r.task_source,
+              r.escalated, r.escalated_at, r.escalation_note,
               rv.first_name || ' ' || rv.last_name AS reviewer_name,
               tb.first_name || ' ' || tb.last_name AS taken_by_name
        FROM   requests.admin_requests r
@@ -249,6 +329,18 @@ export class RequestsService {
       [requestId, userId, req.status],
     );
     return { ok: true };
+  }
+
+  async findByUser(targetUserId: string, limit = 10) {
+    return this.db.query<any[]>(
+      `SELECT r.id, r.type, r.title, r.status, r.priority, r.created_at, r.updated_at,
+              r.reviewed_at, r.review_notes, r.task_source
+       FROM   requests.admin_requests r
+       WHERE  r.requester_id = $1 AND r.deleted_at IS NULL
+       ORDER  BY r.created_at DESC
+       LIMIT  $2`,
+      [targetUserId, limit],
+    );
   }
 
   async getTimeline(requestId: string, userId: string) {

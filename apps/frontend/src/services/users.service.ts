@@ -160,15 +160,24 @@ export const usersService = {
     return data;
   },
 
-  async getMySessions(): Promise<Array<{
-    id:           string;
-    ip_address:   string | null;
-    user_agent:   string | null;
-    expires_at:   string;
-    ended_at:     string | null;
-    created_at:   string;
-    is_active:    boolean;
-  }>> {
+  async getMySessions(): Promise<{
+    sessions: Array<{
+      id:                string;
+      ip_address:        string | null;
+      user_agent:        string | null;
+      expires_at:        string;
+      ended_at:          string | null;
+      created_at:        string;
+      geo_city:          string | null;
+      geo_country:       string | null;
+      geo_country_code:  string | null;
+      geo_lat:           number | null;
+      geo_lon:           number | null;
+      is_active:         boolean;
+    }>;
+    is_online:     boolean;
+    last_seen_at:  string | null;
+  }> {
     const { data } = await api.get('/users/me/sessions');
     return data;
   },
@@ -183,6 +192,42 @@ export const usersService = {
     module_name: string; state_label: string; state_name: string; is_final: boolean;
   }[]> {
     const { data } = await api.get('/users/me/recent-tickets', { params: { limit } });
+    return data;
+  },
+
+  async getUserRecentTickets(userId: string, limit = 6): Promise<{
+    id: string; title: string; priority: string; created_at: string;
+    module_name: string; state_label: string; state_name: string; is_final: boolean;
+  }[]> {
+    const { data } = await api.get(`/users/${userId}/recent-tickets`, { params: { limit } });
+    return data;
+  },
+
+  async getMyActivityFeed(): Promise<{
+    type: string; title: string; context: string; meta: string; ts: string;
+  }[]> {
+    const { data } = await api.get('/users/me/activity-feed');
+    return data;
+  },
+
+  async getUserActivityFeed(userId: string): Promise<{
+    type: string; title: string; context: string; meta: string; ts: string;
+  }[]> {
+    const { data } = await api.get(`/users/${userId}/activity-feed`);
+    return data;
+  },
+
+  async getMyRequestStats(): Promise<{
+    tickets_total: number; requests_total: number; requests_by_status: Record<string, number>;
+  }> {
+    const { data } = await api.get('/users/me/request-stats');
+    return data;
+  },
+
+  async getUserRequestStats(userId: string): Promise<{
+    tickets_total: number; requests_total: number; requests_by_status: Record<string, number>;
+  }> {
+    const { data } = await api.get(`/users/${userId}/request-stats`);
     return data;
   },
 

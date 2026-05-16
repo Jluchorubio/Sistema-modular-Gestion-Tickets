@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException,
   HttpException,
   HttpStatus,
   Logger,
@@ -16,6 +17,7 @@ import { Resend } from 'resend';
 import { createHash, randomBytes } from 'crypto';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
+import * as http from 'http';
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 3;
@@ -595,11 +597,17 @@ export class AuthService {
        VALUES ($1, $2, now() + INTERVAL '7 days')`,
       [userId, this.hash(refresh_token)],
     );
-    await this.db.query(
+    const [{ id: sessionId }] = await this.db.query<{ id: string }[]>(
       `INSERT INTO auth.sessions (user_id, ip_address, user_agent, expires_at)
-       VALUES ($1, $2::inet, $3, now() + INTERVAL '7 days')`,
+       VALUES ($1, $2::inet, $3, now() + INTERVAL '7 days')
+       RETURNING id`,
       [userId, ip ?? null, userAgent ?? null],
     );
+
+    // Geo lookup — fire-and-forget, does not block login response
+    if (ip && !this.isPrivateIp(ip)) {
+      this.lookupGeoAndStore(sessionId, ip).catch(() => {});
+    }
 
     return {
       access_token,
@@ -613,6 +621,77 @@ export class AuthService {
         force_password_change:  credData?.force_password_change ?? false,
       },
     };
+  }
+
+  // ─── Heartbeat — online/offline ──────────────────────────────────────────────
+
+  async heartbeat(userId: string): Promise<{ ok: boolean }> {
+    await this.db.query(
+      `UPDATE users.profiles SET last_seen_at = now() WHERE id = $1`,
+      [userId],
+    );
+    return { ok: true };
+  }
+
+  // ─── Terminate specific session ───────────────────────────────────────────────
+
+  async terminateSession(userId: string, sessionId: string): Promise<{ ok: boolean }> {
+    const [session] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM auth.sessions
+       WHERE  id = $1 AND user_id = $2 AND ended_at IS NULL`,
+      [sessionId, userId],
+    );
+    if (!session) throw new NotFoundException('Sesión no encontrada o ya cerrada');
+
+    await this.db.query(
+      `UPDATE auth.sessions SET ended_at = now() WHERE id = $1`,
+      [sessionId],
+    );
+    return { ok: true };
+  }
+
+  // ─── Geo lookup (ip-api.com free tier) ───────────────────────────────────────
+
+  private isPrivateIp(ip: string): boolean {
+    const clean = ip.replace(/^::ffff:/, '');
+    if (clean === '127.0.0.1' || clean === '::1' || clean === 'localhost') return true;
+    return /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(clean);
+  }
+
+  private async lookupGeoAndStore(sessionId: string, ip: string): Promise<void> {
+    const geo = await this.lookupGeo(ip);
+    if (!geo) return;
+    await this.db.query(
+      `UPDATE auth.sessions
+       SET    geo_city = $1, geo_country = $2, geo_country_code = $3,
+              geo_lat  = $4, geo_lon     = $5
+       WHERE  id = $6`,
+      [geo.city, geo.country, geo.countryCode, geo.lat, geo.lon, sessionId],
+    );
+  }
+
+  private lookupGeo(ip: string): Promise<{
+    city: string; country: string; countryCode: string; lat: number; lon: number;
+  } | null> {
+    return new Promise((resolve) => {
+      const req = http.get(
+        `http://ip-api.com/json/${ip}?fields=status,country,countryCode,city,lat,lon`,
+        (res) => {
+          let raw = '';
+          res.on('data', (c) => { raw += c; });
+          res.on('end', () => {
+            try {
+              const d = JSON.parse(raw);
+              resolve(d.status === 'success' ? d : null);
+            } catch {
+              resolve(null);
+            }
+          });
+        },
+      );
+      req.setTimeout(3000, () => { req.destroy(); resolve(null); });
+      req.on('error', () => resolve(null));
+    });
   }
 
   private hash(value: string): string {

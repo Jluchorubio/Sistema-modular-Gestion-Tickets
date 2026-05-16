@@ -32,3 +32,24 @@
     padding: 22px;
   }
 }
+
+/* ── No-sidebar layout (usuario role) ─────────────────────────────────── */
+.shellUser {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.mainUser {
+  flex: 1;
+  padding: 32px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 720px) {
+  .mainUser { padding: 22px; }
+}

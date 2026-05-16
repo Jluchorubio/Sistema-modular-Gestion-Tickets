@@ -3,30 +3,22 @@ import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
+  Ticket, FileText, LogIn, ShieldCheck, Star,
+} from 'lucide-react';
+import {
   fmtDate, fmtRelative, getActiveModules,
   CONTRIB_COLORS,
   type ProfileUser,
 } from './profile.types';
-import { requestsService } from '@/services/requests.service';
 import { usersService } from '@/services/users.service';
-import { REQUEST_STATUS_LABELS } from '@/constants/requests';
 import styles from './profile.module.css';
-
-const STATUS_CLS: Record<string, string> = {
-  pending:      styles.badgeYellow,
-  under_review: styles.badgeBlue,
-  approved:     styles.badgeGreen,
-  rejected:     styles.badgeRed,
-  cancelled:    styles.badgeGray,
-};
 
 /* ── Activity graph helpers ──────────────────────────────────────────────── */
 
 function getGraphStartDate(): Date {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  // align to Monday of 26 weeks ago
-  const dayOfWeek = (today.getDay() + 6) % 7; // 0=Mon
+  const dayOfWeek = (today.getDay() + 6) % 7;
   const start = new Date(today);
   start.setDate(today.getDate() - dayOfWeek - 25 * 7);
   return start;
@@ -44,46 +36,87 @@ function countToLevel(count: number): number {
   return 4;
 }
 
-interface Props {
-  user:          ProfileUser;
-  isOwnProfile:  boolean;
-  fullName:      string;
+/* ── Activity feed helpers ───────────────────────────────────────────────── */
+
+const FEED_EVENT_CONFIG: Record<string, { icon: typeof Ticket; color: string; label: string }> = {
+  ticket_created:    { icon: Ticket,    color: '#6366F1', label: 'Ticket creado'      },
+  request_pending:   { icon: FileText,  color: '#F59E0B', label: 'Solicitud enviada'  },
+  request_approved:  { icon: Star,      color: '#22C55E', label: 'Solicitud aprobada' },
+  request_rejected:  { icon: FileText,  color: '#EF4444', label: 'Solicitud rechazada'},
+  request_taken:     { icon: ShieldCheck,color:'#3B82F6', label: 'Solicitud tomada'   },
+  request_in_progress:{ icon: FileText, color: '#8B5CF6', label: 'En revisión'        },
+  login:             { icon: LogIn,     color: '#10B981', label: 'Inicio de sesión'   },
+};
+
+function feedConfig(type: string) {
+  return FEED_EVENT_CONFIG[type] ?? { icon: FileText, color: '#94A3B8', label: type };
 }
 
-export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
+/* ── Role color ──────────────────────────────────────────────────────────── */
+
+const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  admin_modulo:  { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
+  jefe_tecnico:  { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
+  tecnico:       { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
+  usuario:       { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0' },
+};
+
+function roleColor(name: string) {
+  return ROLE_COLORS[name] ?? { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0' };
+}
+
+/* ── Component ───────────────────────────────────────────────────────────── */
+
+interface Props {
+  user:                 ProfileUser;
+  isOwnProfile:         boolean;
+  fullName:             string;
+  viewerIsSuperadmin?:  boolean;
+  targetUserId?:        string;
+}
+
+export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuperadmin = false, targetUserId }: Props) {
   const router        = useRouter();
   const activeModules = getActiveModules(user);
+  const canSeeOps     = isOwnProfile || (viewerIsSuperadmin && !!targetUserId);
+  const uid           = targetUserId ?? user.id;
 
-  const { data: requestsData } = useQuery({
-    queryKey: ['my-requests-all'],
-    queryFn:  () => requestsService.getMine(200),
-    enabled:  isOwnProfile,
-    staleTime: 60_000,
-  });
-  const allRequests    = requestsData?.data ?? [];
-  const recentRequests = allRequests.slice(0, 6);
-
-  const reqStats = useMemo(() => ({
-    total:        allRequests.length,
-    pending:      allRequests.filter(r => r.status === 'pending').length,
-    under_review: allRequests.filter(r => r.status === 'under_review').length,
-    approved:     allRequests.filter(r => r.status === 'approved').length,
-    rejected:     allRequests.filter(r => r.status === 'rejected').length,
-    cancelled:    allRequests.filter(r => r.status === 'cancelled').length,
-  }), [allRequests]);
-
+  /* ── Tickets ── */
   const { data: recentTickets } = useQuery({
-    queryKey: ['my-recent-tickets'],
-    queryFn:  () => usersService.getMyRecentTickets(6),
-    enabled:  isOwnProfile,
+    queryKey:  ['recent-tickets', uid],
+    queryFn:   () => isOwnProfile
+      ? usersService.getMyRecentTickets(6)
+      : usersService.getUserRecentTickets(uid, 6),
+    enabled:   canSeeOps,
     staleTime: 60_000,
   });
 
+  /* ── Activity graph ── */
   const { data: activityData } = useQuery({
-    queryKey: ['my-activity'],
-    queryFn:  () => usersService.getMyActivity(),
-    enabled:  isOwnProfile,
+    queryKey:  ['activity-graph', uid],
+    queryFn:   () => usersService.getMyActivity(),
+    enabled:   isOwnProfile,
     staleTime: 5 * 60_000,
+  });
+
+  /* ── Activity feed ── */
+  const { data: feedData } = useQuery({
+    queryKey:  ['activity-feed', uid],
+    queryFn:   () => isOwnProfile
+      ? usersService.getMyActivityFeed()
+      : usersService.getUserActivityFeed(uid),
+    enabled:   canSeeOps,
+    staleTime: 60_000,
+  });
+
+  /* ── Stats ── */
+  const { data: stats } = useQuery({
+    queryKey:  ['request-stats', uid],
+    queryFn:   () => isOwnProfile
+      ? usersService.getMyRequestStats()
+      : usersService.getUserRequestStats(uid),
+    enabled:   canSeeOps,
+    staleTime: 60_000,
   });
 
   const activityMap = useMemo(() => {
@@ -92,11 +125,15 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
     return map;
   }, [activityData]);
 
-  const graphStart   = useMemo(() => getGraphStartDate(), []);
+  const graphStart    = useMemo(() => getGraphStartDate(), []);
   const totalActivity = useMemo(
     () => Object.values(activityMap).reduce((s, v) => s + v, 0),
     [activityMap],
   );
+
+  const pColor: Record<string, string> = {
+    baja: '#94A3B8', media: '#3B82F6', alta: '#F59E0B', critica: '#EF4444',
+  };
 
   return (
     <>
@@ -115,7 +152,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
         </div>
       )}
 
-      {/* ── Profile info card ── */}
+      {/* ── Profile info ── */}
       <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
         <div className={styles.sectionHeader}>
           <p className={styles.sectionTitle}>Información del perfil</p>
@@ -127,8 +164,8 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
             ['Nombre de usuario',     user.username ? `@${user.username}` : '—'],
             ['Correo electrónico',    user.email          || '—'],
             ['Teléfono celular',      user.phone ? `${user.phone_prefix ? user.phone_prefix + ' ' : ''}${user.phone}` : '—'],
-            ['Género',                user.gender         ? (({masculino:'Masculino',femenino:'Femenino',no_binario:'No binario',prefiero_no_decir:'Prefiero no decir',otro:'Otro'} as Record<string,string>)[user.gender] ?? user.gender) : '—'],
-            ['Fecha de nacimiento',   user.birth_date     ? new Date(user.birth_date).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'],
+            ['Género',                user.gender ? (({masculino:'Masculino',femenino:'Femenino',no_binario:'No binario',prefiero_no_decir:'Prefiero no decir',otro:'Otro'} as Record<string,string>)[user.gender] ?? user.gender) : '—'],
+            ['Fecha de nacimiento',   user.birth_date ? new Date(user.birth_date).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'],
             ['Nro. documento',        user.national_id    || '—'],
             ['País',                  user.country        || '—'],
             ['Departamento / Estado', user.state_province || '—'],
@@ -158,66 +195,68 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
         </div>
       </div>
 
-      {/* ── Request stats ── */}
-      {isOwnProfile && (
+      {/* ── Module roles (visible a superadmin viendo otro usuario) ── */}
+      {viewerIsSuperadmin && !isOwnProfile && activeModules.length > 0 && (
+        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionTitle}>Roles en módulos</p>
+            <span style={{ fontSize: 10, color: '#94A3B8' }}>{activeModules.length} asignación{activeModules.length !== 1 ? 'es' : ''}</span>
+          </div>
+          <div style={{ padding: '14px 22px 16px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {activeModules.map((r) => {
+              const c = roleColor(r.role_name);
+              return (
+                <div
+                  key={r.umr_id}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 10px', borderRadius: 20,
+                    background: c.bg, color: c.text, border: `1px solid ${c.border}`,
+                    fontSize: 12, fontWeight: 500,
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{r.module_name}</span>
+                  <span style={{ opacity: 0.7 }}>·</span>
+                  <span>{r.role_name.replace('_', ' ')}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Stats (tickets + requests) ── */}
+      {canSeeOps && stats && (
         <div className={styles.ticketStatGrid} style={{ marginBottom: 22 }}>
           {([
-            ['Total',       reqStats.total,        '#0D1B2A'],
-            ['Pendientes',  reqStats.pending,       '#F59E0B'],
-            ['En revisión', reqStats.under_review,  '#6366F1'],
-            ['Aprobadas',   reqStats.approved,      '#22C55E'],
-            ['Rechazadas',  reqStats.rejected,      '#EF4444'],
-            ['Canceladas',  reqStats.cancelled,     '#94A3B8'],
+            ['Tickets creados', stats.tickets_total,                        '#6366F1'],
+            ['Solicitudes',     stats.requests_total,                       '#0D1B2A'],
+            ['Aprobadas',       stats.requests_by_status['approved']  ?? 0, '#22C55E'],
+            ['Pendientes',      stats.requests_by_status['pending']   ?? 0, '#F59E0B'],
+            ['Rechazadas',      stats.requests_by_status['rejected']  ?? 0, '#EF4444'],
+            ['Canceladas',      stats.requests_by_status['cancelled'] ?? 0, '#94A3B8'],
           ] as [string, number, string][]).map(([label, value, color]) => (
             <div key={label} className={styles.ticketStatItem}>
               <div className={styles.ticketStatLabel}>{label}</div>
               <div className={styles.ticketStatValue} style={{ color }}>{value}</div>
-              <div className={styles.ticketStatNote}>solicitudes</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Recent activity (login + account events) ── */}
-      <div style={{ marginBottom: 22 }}>
-        <p style={{ fontSize: 14, fontWeight: 700, color: '#0D1B2A', marginBottom: 14 }}>Actividad reciente</p>
-        <div className={styles.card} style={{ overflow: 'hidden' }}>
-          {([
-            user.last_login_at    ? { color: '#22C55E', label: 'Inicio de sesión',  time: fmtRelative(user.last_login_at) } : null,
-            user.profile_complete ? { color: '#2563EB', label: 'Perfil completado', time: fmtDate(user.updated_at) } : null,
-            { color: '#8B5CF6', label: 'Cuenta creada', time: fmtDate(user.created_at) },
-          ] as ({ color: string; label: string; time: string } | null)[])
-            .filter((e): e is { color: string; label: string; time: string } => e !== null)
-            .map((e, i, arr) => (
-              <div
-                key={e.label}
-                className={styles.activityRow}
-                style={i < arr.length - 1 ? { borderBottom: '1px solid #E8EDF3' } : undefined}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div className={styles.activityDot} style={{ background: e.color }} />
-                  <span style={{ fontSize: 13.5, fontWeight: 500, color: '#0D1B2A' }}>{e.label}</span>
-                </div>
-                <span style={{ fontSize: 12, color: '#94A3B8' }}>{e.time}</span>
-              </div>
-            ))}
-        </div>
-      </div>
-
       {/* ── Recent tickets ── */}
-      {isOwnProfile && (
+      {canSeeOps && (
         <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
           <div className={styles.sectionHeader}>
             <p className={styles.sectionTitle}>Últimos tickets</p>
-            <button
-              style={{
-                fontSize: 11, color: '#6366F1', background: 'none', border: 'none',
-                cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', padding: 0,
-              }}
-              onClick={() => router.push('/my-tickets')}
-            >
-              Ver más →
-            </button>
+            {isOwnProfile && (
+              <button
+                style={{ fontSize: 11, color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', padding: 0 }}
+                onClick={() => router.push('/my-tickets')}
+              >
+                Ver más →
+              </button>
+            )}
           </div>
 
           {!recentTickets || recentTickets.length === 0 ? (
@@ -226,46 +265,98 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
             </div>
           ) : (
             <div>
-              {recentTickets.map((t, i, arr) => {
-                const pColor: Record<string, string> = {
-                  baja: '#94A3B8', media: '#3B82F6', alta: '#F59E0B', critica: '#EF4444',
-                };
-                const color = pColor[t.priority] ?? '#94A3B8';
+              {recentTickets.map((t, i, arr) => (
+                <div
+                  key={t.id}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 22px', borderBottom: i < arr.length - 1 ? '1px solid #F1F5F9' : undefined, gap: 12 }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#0F172A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.title}
+                    </p>
+                    <p style={{ fontSize: 11, color: '#94A3B8', margin: '2px 0 0' }}>
+                      {t.module_name} · {fmtRelative(t.created_at)}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+                    <span className={styles.badge} style={{ fontSize: 10, background: `${pColor[t.priority] ?? '#94A3B8'}22`, color: pColor[t.priority] ?? '#94A3B8', border: `1px solid ${pColor[t.priority] ?? '#94A3B8'}44` }}>
+                      {t.priority}
+                    </span>
+                    <span className={styles.badge} style={{ fontSize: 10, background: t.is_final ? '#22C55E22' : '#6366F122', color: t.is_final ? '#22C55E' : '#6366F1', border: `1px solid ${t.is_final ? '#22C55E44' : '#6366F144'}` }}>
+                      {t.state_label}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Activity feed ── */}
+      {canSeeOps && (
+        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionTitle}>Actividad operativa</p>
+            <span style={{ fontSize: 10, color: '#94A3B8' }}>Últimos 90 días</span>
+          </div>
+
+          {(!feedData || feedData.length === 0) && (
+            <div style={{ padding: '24px 22px', color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>
+              Sin actividad reciente.
+            </div>
+          )}
+
+          {feedData && feedData.length > 0 && (
+            <div>
+              {/* Static events from user object */}
+              {([
+                user.last_login_at    ? { type: 'login',    title: 'Inicio de sesión',  context: '', ts: user.last_login_at } : null,
+                user.profile_complete ? { type: 'request_approved', title: 'Perfil completado', context: 'Cuenta', ts: user.updated_at } : null,
+                { type: 'login', title: 'Cuenta creada', context: '', ts: user.created_at },
+              ].filter(Boolean) as { type: string; title: string; context: string; ts: string }[]).map((e, i) => {
+                const cfg = feedConfig(e.type);
+                const Icon = cfg.icon;
                 return (
                   <div
-                    key={t.id}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '10px 22px',
-                      borderBottom: i < arr.length - 1 ? '1px solid #F1F5F9' : undefined,
-                      gap: 12,
-                    }}
+                    key={`static-${i}`}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 22px', borderBottom: '1px solid #F1F5F9' }}
                   >
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: `${cfg.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon size={13} style={{ color: cfg.color }} />
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 500, color: '#0F172A', margin: 0,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {t.title}
-                      </p>
-                      <p style={{ fontSize: 11, color: '#94A3B8', margin: '2px 0 0' }}>
-                        {t.module_name} · {fmtRelative(t.created_at)}
-                      </p>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: '#0F172A', margin: 0 }}>{e.title}</p>
+                      {e.context && <p style={{ fontSize: 11, color: '#94A3B8', margin: '2px 0 0' }}>{e.context}</p>}
                     </div>
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
-                      <span
-                        className={styles.badge}
-                        style={{ fontSize: 10, background: `${color}22`, color, border: `1px solid ${color}44` }}
-                      >
-                        {t.priority}
-                      </span>
-                      <span
-                        className={styles.badge}
-                        style={{ fontSize: 10, background: t.is_final ? '#22C55E22' : '#6366F122',
-                          color: t.is_final ? '#22C55E' : '#6366F1',
-                          border: `1px solid ${t.is_final ? '#22C55E44' : '#6366F144'}` }}
-                      >
-                        {t.state_label}
-                      </span>
+                    <span style={{ fontSize: 11, color: '#94A3B8', flexShrink: 0 }}>{fmtRelative(e.ts)}</span>
+                  </div>
+                );
+              })}
+
+              {/* Dynamic events from API */}
+              {feedData.map((event, i) => {
+                const cfg  = feedConfig(event.type);
+                const Icon = cfg.icon;
+                return (
+                  <div
+                    key={`feed-${i}`}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 22px', borderBottom: i < feedData.length - 1 ? '1px solid #F1F5F9' : undefined }}
+                  >
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: `${cfg.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon size={13} style={{ color: cfg.color }} />
                     </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: '#0F172A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {event.title}
+                      </p>
+                      {event.context && (
+                        <p style={{ fontSize: 11, color: '#94A3B8', margin: '2px 0 0' }}>
+                          {cfg.label}{event.context ? ` · ${event.context}` : ''}
+                        </p>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 11, color: '#94A3B8', flexShrink: 0 }}>{fmtRelative(event.ts)}</span>
                   </div>
                 );
               })}
@@ -274,69 +365,11 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName }: Props) {
         </div>
       )}
 
-      {/* ── Recent requests ── */}
+      {/* ── Activity graph (heatmap) — solo perfil propio ── */}
       {isOwnProfile && (
         <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
           <div className={styles.sectionHeader}>
-            <p className={styles.sectionTitle}>Últimas solicitudes</p>
-            <button
-              style={{
-                fontSize: 11, color: '#6366F1', background: 'none', border: 'none',
-                cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', padding: 0,
-              }}
-              onClick={() => router.push('/requests')}
-            >
-              Ver todas →
-            </button>
-          </div>
-
-          {recentRequests.length === 0 ? (
-            <div style={{ padding: '24px 22px', color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>
-              Sin solicitudes aún.{' '}
-              <button
-                style={{ color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}
-                onClick={() => router.push('/requests')}
-              >
-                Crear solicitud →
-              </button>
-            </div>
-          ) : (
-            <div>
-              {recentRequests.map((req, i, arr) => (
-                <div
-                  key={req.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '10px 22px',
-                    borderBottom: i < arr.length - 1 ? '1px solid #F1F5F9' : undefined,
-                    gap: 12,
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: '#0F172A', margin: 0,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {req.title}
-                    </p>
-                    <p style={{ fontSize: 11, color: '#94A3B8', margin: '2px 0 0' }}>
-                      {fmtRelative(req.created_at)}
-                    </p>
-                  </div>
-                  <span className={`${styles.badge} ${STATUS_CLS[req.status] ?? styles.badgeGray}`}
-                    style={{ fontSize: 10, flexShrink: 0 }}>
-                    {REQUEST_STATUS_LABELS[req.status] ?? req.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Activity graph ── */}
-      {isOwnProfile && (
-        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
-          <div className={styles.sectionHeader}>
-            <p className={styles.sectionTitle}>Actividad operativa</p>
+            <p className={styles.sectionTitle}>Historial de actividad</p>
             <span style={{ fontSize: 10, color: '#64748B' }}>
               {totalActivity} eventos · últimas 26 semanas
             </span>

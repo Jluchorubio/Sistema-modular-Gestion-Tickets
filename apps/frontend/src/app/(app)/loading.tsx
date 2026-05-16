@@ -1,9 +1,9 @@
-import { Spinner } from '@/components/ui/Spinner';
+import { SkeletonDashboard } from '@/components/ui/Skeleton';
 
 export default function AppLoading() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-      <Spinner />
+    <div style={{ padding: '28px 32px' }}>
+      <SkeletonDashboard />
     </div>
   );
 }

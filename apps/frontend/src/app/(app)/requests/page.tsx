@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, ChevronDown, ChevronUp, X, Clock, CheckCircle2, Play, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, X, Clock, CheckCircle2, Play, Loader2, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import {
   requestsService,
   type AdmRequest,
@@ -22,11 +22,16 @@ import {
   REQUEST_PRIORITY_COLORS,
   REQUEST_PRIORITIES,
 } from '@/constants/requests';
+import { modulesService } from '@/services/modules.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from './requests.module.css';
 import mstyles from '@/components/ui/modal.module.css';
+
+const MODULE_REQUEST_TYPES: RequestType[] = [
+  'module_access', 'role_change', 'permission_adjustment',
+];
 
 /* ── Status pill map ─────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<string, string> = {
@@ -94,6 +99,7 @@ const createSchema = z.object({
   priority:    z.enum(['baja', 'media', 'alta', 'critica']),
   title:       z.string().min(5, 'Mínimo 5 caracteres'),
   description: z.string().min(10, 'Mínimo 10 caracteres'),
+  module_id:   z.string().uuid('ID de módulo inválido').optional().or(z.literal('')),
 });
 type CreateForm = z.infer<typeof createSchema>;
 
@@ -118,6 +124,8 @@ const TIMELINE_ACTION_LABELS: Record<string, string> = {
   reviewed_approved:     'Aprobada',
   reviewed_rejected:     'Rechazada',
   cancelled:             'Cancelada por el solicitante',
+  escalated:             'Escalada al superadmin',
+  deescalated:           'Escalación resuelta',
 };
 
 /* ── Timeline ─────────────────────────────────────────────────────────────── */
@@ -155,42 +163,67 @@ function TimelinePanel({ requestId }: { requestId: string }) {
 export default function RequestsPage() {
   const qc           = useQueryClient();
   const { user }     = useAuthStore();
-  const isSuperadmin = user?.is_superadmin ?? false;
+  const isSuperadmin  = user?.is_superadmin ?? false;
+  const isAdminModulo = user?.module_roles?.some(
+    (r) => r.status === 'active' && r.role_name === 'admin_modulo'
+  ) ?? false;
+  const hasAdminAccess = isSuperadmin || isAdminModulo;
 
-  const [statusFilter, setStatusFilter] = useState<RequestStatus | ''>('');
-  const [typeFilter,   setTypeFilter]   = useState<RequestType   | ''>('');
-  const [onlyMine,     setOnlyMine]     = useState(false);
+  const [statusFilter,    setStatusFilter]    = useState<RequestStatus | ''>('');
+  const [typeFilter,      setTypeFilter]      = useState<RequestType   | ''>('');
+  const [onlyMine,        setOnlyMine]        = useState(false);
+  const [onlyEscalated,   setOnlyEscalated]   = useState(false);
 
-  const [createOpen,   setCreateOpen]   = useState(false);
-  const [serverMsg,    setServerMsg]    = useState<{ ok: boolean; text: string } | null>(null);
-  const [rejectOpen,   setRejectOpen]   = useState(false);
-  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
-  const [rejectNotes,  setRejectNotes]  = useState('');
-  const [expandedId,   setExpandedId]   = useState<string | null>(null);
-  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [createOpen,     setCreateOpen]     = useState(false);
+  const [serverMsg,      setServerMsg]      = useState<{ ok: boolean; text: string } | null>(null);
+  const [rejectOpen,     setRejectOpen]     = useState(false);
+  const [rejectTarget,   setRejectTarget]   = useState<string | null>(null);
+  const [rejectNotes,    setRejectNotes]    = useState('');
+  const [expandedId,     setExpandedId]     = useState<string | null>(null);
+  const [cancelTarget,   setCancelTarget]   = useState<string | null>(null);
+  const [escalateOpen,   setEscalateOpen]   = useState(false);
+  const [escalateTarget, setEscalateTarget] = useState<string | null>(null);
+  const [escalateNote,   setEscalateNote]   = useState('');
 
-  const queryKey = isSuperadmin && !onlyMine
-    ? ['requests', { statusFilter, typeFilter }]
+  const queryKey = hasAdminAccess && !onlyMine
+    ? ['requests', { statusFilter, typeFilter, onlyEscalated }]
     : ['requests', 'mine'];
 
   const { data, isLoading, error } = useQuery({
     queryKey,
     queryFn: () =>
-      isSuperadmin && !onlyMine
-        ? requestsService.getAll({ status: statusFilter, type: typeFilter })
+      hasAdminAccess && !onlyMine
+        ? requestsService.getAll({ status: statusFilter, type: typeFilter, escalated: onlyEscalated || undefined })
         : requestsService.getMine(),
   });
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } =
+  // Modules list for the selector in the create form
+  const { data: allModules = [] } = useQuery({
+    queryKey: ['modules-all'],
+    queryFn:  () => modulesService.getModules(),
+    staleTime: 120_000,
+    enabled:   createOpen,
+  });
+
+  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } =
     useForm<CreateForm>({
       resolver: zodResolver(createSchema),
-      defaultValues: { type: 'role_change', priority: 'media', title: '', description: '' },
+      defaultValues: { type: 'role_change', priority: 'media', title: '', description: '', module_id: '' },
     });
+
+  const watchedType = watch('type') as RequestType;
+  const showModuleSelector = MODULE_REQUEST_TYPES.includes(watchedType);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['requests'] });
 
   const createMut = useMutation({
-    mutationFn: (dto: CreateForm) => requestsService.create(dto),
+    mutationFn: (dto: CreateForm) => requestsService.create({
+      type:        dto.type,
+      title:       dto.title,
+      description: dto.description,
+      priority:    dto.priority,
+      metadata:    dto.module_id ? { module_id: dto.module_id } : undefined,
+    }),
     onSuccess: () => {
       setServerMsg({ ok: true, text: 'Solicitud enviada' });
       invalidate();
@@ -219,6 +252,16 @@ export default function RequestsPage() {
   const cancelMut = useMutation({
     mutationFn: (id: string) => requestsService.cancel(id),
     onSuccess: () => { setCancelTarget(null); invalidate(); },
+  });
+
+  const escalateMut = useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) => requestsService.escalate(id, note),
+    onSuccess: () => { setEscalateOpen(false); setEscalateTarget(null); setEscalateNote(''); invalidate(); },
+  });
+
+  const deescalateMut = useMutation({
+    mutationFn: (id: string) => requestsService.deescalate(id),
+    onSuccess: invalidate,
   });
 
   const handleReview = useCallback((req: AdmRequest, status: RequestStatus) => {
@@ -298,6 +341,15 @@ export default function RequestsPage() {
             />
             Solo las mías
           </label>
+          <label className={styles.onlyMine} style={{ color: '#F97316' }}>
+            <input
+              type="checkbox"
+              className={styles.onlyMineCb}
+              checked={onlyEscalated}
+              onChange={e => setOnlyEscalated(e.target.checked)}
+            />
+            <TrendingUp size={12} style={{ verticalAlign: 'middle' }} /> Solo escaladas
+          </label>
         </div>
       )}
 
@@ -309,13 +361,32 @@ export default function RequestsPage() {
       )}
 
       {rows.map(req => {
-        const isExpanded = expandedId === req.id;
-        const canCancel  = !isSuperadmin && ['pending', 'under_review'].includes(req.status);
+        const isExpanded  = expandedId === req.id;
+        const canCancel   = !isSuperadmin && ['pending', 'under_review'].includes(req.status);
         const statusColor = REQUEST_STATUS_COLORS[req.status] ?? '#94a3b8';
         const hasSla      = (req.status === 'taken' || req.status === 'in_progress') && req.sla_due_at;
+        const isEscalated = req.escalated === true;
+        const canEscalate = hasAdminAccess && !onlyMine && !isEscalated
+          && ['pending', 'taken', 'in_progress', 'under_review'].includes(req.status);
+        const canDeescalate = isSuperadmin && isEscalated;
 
         return (
-          <div key={req.id} className={styles.card}>
+          <div
+            key={req.id}
+            className={styles.card}
+            style={isEscalated ? { borderColor: '#F97316', boxShadow: '0 0 0 1px #F9731644' } : undefined}
+          >
+            {isEscalated && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', background: '#431407', borderBottom: '1px solid #7c2d12',
+                fontSize: 11, fontWeight: 700, color: '#FB923C', borderRadius: '8px 8px 0 0',
+              }}>
+                <TrendingUp size={11} />
+                ESCALADA{req.escalated_by_name ? ` por ${req.escalated_by_name}` : ''}
+                {req.escalation_note && <span style={{ fontWeight: 400, color: '#FED7AA' }}>· "{req.escalation_note}"</span>}
+              </div>
+            )}
             <div className={styles.cardHeader}>
               <div>
                 <div className={styles.cardTitle}>{req.title}</div>
@@ -439,6 +510,27 @@ export default function RequestsPage() {
                     </button>
                   </>
                 )}
+
+                {/* Escalar / De-escalar */}
+                {canEscalate && (
+                  <button
+                    className={styles.reviewBtn}
+                    style={{ background: '#431407', color: '#FB923C', border: '1px solid #7c2d12' }}
+                    onClick={() => { setEscalateTarget(req.id); setEscalateNote(''); setEscalateOpen(true); }}
+                  >
+                    <TrendingUp size={12} /> Escalar
+                  </button>
+                )}
+                {canDeescalate && (
+                  <button
+                    className={styles.reviewBtn}
+                    style={{ background: '#052e16', color: '#22C55E', border: '1px solid #14532d' }}
+                    onClick={() => deescalateMut.mutate(req.id)}
+                    disabled={deescalateMut.isPending}
+                  >
+                    <TrendingDown size={12} /> Resolver escalación
+                  </button>
+                )}
               </div>
             )}
 
@@ -556,6 +648,37 @@ export default function RequestsPage() {
             disabled={cancelMut.isPending}
           >
             Confirmar cancelación
+          </button>
+        </div>
+      </Modal>
+
+      {/* Escalate modal */}
+      <Modal open={escalateOpen} title="Escalar solicitud al superadmin" onClose={() => setEscalateOpen(false)}>
+        <div style={{ padding: '0 0 4px' }}>
+          <p style={{ fontSize: 13, color: '#94A3B8', marginBottom: 12 }}>
+            La solicitud quedará marcada como escalada y el superadmin será notificado.
+          </p>
+          <label className={mstyles.fieldLabel}>Motivo de la escalación (opcional)</label>
+          <textarea
+            className={styles.rejectNotes}
+            placeholder="Explica por qué necesitas intervención del superadmin…"
+            value={escalateNote}
+            onChange={e => setEscalateNote(e.target.value)}
+          />
+        </div>
+        <div className={mstyles.actions}>
+          <button type="button" className={mstyles.actCancel} onClick={() => setEscalateOpen(false)}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className={mstyles.actConfirm}
+            style={{ background: '#ea580c' }}
+            onClick={() => escalateTarget && escalateMut.mutate({ id: escalateTarget, note: escalateNote || undefined })}
+            disabled={escalateMut.isPending}
+          >
+            <TrendingUp size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+            Confirmar escalación
           </button>
         </div>
       </Modal>

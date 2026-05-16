@@ -146,6 +146,204 @@ export function SkeletonUsersList({ rows = 8 }: { rows?: number }) {
   );
 }
 
+export function SkeletonCalendar() {
+  const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  return (
+    <div>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Skeleton height={34} width={80} style={{ borderRadius: 8 }} />
+          <Skeleton height={34} width={60} style={{ borderRadius: 8 }} />
+          <Skeleton height={34} width={60} style={{ borderRadius: 8 }} />
+        </div>
+        <Skeleton height={22} width={200} style={{ borderRadius: 4 }} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Skeleton height={34} width={90} style={{ borderRadius: 8 }} />
+          <Skeleton height={34} width={80} style={{ borderRadius: 8 }} />
+        </div>
+      </div>
+      {/* Day headers */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+        {DAYS.map(d => (
+          <div key={d} style={{ padding: '8px 10px', textAlign: 'center' }}>
+            <Skeleton height={11} width="60%" style={{ margin: '0 auto' }} />
+          </div>
+        ))}
+      </div>
+      {/* Calendar grid — 5 weeks */}
+      {Array.from({ length: 5 }, (_, w) => (
+        <div key={w} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 2 }}>
+          {Array.from({ length: 7 }, (_, d) => (
+            <div key={d} style={{ border: '1px solid #f1f5f9', borderRadius: 6, padding: '8px 10px', minHeight: 80 }}>
+              <Skeleton height={12} width={20} style={{ marginBottom: 6 }} />
+              {Math.random() > 0.7 && <Skeleton height={18} width="80%" style={{ borderRadius: 4 }} />}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function SkeletonMyTickets({ rows = 8 }: { rows?: number }) {
+  return (
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: '28px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+        <Skeleton height={36} width={80} style={{ borderRadius: 8 }} />
+        <div>
+          <Skeleton height={20} width={140} style={{ marginBottom: 4 }} />
+          <Skeleton height={11} width={60} />
+        </div>
+      </div>
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E8EDF3', overflow: 'hidden' }}>
+        {Array.from({ length: rows }, (_, i) => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 22px', borderBottom: i < rows - 1 ? '1px solid #F1F5F9' : undefined,
+          }}>
+            <div style={{ flex: 1 }}>
+              <Skeleton height={14} width="60%" style={{ marginBottom: 5 }} />
+              <Skeleton height={11} width="35%" />
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <Skeleton height={20} width={50} style={{ borderRadius: 99 }} />
+              <Skeleton height={20} width={65} style={{ borderRadius: 99 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonReports() {
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <Skeleton height={26} width={140} style={{ marginBottom: 6 }} />
+        <Skeleton height={13} width={200} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Skeleton circle width={44} height={44} />
+            <div>
+              <Skeleton height={24} width={60} style={{ marginBottom: 6 }} />
+              <Skeleton height={12} width={100} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
+          <Skeleton height={12} width={120} style={{ marginBottom: 20 }} />
+          <Skeleton circle width={110} height={110} style={{ margin: '0 auto 16px' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={28} />)}
+          </div>
+        </div>
+        <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
+          <Skeleton height={12} width={130} style={{ marginBottom: 20 }} />
+          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={14} style={{ marginBottom: 12 }} />)}
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        {Array.from({ length: 2 }, (_, i) => (
+          <div key={i} style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
+            <Skeleton height={12} width={140} style={{ marginBottom: 20 }} />
+            {Array.from({ length: 5 }, (_, j) => <Skeleton key={j} height={8} style={{ marginBottom: 14, borderRadius: 99 }} />)}
+          </div>
+        ))}
+      </div>
+      <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
+        <Skeleton height={12} width={220} style={{ marginBottom: 16 }} />
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 100 }}>
+          {Array.from({ length: 30 }, (_, i) => (
+            <Skeleton key={i} height={`${20 + Math.floor(Math.random() * 60)}%`} width={14} style={{ flexShrink: 0, borderRadius: '3px 3px 0 0' }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonInventory({ cards = 9 }: { cards?: number }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <Skeleton height={24} width={140} style={{ marginBottom: 6 }} />
+          <Skeleton height={12} width={80} />
+        </div>
+        <Skeleton height={34} width={130} style={{ borderRadius: 8 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} height={32} width={90} style={{ borderRadius: 8 }} />
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        {Array.from({ length: 5 }, (_, i) => (
+          <Skeleton key={i} height={28} width={i === 0 ? 70 : 100} style={{ borderRadius: 99 }} />
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+        {Array.from({ length: cards }, (_, i) => (
+          <div key={i} style={{ background: '#fff', borderRadius: 12, border: '1.5px solid #E8EDF3', padding: '16px 18px', borderTop: '3px solid #E8EDF3' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Skeleton circle width={32} height={32} />
+              <Skeleton height={20} width={70} style={{ borderRadius: 99 }} />
+            </div>
+            <Skeleton height={14} width="80%" style={{ marginBottom: 6 }} />
+            <Skeleton height={11} width="60%" style={{ marginBottom: 12 }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Skeleton height={10} width={60} />
+              <Skeleton height={10} width={80} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonTicketsList({ rows = 8 }: { rows?: number }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <Skeleton height={24} width={120} style={{ marginBottom: 6 }} />
+          <Skeleton height={12} width={80} />
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Skeleton height={34} width={90} style={{ borderRadius: 8 }} />
+          <Skeleton height={34} width={120} style={{ borderRadius: 8 }} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} height={32} width={90} style={{ borderRadius: 8 }} />
+        ))}
+      </div>
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E8EDF3', overflow: 'hidden' }}>
+        {Array.from({ length: rows }, (_, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', borderBottom: i < rows - 1 ? '1px solid #F1F5F9' : undefined }}>
+            <div style={{ flex: 1 }}>
+              <Skeleton height={14} width="55%" style={{ marginBottom: 6 }} />
+              <Skeleton height={11} width="35%" />
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <Skeleton height={20} width={50} style={{ borderRadius: 99 }} />
+              <Skeleton height={20} width={65} style={{ borderRadius: 99 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function SkeletonProfileRight() {
   return (
     <div style={{ flex: 1 }}>

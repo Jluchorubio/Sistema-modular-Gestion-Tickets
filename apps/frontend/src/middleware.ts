@@ -10,6 +10,10 @@ const PROTECTED = [
   '/trash',
   '/requests',
   '/calendar',
+  '/my-tickets',
+  '/tickets',
+  '/inventory',
+  '/reports',
 ];
 
 export function middleware(request: NextRequest) {

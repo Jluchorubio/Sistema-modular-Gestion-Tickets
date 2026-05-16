@@ -27,33 +27,9 @@ const SUBTITLES: Record<AuthView, string> = {
 function handleAuthRedirect(data: LoginResponse, push: (href: string) => void) {
   const { access_token, refresh_token, user } = data;
   const needsProfile = !user.profile_complete && !user.is_superadmin;
+  // Only set tokens — DashboardShell's useCurrentUser will fetch full user from /users/me
+  // (avoids layout flash caused by partial user object with empty module_roles)
   useAuthStore.getState().setTokens(access_token, refresh_token, user.force_password_change, needsProfile);
-  useAuthStore.getState().setUser({
-    ...user,
-    first_name:   user.first_name   || '',
-    last_name:    user.last_name    || '',
-    username:     null,
-    phone:        null,
-    is_active:    true,
-    created_at:   new Date().toISOString(),
-    updated_at:   new Date().toISOString(),
-    deleted_at:   null,
-    job_title:               null,
-    department:              null,
-    primary_sede:            null,
-    address:                 null,
-    phone_prefix:            null,
-    country:                 null,
-    state_province:          null,
-    city:                    null,
-    birth_date:              null,
-    national_id:             null,
-    gender:                  null,
-    emergency_contact_name:  null,
-    emergency_contact_phone: null,
-    module_roles:            [],
-    preferences:             null,
-  });
   push(!user.profile_complete && !user.is_superadmin
     ? ROUTES.AUTH.COMPLETE_PROFILE
     : ROUTES.APP.DASHBOARD,

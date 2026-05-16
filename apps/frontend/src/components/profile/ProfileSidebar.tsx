@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,6 +11,8 @@ import {
   UserCircle, Briefcase, AlertCircle,
 } from 'lucide-react';
 import { RoleManagementPanel } from './RoleManagementPanel';
+import { useGeoData } from '@/hooks/useGeoData';
+import { GeoCombobox } from '@/components/ui/GeoCombobox';
 import { usersService } from '@/services/users.service';
 import type { UpdateMeDto, AdminUpdateUserDto } from '@/services/users.service';
 import { useAuthStore } from '@/stores/auth.store';
@@ -310,10 +312,16 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
     handleSubmit: submitEdit,
     setValue: setVal,
     watch: watchEdit,
+    control: editControl,
     formState: { errors: editErr, isSubmitting: editPending },
   } = editForm;
 
-  const watchedPrefix = watchEdit('phone_prefix');
+  const watchedPrefix  = watchEdit('phone_prefix');
+  const watchedCountry = watchEdit('country') ?? '';
+  const watchedState   = watchEdit('state_province') ?? '';
+
+  const { countryOptions, stateOptions, cityOptions, statesLoading, citiesLoading } =
+    useGeoData(watchedCountry, watchedState);
 
   const updateMeMut = useMutation({
     mutationFn: (dto: UpdateMeDto) => usersService.updateMe(dto),
@@ -655,21 +663,63 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
                 </p>
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>País</label>
-                  <input className={styles.formInput} placeholder="Colombia" list="countries-list" {...regEdit('country')} />
-                  <datalist id="countries-list">
-                    {countries.slice(0, 100).map(c => (
-                      <option key={c.name} value={c.name} />
-                    ))}
-                  </datalist>
+                  <Controller
+                    control={editControl}
+                    name="country"
+                    render={({ field }) => (
+                      <GeoCombobox
+                        value={field.value ?? ''}
+                        onChange={val => {
+                          field.onChange(val);
+                          setVal('state_province', '');
+                          setVal('city', '');
+                        }}
+                        options={countryOptions}
+                        placeholder="Colombia"
+                        inputClass={styles.formInput}
+                      />
+                    )}
+                  />
                 </div>
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label className={styles.formLabel}>Departamento / Estado</label>
-                    <input className={styles.formInput} placeholder="Bogotá D.C." {...regEdit('state_province')} />
+                    <Controller
+                      control={editControl}
+                      name="state_province"
+                      render={({ field }) => (
+                        <GeoCombobox
+                          value={field.value ?? ''}
+                          onChange={val => {
+                            field.onChange(val);
+                            setVal('city', '');
+                          }}
+                          options={stateOptions}
+                          loading={statesLoading}
+                          placeholder={watchedCountry ? 'Cundinamarca' : 'Selecciona país'}
+                          disabled={!watchedCountry}
+                          inputClass={styles.formInput}
+                        />
+                      )}
+                    />
                   </div>
                   <div className={styles.formGroup}>
                     <label className={styles.formLabel}>Ciudad</label>
-                    <input className={styles.formInput} placeholder="Bogotá" {...regEdit('city')} />
+                    <Controller
+                      control={editControl}
+                      name="city"
+                      render={({ field }) => (
+                        <GeoCombobox
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          options={cityOptions}
+                          loading={citiesLoading}
+                          placeholder={watchedState ? 'Bogotá' : 'Selecciona departamento'}
+                          disabled={!watchedState}
+                          inputClass={styles.formInput}
+                        />
+                      )}
+                    />
                   </div>
                 </div>
                 <div className={styles.formGroup}>

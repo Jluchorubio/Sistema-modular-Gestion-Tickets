@@ -3,6 +3,8 @@ import {
   Post,
   Get,
   Patch,
+  Delete,
+  Param,
   Body,
   Req,
   Res,
@@ -156,6 +158,26 @@ export class AuthController {
   @ApiOperation({ summary: 'Establecer contraseña inicial (onboarding). No requiere contraseña actual.' })
   setupPassword(@Req() req: any, @Body() body: { new_password: string }) {
     return this.authService.setupPassword(req.user.sub, body.new_password);
+  }
+
+  // ─── Heartbeat + Session management ─────────────────────────────────────────
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('heartbeat')
+  @ApiOperation({ summary: 'Registrar actividad — mantiene el estado online.' })
+  heartbeat(@Req() req: any) {
+    return this.authService.heartbeat(req.user.sub);
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Delete('sessions/:id')
+  @ApiOperation({ summary: 'Terminar una sesión activa específica.' })
+  terminateSession(@Req() req: any, @Param('id') id: string) {
+    return this.authService.terminateSession(req.user.sub, id);
   }
 
   // ─── TOTP (Google Authenticator) ─────────────────────────────────────────────
