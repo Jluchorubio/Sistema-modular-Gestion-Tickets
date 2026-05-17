@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { Logger } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const VALID_TYPES = new Set(['module', 'user', 'role', 'request']);
 
@@ -9,7 +10,10 @@ const VALID_TYPES = new Set(['module', 'user', 'role', 'request']);
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  constructor(@InjectDataSource() private readonly db: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly db: DataSource,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async getTrash(type?: string, page = 1, limit = 20) {
     page  = Math.max(1, page);
@@ -76,6 +80,58 @@ export class AdminService {
     this.assertValidType(type);
     const results = await Promise.all(ids.map(id => this.permanentDeleteOne(type, id)));
     return { deleted: results.filter(r => r.ok).length, errors: results.filter(r => !r.ok) };
+  }
+
+  async checkAndSendTrashWarnings(): Promise<void> {
+    const WARNING_DAYS = [7, 3, 1];
+
+    // Items expiring in exactly N days (daily window ±tolerance)
+    const rows = await this.db.query<{ item_type: string; display_name: string; days: number }[]>(`
+      SELECT display_name, item_type, days FROM (
+        SELECT name AS display_name, 'módulo'    AS item_type,
+               FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int AS days
+        FROM modules.modules WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
+        UNION ALL
+        SELECT p.first_name || ' ' || p.last_name, 'usuario',
+               FLOOR(EXTRACT(EPOCH FROM (p.scheduled_hard_delete_at - now())) / 86400)::int
+        FROM users.profiles p WHERE p.deleted_at IS NOT NULL AND p.scheduled_hard_delete_at > now()
+        UNION ALL
+        SELECT name, 'rol',
+               FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
+        FROM config.global_roles WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
+        UNION ALL
+        SELECT title, 'solicitud',
+               FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
+        FROM requests.admin_requests WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
+      ) t
+      WHERE days = ANY($1)
+    `, [WARNING_DAYS]);
+
+    if (rows.length === 0) return;
+
+    // Group by days threshold
+    const byDays: Record<number, typeof rows> = {};
+    for (const row of rows) {
+      (byDays[row.days] ??= []).push(row);
+    }
+
+    // Get all superadmin user IDs
+    const admins = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM users.profiles WHERE is_superadmin = true AND deleted_at IS NULL AND is_active = true`,
+    );
+    if (admins.length === 0) return;
+
+    for (const [daysStr, items] of Object.entries(byDays)) {
+      const days = Number(daysStr);
+      const list = items.map(i => `• ${i.item_type}: ${i.display_name}`).join('\n');
+      const subject = `Papelera: ${items.length} elemento${items.length !== 1 ? 's' : ''} se elimina${items.length !== 1 ? 'n' : ''} en ${days} día${days !== 1 ? 's' : ''}`;
+      const body = `Los siguientes elementos serán eliminados permanentemente en ${days} día${days !== 1 ? 's' : ''}:\n\n${list}\n\nPuedes restaurarlos desde la papelera antes de que expire el plazo.`;
+
+      for (const admin of admins) {
+        await this.notifications.send({ userId: admin.id, subject, body, channels: ['email', 'internal'] });
+      }
+      this.logger.warn(`Trash warning sent (${days}d): ${items.length} items to ${admins.length} admin(s)`);
+    }
   }
 
   async purgeExpired(): Promise<{ purged: number; detail: Record<string, number> }> {

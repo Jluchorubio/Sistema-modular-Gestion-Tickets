@@ -12,6 +12,7 @@ import {
   ASSET_STATUS_LABELS, ASSET_STATUS_COLORS, ASSET_STATUSES,
 } from '@/services/inventory.service';
 import { ticketsService } from '@/services/tickets.service';
+import { ADMIN_ROLES } from '@/constants/roles';
 import { fmtDate } from '@/lib/formatters';
 
 const INVENTORY_NAV: ModuleNavItem[] = [
@@ -402,7 +403,7 @@ export function InventoryClient() {
   const canEdit = useMemo(() => {
     if (isSuperadmin) return true;
     const roles = user?.module_roles?.filter((r) => r.status === 'active').map((r) => r.role_name) ?? [];
-    return roles.some((r) => ['admin_modulo', 'jefe_tecnico'].includes(r));
+    return roles.some((r) => (ADMIN_ROLES as string[]).includes(r));
   }, [user, isSuperadmin]);
 
   const [selectedModule, setSelectedModule] = useState(activeModules[0]?.module_id ?? '');

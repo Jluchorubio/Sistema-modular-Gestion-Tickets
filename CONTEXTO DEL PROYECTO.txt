@@ -1,1244 +1,985 @@
-no uses emojis, usa path para colocar en la Pagina que estamos haciendo
+# CONTEXTO ACTUALIZADO DEL PROYECTO — ESTADO REAL DEL SISTEMA (UX/UI + FUNCIONALIDAD + ARQUITECTURA)
 
-🎨 Paleta de ColoresColorHex (Aprox.)Nombre VisualUso en la Interfaz#FFFFFFBlanco PuroFondo principal de la aplicación y tarjetas de selección de hora.#0D1B2AAzul NochePanel lateral izquierdo y sidebar. Crea jerarquía y separa la navegación del contenido.#32C932Verde VibranteBotón de Acción Principal (CTA). Se usa exclusivamente para "Schedule a lesson" porque denota éxito y acción positiva.#FF5733Naranja CoralAcento de Selección. Resalta el día actual o seleccionado en el calendario para que no se pierda de vista.#1F2937Gris CarbónTítulos principales (Group lesson) y texto de alta importancia sobre fondo blanco.#94A3B8Gris SlateTexto secundario, días del calendario no seleccionados y etiquetas informativas.
+## STACK Y ENFOQUE GENERAL
 
+El sistema es una plataforma modular de gestión operativa basada en:
 
-🔐 Flujo de Autenticación del Sistema
-Objetivo
+* Sistema de tickets avanzado
+* Gestión de inventario y activos
+* Gestión administrativa interna
+* Motor SLA dinámico
+* Roles globales y por módulo
+* Arquitectura modular configurable
+* Dashboard operativo multirol
+* Reportería y métricas en tiempo real
+* Sistema de solicitudes internas administrativas
 
-Permitir el acceso seguro al sistema mediante dos métodos de autenticación:
+El enfoque principal del sistema es:
 
-Inicio de sesión tradicional (usuario + contraseña)
-Inicio de sesión con Google OAuth
-
-El acceso solo será permitido a usuarios previamente registrados en la base de datos del sistema.
-
-1. Inicio de Sesión Tradicional
-Descripción General
-
-El usuario podrá autenticarse utilizando:
-
-Usuario o correo electrónico
-Contraseña
-Flujo de Autenticación
-Paso 1 — Ingreso de Credenciales
-
-El usuario ingresa:
-
-Usuario/correo
-Contraseña
-
-y presiona el botón “Iniciar sesión” o la tecla Enter.
-
-Paso 2 — Validación de Existencia
-
-El sistema debe verificar:
-
-Que el usuario exista en la base de datos.
-Que la cuenta esté activa.
-Que tenga permisos de acceso.
-Resultado esperado
-Si el usuario NO existe:
-
-Mostrar mensaje flotante:
-
-“Usuario no existente.”
-
-Si existe:
-Continuar al siguiente paso.
-Paso 3 — Validación de Contraseña
-
-El sistema valida la contraseña ingresada.
-
-Política de Intentos Fallidos
-
-El usuario tendrá un máximo de:
-
-3 intentos fallidos consecutivos.
-Si supera el límite:
-
-El sistema debe:
-
-Bloquear temporalmente el inicio de sesión.
-
-Mostrar mensaje indicando:
-
-“Demasiados intentos fallidos. Intente nuevamente más tarde.”
-
-Consideraciones técnicas
-
-El bloqueo puede implementarse mediante:
-
-Rate limiting por IP
-Rate limiting por usuario
-Tiempo de espera progresivo
-Registro de intentos fallidos en logs de auditoría
-Paso 4 — Autenticación en Dos Factores (2FA)
-
-Si las credenciales son correctas:
-
-El sistema generará un código temporal de verificación.
-El código será enviado al correo electrónico del usuario.
-El usuario deberá ingresar dicho código para completar el acceso.
-Validación del Código 2FA
-
-El sistema debe validar:
-
-Que el código sea correcto.
-Que no haya expirado.
-Que pertenezca al usuario autenticado.
-Resultado esperado
-Si el código es inválido:
-
-Mostrar mensaje:
-
-“Código incorrecto o expirado.”
-
-Si es válido:
-Permitir acceso al sistema.
-2. Inicio de Sesión con Google
-Descripción General
-
-El usuario podrá iniciar sesión mediante Google OAuth.
-
-⚠️ Importante:
-El sistema NO debe registrar automáticamente usuarios nuevos desde Google.
-
-Solo podrán acceder usuarios previamente existentes en la base de datos.
-
-Flujo de Autenticación con Google
-Paso 1 — Selección de Google Login
-
-El usuario presiona:
-
-“Iniciar sesión con Google”
-
-Paso 2 — Autenticación con Google
-
-Google devuelve:
-
-Correo electrónico autenticado
-Información básica del usuario
-Paso 3 — Validación en Base de Datos
-
-El sistema verifica:
-
-Que el correo exista en la base de datos.
-Que el usuario esté habilitado.
-Resultado esperado
-Caso válido
-
-Si el correo existe:
-
-Permitir acceso al sistema.
-Caso inválido
-
-Si el correo NO existe:
-
-El sistema NO debe:
-
-Registrar usuarios automáticamente
-Crear cuentas nuevas
-Guardar información en base de datos
-En su lugar:
-
-Mostrar mensaje flotante:
-
-“Usuario no existente.”
-
-y cancelar el acceso.
-
-3. Reglas Generales de Seguridad
-Requisitos Obligatorios
-Seguridad de contraseñas
-Contraseñas encriptadas con bcrypt o Argon2.
-Nunca almacenar contraseñas en texto plano.
-Seguridad de sesión
-Uso de JWT o sesiones seguras.
-Tokens con expiración.
-Refresh tokens opcionales.
-Auditoría
-
-Registrar:
-
-Intentos fallidos
-Bloqueos temporales
-Inicios de sesión exitosos
-Uso de autenticación Google
-Errores de autenticación
-Protección adicional
-
-Implementar:
-
-Rate limiting
-Protección contra fuerza bruta
-Validación de IP/dispositivo opcional
-CSRF protection
-Secure cookies
-4. Comportamientos Esperados del Sistema
-Escenario	Resultado
-Usuario inexistente	Mostrar “Usuario no existente”
-Contraseña incorrecta	Consumir intento
-3 intentos fallidos	Bloqueo temporal
-Código 2FA incorrecto	Denegar acceso
-Código expirado	Solicitar nuevo código
-Login Google con usuario existente	Acceso permitido
-Login Google con usuario no registrado	Denegar acceso sin registrar usuario
-5. Restricciones Importantes
-El sistema NO debe:
-Registrar usuarios automáticamente con Google.
-Permitir bypass del 2FA.
-Permitir intentos infinitos de login.
-Exponer información sensible en errores.
-Diferenciar visualmente entre:
-usuario inexistente
-contraseña incorrecta
-
-(para evitar enumeración de usuarios).
-
-
-----------------------------------------------------------
-
-
-# 🧩 Módulo Principal del Sistema (Dashboard Global)
-
-## Objetivo General
-
-El módulo principal funcionará como el núcleo central del sistema. Desde este apartado se gestionarán:
-
-* Los módulos/proyectos existentes
-* Los usuarios
-* Los roles globales y por módulo
-* La administración general de la plataforma
-
-La interfaz y funcionalidades visibles cambiarán dinámicamente según el rol global del usuario autenticado.
-
----
-
-# 👥 Roles Globales del Sistema
-
-Dentro del sistema existirán inicialmente dos roles globales principales:
-
-| Rol         | Descripción                                                |
-| ----------- | ---------------------------------------------------------- |
-| Super Admin | Control total sobre toda la plataforma y todos los módulos |
-| Usuario     | Acceso limitado según permisos asignados                   |
-
----
-
-# 🖥️ Estructura Visual del Dashboard
-
-La estructura general del dashboard estará dividida en:
-
-* Header superior
-* Área principal de módulos
-* Sidebar administrativo (solo Super Admin)
-
----
-
-# 🔝 Header Global
-
-El header siempre estará visible para cualquier usuario autenticado.
-
-Debe contener:
-
-* Logo del sistema
-* Nombre de la plataforma
-* Información del usuario autenticado
-* Avatar/foto de perfil
-* Botón de cerrar sesión
-* Notificaciones (futuro)
-* Configuración rápida (futuro)
-
----
-
-# 📦 Área Principal de Módulos
-
-Esta será la vista principal del sistema y estará disponible tanto para:
-
-* Super Admin
-* Usuario normal
-
----
-
-## Funcionalidad del Área de Módulos
-
-Aquí se mostrarán todos los módulos disponibles a los que el usuario tenga acceso.
-
-Ejemplo:
-
-* Mesa de Ayuda
-* Inventario
-* Biblioteca
-* Recursos Humanos
-* CRM
-* Compras
-
----
-
-## Diseño Visual
-
-Los módulos deberán visualizarse mediante:
-
-* Cards/Tarjetas
-* Nombre del módulo
-* Descripción corta
-* Imagen/Icono representativo
-* Categoría o etiqueta
-* Estado del módulo
-
----
-
-## Acceso Condicional
-
-El sistema solo mostrará módulos:
-
-* Permitidos para el usuario
-* Asociados a sus permisos
-* Asociados a sus roles
-
----
-
-# 🛡️ Sidebar Administrativo (Solo Super Admin)
-
-## Regla Principal
-
-El sidebar lateral de navegación administrativa únicamente será visible cuando:
-
-* El usuario autenticado tenga rol global `Super Admin`.
-
----
-
-## Usuario Normal
-
-Si el usuario tiene rol global `Usuario`:
-
-* NO verá el sidebar lateral.
-* SOLO verá:
-
-  * Header
-  * Área principal de módulos disponibles
-
-La experiencia será más limpia y enfocada únicamente en los módulos asignados.
-
----
-
-# 📚 Funcionalidades del Sidebar del Super Admin
-
-El sidebar contendrá accesos administrativos globales como:
-
-* Módulos
-* Usuarios
-* Roles Globales
-* Configuración
-* Auditoría
-* Administración del sistema
-
----
-
-## Comportamiento del Sidebar
-
-El sidebar deberá ser:
-
-* Colapsable/desplegable
-* Persistente entre páginas
-* Responsive
-* Optimizado para escritorio y tablet
-
----
-
-# 🧱 Arquitectura Base de los Módulos
-
-Cada módulo creado dinámicamente heredará por defecto ciertos componentes base del sistema principal.
-
----
-
-## Funcionalidades Base Heredadas
-
-Todo nuevo módulo incluirá inicialmente:
-
-* Sistema de tickets
-* Sistema SLA
-* Sistema de nomenclaturas
-* Gestión de estados
-* Gestión básica de usuarios
-* Sistema de permisos
-* Auditoría básica
-
----
-
-## Configuración Modular
-
-Cada módulo podrá personalizar posteriormente:
-
-* Roles
-* Permisos
-* Flujos
-* Estados
-* Nomenclaturas
-* Automatizaciones
-
-según las necesidades del negocio.
-
----
-
-# 📦 Gestión de Módulos/Proyectos
-
-El Super Admin podrá:
-
-* Crear módulos
-* Editar módulos
-* Configurar módulos
-* Eliminar módulos
-* Gestionar estados del módulo
-
----
-🗑️ Eliminación de Módulos
-Política Obligatoria de Eliminación
-
-Cuando el Super Admin elimine un módulo/proyecto, el sistema deberá utilizar obligatoriamente un proceso de confirmación tipo GitHub.
-
-No podrá existir eliminación directa con un solo clic.
-
-Flujo Obligatorio de Eliminación
-
-Antes de eliminar un módulo, el sistema deberá:
-
-Mostrar una advertencia clara sobre el impacto de la eliminación.
-Solicitar confirmación manual.
-Solicitar que el Super Admin escriba explícitamente:
-Su nombre de usuario
-El nombre exacto del módulo/proyecto a eliminar
-
-Solo si ambos datos coinciden correctamente:
-
-Se habilitará el botón de eliminación.
-♻️ Tipo de Eliminación
-
-La eliminación será mediante:
-
-Soft Delete
-
-Esto significa que el módulo NO será eliminado inmediatamente de la base de datos.
-
-🕒 Tiempo de Retención
-
-Una vez eliminado:
-
-El módulo permanecerá almacenado durante 3 meses.
-
-Durante este período:
-
-El Super Admin podrá recuperar completamente el módulo.
-Se deberán conservar:
-Tickets
-Usuarios
-Roles
-Configuraciones
-SLA
-Nomenclaturas
-Historial
-Archivos
-Relaciones internas
-Auditorías
-Configuraciones personalizadas
-
-La restauración deberá devolver el módulo exactamente al estado previo a su eliminación.
-
-❌ Eliminación Permanente
-
-Si transcurren los 3 meses de retención:
-
-El sistema eliminará automáticamente el módulo de forma definitiva (Hard Delete).
-
-Esta eliminación permanente incluirá:
-
-Datos
-Relaciones
-Configuraciones
-Historial asociado
-Archivos relacionados
-
-Después de este proceso:
-
-La recuperación ya no será posible.
----
-
-# 👤 Gestión Global de Usuarios
-
-El Super Admin podrá:
-
-* Ver usuarios
-* Crear usuarios
-* Editar usuarios
-* Asignar roles
-* Gestionar permisos
-* Aplicar cambios masivos
-
----
-
-# 🎭 Sistema de Roles
-
-El sistema manejará:
-
-## Roles Globales
-
-Aplican a toda la plataforma.
-
-Ejemplo:
-
-* Super Admin
-* Usuario
-
----
-
-## Roles por Módulo
-
-Cada módulo tendrá roles independientes y personalizados.
-
-Ejemplo Inventario:
-
-* Admin
-* Técnico
-* Jefe Técnico
-* Usuario
-
-Ejemplo Biblioteca:
-
-* Bibliotecario
-* Supervisor
-* Estudiante
-
----
-
-# ⚠️ Roles Dinámicos por Módulo
-
-Los roles cambiarán dinámicamente según el módulo seleccionado.
-
-Esto permitirá que:
-
-* Cada módulo tenga estructuras organizacionales diferentes.
-* Los permisos sean totalmente desacoplados entre módulos.
-
----
-
-# 👥 Roles por Defecto
-
-Todo usuario nuevo creado tendrá automáticamente:
-
-| Nivel   | Rol     |
-| ------- | ------- |
-| Global  | Usuario |
-| Módulos | Usuario |
-
-Solo un administrador podrá modificar posteriormente dichos roles.
-
----
-
-# 🚀 Gestión Masiva
-
-El sistema permitirá:
-
-* Selección múltiple de usuarios
-* Cambio masivo de roles
-* Asignación masiva de permisos
-* Activación/desactivación masiva
-
-con el objetivo de reducir clics y optimizar la administración.
-
----
-
-# 🔎 Funcionalidades Obligatorias
-
-Todos los apartados administrativos deberán incluir:
-
-* Paginación ajustable
-* Filtros avanzados
-* Búsqueda avanzada
-* Ordenamiento dinámico
-* Acciones masivas
-* Persistencia de filtros
-* Scroll optimizado
-
----
-
-# 🎨 Consideraciones UX/UI
-
-La interfaz debe priorizar:
-
-* Rapidez operativa
 * Escalabilidad
 * Bajo número de clics
-* Diseño limpio
-* Navegación clara
-* Separación visual entre administración y uso operativo
+* UX limpia
+* Navegación rápida
+* Separación entre administración y operación
+* Configuración dinámica sin tocar código
+* Estructura profesional tipo SaaS empresarial
 
 ---
 
-# 🔐 Restricciones del Usuario Normal
+# ESTRUCTURA VISUAL REAL ACTUAL DEL SISTEMA
 
-El usuario estándar NO podrá:
+## Layout general
 
-* Ver el sidebar administrativo
-* Crear módulos
-* Eliminar módulos
-* Gestionar usuarios globalmente
-* Modificar roles globales
-* Acceder a configuraciones críticas
+La aplicación está dividida en:
 
-Su experiencia estará limitada únicamente a:
+### 1. Sidebar lateral izquierdo
 
-* Los módulos asignados
-* Las funcionalidades permitidas por su rol
-* Las acciones autorizadas dentro de cada módulo
+### 2. Header superior global
 
--------------------------------------------------------------
+### 3. Área central dinámica
 
+### 4. Sistema de módulos/cards
 
-## 🔹 Sistema de módulos (núcleo del sistema)
-
-El sistema funciona como una **plataforma de módulos dinámicos**.
-
-### ✔ Creación de módulos
-
-El **Superadmin** puede:
-
-* Crear módulos ilimitados
-* Cada módulo se genera automáticamente con:
-
-  * Roles por defecto
-  * SLA base
-  * Categorías y subcategorías iniciales
-  * Sedes y ambientes por defecto
-  * Flujo de tickets preconfigurado
-
-👉 Esto convierte cada módulo en:
-
-> Una instancia independiente del sistema de tickets, completamente configurable
+### 5. Vistas internas por módulo
 
 ---
 
-## 🔹 Tipos de módulos
+# SIDEBAR GLOBAL
 
-### 🟢 1. Módulos dinámicos (generados)
+## Comportamiento
 
-* Configurables completamente
-* Basados en plantilla
+El sidebar:
 
-### 🔵 2. Módulos especiales
+* Es persistente
+* Puede colapsarse
+* Tiene navegación vertical
+* Mantiene contexto visual activo
+* Debe ser responsive
+* Debe soportar scroll si existen demasiadas opciones
+* Debe reorganizarse usando dropdowns/secciones agrupadas cuando crezca el sistema
 
-#### ✔ Helpdesk
+## UX/UI esperada
 
-* Implementación base del sistema de tickets
+Debe evitar:
 
-#### ✔ Inventario
+* Saturación visual
+* Opciones duplicadas
+* Scroll innecesario
+* Acciones administrativas mezcladas con acciones operativas
 
-* Sistema extendido de gestión de activos (no solo tickets)
+## Estructura visual actual
 
----
+### Zona superior
 
-# 👥 🔐 SISTEMA DE ROLES
+* Logo del sistema
+* Branding
 
-## 🔹 Rol global
+### Zona media
 
-### Superadmin
+Opciones principales:
 
-* Configura todo el sistema
-* Crea módulos
-* Define SLA, estructuras y reglas globales
+Path: `/dashboard`
 
----
+* Dashboard
 
-## 🔹 Roles por módulo (independientes)
+Path: `/reports`
 
-* Admin
-* Jefe Técnico
-* Técnico
-* Usuario
+* Reportes
 
-✔ Los roles son **contextuales por módulo**
-✔ Un mismo usuario puede tener diferentes roles según el módulo
-✔ Se pueden crear roles personalizados (ej: Técnico Hardware)
+Path: `/users`
 
----
+* Usuarios
 
-# 🎟️ 🔄 FLUJO COMPLETO DEL TICKET (FSM)
+Path: `/roles`
 
-## 🔹 1. Creación del ticket
-
-El usuario registra:
-
-* Categoría
-* Subcategoría
-* Sede
-* Ambiente
-* Descripción
-* Evidencias
-
-Estado inicial:
-
-> 🟢 Abierto
-
----
-
-## 🔹 2. Cálculo automático (SLA)
-
-El sistema calcula automáticamente:
-
-* Prioridad:
-
-  * Baja
-  * Media
-  * Alta
-  * Crítica
-* Tiempo estimado de resolución
-
-Basado en:
-
-* Categoría y subcategoría
-* Tipo de daño
-* Ubicación (sede)
-* Ambiente
-* Reglas configuradas dinámicamente
-
----
-
-## 🔹 3. Asignación automática del ticket
-
-### ✔ Métodos de asignación
-
-#### 🔸 Distribución equitativa (Round-robin)
-
-* Asignación secuencial entre técnicos
-
-#### 🔸 Asignación por especialización
-
-* Basada en roles personalizados
-* Ejemplo:
-
-  * Técnico Hardware → solo tickets de hardware
-
----
-
-### ✔ Validaciones antes de asignar
-
-* Disponibilidad del técnico
-* Carga de trabajo
-* Horarios
-* Incapacidades / ausencias
-* Capacidades (categorías permitidas)
-
----
-
-## 🔹 4. Cola de trabajo por técnico
-
-Cada técnico tiene su propia cola dinámica:
-
-### 📊 Orden de atención:
-
-1. Tickets del día anterior:
-
-   * Alta → Media → Baja
-2. Tickets del día actual:
-
-   * Alta → Media → Baja
-
----
-
-## 🔹 5. Ejecución del ticket
-
-Estados del sistema:
-
-* 🟡 En espera
-* 🔵 En proceso
-* 🟣 Realizado
-* ⚪ Cerrado
-* 🔴 Reproceso
-
-El técnico debe:
-
-* Registrar solución
-* Adjuntar evidencias
-
----
-
-# 🔔 🔐 VALIDACIÓN Y CIERRE (REGLA CRÍTICA DEL SISTEMA)
-
-## 🔹 Condición obligatoria de cierre
-
-> Un ticket SOLO se cierra cuando:
-
-* El técnico finaliza
-* El usuario valida la solución (firma digital)
-
----
-
-## 🔹 Notificación al usuario
-
-El usuario recibe:
-
-* Notificación interna (obligatoria)
-* Email (Gmail por defecto)
-* WhatsApp (opcional)
-
-Incluye:
-
-* Solución aplicada
-* Evidencias
-* Token de firma digital
-
----
-
-## 🔹 Escenarios de cierre
-
-### ✅ Aprobación
-
-* Usuario firma digitalmente
-* Estado → ⚪ Cerrado
-
----
-
-### ⏳ Sin respuesta
-
-* Si no responde en 2 días:
-* Estado → ⚪ Cerrado automático
-
----
-
-### ❌ Rechazo → Reproceso
-
-Condiciones:
-
-* Usuario no está satisfecho
-* Debe enviar:
-
-  * Justificación
-  * Evidencias
-
-Resultado:
-
-* Estado → 🔴 Reproceso
-* Se invalida la solución previa
-
----
-
-## 🔁 6. Reproceso (controlado)
-
-* El técnico vuelve a trabajar el ticket
-* Se repite el flujo de validación
-
----
-
-## 🔴 Regla crítica
-
-> ❗ Solo se permite **UN reproceso**
-
----
-
-## 🔺 7. Escalamiento
-
-Si el usuario vuelve a rechazar:
-
-* El ticket se escala
-
-* Se reasigna (Jefe Técnico)
-
-* Prioridad aumenta:
-
-  * Máximo → **Alta (nunca Crítica)**
-
-* Resolución obligatoria
-
----
-
-# ⚙️ 🧮 MOTOR SLA (COMPORTAMIENTO REAL)
-
-El SLA en tu sistema no es solo tiempo:
-
-> Es un motor inteligente que define prioridad, asignación y orden de ejecución
-
----
-
-## 🔹 Componentes del SLA
-
-### 1. Cálculo automático
-
-* Determina prioridad y tiempos
-
-### 2. Asignación inteligente
-
-* Equitativa
-* Por especialización
-
-### 3. Priorización dinámica
-
-* Orden automático en cola
-
----
-
-# 📦 🧾 MÓDULO DE INVENTARIO (SISTEMA COMPLETO)
-
-## 🔹 Registro de activos
-
-Cada activo debe incluir:
-
-* Descripción
-* Especificaciones
-* Categoría
-* Subcategoría
-* Información relevante completa
-
----
-
-## 🔹 Generación de QR
-
-Al crear un activo:
-
-* Se genera automáticamente un **código QR único**
-
-Permite:
-
-* Identificación rápida
-* Asociación física (impresión y pegado)
-
----
-
-## 🔹 Gestión de QR
-
-* Generación múltiple
-* Selección de varios activos
-* Impresión masiva sencilla
-
----
-
-## 🔹 Visualización de activos
-
-Al seleccionar un activo (ej: computador):
-
-### 📊 Información disponible:
-
-* Datos completos
-* Especificaciones
-* Imágenes
-
----
-
-### 📜 Historial de tickets
-
-* Todos los tickets asociados al activo
-* Trazabilidad completa
-
----
-
-### 🔗 Relación entre activos
-
-Ejemplo:
-
-Un computador puede tener:
-
-* Mouse
-* Teclado
-* Batería
-
-👉 Modelo:
-
-> Relación jerárquica (activo padre → activos hijos)
-
----
-
-## 🔹 Funcionalidades
-
-* Filtros avanzados
-* Paginación
-* Búsqueda por múltiples criterios
-
----
-
-# 🔗 INTEGRACIÓN INVENTARIO + TICKETS
-
-* Un ticket puede asociarse a un activo
-* Un activo tiene historial completo de tickets
-
-👉 Resultado:
-
-> Trazabilidad total del ciclo de vida del equipo
-
----
-
-# ⚙️ 🧩 PERSONALIZACIÓN DEL SISTEMA
-
-Cada módulo puede modificar sin código:
-
-* Categorías
-* Subcategorías
-* SLA
 * Roles
-* Flujos de estados
-* Sedes y ambientes
+
+Path: `/trash`
+
+* Papelera
+
+### Zona inferior
+
+Path: `/profile`
+
+* Mi perfil
+
+Botón:
+
+* Colapsar sidebar
 
 ---
 
-# 🧠 🔥 NATURALEZA REAL DEL SISTEMA
+# HEADER GLOBAL
 
-Tu sistema es:
+Visible para todos los usuarios autenticados.
 
-* ✔ Sistema de tickets avanzado
-* ✔ Motor de workflows (FSM)
-* ✔ Motor SLA dinámico
-* ✔ Sistema de asignación inteligente
-* ✔ Plataforma modular configurable
-* ✔ Sistema de gestión de activos
-* ✔ Sistema de trazabilidad con QR
+## Elementos actuales
 
------------------------------------------------------
+* Nombre/logo del sistema
+* Indicador/calendario rápido
+* Campana de notificaciones
+* Avatar del usuario
+* Dropdown de usuario
 
-👤 🔐 MÓDULO DE PERFIL DE USUARIO
-🔹 Objetivo
+---
 
-El perfil funcionará como:
+# CALENDARIO GLOBAL DEL SISTEMA
 
-Identidad principal del usuario dentro del sistema
-Centro de configuración personal
-Historial de actividad
-Gestión de acceso a módulos
-Control de seguridad y autenticación
+El calendario NO será una página aislada simple.
 
-Inspirado visualmente en una estructura similar a GitHub, pero adaptado al entorno operativo y empresarial del sistema.
+Será un sistema operativo central conectado a:
 
-🖥️ ESTRUCTURA DEL PERFIL
+* Roles
+* Módulos
+* Tareas
+* Eventos
+* Actividad operativa
+* SLA
+* Disponibilidad
 
-El perfil incluirá:
+## Decisión UX/UI
 
-🔹 Información visual
-Foto de perfil
-Nombre completo
-Usuario
-Correo electrónico
-Rol global
-Roles por módulo
-Estado del usuario
-🔹 Información organizacional obligatoria
+El calendario NO debe vivir dentro del sidebar.
 
-El usuario deberá diligenciar obligatoriamente:
+Debe integrarse en el header superior mediante:
 
-Número celular
-Dirección de residencia
-Sede principal
-Ambiente/área de trabajo
-Cargo
-Información organizacional adicional
-⚠️ REGLA CRÍTICA DEL SISTEMA
-Perfil obligatorio
+* Botón/icono contextual
+* Dropdown expandible
+* Modal lateral
+* Vista rápida
 
-El usuario NO podrá:
+Porque:
 
-Ver módulos
-Acceder al sistema
-Crear tickets
-Interactuar con funcionalidades
+* Todos los roles lo usan
+* Es transversal al sistema
+* No pertenece únicamente al área administrativa
+* Reduce saturación del sidebar
 
-hasta completar toda la información obligatoria del perfil.
+---
 
-Flujo obligatorio
-Usuario inicia sesión
-Sistema valida estado del perfil
-Si el perfil está incompleto:
-Redirigir automáticamente al apartado de perfil
-Bloquear navegación restante
-Solo después de completar la información:
-Se habilita acceso al sistema
-🔐 SEGURIDAD DEL PERFIL
-Cambio de contraseña
+# FUNCIONAMIENTO DEL CALENDARIO
 
-El usuario podrá:
+## Tipos de tareas/eventos
 
-Cambiar contraseña
-Configurar seguridad personal
-Validaciones obligatorias
+### 1. Tareas personales
 
-Para cambiar contraseña:
+Solo visibles para:
 
-Solicitar contraseña actual
-Validar identidad
-Confirmar nueva contraseña
-Aplicar políticas de seguridad
-
-Opcional futuro:
-
-Confirmación mediante 2FA
-Verificación por correo
-📊 PANEL PERSONAL DEL USUARIO
-
-El perfil mostrará actividad reciente similar a GitHub, pero enfocada al sistema operativo.
-
-Información visible
-🎟️ Tickets recientes
-Últimos tickets creados
-Tickets asignados
-Tickets pendientes
-Tickets cerrados
-Tickets en reproceso
-📈 Actividad reciente
+* Usuario creador
 
 Ejemplo:
 
-Tickets solucionados
-Comentarios realizados
-Cambios de estado
-Participación en módulos
-Actividad reciente del sistema
-🧩 Módulos disponibles
+* Reuniones personales
+* Recordatorios
+* Seguimientos propios
 
-El usuario podrá visualizar:
+---
 
-Todos los módulos a los que tiene acceso
-Su rol dentro de cada módulo
-Estado de acceso
-👥 ACCESO A MÓDULOS
-Rol por defecto
+### 2. Tareas de módulo
 
-Todo usuario creado tendrá inicialmente:
+Visibles según:
 
-Rol Usuario
+* Rol dentro del módulo
+* Permisos del módulo
 
-en:
+Ejemplo:
 
-el sistema global
-todos los módulos permitidos
-🔄 SOLICITUD DE CAMBIO DE ROL
+* Mantenimiento
+* Auditorías
+* Implementaciones
+* Revisiones técnicas
 
-Y aquí viene algo MUY importante:
+---
 
-La idea que mencionaste de solicitar cambio de rol es excelente.
+### 3. Eventos globales
 
-Porque evita:
+Visibles para:
 
-cambios manuales desorganizados,
-mensajes externos,
-procesos informales,
-pérdida de trazabilidad.
-🧾 PROPUESTA RECOMENDADA
-✔ Crear un módulo de solicitudes administrativas
+* Todos los usuarios autorizados
 
-NO como sistema de tickets tradicional completo,
-sino como:
+Ejemplo:
 
-Sistema de solicitudes internas administrativas
+* Mantenimientos globales
+* Cambios de sistema
+* Eventos corporativos
 
-Funciones del módulo
+---
+
+# COMPORTAMIENTO SEGÚN ROL
+
+El calendario cambia dinámicamente según:
+
+* Rol global
+* Rol dentro del módulo activo
+* Permisos específicos
+
+## Ejemplo
+
+Un técnico:
+
+* Ve tareas técnicas
+* No puede crear eventos globales
+
+Un admin de módulo:
+
+* Puede crear tareas para su módulo
+
+Un superadmin:
+
+* Ve todo
+* Filtra por módulo
+* Filtra por usuario
+* Ve métricas cruzadas
+
+---
+
+# MULTIROL EN CALENDARIO
+
+Un usuario puede pertenecer a múltiples módulos y roles.
+
+## Regla definida
+
+El sistema usará inicialmente:
+
+* El primer rol asignado históricamente como rol activo por defecto
+
+Pero el usuario podrá cambiar manualmente:
+
+* Contexto de rol
+* Contexto de módulo
+
+Esto cambia:
+
+* Eventos visibles
+* Acciones disponibles
+* Permisos operativos
+
+---
+
+# VISUALIZACIÓN DE EVENTOS
+
+Cada evento/tarea debe mostrar:
+
+* Foto/avatar de quien creó la tarea
+* Nombre del usuario
+* Módulo asociado
+* Tipo de tarea
+* Prioridad
+* Estado
+* Fecha
+* Color contextual
+
+---
+
+# FILTROS DEL CALENDARIO
+
+El calendario debe permitir:
+
+## Filtrar por:
+
+* Módulo
+* Usuario
+* Tipo de tarea
+* Prioridad
+* Estado
+* Rol
+* Fecha
+
+## Modos de visualización
+
+* Día
+* Semana
+* Mes
+* Agenda
+* Timeline
+
+---
+
+# DASHBOARD DE MÓDULOS
+
+Path: `/dashboard`
+
+## Objetivo
+
+Mostrar todos los módulos accesibles para el usuario.
+
+---
+
+# CARDS DE MÓDULOS
+
+## Reglas UX/UI obligatorias
+
+Todas las cards:
+
+* Deben tener exactamente el mismo tamaño
+* Altura consistente
+* Distribución uniforme
+* Grid responsive
+* Hover states
+* Estados visuales claros
+
+## Descripción
+
+Si el texto es muy largo:
+
+* Debe truncarse
+* Usar ellipsis
+* El contenido completo se verá dentro del módulo
+
+NO deben existir cards:
+
+* Más altas
+* Más anchas
+* Deformadas por contenido
+
+---
+
+# MENÚ DE ACCIONES EN CARDS
+
+TODOS los módulos, incluso los módulos por defecto:
+
+* Helpdesk
+* Inventario
+* Gestión Administrativa
+
+deben incluir menú contextual de 3 puntos.
+
+## Acciones del menú
+
+* Editar
+* Activar/desactivar
+* Modo mantenimiento
+* Eliminar
+* Ver configuración
+* Ver métricas
+
+Según permisos.
+
+---
+
+# MÓDULOS ESPECIALES
+
+## Helpdesk
+
+Path base:
+`/modules/helpdesk`
+
+Sistema principal de tickets.
+
+---
+
+## Inventario
+
+Path base:
+`/modules/inventory`
+
+Sistema de activos y trazabilidad.
+
+Toda la información relacionada a inventario:
+
+* Activos
+* Solicitudes
+* Historial
+* QR
+* Relaciones
+
+debe vivir dentro del módulo Inventario y NO duplicarse globalmente.
+
+---
+
+## Gestión Administrativa
+
+Path base:
+`/modules/administrative-management`
+
+Módulo unificado de solicitudes internas administrativas.
+
+NO deben existir dos módulos separados tipo:
+
+* Soporte técnico administrativo
+* Gestión administrativa
+
+Todo debe centralizarse aquí.
+
+---
+
+# FUNCIONES DE GESTIÓN ADMINISTRATIVA
 
 El usuario podrá solicitar:
 
-Cambio de rol
-Acceso a módulos
-Corrección de información
-Cambio de sede
-Ajustes de permisos
-Problemas de cuenta
-Reactivaciones
-🔄 Flujo recomendado
-Usuario crea solicitud
-Admin/Superadmin recibe petición
-Revisa información
-Aprueba o rechaza
-Sistema registra auditoría completa
+* Cambio de rol
+* Acceso a módulos
+* Corrección de información
+* Cambio de sede
+* Reactivación de cuenta
+* Escalamiento
+* Ajuste de permisos
+* Problemas de acceso
 
+---
 
- Avatar — fix de raíz + cámara
+# FLUJO DE SOLICITUDES
 
-  Problema: FilesService devolvía http://localhost:3001/uploads/... → URL rota en producción + filesystem efímero en Railway.
+## Reglas
 
-  Solución: Se eliminó la dependencia del upload a disco. Ahora ProfileSidebar redimensiona la imagen a canvas 320×320 px, exporta como webp base64 y llama directamente PATCH
-  /users/me con ese data URL. No hay request a /files/upload. El dato persiste en la columna avatar_url de PostgreSQL (TEXT, sin límite de tamaño).
+Si la solicitud corresponde a un módulo específico:
 
-  Cámara añadida: Modal con stream getUserMedia, captura de frame con mirror horizontal, preview, y botón "Retomar" antes de confirmar.
+→ Va al admin de ese módulo
 
-  Global Section — 2 bugs corregidos
+Si el módulo no tiene admin:
 
-  1. getUsersByModule retornaba shape equivocado (roles[] JSON array) pero el frontend esperaba role_name string y status string directamente. Fix: query plana con mr.name AS
-  role_name y CASE WHEN umr.is_active THEN 'active' END AS status. Los roles/técnicos/admins en la tabla del módulo ahora se muestran correctamente.
-  2. color no se guardaba en módulos: añadido color al INSERT de create(), al UPDATE de updateModule(), y a los SELECT de findAll().
+→ Escala automáticamente al superadmin
 
-  ---
-  Tabla de componentes por rol
+Los admins:
 
-  ┌─────────────────────────────────────┬────────────┬──────────────┬──────────────┬─────────────┬─────────────┐
-  │           Característica            │ Superadmin │ Admin Módulo │ Jefe Técnico │   Técnico   │   Usuario   │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Sidebar — General                   │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Dashboard                           │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Solicitudes                         │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Calendario                          │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Sidebar — Administración            │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Usuarios                            │     ✓      │      ✓       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Roles Globales                      │     ✓      │      ✓       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Papelera                            │     ✓      │      ✓       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Dashboard — Módulos                 │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Ver módulos activos                 │  ✓ todos   │ ✓ asignados  │ ✓ asignados  │ ✓ asignados │ ✓ asignados │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Ver módulos desactivados            │     ✓      │      —       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Crear módulo                        │     ✓      │      —       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Editar / Toggle / Eliminar módulo   │     ✓      │      —       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Módulo Detalle                      │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Ver miembros y roles                │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Asignar usuarios ¹                  │     ✓      │      —       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Usuarios                            │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Listar / Ver perfil de otro         │     ✓      │      ✓       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Crear / Editar usuario              │     ✓      │      ✓       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Asignar / quitar roles de módulo    │     ✓      │      ✓       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Eliminar usuario                    │     ✓      │      —       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Perfil propio                       │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Ver y editar datos                  │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Subir / Tomar foto (cámara)         │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Cambiar contraseña                  │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Notificaciones (campana)            │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Reportes                            │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ SLA Metrics / Resumen Tickets       │     ✓      │      ✓       │      ✓       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Inventario                          │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Ver / Crear / Cambiar estado / QR   │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Roles Globales (lista)              │     ✓      │      ✓       │      ✓       │      ✓      │     ✓ ²     │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Crear / Eliminar rol global         │     ✓      │      —       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Papelera                            │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Ver / Restaurar / Borrar permanente │     ✓      │      —       │      —       │      —      │      —      │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Sistema                             │            │              │              │             │             │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ Modal force-change-password         │ automático │  automático  │  automático  │ automático  │ automático  │
-  ├─────────────────────────────────────┼────────────┼──────────────┼──────────────┼─────────────┼─────────────┤
-  │ 2FA / Google OAuth                  │     ✓      │      ✓       │      ✓       │      ✓      │      ✓      │
-  └─────────────────────────────────────┴────────────┴──────────────┴──────────────┴─────────────┴─────────────┘
+* También pueden escalar solicitudes
+* Pueden reenviar al superadmin
 
-  ¹ El botón "Asignar usuarios" solo aparece en frontend para superadmin. El backend (/users/module/:id/bulk-assign) también acepta admin_modulo — es un gap pendiente en la
-  UI.
+Todo debe mantener:
+
+* Auditoría
+* Historial
+* Estado
+* Responsable
+
+---
+
+# PERFIL DE USUARIO
+
+Path: `/profile`
+
+Inspirado visualmente en GitHub.
+
+---
+
+# ESTRUCTURA DEL PERFIL
+
+## Sidebar izquierdo del perfil
+
+* Foto/avatar
+* Estado online/offline
+* Username
+* Email
+* Roles
+* Ubicación
+* Fecha de creación
+
+---
+
+# ESTADO ONLINE/OFFLINE
+
+Debe reemplazar:
+
+* “Cuenta activa”
+
+## Funcionamiento esperado
+
+Usar:
+
+* heartbeat
+* websocket
+* última actividad
+* sesiones activas
+
+Para determinar:
+
+* Online
+* Offline
+* Ausente
+
+en tiempo real.
+
+---
+
+# ACTIVIDAD OPERATIVA VS SESIONES ACTIVAS
+
+## Actividad operativa
+
+Representa:
+
+* Acciones dentro del sistema
+
+Ejemplo:
+
+* Tickets resueltos
+* Cambios de estado
+* Comentarios
+* Aprobaciones
+* Gestión de activos
+
+Se utilizará principalmente para:
+
+* Métricas
+* Reportes
+* Productividad
+
+NO necesariamente visible siempre en profile.
+
+---
+
+## Sesiones activas
+
+Representa:
+
+* Dispositivos/logins actualmente abiertos
+
+Incluye:
+
+* Ubicación aproximada
+* Navegador
+* Hora de acceso
+* Estado actual
+
+---
+
+# HISTORIAL DE ACTIVIDAD
+
+El historial visual tipo GitHub:
+
+* Se elimina del profile
+* NO es prioritario para UX actual
+
+Pero los datos operativos:
+
+* Siguen existiendo internamente
+* Se reutilizan para reportes y métricas
+
+---
+
+# MÉTRICAS Y REPORTES
+
+Path: `/reports`
+
+## Enfoque
+
+El sistema tendrá dashboards en tiempo real.
+
+---
+
+# SUPERADMIN
+
+Puede ver:
+
+* Métricas globales
+* Comparaciones entre módulos
+* Productividad
+* SLA
+* Tendencias
+* Actividad operativa
+* Tickets
+* Solicitudes
+* Rendimiento
+
+---
+
+# REPORTES POR MÓDULO
+
+Se podrán visualizar:
+
+* Tickets por estado
+* Tickets por prioridad
+* SLA
+* Tendencias
+* Productividad
+* Comparaciones temporales
+
+---
+
+# ACCESO A MÉTRICAS SEGÚN ROL
+
+## Usuario estándar
+
+Puede ver:
+
+* Sus propias métricas
+
+---
+
+## Técnico
+
+Puede ver:
+
+* Sus métricas
+* Métricas de tickets asignados
+
+---
+
+## Admin módulo
+
+Puede ver:
+
+* Métricas del módulo
+
+---
+
+## Superadmin
+
+Puede ver:
+
+* Todo el sistema
+
+---
+
+# SISTEMA DE PERMISOS FUTURO
+
+Los roles globales y de módulo tendrán:
+
+* Matriz completa de permisos
+* Sistema granular
+* Lista editable tipo checkboxes
+
+## Cada permiso definirá:
+
+* Ver
+* Crear
+* Editar
+* Aprobar
+* Eliminar
+* Restaurar
+* Exportar
+* Administrar
+
+---
+
+# PAPELERA
+
+Path: `/trash`
+
+## Reglas
+
+Soft delete:
+
+* 90 días
+
+Luego:
+
+* Hard delete automático
+
+sino:
+
+* si el usuario elimina antes debe colocar su contraseña 
+(solo superadmin o admin pueden eliminar estos apartados)
+el superadmin todo lo global y lo del admin, el admin solo el del
+modulo que le corresponde, recordar que se pueden seleccionar muchos a la
+vez
+
+---
+
+# NOTIFICACIONES DE ELIMINACIÓN
+
+Antes del hard delete:
+
+El sistema debe:
+
+* Notificar progresivamente
+* Mostrar alertas
+* Recordar expiración próxima
+
+---
+
+# AVATAR Y PERFIL
+
+El avatar:
+
+* Ya NO usa filesystem
+* Se almacena en PostgreSQL como base64/webp
+* Se puede:
+
+  * subir
+  * tomar desde cámara
+  * recortar/redimensionar
+
+---
+
+# APIs Y DATOS EXTERNOS
+
+## Google Maps
+
+Usado para:
+
+* Sesiones activas
+* Ubicación aproximada
+
+---
+
+## APIs de ciudades/departamentos
+
+Usadas para:
+
+* Formularios de perfil
+* Sedes
+* Información organizacional
+
+---
+
+# BASE DE DATOS
+
+Debe incluir:
+
+* Seeders reales
+* Usuarios de prueba
+* Roles
+* Sedes
+* Ambientes
+* Categorías
+* Tickets demo
+* Solicitudes demo
+* Inventario demo
+
+---
+
+# CLEAN CODE Y ARQUITECTURA
+
+El sistema debe mantener:
+
+* Clean Architecture
+* Separación de responsabilidades
+* Reutilización de componentes
+* Eliminación de duplicados
+* Tipado fuerte
+* Modularidad real
+* Guards por permisos
+* Componentes desacoplados
+* Queries optimizadas
+* Estados consistentes
+
+Toda nueva funcionalidad debe analizar:
+
+* impacto UX
+* impacto visual
+* impacto arquitectónico
+* escalabilidad
+* coherencia con permisos
+* coherencia multirol
+
+# INTEGRACIÓN DE VIDEOLLAMADAS Y COLABORACIÓN EN TICKETS
+
+## Objetivo
+
+El sistema deberá permitir colaboración en tiempo real dentro de los tickets, especialmente en:
+
+* Casos complejos
+* Escalamientos
+* Soporte cooperativo
+* Validaciones técnicas
+* Atención directa al usuario
+
+La funcionalidad debe integrarse principalmente dentro del módulo:
+
+Path:
+`/modules/helpdesk`
+
+---
+
+# VIDEOLLAMADAS DENTRO DEL SISTEMA
+
+## Integración prevista
+
+Se planea integrar servicios de videollamada como:
+
+* Google Meet API
+* Google Calendar API
+* Alternativas futuras desacopladas
+
+La implementación debe diseñarse desde el inicio de forma modular para permitir reemplazar el proveedor posteriormente.
+
+---
+
+# USOS DE LAS VIDEOLLAMADAS
+
+## 1. Colaboración entre técnicos
+
+Un técnico podrá:
+
+* Solicitar apoyo de otro técnico
+* Crear una videollamada colaborativa
+* Compartir contexto del ticket
+* Resolver incidentes conjuntamente
+
+Especialmente útil para:
+
+* Tickets críticos
+* Casos especializados
+* Reprocesos
+* Escalamientos
+
+---
+
+## 2. Atención directa al usuario (evaluación futura)
+
+Opcionalmente, el sistema podrá permitir:
+
+* Videollamadas entre técnico y usuario final
+
+Pero esto debe evaluarse cuidadosamente porque:
+
+* Puede aumentar carga operativa
+* Puede romper flujo asincrónico del sistema
+* No todos los tickets requieren contacto directo
+
+Por ahora, debe diseñarse como:
+
+* Funcionalidad opcional
+* Activable por módulo o política
+* Controlada por permisos
+
+---
+
+# FUNCIONAMIENTO ESPERADO
+
+Dentro del ticket se podrá:
+
+* Crear reunión
+* Generar enlace automáticamente
+* Invitar participantes
+* Registrar quién participó
+* Registrar fecha y duración
+* Asociar la reunión al historial operativo del ticket
+
+---
+
+# RESTRICCIONES Y PERMISOS
+
+Las videollamadas deberán respetar:
+
+* Roles globales
+* Roles por módulo
+* Permisos específicos
+
+Ejemplo:
+
+* Técnicos pueden iniciar reuniones internas
+* Admins pueden unirse o supervisar
+* Usuarios finales solo pueden entrar si el ticket lo permite
+
+---
+
+# TRAZABILIDAD DE VIDEOLLAMADAS
+
+Cada reunión debe registrar:
+
+* Ticket asociado
+* Creador
+* Participantes
+* Fecha
+* Duración
+* Estado
+* Motivo de la llamada
+
+Esto permitirá:
+
+* Auditoría
+* Métricas
+* Productividad
+* Historial operativo
+
+---
+
+# CALIFICACIÓN DEL SERVICIO AL CERRAR TICKETS
+
+## Regla obligatoria del cierre
+
+Cuando un ticket finalice y sea validado por el usuario:
+
+El sistema deberá solicitar una evaluación del servicio.
+
+---
+
+# OBJETIVO DE LA CALIFICACIÓN
+
+La calificación permitirá medir:
+
+* Calidad de atención
+* Rendimiento técnico
+* Satisfacción del usuario
+* Tiempos de respuesta
+* Eficiencia operativa
+
+Y servirá como base para:
+
+* Métricas
+* Reportes
+* KPIs
+* Rankings internos
+* Evaluaciones operativas
+
+---
+
+# INFORMACIÓN DE LA CALIFICACIÓN
+
+El usuario podrá evaluar:
+
+* Atención recibida
+* Claridad de la solución
+* Tiempo de respuesta
+* Calidad técnica
+* Experiencia general
+
+---
+
+# SISTEMA DE PUNTUACIÓN
+
+La calificación podrá incluir:
+
+* Escala numérica
+* Estrellas
+* Etiquetas rápidas
+* Comentario opcional
+
+Ejemplo:
+
+* Excelente
+* Buena
+* Regular
+* Mala
+
+---
+
+# TRAZABILIDAD DEL TÉCNICO
+
+Cada técnico o responsable tendrá métricas acumuladas relacionadas con:
+
+* Tickets cerrados
+* Tiempo promedio de resolución
+* Reprocesos
+* Escalamientos
+* SLA cumplidos
+* Calificación promedio
+* Satisfacción del usuario
+
+---
+
+# INTEGRACIÓN CON REPORTES
+
+Las calificaciones deben integrarse en:
+
+Path:
+`/reports`
+
+Para permitir:
+
+* Comparativas entre técnicos
+* Tendencias de satisfacción
+* Calidad por módulo
+* Indicadores de servicio
+* Rendimiento histórico
+
+---
+
+# CONSIDERACIONES IMPORTANTES
+
+La calificación:
+
+* NO debe bloquear el cierre definitivo eternamente
+* Debe tener expiración configurable
+* Debe evitar abuso o spam
+* Debe permitir análisis estadístico posterior
+
+El diseño debe priorizar:
+
+* Simplicidad
+* Rapidez
+* Bajo número de clics
+* UX limpia
+* Métricas reutilizables para analítica futura

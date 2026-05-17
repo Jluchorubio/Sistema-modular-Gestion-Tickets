@@ -83,6 +83,10 @@
   border: 3px solid #ffffff;
 }
 
+.onlineDotOffline {
+  background: #94A3B8;
+}
+
 .avatarOverlay {
   position: absolute;
   inset: 0;
@@ -377,19 +381,6 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-
-/* ── Contribution graph ── */
-.contribGraph  { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
-.contribCol    { display: flex; flex-direction: column; gap: 3px; }
-.contribCell {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-  background: #EBEDF0;
-  cursor: default;
-  transition: transform 0.1s;
-}
-.contribCell:hover { transform: scale(1.3); z-index: 10; position: relative; }
 
 /* ── Module item ── */
 .moduleItem {

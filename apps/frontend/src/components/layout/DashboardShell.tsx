@@ -3,6 +3,7 @@
 import { useUIStore } from '@/stores/ui.store';
 import { useHeartbeat } from '@/hooks/useHeartbeat';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { ADMIN_ROLES } from '@/constants/roles';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
 import { ForcePwModal } from './ForcePwModal';
@@ -12,7 +13,7 @@ function hasAdminAccess(user: { is_superadmin?: boolean; module_roles?: { status
   if (!user) return false;
   if (user.is_superadmin) return true;
   const roles = user.module_roles?.filter((r) => r.status === 'active').map((r) => r.role_name) ?? [];
-  return roles.some((r) => ['admin_modulo', 'jefe_tecnico'].includes(r));
+  return roles.some((r) => (ADMIN_ROLES as string[]).includes(r));
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {

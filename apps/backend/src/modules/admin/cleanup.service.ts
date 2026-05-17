@@ -28,5 +28,11 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
     } catch (err: any) {
       this.logger.error(`Scheduled purge failed: ${err.message}`);
     }
+
+    try {
+      await this.adminService.checkAndSendTrashWarnings();
+    } catch (err: any) {
+      this.logger.error(`Trash warning check failed: ${err.message}`);
+    }
   }
 }

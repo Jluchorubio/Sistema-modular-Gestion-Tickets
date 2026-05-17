@@ -2,50 +2,22 @@
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Ticket, FileText, LogIn, ShieldCheck, Star,
-} from 'lucide-react';
-import {
-  fmtDate, fmtRelative, getActiveModules,
-  CONTRIB_COLORS,
-  type ProfileUser,
-} from './profile.types';
+import { Ticket, FileText, ShieldCheck, Star } from 'lucide-react';
+import { fmtDate, fmtRelative, getActiveModules, type ProfileUser } from './profile.types';
 import { usersService } from '@/services/users.service';
 import styles from './profile.module.css';
 
-/* ── Activity graph helpers ──────────────────────────────────────────────── */
-
-function getGraphStartDate(): Date {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dayOfWeek = (today.getDay() + 6) % 7;
-  const start = new Date(today);
-  start.setDate(today.getDate() - dayOfWeek - 25 * 7);
-  return start;
-}
-
-function toISODay(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function countToLevel(count: number): number {
-  if (count === 0) return 0;
-  if (count <= 2)  return 1;
-  if (count <= 5)  return 2;
-  if (count <= 9)  return 3;
-  return 4;
-}
-
 /* ── Activity feed helpers ───────────────────────────────────────────────── */
 
+// login events intentionally excluded — they belong in the Security tab (sessions)
 const FEED_EVENT_CONFIG: Record<string, { icon: typeof Ticket; color: string; label: string }> = {
-  ticket_created:    { icon: Ticket,    color: '#6366F1', label: 'Ticket creado'      },
-  request_pending:   { icon: FileText,  color: '#F59E0B', label: 'Solicitud enviada'  },
-  request_approved:  { icon: Star,      color: '#22C55E', label: 'Solicitud aprobada' },
-  request_rejected:  { icon: FileText,  color: '#EF4444', label: 'Solicitud rechazada'},
-  request_taken:     { icon: ShieldCheck,color:'#3B82F6', label: 'Solicitud tomada'   },
-  request_in_progress:{ icon: FileText, color: '#8B5CF6', label: 'En revisión'        },
-  login:             { icon: LogIn,     color: '#10B981', label: 'Inicio de sesión'   },
+  ticket_created:      { icon: Ticket,     color: '#6366F1', label: 'Ticket creado'      },
+  request_pending:     { icon: FileText,   color: '#F59E0B', label: 'Solicitud enviada'  },
+  request_approved:    { icon: Star,       color: '#22C55E', label: 'Solicitud aprobada' },
+  request_rejected:    { icon: FileText,   color: '#EF4444', label: 'Solicitud rechazada'},
+  request_taken:       { icon: ShieldCheck,color: '#3B82F6', label: 'Solicitud tomada'   },
+  request_in_progress: { icon: FileText,   color: '#8B5CF6', label: 'En revisión'        },
+  account_created:     { icon: Star,       color: '#22C55E', label: 'Cuenta creada'      },
 };
 
 function feedConfig(type: string) {
@@ -91,13 +63,14 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
     staleTime: 60_000,
   });
 
-  /* ── Activity graph ── */
-  const { data: activityData } = useQuery({
-    queryKey:  ['activity-graph', uid],
-    queryFn:   () => usersService.getMyActivity(),
+  /* ── Online status (shared cache key with SecurityTab, no duplicate request) ── */
+  const { data: sessionsData } = useQuery({
+    queryKey:  ['my-sessions'],
+    queryFn:   () => usersService.getMySessions(),
     enabled:   isOwnProfile,
-    staleTime: 5 * 60_000,
+    staleTime: 30_000,
   });
+  const isOnline = sessionsData?.is_online ?? false;
 
   /* ── Activity feed ── */
   const { data: feedData } = useQuery({
@@ -119,16 +92,10 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
     staleTime: 60_000,
   });
 
-  const activityMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    (activityData ?? []).forEach(({ day, count }) => { map[day] = count; });
-    return map;
-  }, [activityData]);
-
-  const graphStart    = useMemo(() => getGraphStartDate(), []);
-  const totalActivity = useMemo(
-    () => Object.values(activityMap).reduce((s, v) => s + v, 0),
-    [activityMap],
+  // operational feed excludes login/session events (those live in Security tab)
+  const operationalFeed = useMemo(
+    () => (feedData ?? []).filter(e => e.type !== 'login'),
+    [feedData],
   );
 
   const pColor: Record<string, string> = {
@@ -182,11 +149,18 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
             </div>
           ))}
           <div>
-            <p className={styles.infoLabel}>Estado de cuenta</p>
-            <span className={`${styles.badge} ${user.is_active ? styles.badgeGreen : styles.badgeRed}`}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: user.is_active ? '#22C55E' : '#EF4444', display: 'inline-block' }} />
-              {user.is_active ? 'Activo' : 'Inactivo'}
-            </span>
+            <p className={styles.infoLabel}>Estado</p>
+            {isOwnProfile ? (
+              <span className={`${styles.badge} ${isOnline ? styles.badgeGreen : styles.badgeGray}`}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: isOnline ? '#22C55E' : '#94A3B8', display: 'inline-block' }} />
+                {isOnline ? 'En línea' : 'Sin conexión'}
+              </span>
+            ) : (
+              <span className={`${styles.badge} ${user.is_active ? styles.badgeGreen : styles.badgeRed}`}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: user.is_active ? '#22C55E' : '#EF4444', display: 'inline-block' }} />
+                {user.is_active ? 'Activo' : 'Inactivo'}
+              </span>
+            )}
           </div>
           <div>
             <p className={styles.infoLabel}>Último acceso</p>
@@ -301,19 +275,18 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
             <span style={{ fontSize: 10, color: '#94A3B8' }}>Últimos 90 días</span>
           </div>
 
-          {(!feedData || feedData.length === 0) && (
+          {!operationalFeed.length && (
             <div style={{ padding: '24px 22px', color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>
               Sin actividad reciente.
             </div>
           )}
 
-          {feedData && feedData.length > 0 && (
+          {operationalFeed.length > 0 && (
             <div>
               {/* Static events from user object */}
               {([
-                user.last_login_at    ? { type: 'login',    title: 'Inicio de sesión',  context: '', ts: user.last_login_at } : null,
                 user.profile_complete ? { type: 'request_approved', title: 'Perfil completado', context: 'Cuenta', ts: user.updated_at } : null,
-                { type: 'login', title: 'Cuenta creada', context: '', ts: user.created_at },
+                { type: 'account_created', title: 'Cuenta creada', context: '', ts: user.created_at },
               ].filter(Boolean) as { type: string; title: string; context: string; ts: string }[]).map((e, i) => {
                 const cfg = feedConfig(e.type);
                 const Icon = cfg.icon;
@@ -335,13 +308,13 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
               })}
 
               {/* Dynamic events from API */}
-              {feedData.map((event, i) => {
+              {operationalFeed.map((event, i) => {
                 const cfg  = feedConfig(event.type);
                 const Icon = cfg.icon;
                 return (
                   <div
                     key={`feed-${i}`}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 22px', borderBottom: i < feedData.length - 1 ? '1px solid #F1F5F9' : undefined }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 22px', borderBottom: i < operationalFeed.length - 1 ? '1px solid #F1F5F9' : undefined }}
                   >
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: `${cfg.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <Icon size={13} style={{ color: cfg.color }} />
@@ -365,49 +338,6 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
         </div>
       )}
 
-      {/* ── Activity graph (heatmap) — solo perfil propio ── */}
-      {isOwnProfile && (
-        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
-          <div className={styles.sectionHeader}>
-            <p className={styles.sectionTitle}>Historial de actividad</p>
-            <span style={{ fontSize: 10, color: '#64748B' }}>
-              {totalActivity} eventos · últimas 26 semanas
-            </span>
-          </div>
-          <div style={{ padding: '18px 22px 20px' }}>
-            <div className={styles.contribGraph}>
-              {Array.from({ length: 26 }, (_, w) => (
-                <div key={w} className={styles.contribCol}>
-                  {Array.from({ length: 7 }, (_, d) => {
-                    const date  = new Date(graphStart);
-                    date.setDate(graphStart.getDate() + w * 7 + d);
-                    const key   = toISODay(date);
-                    const count = activityMap[key] ?? 0;
-                    const level = countToLevel(count);
-                    return (
-                      <div
-                        key={d}
-                        className={styles.contribCell}
-                        style={{ background: CONTRIB_COLORS[level] }}
-                        title={count > 0 ? `${count} eventos · ${key}` : key}
-                      />
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 11, color: '#94A3B8' }}>
-              <span>Menos</span>
-              <div style={{ display: 'flex', gap: 3 }}>
-                {CONTRIB_COLORS.map(c => (
-                  <div key={c} style={{ width: 11, height: 11, borderRadius: 2, background: c }} />
-                ))}
-              </div>
-              <span>Más</span>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

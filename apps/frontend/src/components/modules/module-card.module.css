@@ -10,7 +10,7 @@
   position: relative;
   text-align: left;
   width: 100%;
-  min-height: 100px;
+  height: 120px;
 }
 
 /* Elevate card in stacking context while its kebab menu is open so the
@@ -208,6 +208,7 @@
 .typeCustom     { background: #2d1f3d; color: #c4b5fd; }
 .typeHelpdesk   { background: #1e3a5f; color: #93c5fd; }
 .typeInventory  { background: #1a3a2a; color: #6ee7b7; }
+.typeGestion    { background: #1e1b4b; color: #a5b4fc; }
 
 /* ── Kebab menu (top-right of content panel) ── */
 .menuWrap {

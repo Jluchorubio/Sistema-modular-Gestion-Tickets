@@ -1,0 +1,81 @@
+/* ── Page layout ── */
+.page        { padding: 28px 32px; max-width: 1100px; margin: 0 auto; }
+.header      { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+.title       { font-size: 22px; font-weight: 700; color: #0D1B2A; margin: 0; }
+.subtitle    { font-size: 13px; color: #64748B; margin: 4px 0 0; }
+
+/* ── Module filter tabs ── */
+.filterBar   { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
+.filterBtn   {
+  padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  border: 1.5px solid #E2E8F0; background: #fff; color: #64748B;
+  cursor: pointer; font-family: inherit;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.filterBtn:hover            { border-color: #C7D2FE; color: #6366F1; }
+.filterBtnActive            { border-color: #6366F1 !important; background: #6366F115 !important; color: #6366F1 !important; }
+
+/* ── Loading / empty ── */
+.loading     { padding: 80px 0; text-align: center; color: #94A3B8; font-size: 13px; }
+.emptyState  { padding: 48px 0; text-align: center; }
+.emptyIcon   { color: #CBD5E1; margin-bottom: 12px; }
+.emptyMsg    { font-size: 13px; color: #94A3B8; margin: 0; }
+
+/* ── Stat cards ── */
+.statsGrid   { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.statCard    { background: #fff; border-radius: 14px; border: 1.5px solid #E8EDF3; padding: 20px 22px; display: flex; align-items: center; gap: 16px; }
+.statIcon    { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.statBody    {}
+.statValue   { font-size: 24px; font-weight: 800; color: #0D1B2A; margin: 0; line-height: 1; }
+.statLabel   { font-size: 12px; color: #64748B; margin: 4px 0 0; font-weight: 500; }
+.statSub     { font-size: 11px; color: #94A3B8; margin: 2px 0 0; }
+
+/* ── Section card ── */
+.section       { background: #fff; border-radius: 14px; border: 1.5px solid #E8EDF3; padding: 20px 22px; }
+.sectionTitle  { font-size: 12px; font-weight: 700; color: #475569; margin: 0 0 16px; text-transform: uppercase; letter-spacing: .05em; }
+
+/* ── Grid layouts ── */
+.gridSla       { display: grid; grid-template-columns: 300px 1fr; gap: 16px; margin-bottom: 16px; }
+.gridTwo       { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+@media (max-width: 700px) {
+  .gridSla, .gridTwo { grid-template-columns: 1fr; }
+}
+
+/* ── Horizontal bar ── */
+.hbar          { margin-bottom: 10px; }
+.hbarLabels    { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+.hbarName      { color: #334155; font-weight: 500; }
+.hbarCount     { color: #64748B; font-weight: 600; }
+.hbarPct       { color: #94A3B8; font-weight: 400; }
+.hbarTrack     { height: 8px; background: #F1F5F9; border-radius: 99px; overflow: hidden; }
+.hbarFill      { height: 100%; border-radius: 99px; transition: width .4s ease; }
+.noData        { font-size: 12px; color: #94A3B8; text-align: center; padding: 12px 0; margin: 0; }
+
+/* ── Trend chart ── */
+.trendBars     { display: flex; align-items: flex-end; gap: 3px; height: 100px; padding-bottom: 20px; overflow-x: auto; }
+.trendBarWrap  { flex: 0 0 auto; width: 14px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: default; }
+.trendBarFill  { width: 100%; background: #6366F1; border-radius: 3px 3px 0 0; transition: opacity .2s; }
+.trendBarFill:hover { background: #4F46E5; }
+.trendFooter   { display: flex; justify-content: space-between; font-size: 10px; color: #94A3B8; margin-top: 4px; }
+.trendEmpty    { height: 100px; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 12px; }
+
+/* ── SLA ring ── */
+.slaWrap       { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.slaRingWrap   { position: relative; width: 110px; height: 110px; }
+.slaRingInner  { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.slaRingPct    { font-size: 22px; font-weight: 800; }
+.slaStats      { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; width: 100%; margin-top: 8px; }
+.slaStatItem   { text-align: center; }
+.slaStatValue  { font-size: 18px; font-weight: 700; margin: 0; }
+.slaStatLabel  { font-size: 10px; color: #94A3B8; margin: 0; }
+
+/* ── SLA priority table ── */
+.table         { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tableHead th  { text-align: left; padding: 6px 8px; color: #94A3B8; font-weight: 600; font-size: 10px; border-bottom: 1px solid #F1F5F9; }
+.tableBody td  { padding: 8px; border-bottom: 1px solid #F8FAFC; }
+.tablePriority { display: inline-flex; align-items: center; gap: 5px; }
+.tableDot      { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.tablePrioName { color: #334155; font-weight: 500; }
+.tableTotal    { color: #334155; font-weight: 600; }
+.tableAvg      { color: #64748B; }

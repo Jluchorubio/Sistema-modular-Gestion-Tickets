@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
+import { MODULE_ROLES, TECH_ROLES } from '@/constants/roles';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { getInitials } from '@/lib/utils';
@@ -53,11 +54,12 @@ export default function ModuleDetailPage() {
     enabled:  !!id,
   });
 
-  const techs  = members?.filter((m) => {
-    const r = (m as any).role_name as string;
-    return r === 'tecnico' || r === 'jefe_tecnico';
-  }) ?? [];
-  const admins = members?.filter((m) => (m as any).role_name === 'admin_modulo') ?? [];
+  const techs  = members?.filter((m) =>
+    (TECH_ROLES as string[]).includes((m as any).role_name),
+  ) ?? [];
+  const admins = members?.filter((m) =>
+    (m as any).role_name === MODULE_ROLES.ADMIN_MODULO,
+  ) ?? [];
 
   if (modLoading) return <Spinner />;
   if (modError || !mod) {

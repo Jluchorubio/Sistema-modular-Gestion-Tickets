@@ -8,6 +8,7 @@ import {
 } from '@/services/requests.service';
 import { REQUEST_TYPE_LABELS, REQUEST_TYPES } from '@/constants/requests';
 import { useAuthStore } from '@/stores/auth.store';
+import { MODULE_ROLES } from '@/constants/roles';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import type { ModuleNavItem } from '@/types/nav.types';
 import { Spinner } from '@/components/ui/Spinner';
@@ -33,7 +34,7 @@ export default function RequestsPage() {
   const { user }      = useAuthStore();
   const isSuperadmin  = user?.is_superadmin ?? false;
   const isAdminModulo = user?.module_roles?.some(
-    (r) => r.status === 'active' && r.role_name === 'admin_modulo'
+    (r) => r.status === 'active' && r.role_name === MODULE_ROLES.ADMIN_MODULO
   ) ?? false;
   const hasAdminAccess = isSuperadmin || isAdminModulo;
 

@@ -22,8 +22,6 @@ export type ActiveTab = 'overview' | 'security' | 'settings';
 
 export { fmtDate, fmtRelative } from '@/lib/formatters';
 
-export const CONTRIB_COLORS = ['#EBEDF0', '#9BE9A8', '#40C463', '#30A14E', '#216E39'];
-
 export function getActiveModules(user: ProfileUser): UserModuleRole[] {
   return (user.module_roles ?? []).filter(r => r.status === 'active');
 }

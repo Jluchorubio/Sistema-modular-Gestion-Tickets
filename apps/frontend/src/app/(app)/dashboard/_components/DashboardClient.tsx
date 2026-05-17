@@ -1,175 +1,98 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Layers, Users, Ticket, TrendingUp, AlertTriangle, WrenchIcon } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useModules } from '@/hooks/useModules';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { useAuthStore } from '@/stores/auth.store';
-import { ModuleCard } from '@/components/modules/ModuleCard';
 import { ModuleFormModal } from '@/components/modules/ModuleFormModal';
-import { Modal } from '@/components/ui/Modal';
-import { Spinner } from '@/components/ui/Spinner';
 import type { SystemModule } from '@/types/module.types';
-
-// Pinned built-in system modules — always visible to all users
-const HELPDESK_MODULE: SystemModule = {
-  id:                  '__helpdesk__',
-  name:                'Mesa de Ayuda',
-  slug:                'helpdesk',
-  description:         'Gestión de tickets de soporte técnico, incidencias y solicitudes de servicio',
-  type:                'helpdesk',
-  image_url:           null,
-  color:               '#3B82F6',
-  is_active:           true,
-  has_access:          true,
-  maintenance_mode:    false,
-  maintenance_since:   null,
-  maintenance_message: null,
-  created_at:          new Date(0).toISOString(),
-  deleted_at:          null,
-};
-
-const INVENTORY_MODULE: SystemModule = {
-  id:                  '__inventory__',
-  name:                'Inventario',
-  slug:                'inventario',
-  description:         'Control de activos, equipos, materiales y recursos físicos de la organización',
-  type:                'inventario',
-  image_url:           null,
-  color:               '#10B981',
-  is_active:           true,
-  has_access:          true,
-  maintenance_mode:    false,
-  maintenance_since:   null,
-  maintenance_message: null,
-  created_at:          new Date(0).toISOString(),
-  deleted_at:          null,
-};
-
-const GESTION_MODULE: SystemModule = {
-  id:                  '__gestion__',
-  name:                'Gestión Administrativa',
-  slug:                'gestion',
-  description:         'Solicitudes de acceso, cambio de rol, corrección de perfil y escalaciones',
-  type:                'gestion',
-  image_url:           null,
-  color:               '#6366F1',
-  is_active:           true,
-  has_access:          true,
-  maintenance_mode:    false,
-  maintenance_since:   null,
-  maintenance_message: null,
-  created_at:          new Date(0).toISOString(),
-  deleted_at:          null,
-};
+import { DashboardStats } from './DashboardStats';
+import { ModulesGrid } from './ModulesGrid';
+import { DeleteModuleModal } from './DeleteModuleModal';
+import { MaintenanceModal } from './MaintenanceModal';
 import styles from '../dashboard.module.css';
-import mstyles from '@/components/ui/modal.module.css';
+
+// Fallback shapes used when built-in modules are not yet returned by the API
+const HELPDESK_DEFAULTS: SystemModule = {
+  id: '__helpdesk__', name: 'Mesa de Ayuda', slug: 'helpdesk',
+  description: 'Gestión de tickets de soporte técnico, incidencias y solicitudes de servicio',
+  type: 'helpdesk', image_url: null, color: '#3B82F6',
+  is_active: true, has_access: true,
+  maintenance_mode: false, maintenance_since: null, maintenance_message: null,
+  created_at: new Date(0).toISOString(), deleted_at: null,
+};
+
+const INVENTORY_DEFAULTS: SystemModule = {
+  id: '__inventory__', name: 'Inventario', slug: 'inventario',
+  description: 'Control de activos, equipos, materiales y recursos físicos de la organización',
+  type: 'inventario', image_url: null, color: '#10B981',
+  is_active: true, has_access: true,
+  maintenance_mode: false, maintenance_since: null, maintenance_message: null,
+  created_at: new Date(0).toISOString(), deleted_at: null,
+};
+
+const GESTION_DEFAULTS: SystemModule = {
+  id: '__gestion__', name: 'Gestión Administrativa', slug: 'gestion',
+  description: 'Solicitudes de acceso, cambio de rol, corrección de perfil y escalaciones',
+  type: 'gestion', image_url: null, color: '#6366F1',
+  is_active: true, has_access: true,
+  maintenance_mode: false, maintenance_since: null, maintenance_message: null,
+  created_at: new Date(0).toISOString(), deleted_at: null,
+};
+
+const BUILTIN_SLUGS = new Set(['helpdesk', 'inventario', 'gestion', 'tickets', 'inventory']);
+
+function isRealModule(m: SystemModule): boolean {
+  return !m.id.startsWith('__');
+}
 
 export function DashboardClient() {
-  const router                                             = useRouter();
-  const qc                                                 = useQueryClient();
-  const { user }                                           = useCurrentUser();
-  const authUser                                           = useAuthStore(s => s.user);
+  const qc           = useQueryClient();
+  const { user }     = useCurrentUser();
+  const authUser     = useAuthStore(s => s.user);
   const { modules, active: activeRaw, inactive: inactiveRaw, isLoading, isError } = useModules();
 
-  const BUILTIN_SLUGS = new Set(['helpdesk', 'inventario', 'gestion', 'tickets', 'inventory']);
-  const active   = activeRaw.filter((m)   => !BUILTIN_SLUGS.has(m.slug));
-  const inactive = inactiveRaw.filter((m) => !BUILTIN_SLUGS.has(m.slug));
+  const active   = activeRaw.filter(m => !BUILTIN_SLUGS.has(m.slug));
+  const inactive = inactiveRaw.filter(m => !BUILTIN_SLUGS.has(m.slug));
+
+  const helpdeskModule  = modules?.find(m => ['helpdesk',  'tickets'].includes(m.slug))    ?? HELPDESK_DEFAULTS;
+  const inventoryModule = modules?.find(m => ['inventario','inventory'].includes(m.slug))   ?? INVENTORY_DEFAULTS;
+  const gestionModule   = modules?.find(m => m.slug === 'gestion')                          ?? GESTION_DEFAULTS;
 
   const firstName    = user?.first_name    ?? '';
   const isSuperadmin = user?.is_superadmin ?? false;
 
   const { data: sysStats } = useQuery({
-    queryKey: ['system-stats'],
-    queryFn:  () => usersService.getSystemStats(),
-    enabled:  isSuperadmin,
+    queryKey:  ['system-stats'],
+    queryFn:   () => usersService.getSystemStats(),
+    enabled:   isSuperadmin,
     staleTime: 60_000,
   });
 
-  const [modalOpen,   setModalOpen]   = useState(false);
-  const [editModule,  setEditModule]  = useState<SystemModule | null>(null);
+  // ── Edit / Create modal ────────────────────────────────────────────────────
+  const [editModule, setEditModule] = useState<SystemModule | null>(null);
+  const [modalOpen,  setModalOpen]  = useState(false);
 
-  // ── Safe delete modal ──────────────────────────────────────────────────────
-  const [deleteTarget,    setDeleteTarget]    = useState<SystemModule | null>(null);
-  const [deleteNameInput, setDeleteNameInput] = useState('');
-  const [deleteUserInput, setDeleteUserInput] = useState('');
-  const [deleteError,     setDeleteError]     = useState('');
+  // ── Delete modal ───────────────────────────────────────────────────────────
+  const [deleteTarget, setDeleteTarget] = useState<SystemModule | null>(null);
 
   // ── Maintenance modal ──────────────────────────────────────────────────────
-  const [maintTarget,  setMaintTarget]  = useState<SystemModule | null>(null);
-  const [maintMessage, setMaintMessage] = useState('');
+  const [maintTarget, setMaintTarget] = useState<SystemModule | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['modules'] });
 
   const toggleMut = useMutation({
-    mutationFn: (m: SystemModule) =>
-      modulesService.updateModule(m.id, { is_active: !m.is_active }),
-    onSuccess: invalidate,
+    mutationFn: (m: SystemModule) => modulesService.updateModule(m.id, { is_active: !m.is_active }),
+    onSuccess:  invalidate,
   });
 
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => modulesService.deleteModule(id),
-    onSuccess: () => {
-      setDeleteTarget(null);
-      setDeleteNameInput('');
-      setDeleteUserInput('');
-      setDeleteError('');
-      invalidate();
-    },
-    onError: () => setDeleteError('Error al eliminar el módulo. Intenta de nuevo.'),
-  });
-
-  const maintMut = useMutation({
-    mutationFn: ({ id, enabled, message }: { id: string; enabled: boolean; message?: string }) =>
-      modulesService.toggleMaintenance(id, enabled, message),
-    onSuccess: () => {
-      setMaintTarget(null);
-      setMaintMessage('');
-      invalidate();
-    },
-  });
-
-  function openCreate() {
-    setEditModule(null);
-    setModalOpen(true);
-  }
-
-  function openEdit(m: SystemModule) {
-    setEditModule(m);
-    setModalOpen(true);
-  }
-
-  function openDelete(m: SystemModule) {
-    setDeleteTarget(m);
-    setDeleteNameInput('');
-    setDeleteUserInput('');
-    setDeleteError('');
-  }
-
-  function confirmDelete() {
-    if (!deleteTarget) return;
-    const expectedName = deleteTarget.name;
-    const expectedUser = authUser?.username ?? '';
-
-    if (deleteNameInput !== expectedName) {
-      setDeleteError(`El nombre del módulo no coincide. Escribe exactamente: "${expectedName}"`);
-      return;
-    }
-    if (!expectedUser || deleteUserInput !== expectedUser) {
-      setDeleteError(`El nombre de usuario no coincide. Escribe exactamente: "${expectedUser}"`);
-      return;
-    }
-    deleteMut.mutate(deleteTarget.id);
-  }
-
-  function openMaintenance(m: SystemModule) {
-    setMaintTarget(m);
-    setMaintMessage(m.maintenance_message ?? '');
-  }
+  function openEdit(m: SystemModule)   { setEditModule(m); setModalOpen(true); }
+  function openCreate()                { setEditModule(null); setModalOpen(true); }
+  function openDelete(m: SystemModule) { setDeleteTarget(m); }
+  function openMaint(m: SystemModule)  { setMaintTarget(m); }
 
   return (
     <div>
@@ -178,123 +101,23 @@ export function DashboardClient() {
       </div>
       <p className={styles.sub}>Selecciona el módulo al que deseas acceder</p>
 
-      {/* ── Stats strip (superadmin only, #12) ── */}
-      {isSuperadmin && sysStats && (
-        <div className={styles.statsStrip}>
-          <div className={styles.statCard}>
-            <Layers size={16} className={styles.statCardIcon} />
-            <div>
-              <span className={styles.statCardValue}>{sysStats.modules.total}</span>
-              <span className={styles.statCardLabel}>Módulos</span>
-            </div>
-            <div className={styles.statCardSub}>
-              todos accesibles
-            </div>
-          </div>
-          <div className={styles.statCard}>
-            <Users size={16} className={styles.statCardIcon} />
-            <div>
-              <span className={styles.statCardValue}>{sysStats.users.total}</span>
-              <span className={styles.statCardLabel}>Usuarios</span>
-            </div>
-            <div className={styles.statCardSub}>
-              {sysStats.users.active} activos · {sysStats.users.inactive} inactivos
-            </div>
-          </div>
-          <div className={styles.statCard}>
-            <Ticket size={16} className={styles.statCardIcon} />
-            <div>
-              <span className={styles.statCardValue}>{sysStats.tickets.total}</span>
-              <span className={styles.statCardLabel}>Tickets</span>
-            </div>
-            <div className={styles.statCardSub}>
-              {sysStats.tickets.open} abiertos
-            </div>
-          </div>
-          <div className={styles.statCard}>
-            <AlertTriangle size={16} className={styles.statCardIcon} style={{ color: sysStats.requests.pending > 0 ? '#F59E0B' : undefined }} />
-            <div>
-              <span className={styles.statCardValue}>{sysStats.requests.pending}</span>
-              <span className={styles.statCardLabel}>Solicitudes</span>
-            </div>
-            <div className={styles.statCardSub}>
-              {sysStats.requests.in_progress} en proceso · {sysStats.requests.total} total
-            </div>
-          </div>
-        </div>
-      )}
+      {isSuperadmin && sysStats && <DashboardStats stats={sysStats} />}
 
-      {isLoading && <Spinner />}
-
-      {isError && (
-        <p className={styles.errorMsg}>Error cargando módulos. Intenta recargar.</p>
-      )}
-
-      {modules && (
-        <>
-          <div className={styles.sectionTitle}>Módulos disponibles</div>
-          <div className={styles.grid}>
-            {/* ── Built-in system modules — always visible, no admin controls ── */}
-            <ModuleCard
-              module={HELPDESK_MODULE}
-              isSuperadmin={false}
-              onClick={() => router.push('/tickets')}
-            />
-            <ModuleCard
-              module={INVENTORY_MODULE}
-              isSuperadmin={false}
-              onClick={() => router.push('/inventory')}
-            />
-            <ModuleCard
-              module={GESTION_MODULE}
-              isSuperadmin={false}
-              onClick={() => router.push('/requests')}
-            />
-
-            {!active.length && !isSuperadmin && (
-              <span className={styles.emptyMsg}>No tienes módulos personalizados asignados.</span>
-            )}
-            {active.map((m) => (
-              <ModuleCard
-                key={m.id}
-                module={m}
-                isSuperadmin={isSuperadmin}
-                onClick={() => router.push(`/modules/${m.id}`)}
-                onEdit={() => openEdit(m)}
-                onToggleActive={() => toggleMut.mutate(m)}
-                onDelete={() => openDelete(m)}
-                onToggleMaintenance={() => openMaintenance(m)}
-              />
-            ))}
-            {isSuperadmin && (
-              <button type="button" className={styles.createCard} onClick={openCreate}>
-                <Plus size={28} />
-                <span>Crear módulo</span>
-              </button>
-            )}
-          </div>
-
-          {inactive.length > 0 && isSuperadmin && (
-            <>
-              <div className={styles.inactiveSectionTitle}>Módulos desactivados</div>
-              <div className={styles.grid}>
-                {inactive.map((m) => (
-                  <ModuleCard
-                    key={m.id}
-                    module={m}
-                    isSuperadmin={isSuperadmin}
-                    onClick={() => router.push(`/modules/${m.id}`)}
-                    onEdit={() => openEdit(m)}
-                    onToggleActive={() => toggleMut.mutate(m)}
-                    onDelete={() => openDelete(m)}
-                    onToggleMaintenance={() => openMaintenance(m)}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </>
-      )}
+      <ModulesGrid
+        builtins={{ helpdesk: helpdeskModule, inventory: inventoryModule, gestion: gestionModule }}
+        active={active}
+        inactive={inactive}
+        hasModules={!!modules}
+        isSuperadmin={isSuperadmin}
+        isLoading={isLoading}
+        isError={isError}
+        isRealModule={isRealModule}
+        onEdit={openEdit}
+        onToggleActive={m => toggleMut.mutate(m)}
+        onDelete={openDelete}
+        onMaintenance={openMaint}
+        onCreate={openCreate}
+      />
 
       <ModuleFormModal
         open={modalOpen}
@@ -303,120 +126,16 @@ export function DashboardClient() {
         onSuccess={() => setModalOpen(false)}
       />
 
-      {/* ── Safe Delete Modal ── */}
-      <Modal
-        open={!!deleteTarget}
-        title="Eliminar módulo"
+      <DeleteModuleModal
+        target={deleteTarget}
+        username={authUser?.username ?? ''}
         onClose={() => setDeleteTarget(null)}
-      >
-        <div style={{ padding: '0 0 4px' }}>
-          <div style={{
-            display: 'flex', gap: 10, alignItems: 'flex-start',
-            background: '#450a0a', border: '1px solid #7f1d1d',
-            borderRadius: 8, padding: '12px 14px', marginBottom: 18,
-          }}>
-            <AlertTriangle size={16} style={{ color: '#f87171', flexShrink: 0, marginTop: 1 }} />
-            <p style={{ fontSize: 13, color: '#fca5a5', margin: 0, lineHeight: 1.5 }}>
-              Esta acción moverá el módulo a la papelera. Se conservará 90 días antes del borrado definitivo.
-            </p>
-          </div>
+      />
 
-          <label className={mstyles.fieldLabel}>
-            Escribe el nombre del módulo: <strong>{deleteTarget?.name}</strong>
-          </label>
-          <input
-            className={mstyles.fieldInput}
-            placeholder={deleteTarget?.name ?? ''}
-            value={deleteNameInput}
-            onChange={e => { setDeleteNameInput(e.target.value); setDeleteError(''); }}
-          />
-
-          <label className={mstyles.fieldLabel} style={{ marginTop: 14 }}>
-            Escribe tu nombre de usuario: <strong>{authUser?.username}</strong>
-          </label>
-          <input
-            className={mstyles.fieldInput}
-            placeholder={authUser?.username ?? ''}
-            value={deleteUserInput}
-            onChange={e => { setDeleteUserInput(e.target.value); setDeleteError(''); }}
-          />
-
-          {deleteError && (
-            <div className={mstyles.msgErr} style={{ marginTop: 10 }}>{deleteError}</div>
-          )}
-        </div>
-
-        <div className={mstyles.actions}>
-          <button type="button" className={mstyles.actCancel} onClick={() => setDeleteTarget(null)}>
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className={mstyles.actDanger}
-            onClick={confirmDelete}
-            disabled={deleteMut.isPending || !deleteNameInput || !deleteUserInput}
-          >
-            {deleteMut.isPending ? 'Eliminando…' : 'Eliminar módulo'}
-          </button>
-        </div>
-      </Modal>
-
-      {/* ── Maintenance Modal ── */}
-      <Modal
-        open={!!maintTarget}
-        title={maintTarget?.maintenance_mode ? 'Desactivar mantenimiento' : 'Activar modo mantenimiento'}
+      <MaintenanceModal
+        target={maintTarget}
         onClose={() => setMaintTarget(null)}
-      >
-        <div style={{ padding: '0 0 4px' }}>
-          {!maintTarget?.maintenance_mode ? (
-            <>
-              <div style={{
-                display: 'flex', gap: 10, alignItems: 'flex-start',
-                background: '#451a03', border: '1px solid #78350f',
-                borderRadius: 8, padding: '12px 14px', marginBottom: 18,
-              }}>
-                <WrenchIcon size={16} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
-                <p style={{ fontSize: 13, color: '#fde68a', margin: 0, lineHeight: 1.5 }}>
-                  Los usuarios sin rol de admin no podrán acceder al módulo <strong>{maintTarget?.name}</strong> mientras esté en mantenimiento.
-                </p>
-              </div>
-              <label className={mstyles.fieldLabel}>Mensaje de mantenimiento (opcional)</label>
-              <textarea
-                className={mstyles.fieldInput}
-                placeholder="Ej: Estamos realizando actualizaciones. Volvemos en breve."
-                style={{ minHeight: 80, resize: 'vertical' }}
-                value={maintMessage}
-                onChange={e => setMaintMessage(e.target.value)}
-              />
-            </>
-          ) : (
-            <p style={{ fontSize: 14, color: '#374151', marginBottom: 4 }}>
-              ¿Desactivar el modo mantenimiento del módulo <strong>{maintTarget?.name}</strong>?
-              Los usuarios podrán acceder nuevamente.
-            </p>
-          )}
-        </div>
-
-        <div className={mstyles.actions}>
-          <button type="button" className={mstyles.actCancel} onClick={() => setMaintTarget(null)}>
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className={maintTarget?.maintenance_mode ? mstyles.actConfirm : mstyles.actDanger}
-            disabled={maintMut.isPending}
-            onClick={() => maintTarget && maintMut.mutate({
-              id: maintTarget.id,
-              enabled: !maintTarget.maintenance_mode,
-              message: maintMessage || undefined,
-            })}
-          >
-            {maintMut.isPending
-              ? 'Procesando…'
-              : maintTarget?.maintenance_mode ? 'Desactivar mantenimiento' : 'Activar mantenimiento'}
-          </button>
-        </div>
-      </Modal>
+      />
     </div>
   );
 }

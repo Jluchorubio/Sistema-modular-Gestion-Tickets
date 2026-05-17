@@ -45,9 +45,21 @@ const FALLBACK_CONFIG: TypeConfig = {
   iconColor: '#94a3b8',
 };
 
+const TYPE_PILL_CLS: Record<string, string> = {
+  tickets:    styles.typeTickets,
+  helpdesk:   styles.typeHelpdesk,
+  inventario: styles.typeInventario,
+  inventory:  styles.typeInventory,
+  crm:        styles.typeCrm,
+  rrhh:       styles.typeRrhh,
+  gestion:    styles.typeGestion,
+  custom:     styles.typeCustom,
+};
+
 interface ModuleCardProps {
   module:                SystemModule;
   isSuperadmin:          boolean;
+  isBuiltIn?:            boolean;
   onClick:               () => void;
   onEdit?:               () => void;
   onToggleActive?:       () => void;
@@ -58,6 +70,7 @@ interface ModuleCardProps {
 export const ModuleCard = memo(function ModuleCard({
   module: m,
   isSuperadmin,
+  isBuiltIn = false,
   onClick,
   onEdit,
   onToggleActive,
@@ -68,6 +81,7 @@ export const ModuleCard = memo(function ModuleCard({
   const menuRef  = useRef<HTMLDivElement>(null);
   const cfg      = TYPE_CONFIG[m.type ?? ''] ?? FALLBACK_CONFIG;
   const isLocked = !isSuperadmin && m.has_access === false;
+  const hasMenu  = isSuperadmin && (!!onEdit || !!onToggleActive || !!onToggleMaintenance || !!onDelete);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -139,7 +153,7 @@ export const ModuleCard = memo(function ModuleCard({
       {/* ── Right: content panel (70%) ── */}
       <div className={styles.contentPanel}>
         {/* Kebab menu */}
-        {isSuperadmin && (
+        {hasMenu && (
           <div
             className={styles.menuWrap}
             ref={menuRef}
@@ -154,41 +168,51 @@ export const ModuleCard = memo(function ModuleCard({
               <MoreVertical size={15} />
             </button>
             <div className={`${styles.dropdown}${menuOpen ? ` ${styles.dropdownOpen}` : ''}`}>
-              <button
-                type="button"
-                className={styles.ddItem}
-                onClick={() => { setMenuOpen(false); onEdit?.(); }}
-              >
-                <Pencil size={13} /> Editar
-              </button>
-              <button
-                type="button"
-                className={styles.ddItem}
-                onClick={() => { setMenuOpen(false); onToggleActive?.(); }}
-              >
-                {m.is_active
-                  ? <><Pause size={13} /> Desactivar</>
-                  : <><Play  size={13} /> Activar</>
-                }
-              </button>
-              <button
-                type="button"
-                className={styles.ddItem}
-                onClick={() => { setMenuOpen(false); onToggleMaintenance?.(); }}
-              >
-                {inMaintenance
-                  ? <><WrenchIcon size={13} /> Desactivar mantenimiento</>
-                  : <><WrenchIcon size={13} /> Modo mantenimiento</>
-                }
-              </button>
-              <div className={styles.ddSep} />
-              <button
-                type="button"
-                className={`${styles.ddItem} ${styles.ddDanger}`}
-                onClick={() => { setMenuOpen(false); onDelete?.(); }}
-              >
-                <Trash2 size={13} /> Eliminar
-              </button>
+              {onEdit && (
+                <button
+                  type="button"
+                  className={styles.ddItem}
+                  onClick={() => { setMenuOpen(false); onEdit(); }}
+                >
+                  <Pencil size={13} /> Editar
+                </button>
+              )}
+              {onToggleActive && (
+                <button
+                  type="button"
+                  className={styles.ddItem}
+                  onClick={() => { setMenuOpen(false); onToggleActive(); }}
+                >
+                  {m.is_active
+                    ? <><Pause size={13} /> Desactivar</>
+                    : <><Play  size={13} /> Activar</>
+                  }
+                </button>
+              )}
+              {onToggleMaintenance && (
+                <button
+                  type="button"
+                  className={styles.ddItem}
+                  onClick={() => { setMenuOpen(false); onToggleMaintenance(); }}
+                >
+                  {inMaintenance
+                    ? <><WrenchIcon size={13} /> Desactivar mantenimiento</>
+                    : <><WrenchIcon size={13} /> Modo mantenimiento</>
+                  }
+                </button>
+              )}
+              {!isBuiltIn && onDelete && (
+                <>
+                  <div className={styles.ddSep} />
+                  <button
+                    type="button"
+                    className={`${styles.ddItem} ${styles.ddDanger}`}
+                    onClick={() => { setMenuOpen(false); onDelete(); }}
+                  >
+                    <Trash2 size={13} /> Eliminar
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -198,7 +222,7 @@ export const ModuleCard = memo(function ModuleCard({
           <div className={styles.desc}>{m.description}</div>
         )}
         {m.type && (
-          <span className={`${styles.typePill} ${styles[`type${m.type.charAt(0).toUpperCase()}${m.type.slice(1)}`] ?? styles.typeCustom}`}>
+          <span className={`${styles.typePill} ${TYPE_PILL_CLS[m.type] ?? styles.typeCustom}`}>
             {m.type}
           </span>
         )}

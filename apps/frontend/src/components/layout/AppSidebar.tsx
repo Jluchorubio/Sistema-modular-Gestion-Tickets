@@ -11,24 +11,21 @@ import {
   ChevronRight,
   ArrowLeft,
   BarChart2,
+  Ticket,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
-import { useAuthStore } from '@/stores/auth.store';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { ModuleNavItem } from '@/types/nav.types';
 import styles from './sidebar.module.css';
 
-/* ── Role helpers ──────────────────────────────────────────────────────────── */
+/* ── Nav definitions ───────────────────────────────────────────────────────── */
 
-function useSidebarRoles() {
-  const user         = useAuthStore((s) => s.user);
-  const isSuperadmin = user?.is_superadmin ?? false;
-  const activeRoles  = user?.module_roles?.filter((r) => r.status === 'active').map((r) => r.role_name) ?? [];
-  const isAdmin      = isSuperadmin || activeRoles.includes('admin_modulo');
-  return { isSuperadmin, isAdmin };
-}
-
-/* ── Nav definitions (global admin) ───────────────────────────────────────── */
+const USER_NAV = [
+  { key: 'my-tickets', label: 'Mis Tickets',  Icon: Ticket,   href: '/my-tickets' },
+  { key: 'requests',   label: 'Solicitudes',  Icon: FileText, href: '/requests'   },
+] as const;
 
 const ADMIN_NAV = [
   { key: 'reports', label: 'Reportes', Icon: BarChart2, href: '/reports' },
@@ -129,7 +126,7 @@ export function AppSidebar() {
   const moduleNav     = useUIStore((s) => s.moduleNav);
   const moduleName    = useUIStore((s) => s.moduleName);
   const pathname      = usePathname();
-  const { isSuperadmin, isAdmin } = useSidebarRoles();
+  const { isSuperadmin, isModuleAdmin: isAdmin } = usePermissions();
 
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
@@ -168,6 +165,9 @@ export function AppSidebar() {
               <LayoutGrid className={styles.navIcon} aria-hidden="true" />
               <span className={styles.navLabel}>Dashboard</span>
             </Link>
+
+            <SectionDivider label="MÓDULOS" expanded={expanded} />
+            <NavGroup items={USER_NAV} isActive={isActive} />
 
             {isAdmin && (
               <>

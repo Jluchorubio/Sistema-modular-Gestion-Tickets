@@ -27,3 +27,9 @@ export function hasModuleRole(
 ): boolean {
   return MODULE_ROLE_HIERARCHY[userRole] >= MODULE_ROLE_HIERARCHY[requiredRole];
 }
+
+/** Roles with admin-level access (reports, module management) */
+export const ADMIN_ROLES: ModuleRole[] = [MODULE_ROLES.ADMIN_MODULO, MODULE_ROLES.JEFE_TECNICO];
+
+/** Roles that can be assigned technical work */
+export const TECH_ROLES: ModuleRole[] = [MODULE_ROLES.JEFE_TECNICO, MODULE_ROLES.TECNICO];

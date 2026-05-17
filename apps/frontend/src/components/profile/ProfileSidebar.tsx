@@ -3,7 +3,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Edit2, Check, Star, Eye, Upload, Trash2,
   Building2, MapPin, Mail, Phone, Home, CalendarDays,
@@ -127,6 +127,14 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
   const [prefixSearch, setPrefixSearch] = useState('');
 
   const canEdit = isOwnProfile || viewerIsSuperadmin;
+
+  const { data: sessionsData } = useQuery({
+    queryKey:  ['my-sessions'],
+    queryFn:   () => usersService.getMySessions(),
+    enabled:   isOwnProfile,
+    staleTime: 30_000,
+  });
+  const isOnline = sessionsData?.is_online ?? false;
 
   const fullName      = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre';
   const initials      = getInitials(user.first_name || '?', user.last_name || '?');
@@ -455,7 +463,7 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
           </div>
         )}
 
-        <div className={styles.onlineDot} />
+        <div className={`${styles.onlineDot} ${isOwnProfile && !isOnline ? styles.onlineDotOffline : ''}`} />
 
         {isOwnProfile && menuOpen && !isAvatarBusy && (
           <div className={styles.avatarCtxMenu}>
