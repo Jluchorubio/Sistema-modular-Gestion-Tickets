@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   BadRequestException,
   ForbiddenException,
   Logger,
@@ -11,6 +10,14 @@ import { DataSource } from 'typeorm';
 import { AvailabilityDto } from './dto/availability.dto';
 import { AddSkillDto } from './dto/add-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
+
+const REASON_TO_STATUS: Record<string, string> = {
+  vacation:        'ausente',
+  maternity_leave: 'ausente',
+  sick_leave:      'ausente',
+  training:        'fuera_horario',
+  other:           'ausente',
+};
 
 @Injectable()
 export class SkillService {
@@ -28,6 +35,7 @@ export class SkillService {
               ts.module_id,
               m.name           AS module_name,
               m.slug           AS module_slug,
+              ts.status,
               ts.is_available,
               ts.reason,
               ts.unavailable_from,
@@ -47,26 +55,32 @@ export class SkillService {
     await this.assertModuleExists(dto.module_id);
     await this.assertActorCanManageModule(actorId, dto.module_id);
 
+    const newStatus = dto.is_available
+      ? 'disponible'
+      : (REASON_TO_STATUS[dto.reason ?? ''] ?? 'ausente');
+
     if (dto.is_available) {
       await this.db.query(
         `INSERT INTO modules.technician_status
-           (user_id, module_id, is_available, reason, unavailable_from, unavailable_to, notes, created_by)
-         VALUES ($1, $2, true, NULL, NULL, NULL, NULL, $3)
+           (user_id, module_id, is_available, status, reason, unavailable_from, unavailable_to, notes, created_by)
+         VALUES ($1, $2, true, $3, NULL, NULL, NULL, NULL, $4)
          ON CONFLICT (user_id, module_id) DO UPDATE SET
            is_available     = true,
+           status           = EXCLUDED.status,
            reason           = NULL,
            unavailable_from = NULL,
            unavailable_to   = NULL,
            notes            = NULL`,
-        [userId, dto.module_id, actorId],
+        [userId, dto.module_id, newStatus, actorId],
       );
     } else {
       await this.db.query(
         `INSERT INTO modules.technician_status
-           (user_id, module_id, is_available, reason, unavailable_from, unavailable_to, notes, created_by)
-         VALUES ($1, $2, false, $3, $4, $5, $6, $7)
+           (user_id, module_id, is_available, status, reason, unavailable_from, unavailable_to, notes, created_by)
+         VALUES ($1, $2, false, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (user_id, module_id) DO UPDATE SET
            is_available     = false,
+           status           = EXCLUDED.status,
            reason           = EXCLUDED.reason,
            unavailable_from = EXCLUDED.unavailable_from,
            unavailable_to   = EXCLUDED.unavailable_to,
@@ -74,6 +88,7 @@ export class SkillService {
         [
           userId,
           dto.module_id,
+          newStatus,
           dto.reason           ?? null,
           dto.unavailable_from ?? null,
           dto.unavailable_to   ?? null,
@@ -87,29 +102,44 @@ export class SkillService {
     return this.getAvailability(userId);
   }
 
-  // ─── Skills ──────────────────────────────────────────────────────────────────
+  // ─── Perfiles de técnico ──────────────────────────────────────────────────────
+  // Reemplaza modules.technician_skills (eliminado en v7.0).
+  // Ahora usa tickets.technician_profiles + tickets.technician_category_skills.
 
   async getSkills(userId: string) {
     await this.assertUserExists(userId);
 
     return this.db.query<any[]>(
-      `SELECT ts.id,
-              ts.module_id,
-              m.name          AS module_name,
-              ts.category_slug,
-              ts.location_slug,
-              ts.service_type,
-              ts.max_concurrent,
-              ts.priority,
-              ts.is_active,
-              ts.created_at,
-              ts.updated_at
-       FROM   modules.technician_skills ts
-       JOIN   modules.modules           m ON m.id = ts.module_id
-       WHERE  ts.user_id     = $1
-         AND  ts.is_active   = true
-         AND  ts.deleted_at  IS NULL
-       ORDER  BY m.name, ts.priority DESC`,
+      `SELECT tp.id,
+              tp.module_id,
+              m.name              AS module_name,
+              m.slug              AS module_slug,
+              tp.technician_type,
+              tp.max_daily_tickets,
+              tp.is_active,
+              tp.created_at,
+              tp.updated_at,
+              COALESCE(
+                json_agg(
+                  json_build_object(
+                    'id',            tcs.id,
+                    'category_id',   tcs.category_id,
+                    'category_name', cat.name,
+                    'category_slug', cat.slug
+                  )
+                ) FILTER (WHERE tcs.id IS NOT NULL AND tcs.is_active = true),
+                '[]'
+              ) AS category_skills
+       FROM   tickets.technician_profiles           tp
+       JOIN   modules.modules                       m   ON m.id         = tp.module_id
+       LEFT JOIN tickets.technician_category_skills tcs ON tcs.user_id  = tp.user_id
+                                                       AND tcs.module_id = tp.module_id
+                                                       AND tcs.is_active = true
+       LEFT JOIN modules.categories                 cat ON cat.id = tcs.category_id
+       WHERE  tp.user_id   = $1
+         AND  tp.is_active = true
+       GROUP  BY tp.id, m.name, m.slug
+       ORDER  BY m.name`,
       [userId],
     );
   }
@@ -119,58 +149,51 @@ export class SkillService {
     await this.assertModuleExists(dto.module_id);
     await this.assertActorCanManageModule(actorId, dto.module_id);
 
-    const [existing] = await this.db.query<{ id: string; is_active: boolean; deleted_at: string | null }[]>(
-      `SELECT id, is_active, deleted_at FROM modules.technician_skills
-       WHERE  module_id     = $1
-         AND  user_id       = $2
-         AND  (category_slug = $3 OR (category_slug IS NULL AND $3::text IS NULL))`,
-      [dto.module_id, userId, dto.category_slug ?? null],
-    );
-
-    if (existing) {
-      if (existing.is_active && !existing.deleted_at) {
-        throw new ConflictException('Usuario ya tiene esa skill en ese módulo/categoría');
-      }
-      await this.db.query(
-        `UPDATE modules.technician_skills
-         SET    is_active     = true,
-                deleted_at    = NULL,
-                max_concurrent = $1,
-                priority      = $2
-         WHERE  id = $3`,
-        [dto.max_concurrent ?? 10, dto.priority ?? 0, existing.id],
-      );
-      return this.getSkills(userId);
-    }
-
-    await this.db.query(
-      `INSERT INTO modules.technician_skills
-         (module_id, user_id, category_slug, location_slug, service_type, max_concurrent, priority)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    const [profile] = await this.db.query<{ id: string }[]>(
+      `INSERT INTO tickets.technician_profiles
+         (user_id, module_id, technician_type, max_daily_tickets)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id, module_id) DO UPDATE SET
+         technician_type   = EXCLUDED.technician_type,
+         max_daily_tickets = EXCLUDED.max_daily_tickets,
+         is_active         = true,
+         updated_at        = now()
+       RETURNING id`,
       [
-        dto.module_id,
         userId,
-        dto.category_slug  ?? null,
-        dto.location_slug  ?? null,
-        dto.service_type   ?? null,
-        dto.max_concurrent ?? 10,
-        dto.priority       ?? 0,
+        dto.module_id,
+        dto.technician_type   ?? 'generalist',
+        dto.max_daily_tickets ?? null,
       ],
     );
 
-    this.logger.log(`Skill añadida a usuario ${userId} en módulo ${dto.module_id} por ${actorId}`);
+    if (dto.category_ids?.length) {
+      for (const categoryId of dto.category_ids) {
+        await this.db.query(
+          `INSERT INTO tickets.technician_category_skills
+             (user_id, module_id, category_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (user_id, module_id, category_id) DO UPDATE SET
+             is_active  = true,
+             updated_at = now()`,
+          [userId, dto.module_id, categoryId],
+        );
+      }
+    }
+
+    this.logger.log(`Perfil técnico configurado para usuario ${userId} en módulo ${dto.module_id} por ${actorId}`);
     return this.getSkills(userId);
   }
 
   async updateSkill(actorId: string, userId: string, skillId: string, dto: UpdateSkillDto) {
-    const [skill] = await this.db.query<{ id: string; module_id: string }[]>(
-      `SELECT id, module_id FROM modules.technician_skills
-       WHERE  id = $1 AND user_id = $2 AND is_active = true AND deleted_at IS NULL`,
+    const [profile] = await this.db.query<{ id: string; module_id: string }[]>(
+      `SELECT id, module_id FROM tickets.technician_profiles
+       WHERE  id = $1 AND user_id = $2 AND is_active = true`,
       [skillId, userId],
     );
-    if (!skill) throw new NotFoundException(`Skill ${skillId} no encontrada para usuario ${userId}`);
+    if (!profile) throw new NotFoundException(`Perfil técnico ${skillId} no encontrado para usuario ${userId}`);
 
-    await this.assertActorCanManageModule(actorId, skill.module_id);
+    await this.assertActorCanManageModule(actorId, profile.module_id);
 
     const fields: string[] = [];
     const params: unknown[] = [];
@@ -180,40 +203,79 @@ export class SkillService {
       fields.push(`${col} = $${params.length}`);
     };
 
-    if (dto.max_concurrent !== undefined) add('max_concurrent', dto.max_concurrent);
-    if (dto.priority       !== undefined) add('priority',       dto.priority);
+    if (dto.technician_type   !== undefined) add('technician_type',   dto.technician_type);
+    if (dto.max_daily_tickets !== undefined) add('max_daily_tickets', dto.max_daily_tickets);
 
-    if (fields.length === 0) throw new BadRequestException('Sin campos para actualizar');
+    const hasFields    = fields.length > 0;
+    const hasAddCats   = (dto.category_ids_add?.length    ?? 0) > 0;
+    const hasRemoveCats = (dto.category_ids_remove?.length ?? 0) > 0;
 
-    params.push(skillId);
-    await this.db.query(
-      `UPDATE modules.technician_skills SET ${fields.join(', ')} WHERE id = $${params.length}`,
-      params,
-    );
+    if (!hasFields && !hasAddCats && !hasRemoveCats) {
+      throw new BadRequestException('Sin campos para actualizar');
+    }
+
+    if (hasFields) {
+      params.push(skillId);
+      await this.db.query(
+        `UPDATE tickets.technician_profiles SET ${fields.join(', ')}, updated_at = now()
+         WHERE id = $${params.length}`,
+        params,
+      );
+    }
+
+    if (hasAddCats) {
+      for (const catId of dto.category_ids_add!) {
+        await this.db.query(
+          `INSERT INTO tickets.technician_category_skills (user_id, module_id, category_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (user_id, module_id, category_id) DO UPDATE SET
+             is_active = true, updated_at = now()`,
+          [userId, profile.module_id, catId],
+        );
+      }
+    }
+
+    if (hasRemoveCats) {
+      await this.db.query(
+        `UPDATE tickets.technician_category_skills
+         SET    is_active = false, updated_at = now()
+         WHERE  user_id   = $1
+           AND  module_id  = $2
+           AND  category_id = ANY($3::uuid[])`,
+        [userId, profile.module_id, dto.category_ids_remove],
+      );
+    }
 
     return this.getSkills(userId);
   }
 
   async removeSkill(actorId: string, userId: string, skillId: string) {
-    const [skill] = await this.db.query<{ id: string; module_id: string; is_active: boolean }[]>(
-      `SELECT id, module_id, is_active FROM modules.technician_skills
+    const [profile] = await this.db.query<{ id: string; module_id: string; is_active: boolean }[]>(
+      `SELECT id, module_id, is_active FROM tickets.technician_profiles
        WHERE  id = $1 AND user_id = $2`,
       [skillId, userId],
     );
-    if (!skill) throw new NotFoundException(`Skill ${skillId} no encontrada para usuario ${userId}`);
-    if (!skill.is_active) throw new BadRequestException('Skill ya está inactiva');
+    if (!profile) throw new NotFoundException(`Perfil técnico ${skillId} no encontrado para usuario ${userId}`);
+    if (!profile.is_active) throw new BadRequestException('Perfil técnico ya está inactivo');
 
-    await this.assertActorCanManageModule(actorId, skill.module_id);
+    await this.assertActorCanManageModule(actorId, profile.module_id);
 
     await this.db.query(
-      `UPDATE modules.technician_skills
-       SET    is_active = false, deleted_at = now()
+      `UPDATE tickets.technician_profiles
+       SET    is_active = false, updated_at = now()
        WHERE  id = $1`,
       [skillId],
     );
+    await this.db.query(
+      `UPDATE tickets.technician_category_skills
+       SET    is_active = false, updated_at = now()
+       WHERE  user_id   = $1
+         AND  module_id  = $2`,
+      [userId, profile.module_id],
+    );
 
-    this.logger.log(`Skill ${skillId} removida de usuario ${userId} por ${actorId}`);
-    return { ok: true, message: 'Skill desactivada' };
+    this.logger.log(`Perfil técnico ${skillId} desactivado para usuario ${userId} por ${actorId}`);
+    return { ok: true, message: 'Perfil técnico desactivado' };
   }
 
   // ─── Helpers privados ─────────────────────────────────────────────────────────
@@ -246,10 +308,10 @@ export class SkillService {
       `SELECT umr.id
        FROM   modules.user_module_roles umr
        JOIN   modules.module_roles      mr ON mr.id = umr.role_id
-       WHERE  umr.user_id  = $1
-         AND  umr.module_id = $2
-         AND  mr.name       = 'admin_modulo'
-         AND  umr.is_active = true`,
+       WHERE  umr.user_id   = $1
+         AND  umr.module_id  = $2
+         AND  mr.name        = 'admin_modulo'
+         AND  umr.is_active  = true`,
       [actorId, moduleId],
     );
     if (!adminRole) throw new ForbiddenException('Sin permisos en ese módulo');

@@ -1,46 +1,35 @@
 import {
   IsUUID,
   IsOptional,
-  IsString,
   IsInt,
   Min,
-  Max,
-  MaxLength,
+  IsArray,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+const TECHNICIAN_TYPES = ['generalist', 'specialist', 'both'] as const;
 
 export class AddSkillDto {
   @ApiProperty({ description: 'ID del módulo' })
   @IsUUID()
   module_id: string;
 
-  @ApiPropertyOptional({ description: 'Slug de categoría de tickets' })
+  @ApiPropertyOptional({ enum: TECHNICIAN_TYPES, default: 'generalist',
+    description: 'Tipo de técnico: generalist (cualquier categoría), specialist (solo sus categorías), both' })
   @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  category_slug?: string;
+  @IsIn(TECHNICIAN_TYPES)
+  technician_type?: 'generalist' | 'specialist' | 'both';
 
-  @ApiPropertyOptional({ description: 'Slug de ubicación' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  location_slug?: string;
-
-  @ApiPropertyOptional({ description: 'Tipo de servicio' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  service_type?: string;
-
-  @ApiPropertyOptional({ default: 10, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({ minimum: 1, description: 'Máximo tickets por día. null = sin límite.' })
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(100)
-  max_concurrent?: number;
+  max_daily_tickets?: number;
 
-  @ApiPropertyOptional({ default: 0, description: 'Prioridad (mayor = preferido en asignación)' })
+  @ApiPropertyOptional({ type: [String], description: 'IDs de categorías habilitadas (para technician_type specialist/both)' })
   @IsOptional()
-  @IsInt()
-  priority?: number;
+  @IsArray()
+  @IsUUID('4', { each: true })
+  category_ids?: string[];
 }
