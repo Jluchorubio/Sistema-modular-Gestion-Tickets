@@ -1,6 +1,6 @@
 import {
   ChevronDown, ChevronUp, X, Play,
-  Loader2, CheckCircle2, TrendingUp, TrendingDown,
+  Loader2, CheckCircle2, TrendingUp, TrendingDown, Zap, ExternalLink,
 } from 'lucide-react';
 import { type AdmRequest } from '@/services/requests.service';
 import {
@@ -23,6 +23,10 @@ const STATUS_PILL: Record<string, string> = {
   cancelled:    styles.pillCancelled,
 };
 
+const EXECUTABLE_TYPES = new Set([
+  'role_change', 'module_access', 'sede_change', 'info_correction', 'permission_adjustment', 'reactivation',
+]);
+
 interface Props {
   req:                 AdmRequest;
   isExpanded:          boolean;
@@ -36,6 +40,8 @@ interface Props {
   onReject:            () => void;
   onEscalate:          () => void;
   onDeescalate:        () => void;
+  onExecute?:          () => void;
+  onDetail?:           () => void;
   isTakePending:       boolean;
   isProgressPending:   boolean;
   isReviewPending:     boolean;
@@ -44,7 +50,7 @@ interface Props {
 
 export function RequestCard({
   req, isExpanded, showAdminActions, isSuperadmin, activeTab,
-  onToggleExpand, onCancel, onTake, onProgress, onReject, onEscalate, onDeescalate,
+  onToggleExpand, onCancel, onTake, onProgress, onReject, onEscalate, onDeescalate, onExecute, onDetail,
   isTakePending, isProgressPending, isReviewPending, isDeescalatePending,
 }: Props) {
   const statusColor   = REQUEST_STATUS_COLORS[req.status] ?? '#94a3b8';
@@ -53,6 +59,7 @@ export function RequestCard({
   const canCancel     = !isSuperadmin && activeTab === 'mine' && ['pending', 'under_review'].includes(req.status);
   const canEscalate   = showAdminActions && !isEscalated && ['pending', 'taken', 'in_progress', 'under_review'].includes(req.status);
   const canDeescalate = isSuperadmin && isEscalated;
+  const canExecute    = showAdminActions && EXECUTABLE_TYPES.has(req.type) && ['taken', 'in_progress'].includes(req.status) && !!onExecute;
 
   return (
     <div
@@ -105,6 +112,16 @@ export function RequestCard({
           {canCancel && (
             <button className={styles.cancelBtn} title="Cancelar solicitud" onClick={onCancel}>
               <X size={13} />
+            </button>
+          )}
+          {onDetail && (
+            <button
+              className={styles.expandBtn}
+              title="Ver y gestionar solicitud"
+              onClick={onDetail}
+              style={{ color: '#6366f1' }}
+            >
+              <ExternalLink size={14} />
             </button>
           )}
           <button
@@ -189,6 +206,15 @@ export function RequestCard({
                 <X size={12} /> Rechazar
               </button>
             </>
+          )}
+          {canExecute && (
+            <button
+              className={styles.reviewBtn}
+              style={{ background: '#064e3b', color: '#34D399', border: '1px solid #065f46' }}
+              onClick={onExecute}
+            >
+              <Zap size={12} /> Ejecutar cambio
+            </button>
           )}
           {canEscalate && (
             <button

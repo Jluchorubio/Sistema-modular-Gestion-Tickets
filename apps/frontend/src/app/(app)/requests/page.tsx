@@ -18,6 +18,8 @@ import { CreateRequestModal } from './_components/CreateRequestModal';
 import { RejectRequestModal } from './_components/RejectRequestModal';
 import { CancelRequestModal } from './_components/CancelRequestModal';
 import { EscalateRequestModal } from './_components/EscalateRequestModal';
+import { ExecuteRequestModal } from './_components/ExecuteRequestModal';
+import { RequestDetailModal } from './_components/RequestDetailModal';
 import styles from './requests.module.css';
 
 export default function RequestsPage() {
@@ -49,6 +51,8 @@ export default function RequestsPage() {
   const [escalateOpen,   setEscalateOpen]   = useState(false);
   const [escalateTarget, setEscalateTarget] = useState<string | null>(null);
   const [escalateNote,   setEscalateNote]   = useState('');
+  const [executeTarget,  setExecuteTarget]  = useState<AdmRequest | null>(null);
+  const [detailTarget,   setDetailTarget]   = useState<AdmRequest | null>(null);
 
   /* ── Data ── */
   const { data, isLoading, error } = useQuery({
@@ -217,6 +221,8 @@ export default function RequestsPage() {
           onReject={() => handleReject(req)}
           onEscalate={() => { setEscalateTarget(req.id); setEscalateNote(''); setEscalateOpen(true); }}
           onDeescalate={() => deescalateMut.mutate(req.id)}
+          onExecute={showAdminActions ? () => setExecuteTarget(req) : undefined}
+          onDetail={() => setDetailTarget(req)}
           isTakePending={takeMut.isPending}
           isProgressPending={progressMut.isPending}
           isReviewPending={reviewMut.isPending}
@@ -252,6 +258,21 @@ export default function RequestsPage() {
         onClose={() => { setEscalateOpen(false); setEscalateTarget(null); setEscalateNote(''); }}
         onConfirm={() => escalateTarget && escalateMut.mutate({ id: escalateTarget, note: escalateNote || undefined })}
       />
+      {executeTarget && (
+        <ExecuteRequestModal
+          request={executeTarget}
+          onClose={() => setExecuteTarget(null)}
+        />
+      )}
+      {detailTarget && (
+        <RequestDetailModal
+          request={detailTarget}
+          onClose={() => setDetailTarget(null)}
+          onUpdated={() => { setDetailTarget(null); invalidate(); }}
+          showAdminActions={showAdminActions}
+          isSuperadmin={isSuperadmin}
+        />
+      )}
     </>
   );
 }

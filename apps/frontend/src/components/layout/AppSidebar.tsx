@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
 import { usePermissions } from '@/hooks/usePermissions';
+import { GESTION_NAV, GESTION_MODULE_NAME } from '@/app/(app)/requests/_nav';
 import type { ModuleNavItem } from '@/types/nav.types';
 import styles from './sidebar.module.css';
 
@@ -121,10 +122,15 @@ export function AppSidebar() {
   const pathname      = usePathname();
   const { isSuperadmin, isModuleAdmin: isAdmin } = usePermissions();
 
+  // Path-based nav override — avoids async race when navigating between sub-pages
+  const isGestionPath = pathname.startsWith('/requests');
+  const effectiveNav  = isGestionPath ? GESTION_NAV  : moduleNav;
+  const effectiveName = isGestionPath ? GESTION_MODULE_NAME : (moduleName ?? '');
+
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
     if (href === '/requests')  return pathname === '/requests';
-    return pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(href + '/');
   }
 
   return (
@@ -138,11 +144,11 @@ export function AppSidebar() {
 
       {/* ── Nav ── */}
       <nav className={styles.nav} aria-label="Panel principal">
-        {moduleNav ? (
+        {effectiveNav ? (
           /* ── Module context nav ── */
           <ModuleNav
-            name={moduleName ?? ''}
-            items={moduleNav}
+            name={effectiveName}
+            items={effectiveNav}
             expanded={expanded}
             isSuperadmin={isSuperadmin}
             isActive={isActive}
