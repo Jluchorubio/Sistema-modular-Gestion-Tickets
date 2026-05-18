@@ -5,20 +5,22 @@ interface UIState {
   sidebarExpanded: boolean;
   moduleNav:       ModuleNavItem[] | null;
   moduleName:      string | null;
+  moduleId:        string | null;
 
-  toggleSidebar:    () => void;
+  toggleSidebar:      () => void;
   setSidebarExpanded: (expanded: boolean) => void;
-  setModuleNav:     (name: string, items: ModuleNavItem[]) => void;
-  clearModuleNav:   () => void;
+  setModuleNav:       (name: string, items: ModuleNavItem[], moduleId?: string) => void;
+  clearModuleNav:     () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarExpanded: false,
   moduleNav:       null,
   moduleName:      null,
+  moduleId:        null,
 
   toggleSidebar:      () => set((s) => ({ sidebarExpanded: !s.sidebarExpanded })),
   setSidebarExpanded: (expanded) => set({ sidebarExpanded: expanded }),
-  setModuleNav:       (name, items) => set({ moduleName: name, moduleNav: items }),
-  clearModuleNav:     () => set({ moduleName: null, moduleNav: null }),
+  setModuleNav:       (name, items, moduleId) => set({ moduleName: name, moduleNav: items, moduleId: moduleId ?? null }),
+  clearModuleNav:     () => set({ moduleName: null, moduleNav: null, moduleId: null }),
 }));

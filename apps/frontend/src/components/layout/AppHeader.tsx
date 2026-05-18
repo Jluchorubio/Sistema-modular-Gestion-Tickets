@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import {
   Bell, User, LogOut, ChevronDown,
   CalendarDays, Clock, ClipboardList, LayoutGrid,
-  ChevronRight,
+  ChevronRight, Ticket,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
@@ -139,6 +139,16 @@ export function AppHeader({ noSidebar = false }: Props) {
         )}
 
         <div className={styles.right}>
+          {/* ── Mis Tickets ── */}
+          <Link
+            href="/my-tickets"
+            className={`${styles.ticketsBtn}${pathname.startsWith('/my-tickets') ? ` ${styles.ticketsBtnActive}` : ''}`}
+            title="Mis Tickets"
+          >
+            <Ticket size={15} />
+            <span className={styles.ticketsBtnLabel}>Mis Tickets</span>
+          </Link>
+
           {/* ── Calendar mini-popover ── */}
           <div className={styles.calWrap} ref={calRef}>
             <button

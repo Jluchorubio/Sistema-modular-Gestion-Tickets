@@ -411,6 +411,48 @@
   font-weight: 600;
 }
 
+/* ── Mis Tickets button ─────────────────────────────────────────────────── */
+.ticketsBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  cursor: pointer;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all .12s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.ticketsBtn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.ticketsBtnActive {
+  background: #eef2ff;
+  border-color: #6366F1;
+  color: #6366F1;
+}
+
+.ticketsBtnLabel {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .ticketsBtnLabel { display: none; }
+  .ticketsBtn { padding: 0 10px; }
+}
+
 /* ── Calendar mini-popover ─────────────────────────────────────────────── */
 .calWrap {
   position: relative;

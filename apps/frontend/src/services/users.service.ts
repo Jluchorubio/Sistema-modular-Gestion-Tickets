@@ -267,3 +267,30 @@ export const usersService = {
   },
 
 };
+
+export interface TrashItem {
+  id:                       string;
+  display_name:             string;
+  item_type:                string;
+  deleted_at:               string;
+  scheduled_hard_delete_at: string | null;
+  days_remaining:           number | null;
+  extra:                    string | null;
+}
+
+export const adminService = {
+  async getModuleTrash(moduleId: string): Promise<{ data: TrashItem[]; meta: { total: number } }> {
+    const { data } = await api.get('/admin/trash', { params: { type: 'request', moduleId } });
+    return data;
+  },
+
+  async restoreItems(type: string, ids: string[]): Promise<{ restored: number }> {
+    const { data } = await api.post('/admin/trash/restore', { type, ids });
+    return data;
+  },
+
+  async permanentDelete(type: string, ids: string[]): Promise<{ deleted: number }> {
+    const { data } = await api.delete('/admin/trash/permanent', { data: { type, ids } });
+    return data;
+  },
+};

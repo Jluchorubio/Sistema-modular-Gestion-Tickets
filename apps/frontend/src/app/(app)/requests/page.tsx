@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, TrendingUp, ClipboardList, Users, Tag, Trash2, BarChart2 } from 'lucide-react';
+import { Plus, TrendingUp } from 'lucide-react';
 import {
   requestsService,
   type AdmRequest, type RequestType, type RequestStatus,
@@ -10,7 +10,8 @@ import { REQUEST_TYPE_LABELS, REQUEST_TYPES } from '@/constants/requests';
 import { useAuthStore } from '@/stores/auth.store';
 import { MODULE_ROLES } from '@/constants/roles';
 import { useModuleNav } from '@/hooks/useModuleNav';
-import type { ModuleNavItem } from '@/types/nav.types';
+import { useModules } from '@/hooks/useModules';
+import { GESTION_NAV, GESTION_MODULE_NAME } from './_nav';
 import { Spinner } from '@/components/ui/Spinner';
 import { RequestCard } from './_components/RequestCard';
 import { CreateRequestModal } from './_components/CreateRequestModal';
@@ -19,16 +20,10 @@ import { CancelRequestModal } from './_components/CancelRequestModal';
 import { EscalateRequestModal } from './_components/EscalateRequestModal';
 import styles from './requests.module.css';
 
-const GESTION_NAV: ModuleNavItem[] = [
-  { key: 'requests', label: 'Solicitudes', Icon: ClipboardList, href: '/requests' },
-  { key: 'users',    label: 'Usuarios',    Icon: Users,         href: '/users'    },
-  { key: 'roles',    label: 'Roles',       Icon: Tag,           href: '/roles'    },
-  { key: 'trash',    label: 'Papelera',    Icon: Trash2,        href: '/trash'    },
-  { key: 'reports',  label: 'Reportes',    Icon: BarChart2,     href: '/reports'  },
-];
-
 export default function RequestsPage() {
-  useModuleNav('Gestión Administrativa', GESTION_NAV);
+  const { modules } = useModules();
+  const gestionId = modules?.find(m => ['gestion', 'gestion-adm'].includes(m.slug))?.id;
+  useModuleNav(GESTION_MODULE_NAME, GESTION_NAV, gestionId);
 
   const qc            = useQueryClient();
   const { user }      = useAuthStore();

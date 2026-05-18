@@ -66,6 +66,12 @@ export default function ModuleDetailPage() {
     return <p className={styles.errorMsg}>Error cargando módulo.</p>;
   }
 
+  // Gestión Administrativa is a built-in module — always lives at /requests
+  if (['gestion', 'gestion-adm'].includes((mod as any).slug) || ['administrative', 'gestion'].includes((mod as any).type)) {
+    router.replace('/requests');
+    return <Spinner />;
+  }
+
   // Block non-admin access during maintenance
   if ((mod as any).maintenance_mode && !isSuperadmin) {
     return (

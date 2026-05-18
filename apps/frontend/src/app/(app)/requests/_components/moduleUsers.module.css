@@ -1,0 +1,247 @@
+.wrap { padding: 0; }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.btnPrimary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #6366F1;
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background .12s;
+}
+
+.btnPrimary:hover { background: #4F46E5; }
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  transition: border-color .12s;
+}
+
+.row:hover { border-color: #cbd5e1; }
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #6366F1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatarImg { width: 38px; height: 38px; object-fit: cover; }
+
+.info { flex: 1; min-width: 0; }
+
+.name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roleBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6366F1;
+  background: #eef2ff;
+  border-radius: 6px;
+  padding: 3px 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btnAction {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .12s;
+  font-family: inherit;
+}
+
+.btnAction:hover { border-color: #6366F1; color: #6366F1; background: #eef2ff; }
+
+/* Empty / Error */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 16px;
+  color: #94a3b8;
+  font-size: 14px;
+  text-align: center;
+}
+
+.emptyIcon { opacity: .4; }
+
+.errorMsg {
+  padding: 16px;
+  color: #ef4444;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  min-width: 360px;
+  max-width: 440px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px;
+}
+
+.modalSub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 20px;
+}
+
+.selectWrap { position: relative; margin-bottom: 20px; }
+
+.select {
+  width: 100%;
+  padding: 10px 36px 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  font-size: 14px;
+  color: #0f172a;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+.select:focus { outline: none; border-color: #6366F1; }
+
+.selectIcon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btnPrimary {
+  padding: 9px 20px;
+  background: #6366F1;
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .12s;
+}
+
+.btnPrimary:hover:not(:disabled) { background: #4F46E5; }
+.btnPrimary:disabled { opacity: .5; cursor: not-allowed; }
+
+.btnSecondary {
+  padding: 9px 20px;
+  background: #f8fafc;
+  color: #374151;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .12s;
+}
+
+.btnSecondary:hover { border-color: #cbd5e1; }

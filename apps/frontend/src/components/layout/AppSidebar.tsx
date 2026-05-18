@@ -11,8 +11,6 @@ import {
   ChevronRight,
   ArrowLeft,
   BarChart2,
-  Ticket,
-  FileText,
   type LucideIcon,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
@@ -21,11 +19,6 @@ import type { ModuleNavItem } from '@/types/nav.types';
 import styles from './sidebar.module.css';
 
 /* ── Nav definitions ───────────────────────────────────────────────────────── */
-
-const USER_NAV = [
-  { key: 'my-tickets', label: 'Mis Tickets',  Icon: Ticket,   href: '/my-tickets' },
-  { key: 'requests',   label: 'Solicitudes',  Icon: FileText, href: '/requests'   },
-] as const;
 
 const ADMIN_NAV = [
   { key: 'reports', label: 'Reportes', Icon: BarChart2, href: '/reports' },
@@ -130,6 +123,7 @@ export function AppSidebar() {
 
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
+    if (href === '/requests')  return pathname === '/requests';
     return pathname.startsWith(href);
   }
 
@@ -165,9 +159,6 @@ export function AppSidebar() {
               <LayoutGrid className={styles.navIcon} aria-hidden="true" />
               <span className={styles.navLabel}>Dashboard</span>
             </Link>
-
-            <SectionDivider label="MÓDULOS" expanded={expanded} />
-            <NavGroup items={USER_NAV} isActive={isActive} />
 
             {isAdmin && (
               <>

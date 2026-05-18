@@ -17,13 +17,15 @@ export class AdminController {
   constructor(private readonly service: AdminService) {}
 
   @Get('trash')
-  @ApiOperation({ summary: 'Vista unificada de papelera. type: module|user|role|request' })
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Vista unificada de papelera. type: module|user|role|request. moduleId filtra solo requests del módulo.' })
   getTrash(
-    @Query('type')  type?: string,
-    @Query('page')  page?: string,
-    @Query('limit') limit?: string,
+    @Query('type')     type?: string,
+    @Query('page')     page?: string,
+    @Query('limit')    limit?: string,
+    @Query('moduleId') moduleId?: string,
   ) {
-    return this.service.getTrash(type, page ? +page : 1, limit ? +limit : 50);
+    return this.service.getTrash(type, page ? +page : 1, limit ? +limit : 50, moduleId);
   }
 
   @Post('trash/restore')

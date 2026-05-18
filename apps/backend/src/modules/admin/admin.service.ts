@@ -15,14 +15,17 @@ export class AdminService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async getTrash(type?: string, page = 1, limit = 20) {
+  async getTrash(type?: string, page = 1, limit = 20, moduleId?: string) {
     page  = Math.max(1, page);
     limit = Math.min(100, Math.max(1, limit));
     const offset = (page - 1) * limit;
 
     const parts: Promise<any[]>[] = [];
 
-    if (!type || type === 'module') {
+    // When moduleId is provided, only return requests scoped to that module
+    const moduleScoped = !!moduleId;
+
+    if (!moduleScoped && (!type || type === 'module')) {
       parts.push(this.db.query<any[]>(
         `SELECT id, name AS display_name, 'module' AS item_type,
                 deleted_at, scheduled_hard_delete_at,
@@ -31,7 +34,7 @@ export class AdminService {
          FROM modules.modules WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
       ));
     }
-    if (!type || type === 'user') {
+    if (!moduleScoped && (!type || type === 'user')) {
       parts.push(this.db.query<any[]>(
         `SELECT p.id, p.first_name || ' ' || p.last_name AS display_name, 'user' AS item_type,
                 p.deleted_at, p.scheduled_hard_delete_at,
@@ -42,7 +45,7 @@ export class AdminService {
          WHERE p.deleted_at IS NOT NULL ORDER BY p.deleted_at DESC`,
       ));
     }
-    if (!type || type === 'role') {
+    if (!moduleScoped && (!type || type === 'role')) {
       parts.push(this.db.query<any[]>(
         `SELECT id, name AS display_name, 'role' AS item_type,
                 deleted_at, scheduled_hard_delete_at,
@@ -52,14 +55,28 @@ export class AdminService {
       ));
     }
     if (!type || type === 'request') {
-      parts.push(this.db.query<any[]>(
-        `SELECT r.id, r.title AS display_name, 'request' AS item_type,
-                r.deleted_at, r.scheduled_hard_delete_at,
-                EXTRACT(EPOCH FROM (r.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
-                r.type AS extra
-         FROM requests.admin_requests r
-         WHERE r.deleted_at IS NOT NULL ORDER BY r.deleted_at DESC`,
-      ));
+      if (moduleScoped) {
+        parts.push(this.db.query<any[]>(
+          `SELECT r.id, r.title AS display_name, 'request' AS item_type,
+                  r.deleted_at, r.scheduled_hard_delete_at,
+                  EXTRACT(EPOCH FROM (r.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
+                  r.type AS extra
+           FROM requests.admin_requests r
+           WHERE r.deleted_at IS NOT NULL
+             AND r.metadata->>'module_id' = $1
+           ORDER BY r.deleted_at DESC`,
+          [moduleId],
+        ));
+      } else {
+        parts.push(this.db.query<any[]>(
+          `SELECT r.id, r.title AS display_name, 'request' AS item_type,
+                  r.deleted_at, r.scheduled_hard_delete_at,
+                  EXTRACT(EPOCH FROM (r.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
+                  r.type AS extra
+           FROM requests.admin_requests r
+           WHERE r.deleted_at IS NOT NULL ORDER BY r.deleted_at DESC`,
+        ));
+      }
     }
 
     const all = (await Promise.all(parts)).flat()

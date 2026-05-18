@@ -43,7 +43,7 @@ const GESTION_DEFAULTS: SystemModule = {
   created_at: new Date(0).toISOString(), deleted_at: null,
 };
 
-const BUILTIN_SLUGS = new Set(['helpdesk', 'inventario', 'gestion', 'tickets', 'inventory']);
+const BUILTIN_SLUGS = new Set(['helpdesk', 'inventario', 'gestion', 'gestion-adm', 'tickets', 'inventory', 'soporte', 'support', 'administrative']);
 
 function isRealModule(m: SystemModule): boolean {
   return !m.id.startsWith('__');
@@ -55,12 +55,18 @@ export function DashboardClient() {
   const authUser     = useAuthStore(s => s.user);
   const { modules, active: activeRaw, inactive: inactiveRaw, isLoading, isError } = useModules();
 
-  const active   = activeRaw.filter(m => !BUILTIN_SLUGS.has(m.slug));
-  const inactive = inactiveRaw.filter(m => !BUILTIN_SLUGS.has(m.slug));
+  const helpdeskModule  = modules?.find(m => ['helpdesk',  'tickets'].includes(m.slug) || m.type === 'helpdesk')                              ?? HELPDESK_DEFAULTS;
+  const inventoryModule = modules?.find(m => ['inventario','inventory'].includes(m.slug) || m.type === 'inventario')                           ?? INVENTORY_DEFAULTS;
+  const gestionModule   = modules?.find(m => ['gestion', 'gestion-adm'].includes(m.slug) || ['administrative', 'gestion'].includes(m.type))    ?? GESTION_DEFAULTS;
 
-  const helpdeskModule  = modules?.find(m => ['helpdesk',  'tickets'].includes(m.slug))    ?? HELPDESK_DEFAULTS;
-  const inventoryModule = modules?.find(m => ['inventario','inventory'].includes(m.slug))   ?? INVENTORY_DEFAULTS;
-  const gestionModule   = modules?.find(m => m.slug === 'gestion')                          ?? GESTION_DEFAULTS;
+  // Filter custom sections by slug AND by ID of found built-ins (robustness)
+  const builtinIds = new Set(
+    [helpdeskModule.id, inventoryModule.id, gestionModule.id].filter(id => !id.startsWith('__'))
+  );
+  const isBuiltin = (m: SystemModule) => BUILTIN_SLUGS.has(m.slug) || builtinIds.has(m.id);
+
+  const active   = activeRaw.filter(m => !isBuiltin(m));
+  const inactive = inactiveRaw.filter(m => !isBuiltin(m));
 
   const firstName    = user?.first_name    ?? '';
   const isSuperadmin = user?.is_superadmin ?? false;
