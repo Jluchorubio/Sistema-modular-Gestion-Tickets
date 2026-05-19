@@ -4,11 +4,13 @@ import type { PaginatedResponse } from '@/types/api.types';
 export type RequestType =
   | 'role_change'
   | 'module_access'
-  | 'info_correction'
-  | 'sede_change'
   | 'permission_adjustment'
   | 'account_issue'
   | 'reactivation'
+  | 'access_revocation'
+  | 'user_transfer'
+  | 'technical_issue'
+  | 'data_correction'
   | 'other'
   | 'task';
 
@@ -88,7 +90,7 @@ export const requestsService = {
   },
 
   async create(payload: {
-    type:         RequestType;
+    type:         string;
     title:        string;
     description:  string;
     priority?:    RequestPriority;

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   X, Play, Loader2, CheckCircle2, TrendingUp, TrendingDown,
   AlertCircle, ShieldCheck, Globe, MapPin, User, Zap, Clock,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, ExternalLink, Info,
 } from 'lucide-react';
 import { requestsService, type AdmRequest, type RequestStatus } from '@/services/requests.service';
 import { usersService } from '@/services/users.service';
@@ -22,20 +22,9 @@ import styles from './requestDetail.module.css';
 /* ── Constants ──────────────────────────────────────────────────────────────── */
 
 const EXECUTABLE_TYPES = new Set([
-  'role_change', 'module_access', 'sede_change', 'info_correction',
-  'permission_adjustment', 'reactivation',
+  'role_change', 'module_access', 'permission_adjustment',
+  'reactivation', 'access_revocation', 'user_transfer',
 ]);
-
-const CORRECTABLE_FIELDS = [
-  { key: 'first_name',   label: 'Nombre'              },
-  { key: 'last_name',    label: 'Apellido'             },
-  { key: 'phone',        label: 'Teléfono'             },
-  { key: 'job_title',    label: 'Cargo'                },
-  { key: 'department',   label: 'Departamento'         },
-  { key: 'primary_sede', label: 'Sede'                 },
-  { key: 'address',      label: 'Dirección'            },
-  { key: 'national_id',  label: 'Cédula / ID Nacional' },
-];
 
 /* ── Props ──────────────────────────────────────────────────────────────────── */
 
@@ -47,7 +36,7 @@ interface Props {
   isSuperadmin:     boolean;
 }
 
-/* ── Small helpers ──────────────────────────────────────────────────────────── */
+/* ── Helpers ────────────────────────────────────────────────────────────────── */
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -70,136 +59,134 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-/* ── Execution form (embedded) ──────────────────────────────────────────────── */
+/* ── Execution form ─────────────────────────────────────────────────────────── */
+
+interface ExecFormProps {
+  request:         AdmRequest;
+  requesterId:     string | null;
+  roleChange:      { moduleId: string; roleId: string };
+  setRoleChange:   (v: { moduleId: string; roleId: string }) => void;
+  moduleAccess:    { moduleId: string; roleId: string };
+  setModuleAccess: (v: { moduleId: string; roleId: string }) => void;
+}
 
 function ExecForm({
-  type,
-  requesterId,
+  request, requesterId,
   roleChange, setRoleChange,
   moduleAccess, setModuleAccess,
-  sede, setSede,
-  infoCorrection, setInfoCorrection,
-}: {
-  type:              string;
-  requesterId:       string | null;
-  roleChange:        { moduleId: string; roleId: string };
-  setRoleChange:     (v: { moduleId: string; roleId: string }) => void;
-  moduleAccess:      { moduleId: string; roleId: string };
-  setModuleAccess:   (v: { moduleId: string; roleId: string }) => void;
-  sede:              string;
-  setSede:           (v: string) => void;
-  infoCorrection:    { field: string; newValue: string };
-  setInfoCorrection: (v: { field: string; newValue: string }) => void;
-}) {
-  const { data: modules = [] } = useQuery({
+}: ExecFormProps) {
+  const type = request.type;
+
+  /* ── Load all modules for pickers ── */
+  const { data: modules = [], isLoading: loadingModules } = useQuery({
     queryKey: ['modules-exec-detail'],
     queryFn:  () => modulesService.getModules(),
     staleTime: 60_000,
+    enabled:   type === 'role_change' || type === 'module_access',
   });
 
+  /* ── Load roles for whichever module is selected ── */
   const activeModuleId = type === 'role_change' ? roleChange.moduleId : moduleAccess.moduleId;
-
-  const { data: roles = [] } = useQuery({
-    queryKey: ['module-roles-exec-detail', activeModuleId],
+  const { data: roles = [], isLoading: loadingRoles } = useQuery({
+    queryKey: ['module-roles-exec', activeModuleId],
     queryFn:  () => modulesService.getModuleRoles(activeModuleId),
     enabled:  !!activeModuleId && (type === 'role_change' || type === 'module_access'),
-    staleTime: 60_000,
+    staleTime: 30_000,
   });
+
+  /* ── Find module name for display ── */
+  const activeModule = useMemo(
+    () => modules.find(m => m.id === activeModuleId),
+    [modules, activeModuleId]
+  );
+
+  /* ── Metadata hints ── */
+  const meta         = request.metadata ?? {};
+  const metaModuleId = meta.module_id as string | undefined;
 
   if (!requesterId) {
     return (
-      <div className={styles.execNote} style={{ color: '#ef4444' }}>
-        Sin usuario solicitante vinculado — no se puede ejecutar el cambio.
+      <div className={styles.execNote} style={{ color: '#ef4444', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: 10 }}>
+        Sin usuario solicitante vinculado — no se puede ejecutar automáticamente.
       </div>
     );
   }
 
+  /* ── role_change / module_access ── */
   if (type === 'role_change' || type === 'module_access') {
-    const val     = type === 'role_change' ? roleChange     : moduleAccess;
-    const setVal  = type === 'role_change' ? setRoleChange  : setModuleAccess;
-    const modLabel = type === 'role_change' ? 'Módulo destino' : 'Módulo de acceso';
+    const val    = type === 'role_change' ? roleChange    : moduleAccess;
+    const setVal = type === 'role_change' ? setRoleChange : setModuleAccess;
+    const modLocked = !!metaModuleId; // module was set when request was created
+
     return (
       <div className={styles.execFields}>
-        <Field label={modLabel}>
-          <select
-            className={styles.select}
-            value={val.moduleId}
-            onChange={e => setVal({ moduleId: e.target.value, roleId: '' })}
-          >
-            <option value="">Seleccionar módulo…</option>
-            {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
+        {/* Module picker — read-only if metadata has it */}
+        <Field label={type === 'role_change' ? 'Módulo destino' : 'Módulo de acceso'}>
+          {modLocked ? (
+            activeModule ? (
+              <div className={styles.lockedField}>
+                <Globe size={13} />
+                <span>{activeModule.name}</span>
+                <span className={styles.lockedNote}>— solicitado por el usuario</span>
+              </div>
+            ) : (
+              <div className={styles.selectPlaceholder}>
+                <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Cargando módulo…
+              </div>
+            )
+          ) : (
+            <select
+              className={styles.select}
+              value={val.moduleId}
+              onChange={e => setVal({ moduleId: e.target.value, roleId: '' })}
+              disabled={loadingModules}
+            >
+              <option value="">{loadingModules ? 'Cargando módulos…' : 'Seleccionar módulo…'}</option>
+              {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          )}
         </Field>
+
+        {/* Roles for selected module */}
         <Field label="Rol a asignar">
-          <select
-            className={styles.select}
-            value={val.roleId}
-            onChange={e => setVal({ ...val, roleId: e.target.value })}
-            disabled={!val.moduleId}
-          >
-            <option value="">Seleccionar rol…</option>
-            {roles.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
+          {!val.moduleId ? (
+            <div className={styles.selectPlaceholder}>Selecciona un módulo primero</div>
+          ) : loadingRoles ? (
+            <div className={styles.selectPlaceholder}><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Cargando roles…</div>
+          ) : roles.length === 0 ? (
+            <div className={styles.selectPlaceholder} style={{ color: '#ef4444' }}>Este módulo no tiene roles definidos</div>
+          ) : (
+            <select
+              className={styles.select}
+              value={val.roleId}
+              onChange={e => setVal({ ...val, roleId: e.target.value })}
+            >
+              <option value="">Seleccionar rol…</option>
+              {roles.map(r => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          )}
         </Field>
       </div>
     );
   }
 
-  if (type === 'sede_change') {
-    return (
-      <div className={styles.execFields}>
-        <Field label="Nueva sede">
-          <input
-            type="text"
-            className={styles.input}
-            placeholder="Ej: Sede Norte, Barranquilla…"
-            value={sede}
-            onChange={e => setSede(e.target.value)}
-          />
-        </Field>
-      </div>
-    );
-  }
-
-  if (type === 'info_correction') {
-    return (
-      <div className={styles.execFields}>
-        <Field label="Campo a corregir">
-          <select
-            className={styles.select}
-            value={infoCorrection.field}
-            onChange={e => setInfoCorrection({ ...infoCorrection, field: e.target.value })}
-          >
-            <option value="">Seleccionar campo…</option>
-            {CORRECTABLE_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-          </select>
-        </Field>
-        <Field label="Nuevo valor">
-          <input
-            type="text"
-            className={styles.input}
-            placeholder="Valor corregido…"
-            value={infoCorrection.newValue}
-            onChange={e => setInfoCorrection({ ...infoCorrection, newValue: e.target.value })}
-            disabled={!infoCorrection.field}
-          />
-        </Field>
-      </div>
-    );
-  }
-
+  /* ── reactivation ── */
   if (type === 'reactivation') {
     return (
       <div className={styles.execNote}>
-        La cuenta del usuario será reactivada y podrá iniciar sesión de inmediato.
+        La cuenta de <strong>{request.requester_name ?? 'este usuario'}</strong> será reactivada y podrá iniciar sesión de inmediato.
       </div>
     );
   }
 
+  /* ── permission_adjustment ── */
   if (type === 'permission_adjustment') {
     return (
       <div className={styles.execNote}>
-        Ajusta los permisos del usuario desde el módulo correspondiente y luego finaliza esta solicitud.
+        Revisa la descripción del usuario y ajusta sus permisos manualmente desde el módulo correspondiente.
+        Luego finaliza esta solicitud.
       </div>
     );
   }
@@ -214,25 +201,26 @@ export function RequestDetailModal({
 }: Props) {
   const qc = useQueryClient();
 
-  const requesterId = (request as any).requester_id as string | null;
+  const requesterId  = (request as any).requester_id as string | null;
+  const meta         = request.metadata ?? {};
+  const metaModuleId = (meta.module_id ?? '') as string;
+  const metaRoleId   = (meta.role_id   ?? '') as string;
+
   const isExecutable = EXECUTABLE_TYPES.has(request.type);
   const isActionable = ['taken', 'in_progress'].includes(request.status);
   const canExecute   = showAdminActions && isExecutable && isActionable && !!requesterId;
 
-  /* ── Local state ── */
-  const [rejectNotes,    setRejectNotes]    = useState('');
-  const [escalateNote,   setEscalateNote]   = useState('');
-  const [showTimeline,   setShowTimeline]   = useState(false);
-  const [showRejectBox,  setShowRejectBox]  = useState(false);
-  const [showEscalateBox,setShowEscalateBox]= useState(false);
-  const [execError,      setExecError]      = useState('');
+  /* ── Local state — pre-populated from metadata ── */
+  const [rejectNotes,     setRejectNotes]     = useState('');
+  const [escalateNote,    setEscalateNote]    = useState('');
+  const [showTimeline,    setShowTimeline]    = useState(false);
+  const [showRejectBox,   setShowRejectBox]   = useState(false);
+  const [showEscalateBox, setShowEscalateBox] = useState(false);
+  const [execError,       setExecError]       = useState('');
+  const [resolveNotes,    setResolveNotes]    = useState('');
 
-  /* ── Execution form state ── */
-  const [roleChange,     setRoleChange]     = useState({ moduleId: '', roleId: '' });
-  const [moduleAccess,   setModuleAccess]   = useState({ moduleId: '', roleId: '' });
-  const [sede,           setSede]           = useState('');
-  const [infoCorrection, setInfoCorrection] = useState({ field: '', newValue: '' });
-  const [resolveNotes,   setResolveNotes]   = useState('');
+  const [roleChange,   setRoleChange]   = useState({ moduleId: metaModuleId, roleId: metaRoleId });
+  const [moduleAccess, setModuleAccess] = useState({ moduleId: metaModuleId, roleId: metaRoleId });
 
   /* ── Mutations ── */
   const invalidate = () => {
@@ -272,20 +260,22 @@ export function RequestDetailModal({
     mutationFn: async () => {
       if (!requesterId) throw new Error('Sin usuario vinculado.');
 
-      if (request.type === 'role_change') {
-        if (!roleChange.moduleId || !roleChange.roleId) throw new Error('Selecciona módulo y rol.');
-        await usersService.assignUserRole(requesterId, roleChange.moduleId, roleChange.roleId);
-      } else if (request.type === 'module_access') {
-        if (!moduleAccess.moduleId || !moduleAccess.roleId) throw new Error('Selecciona módulo y rol.');
-        await usersService.assignUserRole(requesterId, moduleAccess.moduleId, moduleAccess.roleId);
-      } else if (request.type === 'sede_change') {
-        if (!sede.trim()) throw new Error('Escribe la nueva sede.');
-        await usersService.updateUser(requesterId, { primary_sede: sede.trim() });
-      } else if (request.type === 'info_correction') {
-        if (!infoCorrection.field || !infoCorrection.newValue.trim()) throw new Error('Completa el campo y el valor.');
-        await usersService.updateUser(requesterId, { [infoCorrection.field]: infoCorrection.newValue.trim() } as any);
-      } else if (request.type === 'reactivation') {
-        await usersService.updateUser(requesterId, { is_active: true });
+      switch (request.type) {
+        case 'role_change':
+          if (!roleChange.moduleId || !roleChange.roleId)
+            throw new Error('Selecciona el módulo y el rol.');
+          await usersService.assignUserRole(requesterId, roleChange.moduleId, roleChange.roleId);
+          break;
+
+        case 'module_access':
+          if (!moduleAccess.moduleId || !moduleAccess.roleId)
+            throw new Error('Selecciona el módulo y el rol de acceso.');
+          await usersService.assignUserRole(requesterId, moduleAccess.moduleId, moduleAccess.roleId);
+          break;
+
+        case 'reactivation':
+          await usersService.updateUser(requesterId, { is_active: true });
+          break;
       }
 
       await requestsService.updateProgress(request.id, 'completed');
@@ -301,32 +291,34 @@ export function RequestDetailModal({
     onError: (e: any) => setExecError(e?.message ?? 'Error al ejecutar el cambio.'),
   });
 
-  /* ── Helpers ── */
+  /* ── execReady ── */
   function execReady(): boolean {
     if (!requesterId) return false;
-    if (request.type === 'role_change')     return !!(roleChange.moduleId && roleChange.roleId);
-    if (request.type === 'module_access')   return !!(moduleAccess.moduleId && moduleAccess.roleId);
-    if (request.type === 'sede_change')     return !!sede.trim();
-    if (request.type === 'info_correction') return !!(infoCorrection.field && infoCorrection.newValue.trim());
-    if (request.type === 'reactivation')    return true;
-    if (request.type === 'permission_adjustment') return true;
-    return false;
+    switch (request.type) {
+      case 'role_change':           return !!(roleChange.moduleId && roleChange.roleId);
+      case 'module_access':         return !!(moduleAccess.moduleId && moduleAccess.roleId);
+      case 'reactivation':          return true;
+      case 'permission_adjustment': return true;
+      case 'access_revocation':     return true;
+      case 'user_transfer':         return true;
+      default:                      return false;
+    }
   }
 
-  const statusColor  = REQUEST_STATUS_COLORS[request.status] ?? '#94a3b8';
-  const isEscalated  = request.escalated === true;
-  const hasSla       = isActionable && !!request.sla_due_at;
-  const canEscalate  = showAdminActions && !isEscalated &&
-    ['pending', 'taken', 'in_progress'].includes(request.status);
+  /* ── Derived ── */
+  const statusColor   = REQUEST_STATUS_COLORS[request.status] ?? '#94a3b8';
+  const isEscalated   = request.escalated === true;
+  const hasSla        = isActionable && !!request.sla_due_at;
+  const canEscalate   = showAdminActions && !isSuperadmin && !isEscalated && ['pending', 'taken', 'in_progress'].includes(request.status);
   const canDeescalate = isSuperadmin && isEscalated;
 
   const typeIcons: Record<string, React.ReactNode> = {
-    role_change:           <ShieldCheck size={13} />,
-    module_access:         <Globe size={13} />,
-    sede_change:           <MapPin size={13} />,
-    info_correction:       <User size={13} />,
-    permission_adjustment: <ShieldCheck size={13} />,
-    reactivation:          <Zap size={13} />,
+    role_change:            <ShieldCheck size={12} />,
+    module_access:          <Globe size={12} />,
+    permission_adjustment:  <ShieldCheck size={12} />,
+    reactivation:           <Zap size={12} />,
+    access_revocation:      <MapPin size={12} />,
+    user_transfer:          <User size={12} />,
   };
 
   /* ── Render ── */
@@ -334,62 +326,64 @@ export function RequestDetailModal({
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
 
-        {/* ── Escalated banner ── */}
+        {/* Escalated banner */}
         {isEscalated && (
           <div className={styles.escalatedBanner}>
-            <TrendingUp size={13} />
+            <TrendingUp size={12} />
             ESCALADA{request.escalated_by_name ? ` por ${request.escalated_by_name}` : ''}
-            {request.escalation_note && <span className={styles.escalationNote}>· "{request.escalation_note}"</span>}
+            {request.escalation_note && (
+              <span className={styles.escalationNote}>· "{request.escalation_note}"</span>
+            )}
           </div>
         )}
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <span className={styles.typeBadge}>
-              {typeIcons[request.type] ?? null}
+              {typeIcons[request.type]}
               {REQUEST_TYPE_LABELS[request.type] ?? request.type}
             </span>
             <StatusPill status={request.status} />
           </div>
-          <button type="button" className={styles.closeBtn} onClick={onClose}><X size={15} /></button>
+          <button type="button" className={styles.closeBtn} onClick={onClose}>
+            <X size={14} />
+          </button>
         </div>
 
         <div className={styles.body}>
-          {/* ── Title + meta ── */}
+          {/* Title */}
           <h2 className={styles.title}>{request.title}</h2>
 
+          {/* Meta */}
           <div className={styles.metaRow}>
             {request.requester_name && (
-              <span className={styles.metaChip}>
-                <User size={11} />
-                {request.requester_name}
-              </span>
+              <span className={styles.metaChip}><User size={11} />{request.requester_name}</span>
             )}
             <span className={styles.metaChip}>
-              <Clock size={11} />
-              {fmtDate(request.created_at)}
+              <Clock size={11} />{fmtDate(request.created_at)}
             </span>
             <span
               className={styles.priorityChip}
-              style={{ color: REQUEST_PRIORITY_COLORS[request.priority], background: `${REQUEST_PRIORITY_COLORS[request.priority]}18` }}
+              style={{
+                color: REQUEST_PRIORITY_COLORS[request.priority],
+                background: `${REQUEST_PRIORITY_COLORS[request.priority]}18`,
+              }}
             >
               {REQUEST_PRIORITY_LABELS[request.priority]}
             </span>
             {request.taken_by_name && (
               <span className={styles.metaChip} style={{ color: '#8b5cf6' }}>
-                Tomado por {request.taken_by_name}
+                Asignado a {request.taken_by_name}
               </span>
             )}
           </div>
 
           {hasSla && (
-            <div style={{ marginBottom: 10 }}>
-              <SlaCountdown sla_due_at={request.sla_due_at!} />
-            </div>
+            <div><SlaCountdown sla_due_at={request.sla_due_at!} /></div>
           )}
 
-          {/* ── Description ── */}
+          {/* Description */}
           <div className={styles.description}>{request.description}</div>
 
           {request.reviewer_name && (
@@ -399,39 +393,53 @@ export function RequestDetailModal({
             </div>
           )}
 
-          {/* ── Admin section ── */}
+          {/* Admin section */}
           {showAdminActions && request.type !== 'task' && (
             <div className={styles.adminSection}>
 
-              {/* Execution form for actionable types */}
+              {/* Execution section */}
               {canExecute && (
                 <div className={styles.execSection}>
                   <div className={styles.execTitle}>
-                    <Zap size={13} />
+                    <Zap size={12} />
                     Ejecutar cambio solicitado
                   </div>
+
                   <ExecForm
-                    type={request.type}
+                    request={request}
                     requesterId={requesterId}
-                    roleChange={roleChange}       setRoleChange={setRoleChange}
-                    moduleAccess={moduleAccess}   setModuleAccess={setModuleAccess}
-                    sede={sede}                   setSede={setSede}
-                    infoCorrection={infoCorrection} setInfoCorrection={setInfoCorrection}
+                    roleChange={roleChange}      setRoleChange={setRoleChange}
+                    moduleAccess={moduleAccess}  setModuleAccess={setModuleAccess}
                   />
+
                   <Field label="Notas de resolución (opcional)">
                     <textarea
                       className={styles.textarea}
-                      placeholder="Describe qué cambio se aplicó…"
+                      placeholder="Qué cambio se aplicó, observaciones…"
                       value={resolveNotes}
                       onChange={e => setResolveNotes(e.target.value)}
                       rows={2}
                     />
                   </Field>
+
                   {execError && <div className={styles.errorBox}>{execError}</div>}
                 </div>
               )}
 
-              {/* Reject notes box */}
+              {/* No requester_id + executable type → info box */}
+              {showAdminActions && isExecutable && isActionable && !requesterId && (
+                <div className={styles.execSection} style={{ background: '#fff7ed', borderColor: '#fdba74' }}>
+                  <div className={styles.execTitle} style={{ color: '#c2410c' }}>
+                    <Info size={12} />
+                    Ejecución manual requerida
+                  </div>
+                  <div className={styles.execNote}>
+                    Esta solicitud no tiene usuario vinculado. Aplica el cambio manualmente y luego finaliza la solicitud con el botón "Finalizar".
+                  </div>
+                </div>
+              )}
+
+              {/* Reject box */}
               {showRejectBox && (
                 <div className={styles.rejectBox}>
                   <textarea
@@ -458,9 +466,9 @@ export function RequestDetailModal({
                 </div>
               )}
 
-              {/* Escalate notes box */}
+              {/* Escalate box */}
               {showEscalateBox && (
-                <div className={styles.rejectBox}>
+                <div className={styles.rejectBox} style={{ background: '#fff7ed', borderColor: '#fdba74' }}>
                   <textarea
                     className={styles.textarea}
                     placeholder="Motivo de la escalación (opcional)…"
@@ -485,7 +493,7 @@ export function RequestDetailModal({
                 </div>
               )}
 
-              {/* ── Action buttons ── */}
+              {/* Action buttons */}
               <div className={styles.actions}>
                 {/* Take */}
                 {request.status === 'pending' && (
@@ -495,12 +503,12 @@ export function RequestDetailModal({
                     disabled={takeMut.isPending}
                     onClick={() => takeMut.mutate()}
                   >
-                    <Play size={12} />
+                    <Play size={11} />
                     {takeMut.isPending ? 'Tomando…' : 'Tomar solicitud'}
                   </button>
                 )}
 
-                {/* Mark in progress */}
+                {/* In progress */}
                 {request.status === 'taken' && (
                   <button
                     type="button"
@@ -508,12 +516,12 @@ export function RequestDetailModal({
                     disabled={progressMut.isPending}
                     onClick={() => progressMut.mutate('in_progress')}
                   >
-                    <Loader2 size={12} />
-                    {progressMut.isPending ? 'Actualizando…' : 'Pasar a proceso'}
+                    <Loader2 size={11} />
+                    {progressMut.isPending ? '…' : 'Iniciar ticket'}
                   </button>
                 )}
 
-                {/* Execute + complete (for actionable types) */}
+                {/* Execute + complete */}
                 {canExecute && (
                   <button
                     type="button"
@@ -521,35 +529,22 @@ export function RequestDetailModal({
                     disabled={!execReady() || executeMut.isPending}
                     onClick={() => { setExecError(''); executeMut.mutate(); }}
                   >
-                    <Zap size={12} />
+                    <Zap size={11} />
                     {executeMut.isPending ? 'Aplicando…' : 'Ejecutar y completar'}
                   </button>
                 )}
 
-                {/* Complete without execution (non-actionable or already know it's done) */}
-                {isActionable && !canExecute && (
+                {/* Complete without auto-exec */}
+                {isActionable && (
                   <button
                     type="button"
-                    className={styles.btnSuccess}
+                    className={canExecute ? styles.btnGhost : styles.btnSuccess}
                     disabled={progressMut.isPending}
                     onClick={() => { progressMut.mutate('completed'); onClose(); }}
+                    title={canExecute ? 'Finalizar sin aplicar cambio automático' : undefined}
                   >
-                    <CheckCircle2 size={12} />
-                    {progressMut.isPending ? 'Finalizando…' : 'Finalizar'}
-                  </button>
-                )}
-
-                {/* Complete (non-actionable + already handling manually) */}
-                {isActionable && canExecute && (
-                  <button
-                    type="button"
-                    className={styles.btnGhost}
-                    disabled={progressMut.isPending}
-                    onClick={() => { progressMut.mutate('completed'); onClose(); }}
-                    title="Finalizar sin ejecutar cambio automático"
-                  >
-                    <CheckCircle2 size={12} />
-                    Solo finalizar
+                    <CheckCircle2 size={11} />
+                    {progressMut.isPending ? '…' : canExecute ? 'Solo finalizar' : 'Finalizar'}
                   </button>
                 )}
 
@@ -560,7 +555,7 @@ export function RequestDetailModal({
                     className={styles.btnDangerOutline}
                     onClick={() => { setShowRejectBox(v => !v); setShowEscalateBox(false); }}
                   >
-                    <X size={12} />
+                    <X size={11} />
                     Rechazar
                   </button>
                 )}
@@ -572,7 +567,7 @@ export function RequestDetailModal({
                     className={styles.btnWarningOutline}
                     onClick={() => { setShowEscalateBox(v => !v); setShowRejectBox(false); }}
                   >
-                    <TrendingUp size={12} />
+                    <TrendingUp size={11} />
                     Escalar
                   </button>
                 )}
@@ -585,22 +580,22 @@ export function RequestDetailModal({
                     disabled={deescalateMut.isPending}
                     onClick={() => deescalateMut.mutate()}
                   >
-                    <TrendingDown size={12} />
-                    {deescalateMut.isPending ? 'Resolviendo…' : 'Resolver escalación'}
+                    <TrendingDown size={11} />
+                    {deescalateMut.isPending ? '…' : 'Resolver escalación'}
                   </button>
                 )}
               </div>
             </div>
           )}
 
-          {/* ── Timeline ── */}
+          {/* Timeline */}
           <div className={styles.timelineSection}>
             <button
               type="button"
               className={styles.timelineToggle}
               onClick={() => setShowTimeline(v => !v)}
             >
-              {showTimeline ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              {showTimeline ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
               {showTimeline ? 'Ocultar historial' : 'Ver historial de cambios'}
             </button>
             {showTimeline && <TimelinePanel requestId={request.id} />}

@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { MODULE_ROLES } from '@/constants/roles';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
-import { GESTION_NAV, GESTION_MODULE_NAME } from './_nav';
+import { GESTION_NAV, GESTION_MODULE_NAME, isGestionModule } from './_nav';
 import { Spinner } from '@/components/ui/Spinner';
 import { RequestCard } from './_components/RequestCard';
 import { CreateRequestModal } from './_components/CreateRequestModal';
@@ -24,7 +24,7 @@ import styles from './requests.module.css';
 
 export default function RequestsPage() {
   const { modules } = useModules();
-  const gestionId = modules?.find(m => ['gestion', 'gestion-adm'].includes(m.slug))?.id;
+  const gestionId = modules?.find(isGestionModule)?.id;
   useModuleNav(GESTION_MODULE_NAME, GESTION_NAV, gestionId);
 
   const qc            = useQueryClient();

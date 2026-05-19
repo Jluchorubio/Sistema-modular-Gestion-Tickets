@@ -200,6 +200,59 @@ export class SystemModulesService {
     return { ok: true, message: `Módulo "${mod.name}" restaurado correctamente.` };
   }
 
+  /* ── Role CRUD ──────────────────────────────────────────────────── */
+
+  async createRole(moduleId: string, name: string, description?: string) {
+    const [mod] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM modules.modules WHERE id = $1 AND deleted_at IS NULL`,
+      [moduleId],
+    );
+    if (!mod) throw new NotFoundException(`Módulo ${moduleId} no encontrado`);
+
+    const [existing] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM modules.module_roles WHERE module_id = $1 AND name = $2`,
+      [moduleId, name],
+    );
+    if (existing) throw new BadRequestException(`Ya existe un rol con ese nombre en este módulo`);
+
+    const [role] = await this.db.query<any[]>(
+      `INSERT INTO modules.module_roles (module_id, name, description)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [moduleId, name, description ?? null],
+    );
+    return role;
+  }
+
+  async updateRole(roleId: string, dto: { name?: string; description?: string }) {
+    const fields: string[] = [];
+    const values: any[]   = [];
+    let idx = 1;
+    if (dto.name        !== undefined) { fields.push(`name = $${idx++}`);        values.push(dto.name); }
+    if (dto.description !== undefined) { fields.push(`description = $${idx++}`); values.push(dto.description); }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(roleId);
+    const [role] = await this.db.query<any[]>(
+      `UPDATE modules.module_roles SET ${fields.join(', ')} WHERE id = $${idx} AND is_active = true RETURNING *`,
+      values,
+    );
+    if (!role) throw new NotFoundException(`Rol ${roleId} no encontrado`);
+    return role;
+  }
+
+  async deleteRole(roleId: string) {
+    const [role] = await this.db.query<{ id: string; name: string }[]>(
+      `SELECT id, name FROM modules.module_roles WHERE id = $1 AND is_active = true`,
+      [roleId],
+    );
+    if (!role) throw new NotFoundException(`Rol ${roleId} no encontrado`);
+    await this.db.query(
+      `UPDATE modules.module_roles SET is_active = false, updated_at = now() WHERE id = $1`,
+      [roleId],
+    );
+    return { ok: true, message: `Rol "${role.name}" desactivado` };
+  }
+
   async findDeleted() {
     return this.db.query<any[]>(
       `SELECT id, name, slug, description, type, image_url, deleted_at, scheduled_hard_delete_at,

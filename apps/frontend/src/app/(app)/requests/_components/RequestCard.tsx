@@ -57,7 +57,7 @@ export function RequestCard({
   const hasSla        = (req.status === 'taken' || req.status === 'in_progress') && req.sla_due_at;
   const isEscalated   = req.escalated === true;
   const canCancel     = !isSuperadmin && activeTab === 'mine' && ['pending', 'under_review'].includes(req.status);
-  const canEscalate   = showAdminActions && !isEscalated && ['pending', 'taken', 'in_progress', 'under_review'].includes(req.status);
+  const canEscalate   = showAdminActions && !isSuperadmin && !isEscalated && ['pending', 'taken', 'in_progress', 'under_review'].includes(req.status);
   const canDeescalate = isSuperadmin && isEscalated;
   const canExecute    = showAdminActions && EXECUTABLE_TYPES.has(req.type) && ['taken', 'in_progress'].includes(req.status) && !!onExecute;
 
@@ -171,7 +171,7 @@ export function RequestCard({
                 onClick={() => onProgress('in_progress')}
                 disabled={isProgressPending}
               >
-                <Loader2 size={12} /> En proceso
+                <Loader2 size={12} /> Iniciar ticket
               </button>
               <button
                 className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}

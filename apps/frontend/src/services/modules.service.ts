@@ -72,4 +72,44 @@ export const modulesService = {
   async bulkAssignUsers(moduleId: string, userIds: string[], roleId: string): Promise<void> {
     await api.post(`/users/module/${moduleId}/bulk-assign`, { user_ids: userIds, role_id: roleId });
   },
+
+  /* ── Role CRUD ── */
+  async createRole(moduleId: string, name: string, description?: string) {
+    const { data } = await api.post(`/system-modules/${moduleId}/roles`, { name, description });
+    return data as { id: string; name: string; description: string | null; is_active: boolean };
+  },
+
+  async updateRole(roleId: string, dto: { name?: string; description?: string }) {
+    const { data } = await api.patch(`/system-modules/roles/${roleId}`, dto);
+    return data as { id: string; name: string; description: string | null };
+  },
+
+  async deleteRole(roleId: string): Promise<void> {
+    await api.delete(`/system-modules/roles/${roleId}`);
+  },
+
+  /* ── Permission management ── */
+  async getModulePermissions(moduleId: string): Promise<{ id: string; name: string; description: string | null }[]> {
+    const { data } = await api.get(`/system-modules/${moduleId}/permissions`);
+    return data;
+  },
+
+  async createPermission(moduleId: string, name: string, description?: string) {
+    const { data } = await api.post(`/system-modules/${moduleId}/permissions`, { name, description });
+    return data as { id: string; name: string; description: string | null };
+  },
+
+  async deletePermission(permId: string): Promise<void> {
+    await api.delete(`/system-modules/permissions/${permId}`);
+  },
+
+  async getRolePermissions(roleId: string): Promise<{ id: string; name: string; description: string | null }[]> {
+    const { data } = await api.get(`/system-modules/roles/${roleId}/permissions`);
+    return data;
+  },
+
+  async setRolePermissions(roleId: string, permissionIds: string[]): Promise<{ id: string; name: string }[]> {
+    const { data } = await api.put(`/system-modules/roles/${roleId}/permissions`, { permission_ids: permissionIds });
+    return data;
+  },
 };

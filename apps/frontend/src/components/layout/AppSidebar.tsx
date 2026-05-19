@@ -11,21 +11,28 @@ import {
   ChevronRight,
   ArrowLeft,
   BarChart2,
+  Settings2,
   type LucideIcon,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui.store';
 import { usePermissions } from '@/hooks/usePermissions';
 import { GESTION_NAV, GESTION_MODULE_NAME } from '@/app/(app)/requests/_nav';
+import { systemConfigService } from '@/services/system-config.service';
 import type { ModuleNavItem } from '@/types/nav.types';
 import styles from './sidebar.module.css';
 
 /* ── Nav definitions ───────────────────────────────────────────────────────── */
 
 const ADMIN_NAV = [
-  { key: 'reports', label: 'Reportes', Icon: BarChart2, href: '/reports' },
-  { key: 'users',   label: 'Usuarios', Icon: Users,     href: '/users'   },
-  { key: 'roles',   label: 'Roles',    Icon: Tag,       href: '/roles'   },
-  { key: 'trash',   label: 'Papelera', Icon: Trash2,    href: '/trash'   },
+  { key: 'reports', label: 'Reportes',        Icon: BarChart2,  href: '/reports' },
+  { key: 'users',   label: 'Usuarios',        Icon: Users,      href: '/users'   },
+  { key: 'roles',   label: 'Roles',           Icon: Tag,        href: '/roles'   },
+  { key: 'trash',   label: 'Papelera',        Icon: Trash2,     href: '/trash'   },
+] as const;
+
+const SUPERADMIN_NAV = [
+  { key: 'config',  label: 'Configuración',   Icon: Settings2,  href: '/config'  },
 ] as const;
 
 /* ── Section divider ───────────────────────────────────────────────────────── */
@@ -122,6 +129,12 @@ export function AppSidebar() {
   const pathname      = usePathname();
   const { isSuperadmin, isModuleAdmin: isAdmin } = usePermissions();
 
+  const { data: company } = useQuery({
+    queryKey: ['company-public'],
+    queryFn:  systemConfigService.getPublicCompanyInfo,
+    staleTime: 600_000,
+  });
+
   // Path-based nav override — avoids async race when navigating between sub-pages
   const isGestionPath = pathname.startsWith('/requests');
   const effectiveNav  = isGestionPath ? GESTION_NAV  : moduleNav;
@@ -136,10 +149,25 @@ export function AppSidebar() {
   return (
     <aside className={`${styles.sidebar}${expanded ? ` ${styles.expanded}` : ''}`}>
       {/* ── Brand ── */}
-      <div className={styles.brand} aria-label="Sistema de Tickets">
+      <div className={styles.brand} aria-label={company?.name ?? 'Sistema de Tickets'}>
         <div className={styles.brandMark} aria-hidden="true">
-          <span className={styles.brandDot} />
+          {company?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={company.logo_url}
+              alt={company.name}
+              style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6 }}
+            />
+          ) : (
+            <span
+              className={styles.brandDot}
+              style={company?.primary_color ? { background: company.primary_color } : undefined}
+            />
+          )}
         </div>
+        {expanded && company?.name && (
+          <span className={styles.brandName}>{company.name}</span>
+        )}
       </div>
 
       {/* ── Nav ── */}
@@ -170,6 +198,13 @@ export function AppSidebar() {
               <>
                 <SectionDivider label="ADMINISTRACIÓN" expanded={expanded} />
                 <NavGroup items={ADMIN_NAV} isActive={isActive} />
+              </>
+            )}
+
+            {isSuperadmin && (
+              <>
+                <SectionDivider label="SISTEMA" expanded={expanded} />
+                <NavGroup items={SUPERADMIN_NAV} isActive={isActive} />
               </>
             )}
           </>

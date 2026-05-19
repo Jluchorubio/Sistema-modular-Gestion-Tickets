@@ -1,4 +1,4 @@
-import { IsString, IsIn, IsOptional, IsObject, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsIn, IsOptional, IsObject, MinLength, MaxLength, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export const TASK_SOURCES = ['user', 'system'] as const;
@@ -6,20 +6,25 @@ export const TASK_SOURCES = ['user', 'system'] as const;
 export const REQUEST_TYPES = [
   'role_change',
   'module_access',
-  'info_correction',
-  'sede_change',
   'permission_adjustment',
   'account_issue',
   'reactivation',
+  'access_revocation',
+  'user_transfer',
+  'technical_issue',
+  'data_correction',
   'other',
   'task',
 ] as const;
 
+export type RequestType = typeof REQUEST_TYPES[number];
+
 export const PRIORITY_LEVELS = ['baja', 'media', 'alta', 'critica'] as const;
 
 export class CreateRequestDto {
-  @ApiProperty({ enum: REQUEST_TYPES })
-  @IsIn(REQUEST_TYPES)
+  @ApiProperty({ description: 'type_key desde config.request_type_config' })
+  @IsString() @MinLength(3) @MaxLength(50)
+  @Matches(/^[a-z_]+$/, { message: 'type solo puede contener letras minúsculas y guiones bajos' })
   type: string;
 
   @ApiProperty({ example: 'Solicitud de acceso al módulo Inventario' })
@@ -33,7 +38,10 @@ export class CreateRequestDto {
   @MinLength(10)
   description: string;
 
-  @ApiPropertyOptional({ enum: PRIORITY_LEVELS, default: 'media' })
+  @ApiPropertyOptional({
+    enum: PRIORITY_LEVELS,
+    description: 'Solo aplica para tipo "other". En todos los demás tipos el sistema calcula la prioridad automáticamente.',
+  })
   @IsIn(PRIORITY_LEVELS)
   @IsOptional()
   priority?: string;
@@ -43,7 +51,7 @@ export class CreateRequestDto {
   @IsOptional()
   task_source?: 'user' | 'system';
 
-  @ApiPropertyOptional({ description: 'Metadata JSON (ej: { due_date: "2026-05-20" } para tasks)' })
+  @ApiPropertyOptional({ description: 'Metadata JSON (ej: { module_id, role_id } para solicitudes de módulo)' })
   @IsObject()
   @IsOptional()
   metadata?: Record<string, unknown>;

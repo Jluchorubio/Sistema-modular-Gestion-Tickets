@@ -89,4 +89,37 @@ export class SystemModulesController {
   ) {
     return this.service.toggleMaintenance(id, req.user.sub, body.enabled, body.message);
   }
+
+  /* ── Role management ────────────────────────────────────────────── */
+
+  @Post(':id/roles')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Crear rol en un módulo. Solo superadmin.' })
+  createRole(
+    @Param('id') moduleId: string,
+    @Body() body: { name: string; description?: string },
+  ) {
+    return this.service.createRole(moduleId, body.name, body.description);
+  }
+
+  @Patch('roles/:roleId')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Editar un rol. Solo superadmin.' })
+  updateRole(
+    @Param('roleId') roleId: string,
+    @Body() body: { name?: string; description?: string },
+  ) {
+    return this.service.updateRole(roleId, body);
+  }
+
+  @Delete('roles/:roleId')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Desactivar un rol. Solo superadmin.' })
+  deleteRole(@Param('roleId') roleId: string) {
+    return this.service.deleteRole(roleId);
+  }
+
 }

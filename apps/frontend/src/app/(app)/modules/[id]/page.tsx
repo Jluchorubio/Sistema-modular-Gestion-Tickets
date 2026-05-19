@@ -67,7 +67,7 @@ export default function ModuleDetailPage() {
   }
 
   // Gestión Administrativa is a built-in module — always lives at /requests
-  if (['gestion', 'gestion-adm'].includes((mod as any).slug) || ['administrative', 'gestion'].includes((mod as any).type)) {
+  if (['gestion', 'gestion-adm', 'gestion-administrativa'].includes((mod as any).slug) || ['administrative', 'gestion'].includes((mod as any).type)) {
     router.replace('/requests');
     return <Spinner />;
   }

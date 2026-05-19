@@ -3,24 +3,52 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ReviewRequestDto } from './dto/review-request.dto';
+import { calculatePriority } from './priority.engine';
+import { resolveAssignee, resolveSlaDeadline } from './routing.engine';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 @Injectable()
 export class RequestsService {
-  constructor(@InjectDataSource() private readonly db: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly db: DataSource,
+    private readonly systemConfig: SystemConfigService,
+  ) {}
 
   async create(requesterId: string, dto: CreateRequestDto & { task_source?: 'user' | 'system' }) {
-    const metaJson   = dto.metadata ? JSON.stringify(dto.metadata) : null;
+    const isActive = await this.systemConfig.isRequestTypeActive(dto.type);
+    if (!isActive) throw new BadRequestException(`Tipo de solicitud "${dto.type}" no existe o no está activo`);
+
     const taskSource = dto.task_source === 'system' ? 'system' : 'user';
+    const meta       = dto.metadata ?? null;
+    const metaJson   = meta ? JSON.stringify(meta) : null;
+
+    // Auto-calculate priority from rules
+    const { priority, auto } = await calculatePriority(
+      this.db, dto.type, requesterId, dto.priority,
+    );
+
+    // Auto-route to module admin or superadmin queue
+    const { assignedTo, autoEscalated } = await resolveAssignee(this.db, meta);
+
+    // SLA deadline at creation time
+    const slaDeadline = await resolveSlaDeadline(this.db, dto.type, priority);
+
     const [row] = await this.db.query<any[]>(
-      `INSERT INTO requests.admin_requests (requester_id, type, title, description, priority, metadata, task_source)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO requests.admin_requests
+         (requester_id, type, title, description, priority, auto_priority, metadata,
+          task_source, assigned_to, escalated, sla_due_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
-      [requesterId, dto.type, dto.title.trim(), dto.description.trim(), dto.priority ?? 'media', metaJson, taskSource],
+      [
+        requesterId, dto.type, dto.title.trim(), dto.description.trim(),
+        priority, auto, metaJson, taskSource,
+        assignedTo, autoEscalated, slaDeadline,
+      ],
     );
     await this.db.query(
-      `INSERT INTO requests.request_timeline (request_id, actor_id, action, new_status)
-       VALUES ($1, $2, 'created', 'pending')`,
-      [row.id, requesterId],
+      `INSERT INTO requests.request_timeline (request_id, actor_id, action, new_status, notes)
+       VALUES ($1, $2, 'created', 'pending', $3)`,
+      [row.id, requesterId, autoEscalated ? 'Auto-escalada: sin admin en módulo' : null],
     );
     return row;
   }
@@ -118,13 +146,14 @@ export class RequestsService {
     if (!isSuperadmin) {
       params.push(userId);
       conditions.push(`(
-        r.metadata->>'module_id' IN (
+        r.assigned_to = $${params.length}
+        OR r.metadata->>'module_id' IN (
           SELECT umr.module_id::text
           FROM   modules.user_module_roles umr
           JOIN   modules.module_roles      mr ON mr.id = umr.role_id
           WHERE  umr.user_id   = $${params.length}
             AND  umr.is_active = true
-            AND  mr.name       = 'admin_modulo'
+            AND  mr.is_admin   = true
         )
       )`);
     }
@@ -244,23 +273,29 @@ export class RequestsService {
   }
 
   async take(userId: string, requestId: string) {
-    const [req] = await this.db.query<{ id: string; status: string }[]>(
-      `SELECT id, status FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
+    const [req] = await this.db.query<{ id: string; status: string; type: string; priority: string; sla_due_at: string | null }[]>(
+      `SELECT id, status, type, priority, sla_due_at
+       FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
       [requestId],
     );
     if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
     if (req.status !== 'pending') throw new BadRequestException('Solo se pueden tomar solicitudes pendientes');
+
+    // Only recalculate SLA if not already set at creation
+    const slaDeadline = req.sla_due_at
+      ? req.sla_due_at
+      : await resolveSlaDeadline(this.db, req.type, req.priority);
 
     const [updated] = await this.db.query<any[]>(
       `UPDATE requests.admin_requests
        SET status     = 'taken',
            taken_at   = now(),
            taken_by   = $1,
-           sla_due_at = now() + INTERVAL '4 hours',
+           sla_due_at = $3,
            updated_at = now()
        WHERE id = $2
        RETURNING *`,
-      [userId, requestId],
+      [userId, requestId, slaDeadline],
     );
     await this.db.query(
       `INSERT INTO requests.request_timeline (request_id, actor_id, action, old_status, new_status)

@@ -44,7 +44,7 @@ const GESTION_DEFAULTS: SystemModule = {
 };
 
 const BUILTIN_SLUGS = new Set([
-  'helpdesk', 'inventario', 'gestion', 'gestion-adm', 'tickets', 'inventory',
+  'helpdesk', 'inventario', 'gestion', 'gestion-adm', 'gestion-administrativa', 'tickets', 'inventory',
   'soporte', 'soporte-tecnico', 'soporte_tecnico', 'soportetecnico',
   'support', 'support-tech', 'administrative',
 ]);
@@ -64,7 +64,7 @@ export function DashboardClient() {
     ['helpdesk', 'soporte'].includes(m.type ?? '')
   ) ?? HELPDESK_DEFAULTS;
   const inventoryModule = modules?.find(m => ['inventario','inventory'].includes(m.slug) || m.type === 'inventario')                           ?? INVENTORY_DEFAULTS;
-  const gestionModule   = modules?.find(m => ['gestion', 'gestion-adm'].includes(m.slug) || (!!m.type && ['administrative', 'gestion'].includes(m.type)))    ?? GESTION_DEFAULTS;
+  const gestionModule   = modules?.find(m => ['gestion', 'gestion-adm', 'gestion-administrativa'].includes(m.slug) || (!!m.type && ['administrative', 'gestion'].includes(m.type))) ?? GESTION_DEFAULTS;
 
   // Filter custom sections by slug AND by ID of found built-ins (robustness)
   const builtinIds = new Set(

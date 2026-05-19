@@ -3,11 +3,13 @@ import type { RequestType, RequestPriority } from '@/services/requests.service';
 export const REQUEST_TYPE_LABELS: Record<string, string> = {
   role_change:           'Cambio de rol',
   module_access:         'Acceso a módulo',
-  info_correction:       'Corrección de info',
-  sede_change:           'Cambio de sede',
   permission_adjustment: 'Ajuste de permisos',
   account_issue:         'Problema de cuenta',
   reactivation:          'Reactivación',
+  access_revocation:     'Revocación de acceso',
+  user_transfer:         'Traslado de usuario',
+  technical_issue:       'Problema técnico',
+  data_correction:       'Corrección de datos',
   other:                 'Otro',
   task:                  'Tarea',
 };
@@ -51,8 +53,16 @@ export const REQUEST_PRIORITY_COLORS: Record<RequestPriority, string> = {
 export const REQUEST_PRIORITIES: RequestPriority[] = ['baja', 'media', 'alta', 'critica'];
 
 export const REQUEST_TYPES: RequestType[] = [
-  'role_change', 'module_access', 'info_correction', 'sede_change',
-  'permission_adjustment', 'account_issue', 'reactivation', 'other',
+  'role_change',
+  'module_access',
+  'permission_adjustment',
+  'account_issue',
+  'reactivation',
+  'access_revocation',
+  'user_transfer',
+  'technical_issue',
+  'data_correction',
+  'other',
 ];
 
 export const TASK_TYPES: RequestType[] = ['task'];

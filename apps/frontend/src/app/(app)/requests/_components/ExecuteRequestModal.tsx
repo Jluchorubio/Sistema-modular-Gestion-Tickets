@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, ShieldCheck, Globe, MapPin, User, Zap } from 'lucide-react';
+import { X, ShieldCheck, Globe, MapPin, User, Zap } from 'lucide-react'; // MapPin/User used in typeIcon
 import { type AdmRequest } from '@/services/requests.service';
 import { usersService } from '@/services/users.service';
 import { modulesService } from '@/services/modules.service';
@@ -17,7 +17,8 @@ interface Props {
 }
 
 const ACTIONABLE_TYPES = new Set([
-  'role_change', 'module_access', 'sede_change', 'info_correction', 'permission_adjustment', 'reactivation',
+  'role_change', 'module_access', 'permission_adjustment', 'reactivation',
+  'access_revocation', 'user_transfer',
 ]);
 
 export function canExecuteRequest(req: AdmRequest): boolean {
@@ -137,73 +138,6 @@ function ModuleAccessForm({
   );
 }
 
-function SedeChangeForm({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <Field label="Nueva sede">
-      <input
-        type="text"
-        className={styles.input}
-        placeholder="Ej: Sede Norte, Barranquilla…"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-      />
-    </Field>
-  );
-}
-
-function InfoCorrectionForm({
-  value,
-  onChange,
-}: {
-  value: { field: string; newValue: string };
-  onChange: (v: { field: string; newValue: string }) => void;
-}) {
-  const CORRECTABLE_FIELDS = [
-    { key: 'first_name',   label: 'Nombre' },
-    { key: 'last_name',    label: 'Apellido' },
-    { key: 'email',        label: 'Email' },
-    { key: 'phone',        label: 'Teléfono' },
-    { key: 'job_title',    label: 'Cargo' },
-    { key: 'department',   label: 'Departamento' },
-    { key: 'primary_sede', label: 'Sede' },
-    { key: 'address',      label: 'Dirección' },
-    { key: 'national_id',  label: 'Cédula / ID Nacional' },
-  ];
-
-  return (
-    <>
-      <Field label="Campo a corregir">
-        <select
-          className={styles.select}
-          value={value.field}
-          onChange={e => onChange({ ...value, field: e.target.value })}
-        >
-          <option value="">Seleccionar campo…</option>
-          {CORRECTABLE_FIELDS.map(f => (
-            <option key={f.key} value={f.key}>{f.label}</option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Nuevo valor">
-        <input
-          type="text"
-          className={styles.input}
-          placeholder="Valor corregido…"
-          value={value.newValue}
-          onChange={e => onChange({ ...value, newValue: e.target.value })}
-          disabled={!value.field}
-        />
-      </Field>
-    </>
-  );
-}
-
 /* ── Main modal ─────────────────────────────────────────────────────────────── */
 
 export function ExecuteRequestModal({ request, onClose }: Props) {
@@ -211,12 +145,10 @@ export function ExecuteRequestModal({ request, onClose }: Props) {
 
   const requesterId = (request as any).requester_id as string | null;
 
-  const [roleChange,     setRoleChange]     = useState({ moduleId: '', roleId: '' });
-  const [moduleAccess,   setModuleAccess]   = useState({ moduleId: '', roleId: '' });
-  const [sede,           setSede]           = useState('');
-  const [infoCorrection, setInfoCorrection] = useState({ field: '', newValue: '' });
-  const [notes,          setNotes]          = useState('');
-  const [error,          setError]          = useState('');
+  const [roleChange,   setRoleChange]   = useState({ moduleId: '', roleId: '' });
+  const [moduleAccess, setModuleAccess] = useState({ moduleId: '', roleId: '' });
+  const [notes,        setNotes]        = useState('');
+  const [error,        setError]        = useState('');
 
   const completeMut = useMutation({
     mutationFn: async () => {
@@ -230,16 +162,6 @@ export function ExecuteRequestModal({ request, onClose }: Props) {
       if (request.type === 'module_access') {
         if (!moduleAccess.moduleId || !moduleAccess.roleId) throw new Error('Selecciona módulo y rol.');
         await usersService.assignUserRole(requesterId, moduleAccess.moduleId, moduleAccess.roleId);
-      }
-
-      if (request.type === 'sede_change') {
-        if (!sede.trim()) throw new Error('Escribe la nueva sede.');
-        await usersService.updateUser(requesterId, { primary_sede: sede.trim() });
-      }
-
-      if (request.type === 'info_correction') {
-        if (!infoCorrection.field || !infoCorrection.newValue.trim()) throw new Error('Selecciona campo y valor.');
-        await usersService.updateUser(requesterId, { [infoCorrection.field]: infoCorrection.newValue.trim() } as any);
       }
 
       if (request.type === 'reactivation') {
@@ -260,31 +182,31 @@ export function ExecuteRequestModal({ request, onClose }: Props) {
 
   function isReady(): boolean {
     if (!requesterId) return false;
-    if (request.type === 'role_change')     return !!(roleChange.moduleId && roleChange.roleId);
-    if (request.type === 'module_access')   return !!(moduleAccess.moduleId && moduleAccess.roleId);
-    if (request.type === 'sede_change')     return !!sede.trim();
-    if (request.type === 'info_correction') return !!(infoCorrection.field && infoCorrection.newValue.trim());
-    if (request.type === 'reactivation')    return true;
+    if (request.type === 'role_change')           return !!(roleChange.moduleId && roleChange.roleId);
+    if (request.type === 'module_access')         return !!(moduleAccess.moduleId && moduleAccess.roleId);
+    if (request.type === 'reactivation')          return true;
     if (request.type === 'permission_adjustment') return true;
+    if (request.type === 'access_revocation')     return true;
+    if (request.type === 'user_transfer')         return true;
     return false;
   }
 
   const typeIcon: Record<string, React.ReactNode> = {
     role_change:            <ShieldCheck size={16} />,
     module_access:          <Globe size={16} />,
-    sede_change:            <MapPin size={16} />,
-    info_correction:        <User size={16} />,
     permission_adjustment:  <ShieldCheck size={16} />,
+    access_revocation:      <MapPin size={16} />,
+    user_transfer:          <User size={16} />,
     reactivation:           <Zap size={16} />,
   };
 
   const typeTitle: Record<string, string> = {
     role_change:            'Asignar nuevo rol',
     module_access:          'Dar acceso a módulo',
-    sede_change:            'Cambiar sede',
-    info_correction:        'Corregir información',
     permission_adjustment:  'Ajustar permisos',
     reactivation:           'Reactivar cuenta',
+    access_revocation:      'Revocar acceso',
+    user_transfer:          'Trasladar usuario',
   };
 
   return (
@@ -318,12 +240,6 @@ export function ExecuteRequestModal({ request, onClose }: Props) {
           )}
           {request.type === 'module_access' && (
             <ModuleAccessForm value={moduleAccess} onChange={setModuleAccess} />
-          )}
-          {request.type === 'sede_change' && (
-            <SedeChangeForm value={sede} onChange={setSede} />
-          )}
-          {request.type === 'info_correction' && (
-            <InfoCorrectionForm value={infoCorrection} onChange={setInfoCorrection} />
           )}
           {request.type === 'reactivation' && (
             <div className={styles.reactivationNote}>

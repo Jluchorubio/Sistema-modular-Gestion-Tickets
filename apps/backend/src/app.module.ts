@@ -15,6 +15,8 @@ import { UsersModule } from './modules/users/users.module';
 import { RequestsModule } from './modules/requests/requests.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { HealthModule } from './health/health.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { HealthModule } from './health/health.module';
     UsersModule,
     RequestsModule,
     AdminModule,
+    SystemConfigModule,
+    PermissionsModule,
   ],
   providers: [
     // Rate limit guard aplicado globalmente

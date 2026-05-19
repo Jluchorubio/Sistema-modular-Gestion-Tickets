@@ -3,6 +3,7 @@
 import { useUIStore } from '@/stores/ui.store';
 import { useHeartbeat } from '@/hooks/useHeartbeat';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useLoadPermissions } from '@/hooks/usePermission';
 import { ADMIN_ROLES } from '@/constants/roles';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
@@ -19,6 +20,7 @@ function hasAdminAccess(user: { is_superadmin?: boolean; module_roles?: { status
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const expanded = useUIStore((s) => s.sidebarExpanded);
   useHeartbeat();
+  useLoadPermissions();
 
   const { user, isLoading } = useCurrentUser();
 

@@ -4,12 +4,12 @@ import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { GestionReportsClient } from '../_components/GestionReportsClient';
 import { Spinner } from '@/components/ui/Spinner';
-import { GESTION_NAV, GESTION_MODULE_NAME } from '../_nav';
+import { GESTION_NAV, GESTION_MODULE_NAME, isGestionModule } from '../_nav';
 
 export default function GestionReportsPage() {
   const user       = useAuthStore(s => s.user);
   const { modules, isLoading } = useModules();
-  const gestionId  = modules?.find(m => ['gestion', 'gestion-adm'].includes(m.slug))?.id;
+  const gestionId  = modules?.find(isGestionModule)?.id;
 
   useModuleNav(GESTION_MODULE_NAME, GESTION_NAV, gestionId);
 

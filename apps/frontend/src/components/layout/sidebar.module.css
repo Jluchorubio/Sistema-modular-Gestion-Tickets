@@ -71,6 +71,17 @@
   box-shadow: 0 0 0 3px rgba(255, 99, 71, .12);
 }
 
+.brandName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #17384a;
+  margin-left: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
 /* ── Nav ── */
 .nav {
   display: flex;
