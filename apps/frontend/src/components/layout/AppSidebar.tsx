@@ -86,17 +86,13 @@ function ModuleNav({
   name,
   items,
   expanded,
-  isSuperadmin,
   isActive,
 }: {
-  name:         string;
-  items:        ModuleNavItem[];
-  expanded:     boolean;
-  isSuperadmin: boolean;
-  isActive:     (href: string) => boolean;
+  name:     string;
+  items:    ModuleNavItem[];
+  expanded: boolean;
+  isActive: (href: string) => boolean;
 }) {
-  const visible = items.filter((item) => !item.superadminOnly || isSuperadmin);
-
   return (
     <>
       <Link href="/dashboard" className={styles.moduleCtxBack} title="Volver al Dashboard">
@@ -110,7 +106,7 @@ function ModuleNav({
 
       <SectionDivider label="MÓDULO" expanded={expanded} />
 
-      {visible.map(({ key, label, Icon, href, permKey }) => {
+      {items.map(({ key, label, Icon, href, permKey }) => {
         const link = (
           <Link
             key={key}
@@ -195,7 +191,6 @@ export function AppSidebar() {
             name={effectiveName}
             items={effectiveNav}
             expanded={expanded}
-            isSuperadmin={isSuperadmin}
             isActive={isActive}
           />
         ) : (

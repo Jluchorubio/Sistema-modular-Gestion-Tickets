@@ -12,7 +12,6 @@ import { MODULE_ROLES } from '@/constants/roles';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
 import { usePermission } from '@/hooks/usePermission';
-import { PermissionGate } from '@/components/auth/PermissionGate';
 import { GESTION_NAV, GESTION_MODULE_NAME, isGestionModule } from './_nav';
 import { Spinner } from '@/components/ui/Spinner';
 import { RequestCard } from './_components/RequestCard';
