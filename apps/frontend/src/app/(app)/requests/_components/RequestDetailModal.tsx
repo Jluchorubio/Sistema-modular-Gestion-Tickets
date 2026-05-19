@@ -10,6 +10,7 @@ import {
 import { requestsService, type AdmRequest, type RequestStatus } from '@/services/requests.service';
 import { usersService } from '@/services/users.service';
 import { modulesService } from '@/services/modules.service';
+import { usePermission } from '@/hooks/usePermission';
 import {
   REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS,
   REQUEST_PRIORITY_LABELS, REQUEST_PRIORITY_COLORS,
@@ -200,6 +201,11 @@ export function RequestDetailModal({
   request, onClose, onUpdated, showAdminActions, isSuperadmin,
 }: Props) {
   const qc = useQueryClient();
+
+  const permTake     = usePermission('gestion:requests:take');
+  const permProgress = usePermission('gestion:requests:progress');
+  const permApprove  = usePermission('gestion:requests:approve');
+  const permEscalate = usePermission('gestion:requests:escalate');
 
   const requesterId  = (request as any).requester_id as string | null;
   const meta         = request.metadata ?? {};
@@ -496,7 +502,7 @@ export function RequestDetailModal({
               {/* Action buttons */}
               <div className={styles.actions}>
                 {/* Take */}
-                {request.status === 'pending' && (
+                {request.status === 'pending' && permTake && (
                   <button
                     type="button"
                     className={styles.btnPrimary}
@@ -509,7 +515,7 @@ export function RequestDetailModal({
                 )}
 
                 {/* In progress */}
-                {request.status === 'taken' && (
+                {request.status === 'taken' && permProgress && (
                   <button
                     type="button"
                     className={styles.btnSecondary}
@@ -522,7 +528,7 @@ export function RequestDetailModal({
                 )}
 
                 {/* Execute + complete */}
-                {canExecute && (
+                {canExecute && permProgress && (
                   <button
                     type="button"
                     className={styles.btnSuccess}
@@ -535,7 +541,7 @@ export function RequestDetailModal({
                 )}
 
                 {/* Complete without auto-exec */}
-                {isActionable && (
+                {isActionable && permProgress && (
                   <button
                     type="button"
                     className={canExecute ? styles.btnGhost : styles.btnSuccess}
@@ -549,7 +555,7 @@ export function RequestDetailModal({
                 )}
 
                 {/* Reject */}
-                {['pending', 'taken', 'in_progress'].includes(request.status) && (
+                {['pending', 'taken', 'in_progress'].includes(request.status) && permApprove && (
                   <button
                     type="button"
                     className={styles.btnDangerOutline}
@@ -561,7 +567,7 @@ export function RequestDetailModal({
                 )}
 
                 {/* Escalate */}
-                {canEscalate && (
+                {canEscalate && permEscalate && (
                   <button
                     type="button"
                     className={styles.btnWarningOutline}
@@ -572,7 +578,7 @@ export function RequestDetailModal({
                   </button>
                 )}
 
-                {/* De-escalate */}
+                {/* De-escalate — superadmin only, always has * */}
                 {canDeescalate && (
                   <button
                     type="button"

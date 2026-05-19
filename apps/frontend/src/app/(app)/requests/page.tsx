@@ -38,6 +38,10 @@ export default function RequestsPage() {
   const hasAdminAccess  = isSuperadmin || isAdminModulo;
   const canCreate       = usePermission('gestion:requests:create');
   const canViewAll      = usePermission('gestion:requests:view_all');
+  const canTake         = usePermission('gestion:requests:take');
+  const canProgress     = usePermission('gestion:requests:progress');
+  const canApprove      = usePermission('gestion:requests:approve');
+  const canEscalatePerm = usePermission('gestion:requests:escalate');
 
   /* ── Tabs + filters ── */
   const [activeTab,     setActiveTab]     = useState<'mine' | 'inbox'>(hasAdminAccess ? 'inbox' : 'mine');
@@ -233,6 +237,10 @@ export default function RequestsPage() {
           isProgressPending={progressMut.isPending}
           isReviewPending={reviewMut.isPending}
           isDeescalatePending={deescalateMut.isPending}
+          permTake={canTake}
+          permProgress={canProgress}
+          permApprove={canApprove}
+          permEscalate={canEscalatePerm}
         />
       ))}
 

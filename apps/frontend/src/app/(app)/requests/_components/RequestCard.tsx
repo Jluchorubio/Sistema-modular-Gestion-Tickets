@@ -46,12 +46,18 @@ interface Props {
   isProgressPending:   boolean;
   isReviewPending:     boolean;
   isDeescalatePending: boolean;
+  // permission flags — default true when not provided
+  permTake?:     boolean;
+  permProgress?: boolean;
+  permApprove?:  boolean;
+  permEscalate?: boolean;
 }
 
 export function RequestCard({
   req, isExpanded, showAdminActions, isSuperadmin, activeTab,
   onToggleExpand, onCancel, onTake, onProgress, onReject, onEscalate, onDeescalate, onExecute, onDetail,
   isTakePending, isProgressPending, isReviewPending, isDeescalatePending,
+  permTake = true, permProgress = true, permApprove = true, permEscalate = true,
 }: Props) {
   const statusColor   = REQUEST_STATUS_COLORS[req.status] ?? '#94a3b8';
   const hasSla        = (req.status === 'taken' || req.status === 'in_progress') && req.sla_due_at;
@@ -147,67 +153,81 @@ export function RequestCard({
         <div className={styles.reviewActions}>
           {req.status === 'pending' && (
             <>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
-                style={{ background: '#4C1D95', color: '#DDD6FE', border: '1px solid #6D28D9' }}
-                onClick={onTake}
-                disabled={isTakePending}
-              >
-                <Play size={12} /> Tomar solicitud
-              </button>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
-                onClick={onReject}
-                disabled={isReviewPending}
-              >
-                <X size={12} /> Rechazar
-              </button>
+              {permTake && (
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
+                  style={{ background: '#4C1D95', color: '#DDD6FE', border: '1px solid #6D28D9' }}
+                  onClick={onTake}
+                  disabled={isTakePending}
+                >
+                  <Play size={12} /> Tomar solicitud
+                </button>
+              )}
+              {permApprove && (
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
+                  onClick={onReject}
+                  disabled={isReviewPending}
+                >
+                  <X size={12} /> Rechazar
+                </button>
+              )}
             </>
           )}
           {req.status === 'taken' && (
             <>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
-                onClick={() => onProgress('in_progress')}
-                disabled={isProgressPending}
-              >
-                <Loader2 size={12} /> Iniciar ticket
-              </button>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
-                onClick={() => onProgress('completed')}
-                disabled={isProgressPending}
-              >
-                <CheckCircle2 size={12} /> Finalizar
-              </button>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
-                onClick={onReject}
-                disabled={isReviewPending}
-              >
-                <X size={12} /> Rechazar
-              </button>
+              {permProgress && (
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
+                  onClick={() => onProgress('in_progress')}
+                  disabled={isProgressPending}
+                >
+                  <Loader2 size={12} /> Iniciar ticket
+                </button>
+              )}
+              {permProgress && (
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
+                  onClick={() => onProgress('completed')}
+                  disabled={isProgressPending}
+                >
+                  <CheckCircle2 size={12} /> Finalizar
+                </button>
+              )}
+              {permApprove && (
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
+                  onClick={onReject}
+                  disabled={isReviewPending}
+                >
+                  <X size={12} /> Rechazar
+                </button>
+              )}
             </>
           )}
           {req.status === 'in_progress' && (
             <>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
-                onClick={() => onProgress('completed')}
-                disabled={isProgressPending}
-              >
-                <CheckCircle2 size={12} /> Finalizar
-              </button>
-              <button
-                className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
-                onClick={onReject}
-                disabled={isReviewPending}
-              >
-                <X size={12} /> Rechazar
-              </button>
+              {permProgress && (
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
+                  onClick={() => onProgress('completed')}
+                  disabled={isProgressPending}
+                >
+                  <CheckCircle2 size={12} /> Finalizar
+                </button>
+              )}
+              {permApprove && (
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
+                  onClick={onReject}
+                  disabled={isReviewPending}
+                >
+                  <X size={12} /> Rechazar
+                </button>
+              )}
             </>
           )}
-          {canExecute && (
+          {canExecute && permProgress && (
             <button
               className={styles.reviewBtn}
               style={{ background: '#064e3b', color: '#34D399', border: '1px solid #065f46' }}
@@ -216,7 +236,7 @@ export function RequestCard({
               <Zap size={12} /> Ejecutar cambio
             </button>
           )}
-          {canEscalate && (
+          {canEscalate && permEscalate && (
             <button
               className={styles.reviewBtn}
               style={{ background: '#431407', color: '#FB923C', border: '1px solid #7c2d12' }}
