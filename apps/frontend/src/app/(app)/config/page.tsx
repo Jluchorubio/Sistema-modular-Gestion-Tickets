@@ -10,7 +10,8 @@ import {
 import { systemConfigService }  from '@/services/system-config.service';
 import { permissionsService }   from '@/services/permissions.service';
 import type { PermissionDef, RoleInfo, ModuleScope } from '@/services/permissions.service';
-import { useSuperadminGuard }   from '@/hooks/useSuperadminGuard';
+import { usePermission }        from '@/hooks/usePermission';
+import { usePermissionsStore }  from '@/stores/permissions.store';
 import { Spinner }              from '@/components/ui/Spinner';
 import type {
   Headquarter, Department, Position, SlaRule, Company, RequestTypeConfig,
@@ -880,11 +881,11 @@ function RolesPermissionsTab() {
 /* ── Main page ──────────────────────────────────────────────────── */
 
 export default function GlobalConfigPage() {
-  const { status } = useSuperadminGuard();
+  const loaded  = usePermissionsStore(s => s.loaded);
+  const canView = usePermission('global:sidebar:config');
   const [tab, setTab] = useState<Tab>('empresa');
 
-  if (status === 'loading')       return <Spinner />;
-  if (status === 'unauthorized')  return null;
+  if (loaded && !canView) return null;
 
   return (
     <div className={styles.page}>

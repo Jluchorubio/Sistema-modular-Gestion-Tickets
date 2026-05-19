@@ -9,7 +9,8 @@ import { Plus } from 'lucide-react';
 import { usersService } from '@/services/users.service';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
-import { useSuperadminGuard } from '@/hooks/useSuperadminGuard';
+import { usePermission } from '@/hooks/usePermission';
+import { usePermissionsStore } from '@/stores/permissions.store';
 import type { GlobalRole } from '@/types/user.types';
 import styles from '../roles.module.css';
 import modalStyles from '@/components/ui/modal.module.css';
@@ -21,7 +22,8 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>;
 
 export function RolesClient() {
-  const { status } = useSuperadminGuard();
+  const loaded  = usePermissionsStore(s => s.loaded);
+  const canView = usePermission('global:sidebar:roles');
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [serverMsg,  setServerMsg]  = useState<{ ok: boolean; text: string } | null>(null);
@@ -29,6 +31,7 @@ export function RolesClient() {
   const { data: roles, isLoading, error } = useQuery({
     queryKey: ['global-roles'],
     queryFn:  usersService.getGlobalRoles,
+    enabled:  canView,
   });
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } =
@@ -66,8 +69,11 @@ export function RolesClient() {
     setCreateOpen(true);
   }, [reset]);
 
-  if (status === 'loading')      return <Spinner />;
-  if (status === 'unauthorized') return null;
+  if (loaded && !canView) return (
+    <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
+      No tienes permiso para ver esta sección.
+    </div>
+  );
 
   const sorted = roles
     ? [...roles.filter(r => r.is_active), ...roles.filter(r => !r.is_active)]

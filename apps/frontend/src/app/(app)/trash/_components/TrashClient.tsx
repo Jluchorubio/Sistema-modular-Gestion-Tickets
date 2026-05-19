@@ -9,7 +9,8 @@ import { useSelection } from '@/hooks/useSelection';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
 import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
-import { useSuperadminGuard } from '@/hooks/useSuperadminGuard';
+import { usePermission } from '@/hooks/usePermission';
+import { usePermissionsStore } from '@/stores/permissions.store';
 import styles from '../trash.module.css';
 import mstyles from '@/components/ui/modal.module.css';
 
@@ -30,8 +31,9 @@ const TYPE_BADGE: Record<string, string> = {
 };
 
 export function TrashClient() {
-  const { status } = useSuperadminGuard();
-  const qc         = useQueryClient();
+  const loaded  = usePermissionsStore(s => s.loaded);
+  const canView = usePermission('global:sidebar:trash');
+  const qc      = useQueryClient();
 
   const [filter, setFilter] = useState<TrashType>('all');
 
@@ -47,6 +49,7 @@ export function TrashClient() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['trash', filter],
     queryFn:  () => adminService.getTrash(filter),
+    enabled:  canView,
   });
 
   const items = data?.data ?? [];
@@ -126,8 +129,11 @@ export function TrashClient() {
     }
   }
 
-  if (status === 'loading')      return <Spinner />;
-  if (status === 'unauthorized') return null;
+  if (loaded && !canView) return (
+    <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
+      No tienes permiso para ver esta sección.
+    </div>
+  );
 
   const bulkPending = bulkRestoreMut.isPending;
 
