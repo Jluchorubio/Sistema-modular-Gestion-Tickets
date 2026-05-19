@@ -1,22 +1,22 @@
 'use client';
-import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
+import { usePermission } from '@/hooks/usePermission';
 import { GestionRolesClient } from '../_components/GestionRolesClient';
 import { Spinner } from '@/components/ui/Spinner';
 import { GESTION_NAV, GESTION_MODULE_NAME, isGestionModule } from '../_nav';
 
 export default function GestionRolesPage() {
-  const user        = useAuthStore(s => s.user);
   const { modules, isLoading } = useModules();
-  const gestionId   = modules?.find(isGestionModule)?.id;
+  const gestionId  = modules?.find(isGestionModule)?.id;
+  const canView    = usePermission('gestion:roles:view');
 
   useModuleNav(GESTION_MODULE_NAME, GESTION_NAV, gestionId);
 
-  if (!user?.is_superadmin) {
+  if (!canView) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
-        Solo superadmins pueden ver esta sección.
+        No tienes permiso para ver esta sección.
       </div>
     );
   }

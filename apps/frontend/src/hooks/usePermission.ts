@@ -28,17 +28,25 @@ export function useLoadPermissions() {
   }, [isAuthenticated, reset]);
 }
 
-/* Check a single permission */
+/* Check a single permission.
+   Returns true while permissions are still loading (optimistic) to avoid
+   content flash. Backend is the authoritative security layer. */
 export function usePermission(key: string): boolean {
-  return usePermissionsStore(s => s.hasPermission(key));
+  const loaded  = usePermissionsStore(s => s.loaded);
+  const hasPerm = usePermissionsStore(s => s.hasPermission(key));
+  return !loaded || hasPerm;
 }
 
 /* Check if user has ANY of the given permissions */
 export function useHasAnyPermission(...keys: string[]): boolean {
-  return usePermissionsStore(s => keys.some(k => s.hasPermission(k)));
+  const loaded = usePermissionsStore(s => s.loaded);
+  const hasAny = usePermissionsStore(s => keys.some(k => s.hasPermission(k)));
+  return !loaded || hasAny;
 }
 
 /* Check if user has ALL of the given permissions */
 export function useHasAllPermissions(...keys: string[]): boolean {
-  return usePermissionsStore(s => keys.every(k => s.hasPermission(k)));
+  const loaded  = usePermissionsStore(s => s.loaded);
+  const hasAll  = usePermissionsStore(s => keys.every(k => s.hasPermission(k)));
+  return !loaded || hasAll;
 }
