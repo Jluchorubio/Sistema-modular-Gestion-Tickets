@@ -89,9 +89,11 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
         </button>
       </div>
 
-      <button type="button" className={styles.linkBtn} onClick={onForgot}>
-        ¿Olvidaste tu contraseña?
-      </button>
+      <div className={styles.formRow}>
+        <button type="button" className={styles.linkBtn} onClick={onForgot}>
+          ¿Olvidaste tu contraseña?
+        </button>
+      </div>
 
       <MsgBanner msg={msg} />
 
