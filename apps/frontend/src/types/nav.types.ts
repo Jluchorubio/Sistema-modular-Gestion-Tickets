@@ -6,6 +6,7 @@ export interface ModuleNavItem {
   Icon:           LucideIcon;
   href:           string;
   superadminOnly?: boolean;
+  permKey?:        string;
 }
 
 export interface ModuleNavConfig {

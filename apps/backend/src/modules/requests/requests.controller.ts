@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { ProfileCompleteGuard } from '../../gateway/guards/profile-complete.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ReviewRequestDto } from './dto/review-request.dto';
@@ -19,12 +20,14 @@ export class RequestsController {
   constructor(private readonly service: RequestsService) {}
 
   @Post()
+  @RequirePermission('gestion:requests:create')
   @ApiOperation({ summary: 'Crear solicitud administrativa.' })
   create(@Req() req: any, @Body() dto: CreateRequestDto) {
     return this.service.create(req.user.sub, dto);
   }
 
   @Get('me')
+  @RequirePermission('gestion:requests:view_own')
   @ApiOperation({ summary: 'Mis solicitudes.' })
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'page',   required: false, type: Number })
@@ -55,6 +58,7 @@ export class RequestsController {
   @Get('user/:id')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('gestion:requests:view_all')
   @ApiOperation({ summary: 'Solicitudes de un usuario específico. Superadmin / admin_modulo.' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   findByUser(@Param('id') id: string, @Query('limit') limit?: string) {
@@ -64,6 +68,7 @@ export class RequestsController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('gestion:requests:view_all')
   @ApiOperation({ summary: 'Listar todas las solicitudes. Superadmin / admin_modulo.' })
   @ApiQuery({ name: 'status',    required: false })
   @ApiQuery({ name: 'type',      required: false })
@@ -88,6 +93,7 @@ export class RequestsController {
   @Patch(':id/review')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('gestion:requests:approve')
   @ApiOperation({ summary: 'Revisar solicitud (aprobar / rechazar / en revisión). Superadmin / admin_modulo.' })
   review(
     @Req() req: any,
@@ -100,6 +106,7 @@ export class RequestsController {
   @Post(':id/take')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('gestion:requests:take')
   @ApiOperation({ summary: 'Tomar solicitud pendiente — inicia SLA de 4 horas.' })
   take(@Req() req: any, @Param('id') id: string) {
     return this.service.take(req.user.sub, id);
@@ -108,6 +115,7 @@ export class RequestsController {
   @Patch(':id/progress')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('gestion:requests:progress')
   @ApiOperation({ summary: 'Actualizar progreso: in_progress | completed.' })
   updateProgress(
     @Req() req: any,
@@ -120,6 +128,7 @@ export class RequestsController {
   @Post(':id/escalate')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('gestion:requests:escalate')
   @ApiOperation({ summary: 'Escalar solicitud al superadmin.' })
   escalate(
     @Req() req: any,

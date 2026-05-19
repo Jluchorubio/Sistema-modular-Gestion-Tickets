@@ -11,6 +11,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import { MODULE_ROLES } from '@/constants/roles';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
+import { usePermission } from '@/hooks/usePermission';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 import { GESTION_NAV, GESTION_MODULE_NAME, isGestionModule } from './_nav';
 import { Spinner } from '@/components/ui/Spinner';
 import { RequestCard } from './_components/RequestCard';
@@ -33,7 +35,9 @@ export default function RequestsPage() {
   const isAdminModulo = user?.module_roles?.some(
     (r) => r.status === 'active' && r.role_name === MODULE_ROLES.ADMIN_MODULO
   ) ?? false;
-  const hasAdminAccess = isSuperadmin || isAdminModulo;
+  const hasAdminAccess  = isSuperadmin || isAdminModulo;
+  const canCreate       = usePermission('gestion:requests:create');
+  const canViewAll      = usePermission('gestion:requests:view_all');
 
   /* ── Tabs + filters ── */
   const [activeTab,     setActiveTab]     = useState<'mine' | 'inbox'>(hasAdminAccess ? 'inbox' : 'mine');
@@ -130,14 +134,16 @@ export default function RequestsPage() {
           <div className={styles.title}>Gestión Administrativa</div>
           {data && <div className={styles.count}>{total} solicitud{total !== 1 ? 'es' : ''}</div>}
         </div>
-        <button className={styles.btnPrimary} onClick={() => setCreateOpen(true)}>
-          <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-          Nueva solicitud
-        </button>
+        {canCreate && (
+          <button className={styles.btnPrimary} onClick={() => setCreateOpen(true)}>
+            <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            Nueva solicitud
+          </button>
+        )}
       </div>
 
       {/* ── Tab bar (admin only) ── */}
-      {hasAdminAccess && (
+      {(hasAdminAccess && canViewAll) && (
         <div className={styles.tabBar}>
           <button
             type="button"

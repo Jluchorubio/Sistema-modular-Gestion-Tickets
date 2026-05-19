@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth.store';
+import { usePermission } from '@/hooks/usePermission';
 import { usersService, type UserListItem } from '@/services/users.service';
 import { adminService } from '@/services/admin.service';
 import { useUsers } from '@/hooks/useUsers';
@@ -43,7 +44,10 @@ type EditForm   = z.infer<typeof editSchema>;
 export function UsersClient() {
   const router = useRouter();
   const qc     = useQueryClient();
-  const isSA   = useAuthStore((s) => s.user?.is_superadmin ?? false);
+  const isSA        = useAuthStore((s) => s.user?.is_superadmin ?? false);
+  const canCreate   = usePermission('global:users:create');
+  const canEdit     = usePermission('global:users:edit');
+  const canDelete   = usePermission('global:users:delete');
 
   const [page,         setPage]         = useState(1);
   const [limit,        setLimit]        = useState(20);
@@ -173,7 +177,7 @@ export function UsersClient() {
             {meta ? `${meta.total} usuario${meta.total !== 1 ? 's' : ''}` : '—'}
           </div>
         </div>
-        {isSA && (
+        {canCreate && (
           <button type="button" className={styles.btnPrimary} onClick={openCreate}>
             + Crear usuario
           </button>
@@ -305,16 +309,20 @@ export function UsersClient() {
                             onClick={() => router.push(`/users/${u.id}/profile`)}>
                             Ver perfil
                           </button>
-                          <button type="button"
-                            className={`${styles.btnSm} ${u.is_active ? styles.btnToggleOff : styles.btnToggleOn}`}
-                            onClick={() => toggleMut.mutate({ id: u.id, active: u.is_active })}
-                            disabled={toggleMut.isPending}>
-                            {u.is_active ? 'Desactivar' : 'Activar'}
-                          </button>
-                          <button type="button" className={`${styles.btnSm} ${styles.btnDanger}`}
-                            onClick={() => { setDeleteUser(u); setDeleteInput(''); }}>
-                            Eliminar
-                          </button>
+                          {canEdit && (
+                            <button type="button"
+                              className={`${styles.btnSm} ${u.is_active ? styles.btnToggleOff : styles.btnToggleOn}`}
+                              onClick={() => toggleMut.mutate({ id: u.id, active: u.is_active })}
+                              disabled={toggleMut.isPending}>
+                              {u.is_active ? 'Desactivar' : 'Activar'}
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button type="button" className={`${styles.btnSm} ${styles.btnDanger}`}
+                              onClick={() => { setDeleteUser(u); setDeleteInput(''); }}>
+                              Eliminar
+                            </button>
+                          )}
                         </div>
                       </td>
                     )}

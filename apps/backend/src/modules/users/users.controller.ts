@@ -18,6 +18,7 @@ import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { ProfileCompleteGuard } from '../../gateway/guards/profile-complete.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
 import { SkipProfileCheck } from '../../gateway/decorators/skip-profile-check.decorator';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { UsersService } from './users.service';
 import { ProfileService } from './profile.service';
 import { RoleService } from './role.service';
@@ -49,6 +50,7 @@ export class UsersController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:create')
   @ApiOperation({ summary: 'Crear usuario. Solo superadmin o admin_modulo.' })
   create(@Req() req: any, @Body() dto: CreateUserDto) {
     return this.usersService.createUser(req.user.sub, dto);
@@ -57,6 +59,7 @@ export class UsersController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Listar usuarios con filtros y paginación.' })
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'is_active', required: false, type: Boolean })
@@ -153,6 +156,7 @@ export class UsersController {
   @Get('module/:moduleId')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('gestion:users:view')
   @ApiOperation({ summary: 'Usuarios activos de un módulo con sus roles.' })
   getUsersByModule(@Param('moduleId', ParseUUIDPipe) moduleId: string) {
     return this.roleService.getUsersByModule(moduleId);
@@ -171,6 +175,7 @@ export class UsersController {
   // ─── Roles globales ──────────────────────────────────────────────────────────
 
   @Get('global-roles')
+  @RequirePermission('global:roles:view')
   @ApiOperation({ summary: 'Listar roles globales del sistema.' })
   listGlobalRoles() {
     return this.roleService.listGlobalRoles();
@@ -179,6 +184,7 @@ export class UsersController {
   @Post('global-roles')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:roles:create')
   @ApiOperation({ summary: 'Crear nuevo rol global. Solo superadmin.' })
   createGlobalRole(@Body() body: { name: string; description?: string }) {
     return this.roleService.createGlobalRole(body.name, body.description);
@@ -187,6 +193,7 @@ export class UsersController {
   @Delete('global-roles/:id')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:roles:delete')
   @ApiOperation({ summary: 'Desactivar rol global (soft-delete). Solo superadmin.' })
   deleteGlobalRole(@Param('id', ParseUUIDPipe) id: string) {
     return this.roleService.deleteGlobalRole(id);
@@ -195,6 +202,7 @@ export class UsersController {
   @Patch('global-roles/:id/reactivate')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:roles:edit')
   @ApiOperation({ summary: 'Reactivar rol global desactivado. Solo superadmin.' })
   reactivateGlobalRole(@Param('id', ParseUUIDPipe) id: string) {
     return this.roleService.reactivateGlobalRole(id);
@@ -205,6 +213,7 @@ export class UsersController {
   @Post('module/:moduleId/bulk-assign')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('gestion:users:assign_role')
   @ApiOperation({ summary: 'Asignar rol a múltiples usuarios en un módulo.' })
   bulkAssign(
     @Req() req: any,
@@ -217,6 +226,7 @@ export class UsersController {
   @Get(':id/activity')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Gráfica de actividad de un usuario — últimas 26 semanas.' })
   getUserActivity(@Param('id', ParseUUIDPipe) id: string) {
     return this.profileService.getActivityGraph(id);
@@ -225,6 +235,7 @@ export class UsersController {
   @Get(':id/recent-tickets')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Últimos tickets de un usuario. ?limit=N (default 6).' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   getUserRecentTickets(@Param('id', ParseUUIDPipe) id: string, @Query('limit') limit?: string) {
@@ -234,6 +245,7 @@ export class UsersController {
   @Get(':id/activity-feed')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Feed de actividad de un usuario — últimos 20 eventos.' })
   getUserActivityFeed(@Param('id', ParseUUIDPipe) id: string) {
     return this.profileService.getActivityFeed(id);
@@ -242,6 +254,7 @@ export class UsersController {
   @Get(':id/request-stats')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Estadísticas de solicitudes y tickets de un usuario.' })
   getUserRequestStats(@Param('id', ParseUUIDPipe) id: string) {
     return this.profileService.getUserRequestStats(id);
@@ -250,6 +263,7 @@ export class UsersController {
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Ver usuario por ID.' })
   getOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.getUser(id);
@@ -258,6 +272,7 @@ export class UsersController {
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:edit')
   @ApiOperation({ summary: 'Actualizar usuario.' })
   update(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.updateUser(req.user.sub, id, dto);
@@ -266,6 +281,7 @@ export class UsersController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:users:delete')
   @ApiOperation({ summary: 'Soft-delete usuario. Solo superadmin.' })
   remove(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.deleteUser(req.user.sub, id);
@@ -276,6 +292,7 @@ export class UsersController {
   @Get(':id/roles')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Roles de un usuario en todos sus módulos.' })
   getRoles(@Param('id', ParseUUIDPipe) id: string) {
     return this.roleService.getUserRoles(id);
@@ -284,6 +301,7 @@ export class UsersController {
   @Post(':id/roles')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:assign_role')
   @ApiOperation({ summary: 'Asignar rol a usuario en un módulo.' })
   assignRole(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignRoleDto) {
     return this.roleService.assignRole(req.user.sub, id, dto);
@@ -292,6 +310,7 @@ export class UsersController {
   @Delete(':id/roles/:umrId')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:assign_role')
   @ApiOperation({ summary: 'Quitar rol de usuario.' })
   removeRole(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Param('umrId', ParseUUIDPipe) umrId: string) {
     return this.roleService.removeRole(req.user.sub, id, umrId);
@@ -308,6 +327,7 @@ export class UsersController {
   @Put(':id/availability')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:edit')
   @ApiOperation({ summary: 'Setear disponibilidad / incapacidad del técnico.' })
   setAvailability(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() dto: AvailabilityDto) {
     return this.skillService.setAvailability(req.user.sub, id, dto);
@@ -324,6 +344,7 @@ export class UsersController {
   @Post(':id/skills')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:edit')
   @ApiOperation({ summary: 'Agregar habilidad al técnico.' })
   addSkill(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() dto: AddSkillDto) {
     return this.skillService.addSkill(req.user.sub, id, dto);
@@ -332,6 +353,7 @@ export class UsersController {
   @Patch(':id/skills/:skillId')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:edit')
   @ApiOperation({ summary: 'Editar habilidad (max_concurrent, priority).' })
   updateSkill(
     @Req() req: any,
@@ -345,6 +367,7 @@ export class UsersController {
   @Delete(':id/skills/:skillId')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:edit')
   @ApiOperation({ summary: 'Desactivar habilidad del técnico.' })
   removeSkill(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Param('skillId', ParseUUIDPipe) skillId: string) {
     return this.skillService.removeSkill(req.user.sub, id, skillId);

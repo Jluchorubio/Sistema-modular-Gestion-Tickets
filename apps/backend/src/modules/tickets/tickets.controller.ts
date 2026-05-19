@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { TicketsService } from './tickets.service';
 
 @ApiTags('tickets')
@@ -15,16 +16,19 @@ export class TicketsController {
   /* ── Module meta — must come before :id routes ──────────────────────────── */
 
   @Get('categories')
+  @RequirePermission('helpdesk:tickets:view')
   getCategories(@Query('module_id') moduleId: string) {
     return this.svc.getModuleCategories(moduleId);
   }
 
   @Get('environments')
+  @RequirePermission('helpdesk:tickets:view')
   getEnvironments(@Query('module_id') moduleId: string) {
     return this.svc.getModuleEnvironments(moduleId);
   }
 
   @Get('workflow')
+  @RequirePermission('helpdesk:tickets:view')
   getWorkflow(@Query('module_id') moduleId: string) {
     return this.svc.getModuleWorkflow(moduleId);
   }
@@ -32,6 +36,7 @@ export class TicketsController {
   /* ── CRUD ───────────────────────────────────────────────────────────────── */
 
   @Get()
+  @RequirePermission('helpdesk:tickets:view')
   findAll(
     @Req() req: any,
     @Query('module_id') moduleId?: string,
@@ -52,16 +57,19 @@ export class TicketsController {
   }
 
   @Get(':id')
+  @RequirePermission('helpdesk:tickets:view')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.findOne(id);
   }
 
   @Post()
+  @RequirePermission('helpdesk:tickets:create')
   create(@Req() req: any, @Body() dto: any) {
     return this.svc.create(req.user.sub, dto);
   }
 
   @Patch(':id/transition')
+  @RequirePermission('helpdesk:tickets:edit')
   transition(
     @Req() req: any,
     @Param('id', ParseUUIDPipe) id: string,

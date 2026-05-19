@@ -11,9 +11,9 @@ export function isGestionModule(m: { slug: string; type?: string | null }): bool
 }
 
 export const GESTION_NAV: ModuleNavItem[] = [
-  { key: 'requests', label: 'Solicitudes', Icon: ClipboardList, href: '/requests'        },
-  { key: 'users',    label: 'Usuarios',    Icon: Users,         href: '/requests/users'  },
-  { key: 'roles',    label: 'Roles',       Icon: Tag,           href: '/requests/roles',   superadminOnly: true },
-  { key: 'trash',    label: 'Papelera',    Icon: Trash2,        href: '/requests/trash',   superadminOnly: true },
-  { key: 'reports',  label: 'Reportes',    Icon: BarChart2,     href: '/requests/reports', superadminOnly: true },
+  { key: 'requests', label: 'Solicitudes', Icon: ClipboardList, href: '/requests',         permKey: 'gestion:requests:view_own'  },
+  { key: 'users',    label: 'Usuarios',    Icon: Users,         href: '/requests/users',   permKey: 'gestion:users:view'         },
+  { key: 'roles',    label: 'Roles',       Icon: Tag,           href: '/requests/roles',   permKey: 'gestion:roles:view',        superadminOnly: true },
+  { key: 'trash',    label: 'Papelera',    Icon: Trash2,        href: '/requests/trash',   permKey: 'gestion:trash:view',        superadminOnly: true },
+  { key: 'reports',  label: 'Reportes',    Icon: BarChart2,     href: '/requests/reports', permKey: 'gestion:reports:view',      superadminOnly: true },
 ];

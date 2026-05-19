@@ -17,6 +17,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui.store';
 import { usePermissions } from '@/hooks/usePermissions';
+import { usePermission, useHasAnyPermission } from '@/hooks/usePermission';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 import { GESTION_NAV, GESTION_MODULE_NAME } from '@/app/(app)/requests/_nav';
 import { systemConfigService } from '@/services/system-config.service';
 import type { ModuleNavItem } from '@/types/nav.types';
@@ -25,15 +27,15 @@ import styles from './sidebar.module.css';
 /* ── Nav definitions ───────────────────────────────────────────────────────── */
 
 const ADMIN_NAV = [
-  { key: 'reports', label: 'Reportes',        Icon: BarChart2,  href: '/reports' },
-  { key: 'users',   label: 'Usuarios',        Icon: Users,      href: '/users'   },
-  { key: 'roles',   label: 'Roles',           Icon: Tag,        href: '/roles'   },
-  { key: 'trash',   label: 'Papelera',        Icon: Trash2,     href: '/trash'   },
-] as const;
+  { key: 'reports', label: 'Reportes',      Icon: BarChart2,  href: '/reports', permKey: 'global:sidebar:reports' },
+  { key: 'users',   label: 'Usuarios',      Icon: Users,      href: '/users',   permKey: 'global:sidebar:users'   },
+  { key: 'roles',   label: 'Roles',         Icon: Tag,        href: '/roles',   permKey: 'global:sidebar:roles'   },
+  { key: 'trash',   label: 'Papelera',      Icon: Trash2,     href: '/trash',   permKey: 'global:sidebar:trash'   },
+];
 
 const SUPERADMIN_NAV = [
-  { key: 'config',  label: 'Configuración',   Icon: Settings2,  href: '/config'  },
-] as const;
+  { key: 'config',  label: 'Configuración', Icon: Settings2,  href: '/config',  permKey: 'global:sidebar:config'  },
+];
 
 /* ── Section divider ───────────────────────────────────────────────────────── */
 
@@ -52,23 +54,28 @@ function NavGroup({
   items,
   isActive,
 }: {
-  items: ReadonlyArray<{ key: string; label: string; Icon: LucideIcon; href: string }>;
+  items: Array<{ key: string; label: string; Icon: LucideIcon; href: string; permKey?: string }>;
   isActive: (href: string) => boolean;
 }) {
   return (
     <>
-      {items.map(({ key, label, Icon, href }) => (
-        <Link
-          key={key}
-          href={href}
-          title={label}
-          aria-label={label}
-          className={`${styles.navItem}${isActive(href) ? ` ${styles.navItemActive}` : ''}`}
-        >
-          <Icon className={styles.navIcon} aria-hidden="true" />
-          <span className={styles.navLabel}>{label}</span>
-        </Link>
-      ))}
+      {items.map(({ key, label, Icon, href, permKey }) => {
+        const link = (
+          <Link
+            key={key}
+            href={href}
+            title={label}
+            aria-label={label}
+            className={`${styles.navItem}${isActive(href) ? ` ${styles.navItemActive}` : ''}`}
+          >
+            <Icon className={styles.navIcon} aria-hidden="true" />
+            <span className={styles.navLabel}>{label}</span>
+          </Link>
+        );
+        return permKey
+          ? <PermissionGate key={key} perm={permKey}>{link}</PermissionGate>
+          : link;
+      })}
     </>
   );
 }
@@ -103,18 +110,23 @@ function ModuleNav({
 
       <SectionDivider label="MÓDULO" expanded={expanded} />
 
-      {visible.map(({ key, label, Icon, href }) => (
-        <Link
-          key={key}
-          href={href}
-          title={label}
-          aria-label={label}
-          className={`${styles.navItem}${isActive(href) ? ` ${styles.navItemActive}` : ''}`}
-        >
-          <Icon className={styles.navIcon} aria-hidden="true" />
-          <span className={styles.navLabel}>{label}</span>
-        </Link>
-      ))}
+      {visible.map(({ key, label, Icon, href, permKey }) => {
+        const link = (
+          <Link
+            key={key}
+            href={href}
+            title={label}
+            aria-label={label}
+            className={`${styles.navItem}${isActive(href) ? ` ${styles.navItemActive}` : ''}`}
+          >
+            <Icon className={styles.navIcon} aria-hidden="true" />
+            <span className={styles.navLabel}>{label}</span>
+          </Link>
+        );
+        return permKey
+          ? <PermissionGate key={key} perm={permKey}>{link}</PermissionGate>
+          : link;
+      })}
     </>
   );
 }
@@ -128,6 +140,11 @@ export function AppSidebar() {
   const moduleName    = useUIStore((s) => s.moduleName);
   const pathname      = usePathname();
   const { isSuperadmin, isModuleAdmin: isAdmin } = usePermissions();
+  const hasAnyAdminNav    = useHasAnyPermission(
+    'global:sidebar:reports', 'global:sidebar:users',
+    'global:sidebar:roles',   'global:sidebar:trash',
+  );
+  const hasConfigNav      = usePermission('global:sidebar:config');
 
   const { data: company } = useQuery({
     queryKey: ['company-public'],
@@ -194,14 +211,14 @@ export function AppSidebar() {
               <span className={styles.navLabel}>Dashboard</span>
             </Link>
 
-            {isAdmin && (
+            {(isAdmin && hasAnyAdminNav) && (
               <>
                 <SectionDivider label="ADMINISTRACIÓN" expanded={expanded} />
                 <NavGroup items={ADMIN_NAV} isActive={isActive} />
               </>
             )}
 
-            {isSuperadmin && (
+            {(isSuperadmin && hasConfigNav) && (
               <>
                 <SectionDivider label="SISTEMA" expanded={expanded} />
                 <NavGroup items={SUPERADMIN_NAV} isActive={isActive} />
