@@ -6,6 +6,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { AdminService } from './admin.service';
 
 @ApiTags('admin')
@@ -18,6 +19,7 @@ export class AdminController {
 
   @Get('trash')
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:trash:view')
   @ApiOperation({ summary: 'Vista unificada de papelera. type: module|user|role|request. moduleId filtra solo requests del módulo.' })
   getTrash(
     @Query('type')     type?: string,
@@ -29,12 +31,14 @@ export class AdminController {
   }
 
   @Post('trash/restore')
+  @RequirePermission('global:trash:restore')
   @ApiOperation({ summary: 'Restaurar items de la papelera.' })
   restore(@Body() body: { type: string; ids: string[] }) {
     return this.service.restoreItems(body.type, body.ids);
   }
 
   @Delete('trash/permanent')
+  @RequirePermission('global:trash:purge')
   @ApiOperation({ summary: 'Eliminar permanentemente de la papelera.' })
   permanentDelete(@Body() body: { type: string; ids: string[] }) {
     return this.service.permanentDeleteItems(body.type, body.ids);
@@ -42,12 +46,14 @@ export class AdminController {
 
   @Post('trash/purge-expired')
   @HttpCode(200)
+  @RequirePermission('global:trash:purge')
   @ApiOperation({ summary: 'Borrado definitivo de items cuyo período de retención expiró.' })
   purgeExpired() {
     return this.service.purgeExpired();
   }
 
   @Post('bulk-delete')
+  @RequirePermission('global:users:delete')
   @ApiOperation({ summary: 'Mover múltiples items a papelera (soft delete).' })
   bulkDelete(@Req() req: any, @Body() body: { type: string; ids: string[] }) {
     return this.service.bulkSoftDelete(body.type, body.ids, req.user.sub);

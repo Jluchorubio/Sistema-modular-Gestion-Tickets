@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { ReportingService } from './reporting.service';
 
 @ApiTags('reporting')
@@ -14,6 +15,7 @@ export class ReportingController {
   constructor(private readonly service: ReportingService) {}
 
   @Get('sla')
+  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Métricas de SLA: cumplimiento global y por prioridad.' })
   @ApiQuery({ name: 'moduleId', required: false })
   slaMetrics(@Query('moduleId') moduleId?: string) {
@@ -21,6 +23,7 @@ export class ReportingController {
   }
 
   @Get('tickets')
+  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Resumen de tickets: totales, por estado, prioridad y tendencia 30 días.' })
   @ApiQuery({ name: 'moduleId', required: false })
   ticketsSummary(@Query('moduleId') moduleId?: string) {
