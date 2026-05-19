@@ -36,6 +36,7 @@ export default function RequestsPage() {
     (r) => r.status === 'active' && r.role_name === MODULE_ROLES.ADMIN_MODULO
   ) ?? false;
   const hasAdminAccess  = isSuperadmin || isAdminModulo;
+  const canViewOwn      = usePermission('gestion:requests:view_own');
   const canCreate       = usePermission('gestion:requests:create');
   const canViewAll      = usePermission('gestion:requests:view_all');
   const canTake         = usePermission('gestion:requests:take');
@@ -70,6 +71,7 @@ export default function RequestsPage() {
     queryFn: () => activeTab === 'inbox'
       ? requestsService.getAll({ status: statusFilter, type: typeFilter, escalated: onlyEscalated || undefined })
       : requestsService.getMine(),
+    enabled: activeTab === 'inbox' ? canViewAll : canViewOwn,
   });
 
   /* ── Mutations ── */

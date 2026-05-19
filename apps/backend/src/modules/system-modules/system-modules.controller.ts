@@ -15,6 +15,7 @@ export class SystemModulesController {
   constructor(private readonly service: SystemModulesService) {}
 
   @Get()
+  @SkipProfileCheck()
   @ApiOperation({ summary: 'Listar módulos. Superadmin ve todos; resto solo los asignados.' })
   findAll(@Req() req: any) {
     return this.service.findAll(req.user.sub);
