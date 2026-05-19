@@ -43,11 +43,28 @@ function handleAuthRedirect(data: LoginResponse, push: (href: string) => void) {
   );
 }
 
-/* ── Right panel (static branding) ─────────────────────────────────────────── */
+/* ── Right panel ─────────────────────────────────────────────────────────────── */
 
 function RightPanel() {
   return (
     <div className={styles.right}>
+      {/* Decorative rotating rings */}
+      <div className={styles.ringDecor} />
+      <div className={styles.ringDecor2} />
+
+      {/* Dot clusters */}
+      <div className={styles.dots}>
+        {Array.from({ length: 24 }).map((_, i) => (
+          <div key={i} className={styles.dot} />
+        ))}
+      </div>
+      <div className={styles.dotsOrange}>
+        {Array.from({ length: 16 }).map((_, i) => (
+          <div key={i} className={styles.dotOrange} />
+        ))}
+      </div>
+
+      {/* Logo */}
       <div className={styles.logoWrap}>
         <div className={styles.logoCircle}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -55,25 +72,25 @@ function RightPanel() {
         </div>
       </div>
 
+      {/* Text */}
       <div className={styles.rightContent}>
-        <p className={styles.rightSub}>Sistema Modular</p>
+        <div className={styles.rightTag}>Sistema Modular</div>
         <h2 className={styles.rightTitle}>Gestión operativa centralizada</h2>
         <p className={styles.rightDesc}>
-          Tickets, inventario, solicitudes y reportes en una sola plataforma.
+          Tickets, inventario, solicitudes administrativas y reportes en una sola plataforma.
         </p>
-      </div>
-
-      {/* Decorative dots */}
-      <div className={styles.dots}>
-        {Array.from({ length: 25 }).map((_, i) => (
-          <div key={i} className={styles.dot} />
-        ))}
+        <div className={styles.featurePills}>
+          <span className={styles.pill}>Mesa de ayuda</span>
+          <span className={styles.pill}>Inventario</span>
+          <span className={styles.pill}>SLA</span>
+          <span className={styles.pill}>Reportes</span>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ── Main component ─────────────────────────────────────────────────────────── */
+/* ── Main component ──────────────────────────────────────────────────────────── */
 
 export function LoginClient() {
   const router       = useRouter();
