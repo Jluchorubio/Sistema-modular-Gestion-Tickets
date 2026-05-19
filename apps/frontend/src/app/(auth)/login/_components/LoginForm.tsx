@@ -24,10 +24,10 @@ interface Props {
 }
 
 export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
-  const [showPw,    setShowPw]    = useState(false);
-  const [remember,  setRemember]  = useState(false);
-  const [msg,       setMsg]       = useState<Msg | null>(null);
-  const [loading,   setLoading]   = useState(false);
+  const [showPw,   setShowPw]   = useState(false);
+  const [remember, setRemember] = useState(false);
+  const [msg,      setMsg]      = useState<Msg | null>(null);
+  const [loading,  setLoading]  = useState(false);
   const form = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
 
   async function onSubmit(values: LoginFormValues) {
@@ -68,22 +68,22 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
-      <label className={styles.label}>Correo o usuario</label>
+      <label className={styles.label}>Username</label>
       <input
         {...form.register('email')}
         type="text"
         autoComplete="username"
-        placeholder="email@ejemplo.com"
+        placeholder="example@gmail.com"
         className={styles.input}
       />
 
-      <label className={styles.label}>Contraseña</label>
+      <label className={styles.label}>Password</label>
       <div className={styles.pwWrap}>
         <input
           {...form.register('password')}
           type={showPw ? 'text' : 'password'}
           autoComplete="current-password"
-          placeholder="••••••••"
+          placeholder="••••••"
           className={styles.input}
         />
         <button
@@ -96,18 +96,21 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
         </button>
       </div>
 
-      {/* Remember me + forgot */}
       <div className={styles.formRow}>
         <label className={styles.checkLabel}>
           <input
             type="checkbox"
             checked={remember}
             onChange={(e) => setRemember(e.target.checked)}
+            style={{ display: 'none' }}
           />
-          <span className={styles.checkText}>Recordarme</span>
+          <div className={`${styles.checkCircle} ${remember ? styles.checkCircleChecked : ''}`}>
+            <div className={`${styles.checkCircleInner} ${remember ? styles.checkCircleInnerVisible : ''}`} />
+          </div>
+          <span className={styles.checkText}>Remember me</span>
         </label>
         <button type="button" className={styles.linkBtn} onClick={onForgot}>
-          ¿Olvidaste tu contraseña?
+          Forget password?
         </button>
       </div>
 
@@ -118,7 +121,7 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
         className={`${styles.btn} ${styles.btnPrimary}`}
         disabled={loading}
       >
-        {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+        {loading ? 'Iniciando sesión...' : 'Sign In'}
       </button>
 
       <div className={styles.divider}>o</div>
