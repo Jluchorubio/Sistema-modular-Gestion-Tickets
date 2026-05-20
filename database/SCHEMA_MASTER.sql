@@ -221,7 +221,8 @@ CREATE OR REPLACE FUNCTION modules.bootstrap_module(
     p_is_default      boolean DEFAULT false,
     p_created_by      uuid    DEFAULT NULL,
     p_type            text    DEFAULT 'helpdesk',
-    p_permission_scope text   DEFAULT NULL
+    p_permission_scope text   DEFAULT NULL,
+    p_is_builtin      boolean DEFAULT false
 )
  RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public', 'modules', 'tickets', 'config', 'app'
@@ -243,13 +244,14 @@ DECLARE
 BEGIN
     v_scope := COALESCE(p_permission_scope, p_slug);
 
-    INSERT INTO modules.modules (name, slug, description, type, is_active, permission_scope)
-    VALUES (p_name, p_slug, p_description, p_type, true, v_scope)
+    INSERT INTO modules.modules (name, slug, description, type, is_active, permission_scope, is_builtin)
+    VALUES (p_name, p_slug, p_description, p_type, true, v_scope, p_is_builtin)
     ON CONFLICT (slug) DO UPDATE SET
         name             = EXCLUDED.name,
         description      = COALESCE(EXCLUDED.description, modules.modules.description),
         is_active        = EXCLUDED.is_active,
         permission_scope = COALESCE(EXCLUDED.permission_scope, modules.modules.permission_scope),
+        is_builtin       = modules.modules.is_builtin OR EXCLUDED.is_builtin,
         updated_at       = now()
     RETURNING id INTO v_module_id;
 
@@ -756,6 +758,7 @@ CREATE TABLE IF NOT EXISTS users.organizations (
     timezone        varchar(100) NOT NULL DEFAULT 'America/Bogota',
     language        varchar(10)  NOT NULL DEFAULT 'es',
     is_active       boolean      NOT NULL DEFAULT true,
+    is_initialized  boolean      NOT NULL DEFAULT false,
     metadata        jsonb        NOT NULL DEFAULT '{}',
     logo_url        text,
     primary_color   varchar(20)  DEFAULT '#6366f1',
@@ -1101,6 +1104,7 @@ CREATE TABLE IF NOT EXISTS modules.modules (
     image_url           text,
     color               varchar(20),
     permission_scope    varchar(50),
+    is_builtin          boolean      NOT NULL DEFAULT false,
     maintenance_mode    boolean      NOT NULL DEFAULT false,
     maintenance_by      uuid,
     maintenance_since   timestamptz,
@@ -2419,6 +2423,35 @@ CREATE TRIGGER trg_users_profiles_updated_at
   BEFORE UPDATE ON users.profiles
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+-- Protección módulos built-in — impide hard-delete y soft-delete
+CREATE OR REPLACE FUNCTION modules.protect_builtin_module_delete()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.is_builtin = true THEN
+        RAISE EXCEPTION 'El módulo "%" es built-in y no puede eliminarse permanentemente.', OLD.name
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN OLD;
+END; $$;
+
+CREATE OR REPLACE FUNCTION modules.protect_builtin_module_softdelete()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.is_builtin = true AND NEW.deleted_at IS NOT NULL AND OLD.deleted_at IS NULL THEN
+        RAISE EXCEPTION 'El módulo "%" es built-in y no puede enviarse a papelera.', OLD.name
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END; $$;
+
+CREATE TRIGGER trg_protect_builtin_delete
+    BEFORE DELETE ON modules.modules
+    FOR EACH ROW EXECUTE FUNCTION modules.protect_builtin_module_delete();
+
+CREATE TRIGGER trg_protect_builtin_softdelete
+    BEFORE UPDATE OF deleted_at ON modules.modules
+    FOR EACH ROW EXECUTE FUNCTION modules.protect_builtin_module_softdelete();
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- PARTE 9: Row Level Security
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -2755,7 +2788,8 @@ SELECT modules.bootstrap_module(
   true,
   '00000000-0000-0000-0000-000000000001'::uuid,
   'helpdesk',
-  'helpdesk'
+  'helpdesk',
+  true   -- is_builtin
 );
 
 -- Inventario — gestión de activos
@@ -2766,7 +2800,8 @@ SELECT modules.bootstrap_module(
   true,
   '00000000-0000-0000-0000-000000000001'::uuid,
   'inventario',
-  'inventario'
+  'inventario',
+  true   -- is_builtin
 );
 
 -- Gestión Administrativa — hub de solicitudes internas (módulo built-in)
@@ -2777,7 +2812,8 @@ SELECT modules.bootstrap_module(
   true,
   '00000000-0000-0000-0000-000000000001'::uuid,
   'gestion',
-  'gestion'
+  'gestion',
+  true   -- is_builtin
 );
 
 -- ── permission_definitions — 60 permisos (idempotente) ───────────────────────
