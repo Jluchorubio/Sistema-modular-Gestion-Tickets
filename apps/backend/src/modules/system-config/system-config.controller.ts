@@ -54,6 +54,11 @@ export class SystemConfigController {
 
   /* ── Superadmin-only endpoints ── */
 
+  @Post('initialize')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @ApiOperation({ summary: 'Marca el sistema como inicializado. Solo se llama una vez al finalizar el wizard de setup.' })
+  initializeSystem() { return this.svc.initializeSystem(); }
+
   @Get('company')
   @UseGuards(RolesGuard) @Roles('superadmin')
   @RequirePermission('global:config:view')

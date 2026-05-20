@@ -36,11 +36,11 @@ const SUBS: Record<AuthView, string> = {
 function handleAuthRedirect(data: LoginResponse, push: (href: string) => void) {
   const { access_token, refresh_token, user } = data;
   const needsProfile = !user.profile_complete && !user.is_superadmin;
-  useAuthStore.getState().setTokens(access_token, refresh_token, user.force_password_change, needsProfile);
-  push(!user.profile_complete && !user.is_superadmin
-    ? ROUTES.AUTH.COMPLETE_PROFILE
-    : ROUTES.APP.DASHBOARD,
-  );
+  const needsSetup   = !!user.needs_setup;
+  useAuthStore.getState().setTokens(access_token, refresh_token, user.force_password_change, needsProfile, needsSetup);
+  if (needsSetup)   return push(ROUTES.AUTH.SETUP);
+  if (needsProfile) return push(ROUTES.AUTH.COMPLETE_PROFILE);
+  push(ROUTES.APP.DASHBOARD);
 }
 
 export function LoginClient() {

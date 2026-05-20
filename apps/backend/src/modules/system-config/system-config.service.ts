@@ -56,6 +56,14 @@ export class SystemConfigService {
     return org;
   }
 
+  async initializeSystem() {
+    await this.db.query(
+      `UPDATE users.organizations SET is_initialized = true, updated_at = now()
+       WHERE id = '00000000-0000-0000-0000-000000000001'`,
+    );
+    return { ok: true };
+  }
+
   /* ── Headquarters ──────────────────────────────────────────────── */
 
   async getHeadquarters() {

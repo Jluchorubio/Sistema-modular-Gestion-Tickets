@@ -161,4 +161,8 @@ export const systemConfigService = {
   /* ── Public company info (all authenticated users) ── */
   getPublicCompanyInfo: () =>
     api.get<PublicCompanyInfo>(`${BASE}/company/public`).then(r => r.data),
+
+  /* ── System initialization (superadmin wizard) ── */
+  initializeSystem: () =>
+    api.post<{ ok: boolean }>(`${BASE}/initialize`).then(r => r.data),
 };

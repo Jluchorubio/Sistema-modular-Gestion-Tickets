@@ -11,6 +11,7 @@ export interface AuthUser {
   is_superadmin: boolean;
   profile_complete: boolean;
   force_password_change: boolean;
+  needs_setup: boolean;
   avatar_url: string | null;
 }
 

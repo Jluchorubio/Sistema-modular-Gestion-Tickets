@@ -2698,11 +2698,11 @@ INSERT INTO users.organizations (id, name, slug) VALUES
   ('00000000-0000-0000-0000-000000000001', 'Mi Empresa', 'default')
 ON CONFLICT DO NOTHING;
 
--- Roles globales: 3 roles (superadmin creado en v7, admin y usuario añadidos en v11/v12)
+-- Roles globales: 2 roles (superadmin y usuario)
+-- admin_modulo es rol de módulo, no global
 INSERT INTO config.global_roles (id, name, description, is_active) VALUES
-  ('00000000-0000-0000-0001-000000000001', 'superadmin', 'Administrador global de la plataforma',   true),
-  ('00000000-0000-0000-0001-000000000002', 'usuario',    'Usuario estándar del sistema',             true),
-  ('00000000-0000-0000-0001-000000000003', 'admin',      'Administrador global del sistema',         true)
+  ('00000000-0000-0000-0001-000000000001', 'superadmin', 'Administrador global de la plataforma', true),
+  ('00000000-0000-0000-0001-000000000002', 'usuario',    'Usuario estándar del sistema',          true)
 ON CONFLICT (name) DO UPDATE SET is_active = TRUE, description = EXCLUDED.description;
 
 -- Perfil sistema (actor para operaciones automáticas)
@@ -2929,34 +2929,6 @@ SELECT gr.id, 'global', pd.key
 FROM config.global_roles gr
 CROSS JOIN config.permission_definitions pd
 WHERE gr.name = 'superadmin' AND pd.is_active = true
-ON CONFLICT (role_id, permission_key) DO NOTHING;
-
--- ── RBAC grants — admin: control total (sin config superadmin) ───────────────
-INSERT INTO config.role_permission_grants (role_id, role_type, permission_key)
-SELECT gr.id, 'global', pd.key
-FROM config.global_roles gr
-CROSS JOIN config.permission_definitions pd
-WHERE gr.name = 'admin'
-  AND pd.key IN (
-    'global:system:access',          'global:sidebar:view',
-    'global:sidebar:dashboard',      'global:dashboard:view',     'global:dashboard:modules_view',
-    'global:sidebar:users',          'global:users:view',         'global:users:create',
-    'global:users:edit',             'global:users:delete',       'global:users:assign_role',
-    'global:sidebar:roles',          'global:roles:view',         'global:roles:create',
-    'global:roles:edit',             'global:roles:delete',       'global:roles:assign_perms',
-    'global:sidebar:reports',        'global:reports:view',
-    'global:sidebar:trash',          'global:trash:view',         'global:trash:restore',
-    'global:trash:purge',
-    'gestion:requests:view_own',     'gestion:requests:view_all', 'gestion:requests:create',
-    'gestion:requests:take',         'gestion:requests:progress', 'gestion:requests:approve',
-    'gestion:requests:reject',       'gestion:requests:escalate',
-    'gestion:roles:view',            'gestion:roles:create',      'gestion:roles:edit',
-    'gestion:roles:delete',          'gestion:users:view',        'gestion:users:assign_role',
-    'gestion:reports:view',          'gestion:trash:view',        'gestion:trash:restore',
-    'helpdesk:tickets:view',         'helpdesk:tickets:create',   'helpdesk:tickets:edit',
-    'helpdesk:tickets:close',        'helpdesk:tickets:assign',   'helpdesk:comments:add',
-    'inventario:items:view',         'inventario:items:create',   'inventario:items:edit'
-  )
 ON CONFLICT (role_id, permission_key) DO NOTHING;
 
 -- ── RBAC grants — usuario: acceso básico ─────────────────────────────────────

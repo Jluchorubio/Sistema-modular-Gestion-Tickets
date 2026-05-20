@@ -588,8 +588,15 @@ export class AuthService {
       );
       credData = row;
     } catch {
-      // Column does not exist yet — migration pending. Default to false.
       credData = undefined;
+    }
+
+    let needsSetup = false;
+    if (isSuperadmin) {
+      const [org] = await this.db.query<{ is_initialized: boolean }[]>(
+        `SELECT is_initialized FROM users.organizations WHERE id = '00000000-0000-0000-0000-000000000001'`,
+      );
+      needsSetup = !(org?.is_initialized ?? false);
     }
 
     await this.db.query(
@@ -619,6 +626,7 @@ export class AuthService {
         is_superadmin:          isSuperadmin,
         profile_complete:       profileData?.profile_complete ?? false,
         force_password_change:  credData?.force_password_change ?? false,
+        needs_setup:            needsSetup,
       },
     };
   }

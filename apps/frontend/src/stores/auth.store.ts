@@ -7,7 +7,7 @@ interface AuthState {
   accessToken: string | null;
   isAuthenticated: boolean;
 
-  setTokens: (access: string, refresh: string, forcePw?: boolean, needsProfile?: boolean) => void;
+  setTokens: (access: string, refresh: string, forcePw?: boolean, needsProfile?: boolean, needsSetup?: boolean) => void;
   setUser: (user: CurrentUser) => void;
   clearAuth: () => void;
   initFromStorage: () => void;
@@ -18,8 +18,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   isAuthenticated: false,
 
-  setTokens(access, refresh, forcePw, needsProfile) {
-    tokens.set(access, refresh, forcePw, needsProfile);
+  setTokens(access, refresh, forcePw, needsProfile, needsSetup) {
+    tokens.set(access, refresh, forcePw, needsProfile, needsSetup);
     set({ accessToken: access, isAuthenticated: true });
   },
 

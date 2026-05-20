@@ -2,6 +2,7 @@ export const ROUTES = {
   AUTH: {
     LOGIN: '/login',
     COMPLETE_PROFILE: '/complete-profile',
+    SETUP: '/setup',
   },
   APP: {
     DASHBOARD:    '/dashboard',
