@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Bell, User, LogOut, ChevronDown,
-  CalendarDays, Clock, ClipboardList, LayoutGrid,
-  ChevronRight, Ticket,
+  CalendarDays, Clock, ChevronRight,
+  Ticket, Sun, Download,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
@@ -48,6 +48,7 @@ export function AppHeader({ noSidebar = false }: Props) {
 
   const fullName = user ? `${user.first_name} ${user.last_name}`.trim() : '';
   const initials = user ? getInitials(user.first_name, user.last_name) : '?';
+  const roleName = user?.is_superadmin ? 'Superadmin' : 'Usuario';
 
   const today = new Date();
   const todayLabel = today.toLocaleDateString('es-CO', {
@@ -107,8 +108,8 @@ export function AppHeader({ noSidebar = false }: Props) {
   const notifications = notifData?.notifications ?? [];
 
   const navLinks = [
-    { href: '/dashboard', label: 'Dashboard',   Icon: LayoutGrid },
-    { href: '/requests',  label: 'Solicitudes', Icon: ClipboardList },
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/requests',  label: 'Solicitudes' },
   ];
 
   return (
@@ -125,13 +126,12 @@ export function AppHeader({ noSidebar = false }: Props) {
         {/* ── Centro nav (solo no-sidebar) ── */}
         {noSidebar && (
           <nav className={styles.centerNav}>
-            {navLinks.map(({ href, label, Icon }) => (
+            {navLinks.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
                 className={`${styles.centerNavLink}${pathname.startsWith(href) ? ` ${styles.centerNavLinkActive}` : ''}`}
               >
-                <Icon size={14} />
                 {label}
               </Link>
             ))}
@@ -139,16 +139,6 @@ export function AppHeader({ noSidebar = false }: Props) {
         )}
 
         <div className={styles.right}>
-          {/* ── Mis Tickets ── */}
-          <Link
-            href="/my-tickets"
-            className={`${styles.ticketsBtn}${pathname.startsWith('/my-tickets') ? ` ${styles.ticketsBtnActive}` : ''}`}
-            title="Mis Tickets"
-          >
-            <Ticket size={15} />
-            <span className={styles.ticketsBtnLabel}>Mis Tickets</span>
-          </Link>
-
           {/* ── Calendar mini-popover ── */}
           <div className={styles.calWrap} ref={calRef}>
             <button
@@ -162,7 +152,6 @@ export function AppHeader({ noSidebar = false }: Props) {
             </button>
 
             <div className={`${styles.calDropdown}${calOpen ? ` ${styles.calDropdownOpen}` : ''}`}>
-              {/* Header */}
               <div className={styles.calHeader}>
                 <div className={styles.calTodayLabel}>{todayLabel}</div>
                 <Link
@@ -174,7 +163,6 @@ export function AppHeader({ noSidebar = false }: Props) {
                 </Link>
               </div>
 
-              {/* Items */}
               <div className={styles.calList}>
                 {upcomingItems.length === 0 && !miniCalData && (
                   <p className={styles.calEmpty}>Cargando…</p>
@@ -204,7 +192,6 @@ export function AppHeader({ noSidebar = false }: Props) {
                 ))}
               </div>
 
-              {/* Footer */}
               <div className={styles.calFooter}>
                 <Link
                   href="/calendar"
@@ -304,24 +291,75 @@ export function AppHeader({ noSidebar = false }: Props) {
             </button>
 
             <div className={`${styles.dropdown}${profileOpen ? ` ${styles.dropdownOpen}` : ''}`}>
-              <div className={styles.ddInfo}>
-                <div className={styles.ddName}>{fullName || '—'}</div>
-                <div className={styles.ddUser}>{user?.username ? `@${user.username}` : user?.email ?? '—'}</div>
+              {/* ── Profile card ── */}
+              <div className={styles.ddCard}>
+                <div className={styles.ddCardAvatar}>
+                  {user?.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.avatar_url} alt="" className={styles.ddCardAvatarImg} />
+                  ) : (
+                    <span className={styles.ddCardAvatarInitials}>{initials}</span>
+                  )}
+                  <span className={styles.ddOnlineDot} />
+                </div>
+                <div className={styles.ddCardInfo}>
+                  <div className={styles.ddCardName}>{fullName || '—'}</div>
+                  <div className={styles.ddCardSub}>{user?.username ? `@${user.username}` : user?.email ?? '—'}</div>
+                  <span className={styles.ddRoleBadge}>{roleName}</span>
+                </div>
               </div>
+
               <div className={styles.ddSep} />
-              <Link href="/profile" className={styles.ddItem} onClick={() => setProfileOpen(false)}>
-                <User size={14} />
-                Mi perfil
-              </Link>
+
+              {/* ── Navigation ── */}
+              <div className={styles.ddSection}>
+                <Link
+                  href="/profile"
+                  className={styles.ddItem}
+                  onClick={() => setProfileOpen(false)}
+                >
+                  <span className={styles.ddItemIcon}><User size={14} /></span>
+                  Mi perfil
+                </Link>
+                <Link
+                  href="/my-tickets"
+                  className={styles.ddItem}
+                  onClick={() => setProfileOpen(false)}
+                >
+                  <span className={styles.ddItemIcon}><Ticket size={14} /></span>
+                  Historial de tickets
+                </Link>
+              </div>
+
               <div className={styles.ddSep} />
-              <button
-                type="button"
-                className={`${styles.ddItem} ${styles.ddDanger}`}
-                onClick={handleLogout}
-              >
-                <LogOut size={14} />
-                Cerrar sesión
-              </button>
+
+              {/* ── Preferences ── */}
+              <div className={styles.ddSection}>
+                <div className={`${styles.ddItem} ${styles.ddItemDisabled}`}>
+                  <span className={styles.ddItemIcon}><Sun size={14} /></span>
+                  Tema
+                  <span className={styles.ddProxBadge}>Próximamente</span>
+                </div>
+                <div className={`${styles.ddItem} ${styles.ddItemDisabled}`}>
+                  <span className={styles.ddItemIcon}><Download size={14} /></span>
+                  Descargar aplicación
+                  <span className={styles.ddProxBadge}>Próximamente</span>
+                </div>
+              </div>
+
+              <div className={styles.ddSep} />
+
+              {/* ── Logout ── */}
+              <div className={styles.ddSection}>
+                <button
+                  type="button"
+                  className={`${styles.ddItem} ${styles.ddDanger}`}
+                  onClick={handleLogout}
+                >
+                  <span className={styles.ddItemIcon}><LogOut size={14} /></span>
+                  Cerrar sesión
+                </button>
+              </div>
             </div>
           </div>
         </div>

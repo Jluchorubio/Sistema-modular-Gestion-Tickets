@@ -150,18 +150,19 @@
   transform: rotate(180deg);
 }
 
-/* ── Dropdown ── */
+/* ── Dropdown shell ── */
 .dropdown {
   display: none;
   position: absolute;
   right: 0;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  min-width: 215px;
-  padding: 8px 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, .10), 0 2px 8px rgba(0, 0, 0, .05);
+  border-radius: 14px;
+  min-width: 248px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .12), 0 2px 8px rgba(0, 0, 0, .06);
   z-index: 200;
 }
 
@@ -169,35 +170,106 @@
   display: block;
 }
 
-.ddInfo {
-  padding: 10px 16px;
-  border-bottom: 1px solid #f1f5f9;
-  margin-bottom: 4px;
+/* ── Profile card header ── */
+.ddCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
-.ddName {
-  font-size: 14px;
+.ddCardAvatar {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1f7ae0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.ddCardAvatarImg {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.ddCardAvatarInitials {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.ddOnlineDot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 11px;
+  height: 11px;
+  background: #22c55e;
+  border: 2px solid #1e293b;
+  border-radius: 50%;
+}
+
+.ddCardInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.ddCardName {
+  font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.ddUser {
-  font-size: 12px;
+.ddCardSub {
+  font-size: 11px;
   color: #94a3b8;
-  margin-top: 2px;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ddRoleBadge {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 7px;
+  background: rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #a5b4fc;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+/* ── Sections and items ── */
+.ddSection {
+  padding: 4px 0;
 }
 
 .ddSep {
   height: 1px;
   background: #f1f5f9;
-  margin: 4px 0;
+  margin: 0;
 }
 
 .ddItem {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 9px 16px;
+  gap: 10px;
+  padding: 9px 14px;
   background: none;
   border: none;
   color: #374151;
@@ -216,6 +288,43 @@
   color: #0f172a;
 }
 
+.ddItemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #475569;
+  flex-shrink: 0;
+  transition: background .12s;
+}
+
+.ddItem:hover .ddItemIcon {
+  background: #e2e8f0;
+}
+
+.ddItemDisabled {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+.ddProxBadge {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #6366f1;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 99px;
+  padding: 2px 7px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .ddDanger {
   color: #ef4444;
 }
@@ -223,6 +332,15 @@
 .ddDanger:hover {
   color: #dc2626;
   background: #fff5f5;
+}
+
+.ddDanger .ddItemIcon {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.ddDanger:hover .ddItemIcon {
+  background: #fecaca;
 }
 
 /* ── Notification bell wrap ── */
@@ -411,47 +529,6 @@
   font-weight: 600;
 }
 
-/* ── Mis Tickets button ─────────────────────────────────────────────────── */
-.ticketsBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 9px;
-  border: 1.5px solid #e2e8f0;
-  background: #ffffff;
-  cursor: pointer;
-  color: #374151;
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-  transition: all .12s;
-  font-family: inherit;
-  white-space: nowrap;
-}
-
-.ticketsBtn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #0f172a;
-}
-
-.ticketsBtnActive {
-  background: #eef2ff;
-  border-color: #6366F1;
-  color: #6366F1;
-}
-
-.ticketsBtnLabel {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-@media (max-width: 768px) {
-  .ticketsBtnLabel { display: none; }
-  .ticketsBtn { padding: 0 10px; }
-}
 
 /* ── Calendar mini-popover ─────────────────────────────────────────────── */
 .calWrap {

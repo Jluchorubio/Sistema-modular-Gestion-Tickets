@@ -7,7 +7,6 @@ import {
   Users,
   Tag,
   Trash2,
-  User,
   ChevronRight,
   ArrowLeft,
   BarChart2,
@@ -225,16 +224,6 @@ export function AppSidebar() {
 
       {/* ── Bottom ── */}
       <div className={styles.bottom}>
-        <Link
-          href="/profile"
-          title="Mi perfil"
-          aria-label="Mi perfil"
-          className={`${styles.navItem}${pathname === '/profile' ? ` ${styles.navItemActive}` : ''}`}
-        >
-          <User className={styles.navIcon} aria-hidden="true" />
-          <span className={styles.navLabel}>Mi perfil</span>
-        </Link>
-
         <button
           type="button"
           className={styles.toggleBtn}
