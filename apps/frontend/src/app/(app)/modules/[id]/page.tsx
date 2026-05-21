@@ -9,24 +9,10 @@ import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { getInitials } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
-import { Construction, Layers, UserPlus } from 'lucide-react';
-import { ModuleBanner, bannerStyles } from '@/components/ui/ModuleBanner';
+import { Construction } from 'lucide-react';
+import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { AssignUsersModal } from './AssignUsersModal';
 import styles from './module-detail.module.css';
-
-function deriveGradient(color: string | null | undefined): [string, string] {
-  if (!color) return ['#334155', '#1e3a5f'];
-  const hex = color.replace('#', '');
-  if (hex.length !== 6) return ['#334155', '#1e3a5f'];
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
-  const dr = Math.max(0, Math.round(r * 0.65));
-  const dg = Math.max(0, Math.round(g * 0.65));
-  const db = Math.max(0, Math.round(b * 0.65));
-  const darker = `#${dr.toString(16).padStart(2,'0')}${dg.toString(16).padStart(2,'0')}${db.toString(16).padStart(2,'0')}`;
-  return [darker, color];
-}
 
 const ROLE_LABEL: Record<string, string> = {
   admin_modulo:  'Admin Módulo',
@@ -117,29 +103,13 @@ export default function ModuleDetailPage() {
     );
   }
 
-  const [gradFrom, gradTo] = deriveGradient((mod as any).color);
-
   return (
-    <div>
-      {/* ── Module banner ── */}
-      <ModuleBanner
-        title={mod.name}
-        subtitle={(mod as any).description ?? `Módulo · ${mod.slug}`}
-        icon={Layers}
-        gradientFrom={gradFrom}
-        gradientTo={gradTo}
-        imageUrl={(mod as any).image_url}
-        action={isSuperadmin ? (
-          <button
-            type="button"
-            className={bannerStyles.btn}
-            onClick={() => setShowAssign(true)}
-          >
-            <UserPlus size={14} strokeWidth={2} /> Asignar usuarios
-          </button>
-        ) : undefined}
-      />
-
+    <ModuleLayout
+      moduleId={id}
+      title={mod.name}
+      description={(mod as any).description ?? null}
+      isSuperadmin={isSuperadmin}
+    >
       {/* Maintenance notice for superadmin */}
       {(mod as any).maintenance_mode && isSuperadmin && (
         <div style={{
@@ -151,6 +121,23 @@ export default function ModuleDetailPage() {
           <span style={{ fontSize: 13, color: '#fde68a', fontWeight: 600 }}>
             Modo mantenimiento activo — los usuarios no pueden acceder a este módulo.
           </span>
+        </div>
+      )}
+
+      {/* Assign button for superadmin */}
+      {isSuperadmin && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <button
+            type="button"
+            onClick={() => setShowAssign(true)}
+            style={{
+              padding: '8px 16px', background: '#6366f1', color: '#fff',
+              border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            + Asignar usuarios
+          </button>
         </div>
       )}
 
@@ -247,6 +234,6 @@ export default function ModuleDetailPage() {
           </table>
         </div>
       )}
-    </div>
+    </ModuleLayout>
   );
 }

@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, QrCode, Package, ChevronDown, Boxes } from 'lucide-react';
-import { ModuleBanner, bannerStyles } from '@/components/ui/ModuleBanner';
+import { Plus, X, QrCode, Package, ChevronDown } from 'lucide-react';
+import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import type { ModuleNavItem } from '@/types/nav.types';
@@ -426,25 +426,25 @@ export function InventoryClient() {
   }, [assets]);
 
   return (
-    <div>
-      {/* ── Module banner ── */}
-      <ModuleBanner
-        title="Inventario"
-        subtitle={`${assets.length} activo${assets.length !== 1 ? 's' : ''}${statusFilter ? ` · ${ASSET_STATUS_LABELS[statusFilter]}` : ' · Gestión de activos y recursos'}`}
-        icon={Boxes}
-        gradientFrom="#065f46"
-        gradientTo="#0f766e"
-        action={
-          canEdit && selectedModule ? (
-            <button
-              type="button"
-              className={bannerStyles.btn}
-              onClick={() => setShowCreate(true)}
-            >
-              <Plus size={13} strokeWidth={2.5} /> Nuevo activo
-            </button>
-          ) : undefined}
-      />
+    <ModuleLayout
+      moduleId={selectedModule || undefined}
+      title="Inventario"
+      description="Registro y trazabilidad de activos organizacionales. Controla equipos, hardware y recursos asignados por módulo."
+      isSuperadmin={isSuperadmin}
+    >
+      {/* ── Toolbar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div /> {/* spacer */}
+        {canEdit && selectedModule && (
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 15px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', background: '#6366F1', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            <Plus size={13} /> Nuevo activo
+          </button>
+        )}
+      </div>
 
       {/* ── Module tabs ── */}
       {activeModules.length > 0 && (
@@ -520,6 +520,6 @@ export function InventoryClient() {
       {detailId && (
         <DetailModal assetId={detailId} canEdit={canEdit} onClose={() => setDetailId(null)} />
       )}
-    </div>
+    </ModuleLayout>
   );
 }

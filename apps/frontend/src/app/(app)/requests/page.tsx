@@ -1,8 +1,8 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, TrendingUp, ClipboardList } from 'lucide-react';
-import { ModuleBanner, bannerStyles } from '@/components/ui/ModuleBanner';
+import { Plus, TrendingUp } from 'lucide-react';
+import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import {
   requestsService,
   type AdmRequest, type RequestType, type RequestStatus,
@@ -133,27 +133,24 @@ export default function RequestsPage() {
   const showAdminActions = hasAdminAccess && activeTab === 'inbox';
 
   return (
-    <>
-      {/* ── Module banner ── */}
-      <ModuleBanner
-        title="Gestión Administrativa"
-        subtitle="Sistema de solicitudes y autorizaciones organizacionales"
-        icon={ClipboardList}
-        gradientFrom="#3730a3"
-        gradientTo="#6d28d9"
-        action={canCreate ? (
-          <button className={bannerStyles.btn} onClick={() => setCreateOpen(true)}>
-            <Plus size={13} strokeWidth={2.5} /> Nueva solicitud
-          </button>
-        ) : undefined}
-      />
-
-      {/* ── Count ── */}
-      {data && (
-        <div className={styles.count} style={{ marginBottom: 12, marginTop: -8 }}>
-          {total} solicitud{total !== 1 ? 'es' : ''}
+    <ModuleLayout
+      moduleId={gestionId}
+      title="Gestión Administrativa"
+      description="Consola centralizada de solicitudes organizacionales: autorizaciones, traslados, cambios de rol y escalamientos administrativos."
+      isSuperadmin={isSuperadmin}
+    >
+      {/* ── Count + create btn row ── */}
+      <div className={styles.header}>
+        <div>
+          {data && <div className={styles.count}>{total} solicitud{total !== 1 ? 'es' : ''}</div>}
         </div>
-      )}
+        {canCreate && (
+          <button className={styles.btnPrimary} onClick={() => setCreateOpen(true)}>
+            <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            Nueva solicitud
+          </button>
+        )}
+      </div>
 
       {/* ── Tab bar (admin only) ── */}
       {(hasAdminAccess && canViewAll) && (
@@ -296,6 +293,6 @@ export default function RequestsPage() {
           isSuperadmin={isSuperadmin}
         />
       )}
-    </>
+    </ModuleLayout>
   );
 }
