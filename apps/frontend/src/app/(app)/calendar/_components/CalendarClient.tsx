@@ -10,6 +10,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, CheckCircle2, XCircle, Clock, Filter, Plus, Settings, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
+import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import {
   requestsService,
   type AdmRequest,
@@ -614,11 +615,15 @@ export function CalendarClient() {
   }
 
   return (
+    <ModuleLayout
+      title="Calendario"
+      description="Visualización de solicitudes y tareas en formato de calendario mensual, semanal o agenda."
+      isSuperadmin={isSuperadmin}
+    >
     <div className={styles.wrap}>
       {/* ── Header ── */}
       <div className={styles.pageHeader}>
         <div>
-          <div className={styles.title}>Calendario</div>
           <div className={styles.subtitle}>{ROLE_LABELS[role]}</div>
           {contexts.length > 1 && (
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
@@ -775,5 +780,6 @@ export function CalendarClient() {
         />
       )}
     </div>
+    </ModuleLayout>
   );
 }

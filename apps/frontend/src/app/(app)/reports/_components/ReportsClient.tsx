@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, Ticket, CheckCircle2, Clock } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
+import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { ADMIN_ROLES } from '@/constants/roles';
 import { reportingService, type DailyTrend, type SlaByPriority } from '@/services/reporting.service';
 import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
@@ -197,19 +198,12 @@ export function ReportsClient() {
   const hasData      = totalTickets > 0;
 
   return (
-    <div className={styles.page}>
-      {/* ── Header ── */}
-      <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Reportes</h1>
-          <p className={styles.subtitle}>
-            {selectedModule
-              ? adminModules.find((m) => m.module_id === selectedModule)?.module_name ?? 'Módulo seleccionado'
-              : 'Vista global — todos los módulos'}
-          </p>
-        </div>
-      </div>
-
+    <ModuleLayout
+      title="Reportes"
+      description="Análisis de rendimiento, cumplimiento SLA y tendencias de tickets por módulo."
+      isSuperadmin={isSuperadmin}
+    >
+    <div>
       {/* ── Module selector ── */}
       {(isSuperadmin || adminModules.length > 1) && (
         <div className={styles.filterBar}>
@@ -339,5 +333,6 @@ export function ReportsClient() {
         </>
       )}
     </div>
+    </ModuleLayout>
   );
 }
