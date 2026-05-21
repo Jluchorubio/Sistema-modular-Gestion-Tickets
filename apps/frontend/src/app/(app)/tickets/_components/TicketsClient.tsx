@@ -5,7 +5,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, X, ChevronRight, Clock, AlertTriangle, CheckCircle2,
   Ticket, Filter, RotateCcw, LayoutList, Calendar, BarChart2,
+  HeadphonesIcon,
 } from 'lucide-react';
+import { ModuleBanner, bannerStyles } from '@/components/ui/ModuleBanner';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import type { ModuleNavItem } from '@/types/nav.types';
@@ -524,52 +526,50 @@ export function TicketsClient() {
   const canCreate = isSuperadmin || activeModules.length > 0;
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 1100, margin: '0 auto' }}>
-      {/* ── Page header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0D1B2A', margin: 0 }}>Mesa de Ayuda</h1>
-          <p style={{ fontSize: 13, color: '#64748B', margin: '4px 0 0' }}>
-            {total > 0 ? `${total} ticket${total !== 1 ? 's' : ''}` : 'Sin tickets'}
-            {selectedModule && activeModules.find((m) => m.module_id === selectedModule) && (
-              <> en {activeModules.find((m) => m.module_id === selectedModule)!.module_name}</>
-            )}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '7px 13px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-              border: `1.5px solid ${showFilters ? '#6366F1' : '#E2E8F0'}`,
-              background: showFilters ? '#6366F115' : '#fff',
-              color: showFilters ? '#6366F1' : '#475569',
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            <Filter size={13} />
-            Filtros
-            {hasFilters && <span style={{ background: '#6366F1', color: '#fff', borderRadius: 99, padding: '0 5px', fontSize: 10, fontWeight: 700 }}>•</span>}
-          </button>
-
-          {canCreate && selectedModule && (
+    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      {/* ── Module banner ── */}
+      <ModuleBanner
+        title="Mesa de Ayuda"
+        subtitle={
+          total > 0
+            ? `${total} ticket${total !== 1 ? 's' : ''}${selectedModule && activeModules.find((m) => m.module_id === selectedModule) ? ` en ${activeModules.find((m) => m.module_id === selectedModule)!.module_name}` : ''}`
+            : 'Soporte técnico y gestión de incidencias'
+        }
+        icon={HeadphonesIcon}
+        gradientFrom="#1e40af"
+        gradientTo="#0369a1"
+        action={
+          canCreate && selectedModule ? (
             <button
               type="button"
+              className={bannerStyles.btn}
               onClick={() => setShowCreate(true)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 15px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                border: 'none', background: '#6366F1', color: '#fff',
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
             >
-              <Plus size={13} />
-              Nuevo ticket
+              <Plus size={13} strokeWidth={2.5} /> Nuevo ticket
             </button>
+          ) : undefined}
+      />
+
+      {/* ── Filter row ── */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, marginTop: -8 }}>
+        <button
+          type="button"
+          onClick={() => setShowFilters((v) => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '7px 13px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+            border: `1.5px solid ${showFilters ? '#6366F1' : '#E2E8F0'}`,
+            background: showFilters ? '#6366F115' : '#fff',
+            color: showFilters ? '#6366F1' : '#475569',
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          <Filter size={13} />
+          Filtros
+          {hasFilters && (
+            <span style={{ background: '#6366F1', color: '#fff', borderRadius: 99, padding: '0 5px', fontSize: 10, fontWeight: 700 }}>•</span>
           )}
-        </div>
+        </button>
       </div>
 
       {/* ── Module tabs ── */}

@@ -9,9 +9,24 @@ import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { getInitials } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
-import { Construction } from 'lucide-react';
+import { Construction, Layers, UserPlus } from 'lucide-react';
+import { ModuleBanner, bannerStyles } from '@/components/ui/ModuleBanner';
 import { AssignUsersModal } from './AssignUsersModal';
 import styles from './module-detail.module.css';
+
+function deriveGradient(color: string | null | undefined): [string, string] {
+  if (!color) return ['#334155', '#1e3a5f'];
+  const hex = color.replace('#', '');
+  if (hex.length !== 6) return ['#334155', '#1e3a5f'];
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const dr = Math.max(0, Math.round(r * 0.65));
+  const dg = Math.max(0, Math.round(g * 0.65));
+  const db = Math.max(0, Math.round(b * 0.65));
+  const darker = `#${dr.toString(16).padStart(2,'0')}${dg.toString(16).padStart(2,'0')}${db.toString(16).padStart(2,'0')}`;
+  return [darker, color];
+}
 
 const ROLE_LABEL: Record<string, string> = {
   admin_modulo:  'Admin Módulo',
@@ -102,17 +117,30 @@ export default function ModuleDetailPage() {
     );
   }
 
+  const [gradFrom, gradTo] = deriveGradient((mod as any).color);
+
   return (
     <div>
-      <div className={styles.breadcrumb}>
-        <button type="button" className={styles.breadcrumbLink} onClick={() => router.push('/dashboard')}>
-          Módulos
-        </button>
-        <span>›</span>
-        <span>{mod.name}</span>
-      </div>
+      {/* ── Module banner ── */}
+      <ModuleBanner
+        title={mod.name}
+        subtitle={(mod as any).description ?? `Módulo · ${mod.slug}`}
+        icon={Layers}
+        gradientFrom={gradFrom}
+        gradientTo={gradTo}
+        imageUrl={(mod as any).image_url}
+        action={isSuperadmin ? (
+          <button
+            type="button"
+            className={bannerStyles.btn}
+            onClick={() => setShowAssign(true)}
+          >
+            <UserPlus size={14} strokeWidth={2} /> Asignar usuarios
+          </button>
+        ) : undefined}
+      />
 
-      {/* Maintenance banner for superadmin */}
+      {/* Maintenance notice for superadmin */}
       {(mod as any).maintenance_mode && isSuperadmin && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
@@ -125,18 +153,6 @@ export default function ModuleDetailPage() {
           </span>
         </div>
       )}
-
-      <div className={styles.header}>
-        <div>
-          <div className={styles.title}>{mod.name}</div>
-          <div className={styles.slug}>{mod.slug}</div>
-        </div>
-        {isSuperadmin && (
-          <button type="button" className={styles.btnPrimary} onClick={() => setShowAssign(true)}>
-            + Asignar usuarios
-          </button>
-        )}
-      </div>
 
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
