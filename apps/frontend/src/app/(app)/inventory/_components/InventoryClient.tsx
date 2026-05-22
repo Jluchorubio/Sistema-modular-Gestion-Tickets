@@ -2,11 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, QrCode, Package, ChevronDown } from 'lucide-react';
+import { Plus, X, QrCode, ChevronDown, Package } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModuleNav } from '@/hooks/useModuleNav';
-import type { ModuleNavItem } from '@/types/nav.types';
+import { useModules } from '@/hooks/useModules';
+import { INVENTORY_NAV, INVENTORY_MODULE_NAME, isInventoryModule } from '../_nav';
 import {
   inventoryService,
   type AssetListItem, type AssetDetail, type AssetStatus, type CreateAssetDto,
@@ -16,9 +17,6 @@ import { ticketsService } from '@/services/tickets.service';
 import { ADMIN_ROLES } from '@/constants/roles';
 import { fmtDate } from '@/lib/formatters';
 
-const INVENTORY_NAV: ModuleNavItem[] = [
-  { key: 'inventory', label: 'Inventario', Icon: Package, href: '/inventory' },
-];
 
 /* ── Status badge ────────────────────────────────────────────────────────── */
 
@@ -386,7 +384,9 @@ function AssetCard({ asset, onClick }: { asset: AssetListItem; onClick: () => vo
 /* ── Main ────────────────────────────────────────────────────────────────── */
 
 export function InventoryClient() {
-  useModuleNav('Inventario', INVENTORY_NAV);
+  const { modules } = useModules();
+  const inventoryId = modules?.find(isInventoryModule)?.id;
+  useModuleNav(INVENTORY_MODULE_NAME, INVENTORY_NAV, inventoryId);
 
   const user         = useAuthStore((s) => s.user);
   const isSuperadmin = user?.is_superadmin ?? false;
@@ -427,7 +427,7 @@ export function InventoryClient() {
 
   return (
     <ModuleLayout
-      moduleId={selectedModule || undefined}
+      moduleId={inventoryId || selectedModule || undefined}
       title="Inventario"
       description="Registro y trazabilidad de activos organizacionales. Controla equipos, hardware y recursos asignados por módulo."
       isSuperadmin={isSuperadmin}

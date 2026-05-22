@@ -12,39 +12,49 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Construction } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useModuleNav } from '@/hooks/useModuleNav';
-import { buildDynamicModuleNav } from './_nav';
-import { AssignUsersModal } from './AssignUsersModal';
-import styles from './module-detail.module.css';
+import { buildDynamicModuleNav } from '../modules/[id]/_nav';
+import { AssignUsersModal } from '../modules/[id]/AssignUsersModal';
+import styles from '../modules/[id]/module-detail.module.css';
 
 const ROLE_LABEL: Record<string, string> = {
-  admin_modulo:  'Admin Módulo',
-  jefe_tecnico:  'Jefe Técnico',
-  tecnico:       'Técnico',
-  usuario:       'Usuario',
+  admin_modulo: 'Admin Módulo',
+  jefe_tecnico: 'Jefe Técnico',
+  tecnico:      'Técnico',
+  usuario:      'Usuario',
 };
 
 const ROLE_CLS: Record<string, string> = {
-  admin_modulo:  styles.roleAdmin,
-  jefe_tecnico:  styles.roleJefe,
-  tecnico:       styles.roleTecnico,
-  usuario:       styles.roleUsuario,
+  admin_modulo: styles.roleAdmin,
+  jefe_tecnico: styles.roleJefe,
+  tecnico:      styles.roleTecnico,
+  usuario:      styles.roleUsuario,
 };
 
-export default function ModuleDetailPage() {
-  const { id }          = useParams<{ id: string }>();
-  const router          = useRouter();
-  const user            = useAuthStore((s) => s.user);
-  const isSuperadmin    = user?.is_superadmin ?? false;
+export default function ModuleSlugPage() {
+  const { moduleSlug }   = useParams<{ moduleSlug: string }>();
+  const router           = useRouter();
+  const user             = useAuthStore((s) => s.user);
+  const isSuperadmin     = user?.is_superadmin ?? false;
   const [showAssign, setShowAssign] = useState(false);
+
+  const navItems = useMemo(() => buildDynamicModuleNav(moduleSlug), [moduleSlug]);
+
+  // Find module by slug from the full list
+  const { data: allModules } = useQuery({
+    queryKey: ['modules'],
+    queryFn:  () => modulesService.getModules(),
+  });
+
+  const moduleRef = allModules?.find((m) => m.slug === moduleSlug);
 
   const {
     data: mod,
     isLoading: modLoading,
     isError: modError,
   } = useQuery({
-    queryKey: ['module', id],
-    queryFn:  () => modulesService.getModule(id),
-    enabled:  !!id,
+    queryKey: ['module', moduleRef?.id],
+    queryFn:  () => modulesService.getModule(moduleRef!.id),
+    enabled:  !!moduleRef?.id,
   });
 
   const {
@@ -52,9 +62,9 @@ export default function ModuleDetailPage() {
     isLoading: membersLoading,
     isError: membersError,
   } = useQuery({
-    queryKey: ['module-members', id],
-    queryFn:  () => usersService.getModuleUsers(id),
-    enabled:  !!id,
+    queryKey: ['module-members', moduleRef?.id],
+    queryFn:  () => usersService.getModuleUsers(moduleRef!.id),
+    enabled:  !!moduleRef?.id,
   });
 
   const techs  = members?.filter((m) =>
@@ -65,30 +75,14 @@ export default function ModuleDetailPage() {
   ) ?? [];
 
   // Must be before early returns (Rules of Hooks)
-  const navItems = useMemo(
-    () => buildDynamicModuleNav(mod?.slug ?? id),
-    [mod?.slug, id],
-  );
-  useModuleNav(mod?.name ?? '', navItems, id);
+  useModuleNav(mod?.name ?? moduleRef?.name ?? '', navItems, moduleRef?.id);
 
-  if (modLoading) return <Spinner />;
-  if (modError || !mod) {
-    return <p className={styles.errorMsg}>Error cargando módulo.</p>;
+  if (!allModules || modLoading) return <Spinner />;
+
+  if (!moduleRef || modError || !mod) {
+    return <p style={{ padding: 24, color: '#ef4444' }}>Módulo no encontrado.</p>;
   }
 
-  // Gestión Administrativa is a built-in module — always lives at /requests
-  if (['gestion', 'gestion-adm', 'gestion-administrativa'].includes((mod as any).slug) || ['administrative', 'gestion'].includes((mod as any).type)) {
-    router.replace('/requests');
-    return <Spinner />;
-  }
-
-  // Redirect to slug-based canonical URL for all custom modules
-  if (mod.slug) {
-    router.replace(`/${mod.slug}`);
-    return <Spinner />;
-  }
-
-  // Block non-admin access during maintenance
   if ((mod as any).maintenance_mode && !isSuperadmin) {
     return (
       <div style={{
@@ -101,15 +95,14 @@ export default function ModuleDetailPage() {
         </h2>
         <p style={{ fontSize: 15, color: '#64748b', maxWidth: 420, margin: 0 }}>
           {(mod as any).maintenance_message
-            || 'Este módulo está temporalmente fuera de servicio por mantenimiento. Vuelve más tarde.'}
+            || 'Este módulo está temporalmente fuera de servicio. Vuelve más tarde.'}
         </p>
         <button
           type="button"
           onClick={() => router.push('/dashboard')}
           style={{
             marginTop: 8, padding: '10px 24px', background: '#6366f1', color: '#fff',
-            border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600,
-            cursor: 'pointer',
+            border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
         >
           Volver al dashboard
@@ -120,12 +113,11 @@ export default function ModuleDetailPage() {
 
   return (
     <ModuleLayout
-      moduleId={id}
+      moduleId={moduleRef.id}
       title={mod.name}
       description={(mod as any).description ?? null}
       isSuperadmin={isSuperadmin}
     >
-      {/* Maintenance notice for superadmin */}
       {(mod as any).maintenance_mode && isSuperadmin && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
@@ -139,7 +131,6 @@ export default function ModuleDetailPage() {
         </div>
       )}
 
-      {/* Assign button for superadmin */}
       {isSuperadmin && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
           <button
@@ -174,14 +165,11 @@ export default function ModuleDetailPage() {
       <div className={styles.sectionTitle}>Miembros y roles</div>
 
       {membersLoading && <Spinner />}
-
-      {membersError && (
-        <p className={styles.errorMsg}>Error cargando miembros.</p>
-      )}
+      {membersError && <p className={styles.errorMsg}>Error cargando miembros.</p>}
 
       {showAssign && (
         <AssignUsersModal
-          moduleId={id}
+          moduleId={moduleRef.id}
           existingUserIds={new Set(members?.map((m) => m.id) ?? [])}
           onClose={() => setShowAssign(false)}
         />
@@ -208,26 +196,22 @@ export default function ModuleDetailPage() {
                 </tr>
               )}
               {members.map((m, i) => {
-                const initials = getInitials(m.first_name, m.last_name);
-                const roleName = (m as any).role_name as string;
-                const roleCls  = ROLE_CLS[roleName] ?? styles.roleUsuario;
-                const isActive = (m as any).status === 'active';
+                const initials  = getInitials(m.first_name, m.last_name);
+                const roleName  = (m as any).role_name as string;
+                const roleCls   = ROLE_CLS[roleName] ?? styles.roleUsuario;
+                const isActive  = (m as any).status === 'active';
 
                 return (
                   <tr key={`${m.id}_${roleName}_${i}`}>
                     <td>
                       <div className={styles.userCell}>
                         <div className={styles.avatar}>
-                          {m.avatar_url ? (
-                            <img src={m.avatar_url} alt="" className={styles.avatarImg} />
-                          ) : (
-                            <span>{initials}</span>
-                          )}
+                          {m.avatar_url
+                            ? <img src={m.avatar_url} alt="" className={styles.avatarImg} />
+                            : <span>{initials}</span>}
                         </div>
                         <div>
-                          <div className={styles.userName}>
-                            {m.first_name} {m.last_name}
-                          </div>
+                          <div className={styles.userName}>{m.first_name} {m.last_name}</div>
                         </div>
                       </div>
                     </td>

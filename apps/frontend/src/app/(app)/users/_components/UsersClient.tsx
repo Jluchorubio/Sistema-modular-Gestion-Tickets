@@ -16,6 +16,7 @@ import { getInitials } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
 import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
+import { BulkImportModal } from './BulkImportModal';
 import styles from '../users.module.css';
 import mstyles from '@/components/ui/modal.module.css';
 
@@ -57,6 +58,7 @@ export function UsersClient() {
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [createOpen,      setCreateOpen]      = useState(false);
+  const [importOpen,      setImportOpen]      = useState(false);
   const [editUser,        setEditUser]        = useState<UserListItem | null>(null);
   const [deleteUser,      setDeleteUser]      = useState<UserListItem | null>(null);
   const [deleteInput,     setDeleteInput]     = useState('');
@@ -178,9 +180,19 @@ export function UsersClient() {
           </div>
         </div>
         {canCreate && (
-          <button type="button" className={styles.btnPrimary} onClick={openCreate}>
-            + Crear usuario
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              className={styles.btnSecondary}
+              onClick={() => setImportOpen(true)}
+              title="Importar usuarios desde CSV"
+            >
+              ↑ Importar CSV
+            </button>
+            <button type="button" className={styles.btnPrimary} onClick={openCreate}>
+              + Crear usuario
+            </button>
+          </div>
         )}
       </div>
 
@@ -546,6 +558,8 @@ export function UsersClient() {
           </button>
         </div>
       </Modal>
+
+      {importOpen && <BulkImportModal onClose={() => setImportOpen(false)} />}
     </div>
   );
 }

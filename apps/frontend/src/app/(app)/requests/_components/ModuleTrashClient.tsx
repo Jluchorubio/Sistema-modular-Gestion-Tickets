@@ -15,20 +15,22 @@ function daysLabel(days: number | null) {
   return `${Math.floor(days)} día${Math.floor(days) !== 1 ? 's' : ''}`;
 }
 
-export function ModuleTrashClient() {
+interface Props { itemType?: string }
+
+export function ModuleTrashClient({ itemType = 'request' }: Props) {
   const qc       = useQueryClient();
   const moduleId = useUIStore((s) => s.moduleId);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['module-trash', moduleId],
-    queryFn:  () => adminService.getModuleTrash(moduleId!),
+    queryKey: ['module-trash', moduleId, itemType],
+    queryFn:  () => adminService.getModuleTrash(moduleId!, itemType),
     enabled:  !!moduleId,
   });
 
   const restoreMut = useMutation({
-    mutationFn: (ids: string[]) => adminService.restoreItems('request', ids),
+    mutationFn: (ids: string[]) => adminService.restoreItems(itemType, ids),
     onSuccess:  () => {
       qc.invalidateQueries({ queryKey: ['module-trash', moduleId] });
       setSelected(new Set());

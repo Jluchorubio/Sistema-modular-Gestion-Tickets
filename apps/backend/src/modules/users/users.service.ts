@@ -336,4 +336,32 @@ export class UsersService {
     this.logger.log(`Usuario ${id} eliminado (soft) por actor ${actorId}`);
     return { ok: true, message: 'Usuario eliminado' };
   }
+
+  async bulkImportUsers(
+    actorId: string,
+    rows: { first_name: string; last_name: string; email: string; username?: string; is_superadmin?: boolean }[],
+  ) {
+    const results: { row: number; email: string; status: 'created' | 'failed'; error?: string }[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      try {
+        await this.createUser(actorId, {
+          first_name:   row.first_name.trim(),
+          last_name:    row.last_name.trim(),
+          email:        row.email.trim().toLowerCase(),
+          username:     row.username?.trim() || undefined,
+          is_superadmin: !!row.is_superadmin,
+        } as any);
+        results.push({ row: i + 1, email: row.email, status: 'created' });
+      } catch (err: any) {
+        results.push({ row: i + 1, email: row.email, status: 'failed', error: err?.message ?? 'Error desconocido' });
+      }
+    }
+
+    const created = results.filter((r) => r.status === 'created').length;
+    const failed  = results.filter((r) => r.status === 'failed');
+    this.logger.log(`Bulk import: ${created} creados, ${failed.length} fallidos — actor ${actorId}`);
+    return { created, failed, total: rows.length };
+  }
 }

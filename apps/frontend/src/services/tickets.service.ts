@@ -189,4 +189,9 @@ export const ticketsService = {
     const { data } = await api.get('/tickets/workflow', { params: { module_id: moduleId } });
     return data;
   },
+
+  async addCollaborator(ticketId: string, userId: string, role: string): Promise<TicketAssignment> {
+    const { data } = await api.post(`/tickets/${ticketId}/assignments`, { user_id: userId, role });
+    return data;
+  },
 };

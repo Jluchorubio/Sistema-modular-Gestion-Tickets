@@ -11,6 +11,7 @@ import {
   Req,
   ParseUUIDPipe,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
@@ -54,6 +55,24 @@ export class UsersController {
   @ApiOperation({ summary: 'Crear usuario. Solo superadmin o admin_modulo.' })
   create(@Req() req: any, @Body() dto: CreateUserDto) {
     return this.usersService.createUser(req.user.sub, dto);
+  }
+
+  @Post('bulk-import')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:create')
+  @ApiOperation({ summary: 'Importar múltiples usuarios desde CSV/Excel. Máx 200 filas.' })
+  bulkImport(
+    @Req() req: any,
+    @Body() body: { rows: { first_name: string; last_name: string; email: string; username?: string; is_superadmin?: boolean }[] },
+  ) {
+    if (!Array.isArray(body.rows) || body.rows.length === 0) {
+      throw new BadRequestException('No hay filas para importar');
+    }
+    if (body.rows.length > 200) {
+      throw new BadRequestException('Máximo 200 usuarios por importación');
+    }
+    return this.usersService.bulkImportUsers(req.user.sub, body.rows);
   }
 
   @Get()

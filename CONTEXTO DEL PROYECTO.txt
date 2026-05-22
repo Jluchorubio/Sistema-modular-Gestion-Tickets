@@ -1240,46 +1240,521 @@ Panel rápido del usuario autenticado.
 
 ---
 
-# CALENDARIO GLOBAL
+CONTEXTO MEJORADO — CALENDARIO OPERATIVO GLOBAL DEL SISTEMA
+NATURALEZA DEL CALENDARIO
 
-El calendario:
+El calendario NO es una funcionalidad secundaria.
 
-* NO pertenece a un módulo específico,
-* NO vive dentro del sidebar,
-* y funciona como sistema transversal.
+Es un núcleo operativo transversal conectado directamente con:
 
----
+módulos,
+tickets,
+SLA,
+tareas,
+usuarios,
+disponibilidad,
+actividad operativa,
+automatizaciones,
+reuniones,
+mantenimiento,
+colaboración.
 
-# TIPOS DE EVENTOS
+Debe funcionar como un sistema vivo de organización operacional empresarial.
 
-## Eventos personales
+UBICACIÓN DEL CALENDARIO
 
-Solo visibles para el usuario creador.
+El calendario NO vive dentro del sidebar.
 
----
+Debe integrarse dentro del:
 
-## Eventos operativos
+header global
 
-Relacionados con:
+mediante:
 
-* módulos,
-* tickets,
-* tareas,
-* SLA,
-* actividad.
+botón contextual,
+dropdown expandible,
+panel lateral,
+modal rápido,
+acceso instantáneo.
+OBJETIVO UX/UI
 
----
+La integración en el header busca:
 
-# VISIBILIDAD
+acceso rápido,
+reducción de clics,
+navegación transversal,
+menor saturación visual,
+disponibilidad permanente.
 
-El contenido visible depende de:
+Todos los roles utilizan el calendario.
 
-* rol,
-* permisos,
-* módulo,
-* contexto.
+Por lo tanto:
 
----
+NO pertenece exclusivamente a un área administrativa.
+
+IMPORTANCIA OPERATIVA
+
+El calendario centraliza:
+
+planificación,
+disponibilidad,
+seguimiento,
+coordinación,
+vencimientos,
+reuniones,
+SLA,
+tareas personales,
+eventos globales.
+RELACIÓN CON EL SISTEMA
+
+El calendario se conecta directamente con:
+
+Helpdesk
+tickets,
+SLA,
+escalaciones,
+reuniones,
+tareas técnicas.
+Inventario
+mantenimientos,
+auditorías,
+préstamos,
+revisiones,
+vencimientos.
+Gestión Administrativa
+aprobaciones,
+reuniones,
+solicitudes,
+validaciones.
+Sistema global
+eventos corporativos,
+mantenimientos globales,
+actividad operativa,
+cambios críticos.
+TIPOS DE EVENTOS Y TAREAS
+
+El calendario maneja múltiples categorías operativas.
+
+1. EVENTOS PERSONALES
+Visibilidad
+
+Solo visibles para:
+
+usuario creador.
+USOS
+
+Ejemplos:
+
+recordatorios,
+reuniones personales,
+seguimiento individual,
+tareas privadas,
+organización diaria.
+CARACTERÍSTICAS
+
+Los eventos personales:
+
+NO afectan SLA,
+NO generan automatizaciones globales,
+NO aparecen en métricas compartidas,
+NO son visibles por otros usuarios.
+2. EVENTOS DE MÓDULO
+
+Relacionados directamente con módulos específicos.
+
+VISIBILIDAD
+
+Depende de:
+
+rol dentro del módulo,
+permisos,
+asignaciones,
+contexto activo.
+EJEMPLOS
+Helpdesk
+soporte programado,
+revisiones técnicas,
+reuniones de escalamiento,
+auditorías SLA,
+mantenimientos.
+Inventario
+revisiones de activos,
+mantenimientos preventivos,
+inventarios físicos,
+auditorías.
+Gestión Administrativa
+aprobaciones,
+revisiones,
+reuniones internas,
+validaciones.
+3. EVENTOS GLOBALES
+
+Eventos organizacionales visibles globalmente.
+
+VISIBILIDAD
+
+Disponibles para:
+
+usuarios autorizados,
+admins,
+superadmin,
+roles definidos.
+EJEMPLOS
+mantenimiento del sistema,
+caída programada,
+reuniones corporativas,
+cambios organizacionales,
+eventos empresariales,
+capacitaciones.
+SISTEMA MULTIROL
+
+Un usuario puede pertenecer simultáneamente a:
+
+múltiples módulos,
+múltiples roles,
+múltiples contextos operativos.
+REGLA DE CONTEXTO ACTIVO
+
+Inicialmente el sistema utilizará:
+
+primer rol asignado históricamente
+
+como contexto principal.
+
+CAMBIO MANUAL DE CONTEXTO
+
+El usuario podrá cambiar manualmente:
+
+módulo activo,
+rol operativo,
+contexto funcional.
+IMPACTO DEL CONTEXTO ACTIVO
+
+El contexto cambia dinámicamente:
+
+eventos visibles,
+permisos,
+tareas disponibles,
+creación de eventos,
+filtros,
+automatizaciones,
+accesos.
+COMPORTAMIENTO SEGÚN ROL
+USUARIO ESTÁNDAR
+
+Puede:
+
+visualizar calendario,
+consultar horarios,
+ver tareas asignadas,
+gestionar eventos personales.
+
+NO puede:
+
+crear eventos globales,
+modificar tareas del sistema,
+administrar eventos organizacionales.
+TÉCNICO
+
+Puede:
+
+ver tareas técnicas,
+gestionar asignaciones propias,
+programar seguimientos,
+crear tareas internas del módulo,
+asociar reuniones a tickets.
+
+NO puede:
+
+crear eventos globales,
+alterar configuraciones críticas.
+TÉCNICO EN JEFE / SUPERVISOR
+
+Puede:
+
+visualizar calendario del equipo,
+reasignar tareas,
+coordinar técnicos,
+gestionar disponibilidad,
+validar mantenimientos,
+supervisar SLA relacionados.
+ADMIN DE MÓDULO
+
+Puede:
+
+crear eventos del módulo,
+gestionar tareas colectivas,
+programar mantenimientos,
+visualizar métricas del módulo,
+coordinar reuniones operativas.
+SUPERADMIN
+
+Tiene acceso completo.
+
+Puede:
+
+visualizar todos los eventos,
+filtrar globalmente,
+administrar tareas organizacionales,
+coordinar módulos,
+visualizar métricas cruzadas,
+crear eventos globales,
+gestionar disponibilidad organizacional.
+MODOS DE VISUALIZACIÓN
+
+El calendario debe soportar múltiples vistas.
+
+VISTA DÍA
+
+Enfocada en:
+
+tareas detalladas,
+horas específicas,
+disponibilidad operativa.
+VISTA SEMANA
+
+Permite:
+
+planificación semanal,
+coordinación técnica,
+distribución operativa.
+VISTA MES
+
+Permite:
+
+visión general,
+mantenimientos,
+eventos corporativos,
+tendencias operativas.
+VISTA AGENDA
+
+Visualización lineal de:
+
+tareas,
+eventos,
+seguimientos,
+reuniones.
+VISTA TIMELINE
+
+Orientada a:
+
+operaciones complejas,
+supervisión,
+disponibilidad,
+actividad extendida.
+FILTROS DEL CALENDARIO
+
+El sistema debe soportar filtros dinámicos avanzados.
+
+FILTROS DISPONIBLES
+Por módulo
+
+Ejemplo:
+
+Helpdesk
+Inventario
+Gestión Administrativa
+Por usuario
+técnico,
+supervisor,
+admin,
+usuario específico.
+Por prioridad
+baja,
+media,
+alta,
+crítica.
+Por estado
+pendiente,
+en progreso,
+completado,
+cancelado,
+vencido.
+Por rol
+técnico,
+admin,
+supervisor,
+usuario.
+Por tipo
+reunión,
+mantenimiento,
+auditoría,
+tarea,
+seguimiento.
+Por fecha
+rango personalizado,
+hoy,
+semana,
+mes,
+vencidos.
+VISUALIZACIÓN DE EVENTOS
+
+Cada evento debe mostrar información contextual rápida.
+
+DATOS VISIBLES EN EVENTOS
+avatar/foto,
+nombre creador,
+módulo asociado,
+prioridad,
+tipo,
+fecha,
+duración,
+estado,
+color contextual.
+SISTEMA DE COLORES
+
+Los colores deben representar:
+
+Prioridad
+
+Ejemplo:
+
+rojo → crítico
+amarillo → medio
+verde → bajo
+Tipo de evento
+
+Ejemplo:
+
+reunión,
+mantenimiento,
+SLA,
+auditoría.
+Estado
+
+Ejemplo:
+
+completado,
+pendiente,
+vencido.
+RELACIÓN CON SLA
+
+El calendario debe integrarse directamente con:
+
+SLA,
+vencimientos,
+escalaciones,
+alertas.
+EVENTOS AUTOMÁTICOS POR SLA
+
+El sistema podrá generar automáticamente:
+
+alertas,
+recordatorios,
+vencimientos,
+escalaciones programadas.
+RECORDATORIOS Y ALERTAS
+
+Cada evento puede tener:
+
+recordatorios,
+notificaciones,
+alertas progresivas,
+avisos previos.
+NOTIFICACIONES DEL CALENDARIO
+
+Las notificaciones pueden enviarse mediante:
+
+sistema interno,
+correo,
+websocket,
+alertas visuales.
+EVENTOS RECURRENTES
+
+El calendario debe soportar recurrencia.
+
+Ejemplos:
+
+reuniones semanales,
+mantenimientos mensuales,
+auditorías periódicas.
+CONFIGURACIÓN DE RECURRENCIA
+
+Debe permitir:
+
+diaria,
+semanal,
+mensual,
+personalizada.
+DISPONIBILIDAD OPERATIVA
+
+El calendario debe manejar disponibilidad de usuarios.
+
+ESTADOS DE DISPONIBILIDAD
+
+Ejemplo:
+
+disponible,
+ocupado,
+ausente,
+reunión,
+fuera de horario.
+RELACIÓN CON VIDEOLLAMADAS
+
+El calendario debe integrarse posteriormente con:
+
+Google Meet,
+reuniones,
+invitaciones,
+sesiones colaborativas.
+CREACIÓN DE REUNIONES
+
+Desde el calendario podrá:
+
+programarse reunión,
+asociarse a ticket,
+invitar participantes,
+generar enlaces automáticos.
+TRAZABILIDAD
+
+Toda acción del calendario debe generar auditoría.
+
+EVENTOS AUDITABLES
+creación,
+edición,
+cancelación,
+participación,
+cambios de estado,
+reprogramaciones.
+MÉTRICAS FUTURAS
+
+El calendario alimentará métricas relacionadas con:
+
+productividad,
+disponibilidad,
+carga operativa,
+cumplimiento,
+SLA,
+coordinación.
+OPTIMIZACIÓN UX/UI
+
+El calendario debe priorizar:
+
+rapidez,
+bajo número de clics,
+claridad visual,
+consistencia,
+acceso inmediato,
+navegación fluida.
+REGLA IMPORTANTE DE DISEÑO
+
+La estructura visual actual del calendario:
+
+NO debe reinterpretarse,
+NO debe rediseñarse,
+NO debe alterarse visualmente,
+
+salvo instrucción explícita futura.
+
+Actualmente el enfoque principal es:
+
+comportamiento,
+lógica,
+permisos,
+trazabilidad,
+automatización,
+integración operacional.
+-----------------------
 
 # NOTIFICACIONES
 

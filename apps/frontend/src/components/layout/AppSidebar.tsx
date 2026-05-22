@@ -162,21 +162,25 @@ export function AppSidebar() {
     <aside className={`${styles.sidebar}${expanded ? ` ${styles.expanded}` : ''}`}>
       {/* ── Brand ── */}
       <div className={styles.brand} aria-label={company?.name ?? 'Sistema de Tickets'}>
-        <div className={styles.brandMark} aria-hidden="true">
-          {company?.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
+        {company?.logo_url ? (
+          /* Company logo — plain container, no pseudo-element bars */
+          <div className={styles.logoWrap} aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={company.logo_url}
               alt={company.name}
-              style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6 }}
+              style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 8, display: 'block' }}
             />
-          ) : (
+          </div>
+        ) : (
+          /* Default brand mark — two diagonal bars + dot */
+          <div className={styles.brandMark} aria-hidden="true">
             <span
               className={styles.brandDot}
-              style={company?.primary_color ? { background: company.primary_color } : undefined}
+              style={company?.primary_color ? { background: company.primary_color, boxShadow: `0 0 0 3px ${company.primary_color}26` } : undefined}
             />
-          )}
-        </div>
+          </div>
+        )}
         {expanded && company?.name && (
           <span className={styles.brandName}>{company.name}</span>
         )}

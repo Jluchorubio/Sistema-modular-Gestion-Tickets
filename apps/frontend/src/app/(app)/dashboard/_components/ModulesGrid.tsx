@@ -94,7 +94,7 @@ export function ModulesGrid({
             key={m.id}
             module={m}
             isSuperadmin={isSuperadmin}
-            onClick={() => router.push(`/modules/${m.id}`)}
+            onClick={() => router.push(`/${m.slug}`)}
             onEdit={() => onEdit(m)}
             onToggleActive={() => onToggleActive(m)}
             onDelete={() => onDelete(m)}
@@ -119,7 +119,7 @@ export function ModulesGrid({
                 key={m.id}
                 module={m}
                 isSuperadmin={isSuperadmin}
-                onClick={() => router.push(`/modules/${m.id}`)}
+                onClick={() => router.push(`/${m.slug}`)}
                 onEdit={() => onEdit(m)}
                 onToggleActive={() => onToggleActive(m)}
                 onDelete={() => onDelete(m)}

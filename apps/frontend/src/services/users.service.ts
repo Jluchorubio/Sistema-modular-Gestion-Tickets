@@ -266,6 +266,13 @@ export const usersService = {
     await api.post(`/users/module/${moduleId}/bulk-assign`, { user_ids: userIds, role_id: roleId });
   },
 
+  async bulkImport(
+    rows: { first_name: string; last_name: string; email: string; username?: string; is_superadmin?: boolean }[],
+  ): Promise<{ created: number; failed: { row: number; email: string; error: string }[]; total: number }> {
+    const { data } = await api.post('/users/bulk-import', { rows });
+    return data;
+  },
+
 };
 
 export interface TrashItem {
@@ -279,8 +286,8 @@ export interface TrashItem {
 }
 
 export const adminService = {
-  async getModuleTrash(moduleId: string): Promise<{ data: TrashItem[]; meta: { total: number } }> {
-    const { data } = await api.get('/admin/trash', { params: { type: 'request', moduleId } });
+  async getModuleTrash(moduleId: string, itemType = 'request'): Promise<{ data: TrashItem[]; meta: { total: number } }> {
+    const { data } = await api.get('/admin/trash', { params: { type: itemType, moduleId } });
     return data;
   },
 

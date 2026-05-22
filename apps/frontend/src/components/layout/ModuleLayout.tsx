@@ -12,6 +12,7 @@ interface Props {
   title: string;
   description?: string | null;
   isSuperadmin?: boolean;
+  showHero?: boolean;
   children: React.ReactNode;
 }
 
@@ -20,6 +21,7 @@ export function ModuleLayout({
   title,
   description,
   isSuperadmin = false,
+  showHero = true,
   children,
 }: Props) {
   /* ── Fetch module data & members ── */
@@ -55,51 +57,58 @@ export function ModuleLayout({
     ? getInitials(admin.first_name, admin.last_name)
     : null;
 
-  /* ── Hero background style ── */
-  const heroStyle: React.CSSProperties = imageUrl
-    ? { backgroundImage: `url(${imageUrl})` }
-    : {};
+  /* ── Hero overlay color style ── */
+  const overlayStyle: React.CSSProperties = {
+    background: imageUrl
+      ? `linear-gradient(to bottom, ${overlayColor}44 0%, ${overlayColor}bb 100%)`
+      : `linear-gradient(135deg, ${overlayColor}e6 0%, ${overlayColor}99 100%)`,
+  };
 
   return (
     <div className={styles.card}>
-      {/* ── Hero section ── */}
-      <div className={styles.hero} style={heroStyle}>
-        {/* Color overlay — always shown; tints image or fills plain bg */}
-        <div
-          className={styles.overlay}
-          style={{
-            background: imageUrl
-              ? `linear-gradient(to bottom, ${overlayColor}55 0%, ${overlayColor}cc 100%)`
-              : `linear-gradient(135deg, ${overlayColor}e6 0%, ${overlayColor}99 100%)`,
-          }}
-        />
-        {/* Bottom gradient for depth */}
-        <div className={styles.overlayGrad} />
+      {/* ── Hero section — only for dashboard modules ── */}
+      {showHero && (
+        <div className={styles.hero}>
+          {/* Full image — object-fit: contain shows complete image, no crop */}
+          {imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt=""
+              aria-hidden="true"
+              className={styles.heroImg}
+            />
+          )}
+          {/* Color overlay */}
+          <div className={styles.overlay} style={overlayStyle} />
+          {/* Bottom gradient for depth */}
+          <div className={styles.overlayGrad} />
 
-        {/* Admin avatar — overlaps hero/content boundary */}
-        <div className={styles.adminAvatar}>
-          <div className={styles.adminAvatarInner}>
-            {adminAvatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={adminAvatar}
-                alt={adminName ?? 'Admin'}
-                className={styles.adminAvatarImg}
-              />
-            ) : adminInitials ? (
-              <span className={styles.adminAvatarInitials}>{adminInitials}</span>
-            ) : (
-              <span className={styles.adminPlaceholder}>?</span>
-            )}
-          </div>
-          {admin && <span className={styles.adminOnlineDot} />}
+          {/* Admin avatar — overlaps hero/content boundary, only when admin exists */}
+          {admin && (
+            <div className={styles.adminAvatar}>
+              <div className={styles.adminAvatarInner}>
+                {adminAvatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={adminAvatar}
+                    alt={adminName ?? 'Admin'}
+                    className={styles.adminAvatarImg}
+                  />
+                ) : adminInitials ? (
+                  <span className={styles.adminAvatarInitials}>{adminInitials}</span>
+                ) : null}
+              </div>
+              <span className={styles.adminOnlineDot} />
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* ── Module info ── */}
       <div className={styles.info}>
-        {/* Spacer so content clears the overlapping avatar */}
-        <div className={styles.avatarSpacer} />
+        {/* Spacer so content clears the overlapping avatar (only when hero shown) */}
+        {showHero && <div className={styles.avatarSpacer} />}
 
         {/* Title row */}
         <div className={styles.titleRow}>

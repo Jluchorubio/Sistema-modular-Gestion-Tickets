@@ -1,34 +1,29 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, X, ChevronRight, Clock, AlertTriangle, CheckCircle2,
-  Ticket, Filter, RotateCcw, LayoutList, Calendar, BarChart2,
+  Plus, X, Clock, AlertTriangle, Ticket, Filter,
 } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModuleNav } from '@/hooks/useModuleNav';
-import type { ModuleNavItem } from '@/types/nav.types';
+import { useModules } from '@/hooks/useModules';
+import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
   ticketsService,
-  type TicketListItem, type TicketDetail, type TicketPriority,
+  type TicketListItem, type TicketPriority,
   type CreateTicketDto,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
 } from '@/services/tickets.service';
-import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
+import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 
 const PRIORITIES: TicketPriority[] = ['baja', 'media', 'alta', 'critica'];
 
-const HELPDESK_NAV: ModuleNavItem[] = [
-  { key: 'all-tickets', label: 'Todos los Tickets', Icon: LayoutList, href: '/tickets'    },
-  { key: 'my-tickets',  label: 'Mis Tickets',       Icon: Ticket,     href: '/my-tickets' },
-  { key: 'calendar',    label: 'Calendario',         Icon: Calendar,   href: '/calendar'   },
-  { key: 'reports',     label: 'Reportes',           Icon: BarChart2,  href: '/reports'    },
-];
 
-/* ── Priority badge ─────────────────────────────────────────────────────── */
+/* ── Priority badge ─────────────────────────────────────────────── */
 
 function PriorityBadge({ priority }: { priority: TicketPriority }) {
   const color = TICKET_PRIORITY_COLORS[priority];
@@ -42,7 +37,7 @@ function PriorityBadge({ priority }: { priority: TicketPriority }) {
   );
 }
 
-/* ── State badge ────────────────────────────────────────────────────────── */
+/* ── State badge ────────────────────────────────────────────────── */
 
 function StateBadge({ label, isFinal }: { label: string; isFinal: boolean }) {
   const color = isFinal ? '#22C55E' : '#6366F1';
@@ -56,7 +51,7 @@ function StateBadge({ label, isFinal }: { label: string; isFinal: boolean }) {
   );
 }
 
-/* ── SLA badge ──────────────────────────────────────────────────────────── */
+/* ── SLA badge ──────────────────────────────────────────────────── */
 
 function SlaBadge({ status, deadline }: { status: string | null; deadline: string | null }) {
   if (!status || !deadline) return null;
@@ -74,7 +69,7 @@ function SlaBadge({ status, deadline }: { status: string | null; deadline: strin
   );
 }
 
-/* ── Create ticket modal ─────────────────────────────────────────────────── */
+/* ── Create ticket modal ─────────────────────────────────────────── */
 
 interface CreateModalProps {
   moduleId: string;
@@ -119,9 +114,9 @@ function CreateModal({ moduleId, onClose }: CreateModalProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.title?.trim())        { setError('Título requerido.'); return; }
-    if (!form.category_id)          { setError('Categoría requerida.'); return; }
-    if (!form.environment_id)       { setError('Ambiente requerido.'); return; }
+    if (!form.title?.trim())   { setError('Título requerido.'); return; }
+    if (!form.category_id)     { setError('Categoría requerida.'); return; }
+    if (!form.environment_id)  { setError('Ambiente requerido.'); return; }
     setError('');
     createMut.mutate();
   }
@@ -241,188 +236,7 @@ function CreateModal({ moduleId, onClose }: CreateModalProps) {
   );
 }
 
-/* ── Ticket detail modal ─────────────────────────────────────────────────── */
-
-interface DetailModalProps {
-  ticketId: string;
-  onClose:  () => void;
-}
-
-function DetailModal({ ticketId, onClose }: DetailModalProps) {
-  const qc = useQueryClient();
-
-  const { data: ticket, isLoading } = useQuery({
-    queryKey: ['ticket-detail', ticketId],
-    queryFn:  () => ticketsService.getOne(ticketId),
-    staleTime: 30_000,
-  });
-
-  const [transReason, setTransReason] = useState('');
-  const [activeTransId, setActiveTransId] = useState<string | null>(null);
-
-  const transMut = useMutation({
-    mutationFn: ({ transId, reason }: { transId: string; reason?: string }) =>
-      ticketsService.transition(ticketId, transId, reason || undefined),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['tickets'] });
-      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
-      setActiveTransId(null);
-      setTransReason('');
-    },
-  });
-
-  return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', overflowY: 'auto' }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 640, padding: '28px 28px 24px', position: 'relative' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button type="button" onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}>
-          <X size={16} />
-        </button>
-
-        {isLoading && <div style={{ padding: '48px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>Cargando…</div>}
-
-        {ticket && (
-          <>
-            {/* Header */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 500 }}>{ticket.module_name}</span>
-                <ChevronRight size={11} style={{ color: '#CBD5E1' }} />
-                <span style={{ fontSize: 11, color: '#94A3B8' }}>{ticket.category_name}</span>
-              </div>
-              <h2 style={{ fontSize: 17, fontWeight: 700, color: '#0F172A', margin: '0 0 10px' }}>{ticket.title}</h2>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                <PriorityBadge priority={ticket.priority} />
-                <StateBadge label={ticket.state_label} isFinal={ticket.is_final} />
-                <SlaBadge status={ticket.sla_status} deadline={ticket.sla_deadline_tracked} />
-              </div>
-            </div>
-
-            {/* Description */}
-            {ticket.description && (
-              <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: 8, fontSize: 13, color: '#334155', marginBottom: 16, lineHeight: 1.6 }}>
-                {ticket.description}
-              </div>
-            )}
-
-            {/* Meta grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px', fontSize: 12, marginBottom: 20 }}>
-              {([
-                ['Creado por',   ticket.creator_name],
-                ['Asignado a',   ticket.assignee_name ?? '—'],
-                ['Ambiente',     ticket.environment_name],
-                ['Creado',       fmtDate(ticket.created_at)],
-                ['Urgencia',     ticket.urgency],
-                ['Impacto',      ticket.impact],
-              ] as [string, string][]).map(([label, val]) => (
-                <div key={label}>
-                  <span style={{ color: '#94A3B8', fontWeight: 500 }}>{label}: </span>
-                  <span style={{ color: '#334155', fontWeight: 600 }}>{val}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Transitions */}
-            {!ticket.is_final && ticket.transitions.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', marginBottom: 8 }}>ACCIONES DISPONIBLES</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {ticket.transitions.map((tr) => (
-                    <button
-                      key={tr.id}
-                      type="button"
-                      onClick={() => setActiveTransId(activeTransId === tr.id ? null : tr.id)}
-                      style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        border: `1.5px solid ${activeTransId === tr.id ? '#6366F1' : '#E2E8F0'}`,
-                        background: activeTransId === tr.id ? '#6366F115' : '#fff',
-                        color: activeTransId === tr.id ? '#6366F1' : '#475569',
-                        cursor: 'pointer', fontFamily: 'inherit',
-                        display: 'flex', alignItems: 'center', gap: 5,
-                      }}
-                    >
-                      <ChevronRight size={11} />
-                      {tr.to_label}
-                    </button>
-                  ))}
-                </div>
-
-                {activeTransId && (
-                  <div style={{ marginTop: 10, display: 'flex', gap: 8, flexDirection: 'column' }}>
-                    <textarea
-                      value={transReason}
-                      onChange={(e) => setTransReason(e.target.value)}
-                      placeholder="Motivo del cambio (opcional)…"
-                      rows={2}
-                      style={{
-                        width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13,
-                        border: '1px solid #E2E8F0', outline: 'none', resize: 'vertical',
-                        boxSizing: 'border-box', fontFamily: 'inherit',
-                      }}
-                    />
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="button" onClick={() => { setActiveTransId(null); setTransReason(''); }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: '#64748B' }}>
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => transMut.mutate({ transId: activeTransId, reason: transReason })}
-                        disabled={transMut.isPending}
-                        style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: '#6366F1', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, opacity: transMut.isPending ? .7 : 1 }}
-                      >
-                        <CheckCircle2 size={12} />
-                        {transMut.isPending ? 'Aplicando…' : 'Confirmar'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* History */}
-            {ticket.history.length > 0 && (
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', marginBottom: 10 }}>HISTORIAL DE ESTADOS</p>
-                <div style={{ borderRadius: 10, border: '1px solid #F1F5F9', overflow: 'hidden' }}>
-                  {ticket.history.map((h, i) => (
-                    <div key={h.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                      borderBottom: i < ticket.history.length - 1 ? '1px solid #F1F5F9' : undefined,
-                      background: '#fff',
-                    }}>
-                      <div style={{ width: 24, height: 24, borderRadius: 6, background: '#6366F115', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <RotateCcw size={11} style={{ color: '#6366F1' }} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 12, fontWeight: 500, color: '#0F172A', margin: 0 }}>
-                          {h.from_label} → {h.to_label}
-                        </p>
-                        {h.transition_reason && (
-                          <p style={{ fontSize: 11, color: '#94A3B8', margin: '2px 0 0' }}>{h.transition_reason}</p>
-                        )}
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <p style={{ fontSize: 11, color: '#94A3B8', margin: 0 }}>{h.actor_name}</p>
-                        <p style={{ fontSize: 10, color: '#CBD5E1', margin: '1px 0 0' }}>{fmtRelative(h.transitioned_at)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ── Ticket row ─────────────────────────────────────────────────────────── */
+/* ── Ticket row ─────────────────────────────────────────────────── */
 
 function TicketRow({ ticket, onClick }: { ticket: TicketListItem; onClick: () => void }) {
   const overdue = ticket.sla_status === 'breached';
@@ -458,10 +272,13 @@ function TicketRow({ ticket, onClick }: { ticket: TicketListItem; onClick: () =>
   );
 }
 
-/* ── Main component ─────────────────────────────────────────────────────── */
+/* ── Main component ─────────────────────────────────────────────── */
 
 export function TicketsClient() {
-  useModuleNav('Mesa de Ayuda', HELPDESK_NAV);
+  const router        = useRouter();
+  const { modules }   = useModules();
+  const helpdeskId    = modules?.find(isHelpdeskModule)?.id;
+  useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
 
   const user         = useAuthStore((s) => s.user);
   const isSuperadmin = user?.is_superadmin ?? false;
@@ -484,7 +301,6 @@ export function TicketsClient() {
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
   const [mineOnly,       setMineOnly]       = useState(false);
   const [showCreate,     setShowCreate]     = useState(false);
-  const [detailId,       setDetailId]       = useState<string | null>(null);
   const [showFilters,    setShowFilters]    = useState(false);
   const [page,           setPage]           = useState(1);
 
@@ -526,12 +342,12 @@ export function TicketsClient() {
 
   return (
     <ModuleLayout
-      moduleId={selectedModule || undefined}
+      moduleId={helpdeskId || selectedModule || undefined}
       title="Mesa de Ayuda"
       description="Sistema centralizado de soporte técnico. Gestiona incidencias, solicitudes y seguimiento SLA para todos los módulos asignados."
       isSuperadmin={isSuperadmin}
     >
-      {/* ── Toolbar: filter + create ── */}
+      {/* ── Toolbar ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <button
           type="button"
@@ -671,7 +487,10 @@ export function TicketsClient() {
 
         {tickets.map((t, i) => (
           <div key={t.id} style={{ borderBottom: i < tickets.length - 1 ? '1px solid #F1F5F9' : undefined }}>
-            <TicketRow ticket={t} onClick={() => setDetailId(t.id)} />
+            <TicketRow
+              ticket={t}
+              onClick={() => router.push(`/tickets/ticket/${t.id}`)}
+            />
           </div>
         ))}
       </div>
@@ -701,13 +520,9 @@ export function TicketsClient() {
         </div>
       )}
 
-      {/* ── Modals ── */}
+      {/* ── Create modal ── */}
       {showCreate && selectedModule && (
         <CreateModal moduleId={selectedModule} onClose={() => setShowCreate(false)} />
-      )}
-
-      {detailId && (
-        <DetailModal ticketId={detailId} onClose={() => setDetailId(null)} />
       )}
     </ModuleLayout>
   );
