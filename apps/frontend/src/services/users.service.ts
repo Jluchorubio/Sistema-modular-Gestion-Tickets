@@ -188,10 +188,25 @@ export const usersService = {
   },
 
   async getMyRecentTickets(limit = 6): Promise<{
-    id: string; title: string; priority: string; created_at: string;
-    module_name: string; state_label: string; state_name: string; is_final: boolean;
+    id: string; title: string; priority: string;
+    created_at: string; updated_at: string;
+    module_name: string; module_slug: string | null;
+    state_label: string; state_name: string; is_final: boolean;
+    sla_status: string | null; sla_deadline_tracked: string | null;
   }[]> {
     const { data } = await api.get('/users/me/recent-tickets', { params: { limit } });
+    return data;
+  },
+
+  async getMyAssignedTickets(limit = 50): Promise<{
+    id: string; title: string; priority: string;
+    created_at: string; updated_at: string;
+    module_name: string; module_slug: string | null;
+    state_label: string; state_name: string; is_final: boolean;
+    sla_status: string | null; sla_deadline_tracked: string | null;
+    assignment_role: string;
+  }[]> {
+    const { data } = await api.get('/users/me/assigned-tickets', { params: { limit } });
     return data;
   },
 

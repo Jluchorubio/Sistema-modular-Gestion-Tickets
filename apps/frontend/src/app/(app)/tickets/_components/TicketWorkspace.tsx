@@ -1,19 +1,20 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, ChevronRight, Clock, AlertTriangle, CheckCircle2, RotateCcw,
   Users, Phone, CalendarDays, X, Paperclip, ScrollText,
+  Upload, FileText, ImageIcon, Trash2,
 } from 'lucide-react';
-import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
+import { useAuthStore } from '@/stores/auth.store';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
   ticketsService,
-  type TicketPriority,
+  type TicketPriority, type TicketAttachment,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
 } from '@/services/tickets.service';
@@ -76,8 +77,9 @@ function SlaBadge({ status, deadline }: { status: string | null; deadline: strin
 /* ── Main component ─────────────────────────────────────────────── */
 
 export function TicketWorkspace({ ticketId }: { ticketId: string }) {
-  const router    = useRouter();
-  const qc        = useQueryClient();
+  const router      = useRouter();
+  const qc          = useQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
   const { modules } = useModules();
   const helpdeskId  = modules?.find(isHelpdeskModule)?.id;
 
@@ -110,6 +112,14 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [activeTransId, setActiveTransId] = useState<string | null>(null);
   const [replyText,     setReplyText]     = useState('');
 
+  /* ── Validation state ── */
+  const [signature,       setSignature]       = useState('');
+  const [showRejectForm,  setShowRejectForm]  = useState(false);
+  const [rejectReason,    setRejectReason]    = useState('');
+  const [isApproving,     setIsApproving]     = useState(false);
+  const [isRejecting,     setIsRejecting]     = useState(false);
+  const [validationError, setValidationError] = useState('');
+
   /* ── Right panel state ── */
   const [meetingType,    setMeetingType]    = useState<MeetingType>('asesoramiento');
   const [selectedUserId, setSelectedUserId] = useState('');
@@ -119,6 +129,39 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [localGuests,    setLocalGuests]    = useState<LocalGuest[]>([]);
   const [scheduledDetails, setScheduledDetails] = useState<{ date: string; time: string; type: MeetingType } | null>(null);
   const [isScheduling,   setIsScheduling]   = useState(false);
+
+  /* ── Attachments ── */
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState('');
+
+  const { data: attachments = [] } = useQuery<TicketAttachment[]>({
+    queryKey: ['ticket-attachments', ticketId],
+    queryFn:  () => ticketsService.getAttachments(ticketId),
+    staleTime: 60_000,
+  });
+
+  const uploadMut = useMutation({
+    mutationFn: (file: File) => ticketsService.uploadAttachment(ticketId, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] });
+      setUploadError('');
+    },
+    onError: (e: any) => setUploadError(e?.response?.data?.message ?? 'Error al subir archivo.'),
+  });
+
+  const deletAttMut = useMutation({
+    mutationFn: (attId: string) => ticketsService.deleteAttachment(ticketId, attId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] }),
+  });
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setUploadError('Máximo 10 MB.'); return; }
+    setUploadError('');
+    uploadMut.mutate(file);
+    e.target.value = '';
+  }
 
   /* ── Transition mutation ── */
   const transMut = useMutation({
@@ -210,6 +253,43 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     return merged;
   }, [ticket?.assignments, localGuests]);
 
+  /* ── Validation handlers ── */
+  async function handleApprove() {
+    if (!signature.trim()) { setValidationError('Firma requerida.'); return; }
+    setIsApproving(true);
+    setValidationError('');
+    try {
+      await ticketsService.approve(ticketId, signature.trim());
+      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+      setSignature('');
+    } catch (e: any) {
+      setValidationError(e?.response?.data?.message ?? 'Error al aprobar.');
+    } finally {
+      setIsApproving(false);
+    }
+  }
+
+  async function handleReject() {
+    if (!rejectReason.trim()) { setValidationError('Justificación requerida.'); return; }
+    setIsRejecting(true);
+    setValidationError('');
+    try {
+      const result = await ticketsService.reject(ticketId, rejectReason.trim());
+      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+      setShowRejectForm(false);
+      setRejectReason('');
+      if (result.escalated) {
+        alert('Ticket escalado al Jefe Técnico con prioridad Alta.');
+      }
+    } catch (e: any) {
+      setValidationError(e?.response?.data?.message ?? 'Error al rechazar.');
+    } finally {
+      setIsRejecting(false);
+    }
+  }
+
   /* ── SLA helpers ── */
   const slaColor = ticket?.sla_status
     ? (SLA_STATUS_COLORS[ticket.sla_status as keyof typeof SLA_STATUS_COLORS] ?? '#94A3B8')
@@ -220,11 +300,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
   /* ── Render ── */
   return (
-    <ModuleLayout
-      moduleId={helpdeskId}
-      title="Mesa de Ayuda"
-      description="Sistema centralizado de soporte técnico. Gestiona incidencias, solicitudes y seguimiento SLA para todos los módulos asignados."
-    >
+    <div className={styles.workspacePage}>
       {isLoading && (
         <div style={{ padding: '80px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>
           Cargando ticket…
@@ -292,8 +368,101 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               ))}
             </div>
 
+            {/* ── Digital signature validation ── */}
+            {ticket.state_name === 'realizado' && (
+              currentUser?.id === ticket.created_by ? (
+                <div className={styles.validationPanel}>
+                  <p className={styles.validationTitle}>
+                    <CheckCircle2 size={15} />
+                    Validación de solución requerida
+                  </p>
+                  <p className={styles.validationSubtitle}>
+                    El equipo técnico ha resuelto tu ticket. Por favor revisa la solución y valida con tu firma.
+                  </p>
+
+                  {ticket.reprocess_count > 0 && (
+                    <div className={styles.escalationWarning}>
+                      ⚠️ Ya aplicaste un reproceso. Si rechazas de nuevo, el ticket se escalará al Jefe Técnico con prioridad Alta.
+                    </div>
+                  )}
+
+                  {!showRejectForm ? (
+                    <>
+                      <input
+                        type="text"
+                        className={styles.signatureInput}
+                        placeholder="Tu firma (nombre completo) *"
+                        value={signature}
+                        onChange={(e) => setSignature(e.target.value)}
+                      />
+                      {validationError && (
+                        <p style={{ fontSize: 11, color: '#dc2626', margin: '0 0 8px' }}>{validationError}</p>
+                      )}
+                      <div className={styles.validationBtns}>
+                        <button
+                          type="button"
+                          className={styles.approveBtn}
+                          disabled={!signature.trim() || isApproving}
+                          onClick={handleApprove}
+                        >
+                          <CheckCircle2 size={13} />
+                          {isApproving ? 'Firmando…' : 'Aprobar y firmar'}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.rejectBtn}
+                          onClick={() => { setShowRejectForm(true); setValidationError(''); }}
+                        >
+                          <X size={13} />
+                          Rechazar
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className={styles.rejectForm}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: '#991b1b', margin: 0 }}>
+                        Motivo del rechazo
+                      </p>
+                      <textarea
+                        className={styles.rejectTextarea}
+                        placeholder="Describe por qué rechazas la solución…"
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        rows={3}
+                      />
+                      {validationError && (
+                        <p style={{ fontSize: 11, color: '#dc2626', margin: 0 }}>{validationError}</p>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                          onClick={() => { setShowRejectForm(false); setRejectReason(''); setValidationError(''); }}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.confirmRejectBtn}
+                          disabled={!rejectReason.trim() || isRejecting}
+                          onClick={handleReject}
+                        >
+                          {isRejecting ? 'Rechazando…' : 'Confirmar rechazo'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className={styles.awaitingValidation}>
+                  <Clock size={15} />
+                  Esperando validación del solicitante
+                </div>
+              )
+            )}
+
             {/* Transitions */}
-            {!ticket.is_final && ticket.transitions.length > 0 && (
+            {!ticket.is_final && ticket.state_name !== 'realizado' && ticket.transitions.length > 0 && (
               <div style={{ marginBottom: 22 }}>
                 <p className={styles.sectionHeader}>Acciones disponibles</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -374,6 +543,126 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 </div>
               </div>
             )}
+
+            {/* Attachments panel */}
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <p className={styles.sectionHeader} style={{ margin: 0 }}>
+                  Evidencias y adjuntos
+                  {attachments.length > 0 && (
+                    <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 6px', borderRadius: 99, background: '#e2e8f0', color: '#64748b', fontWeight: 600 }}>
+                      {attachments.length}
+                    </span>
+                  )}
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  style={{ display: 'none' }}
+                  accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={handleFileChange}
+                />
+                <button
+                  type="button"
+                  disabled={uploadMut.isPending}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '5px 12px', borderRadius: 8, border: '1px solid #e2e8f0',
+                    background: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                    color: '#475569', opacity: uploadMut.isPending ? .6 : 1,
+                  }}
+                >
+                  <Upload size={12} />
+                  {uploadMut.isPending ? 'Subiendo…' : 'Adjuntar'}
+                </button>
+              </div>
+
+              {uploadError && (
+                <p style={{ fontSize: 11, color: '#dc2626', margin: '0 0 8px' }}>{uploadError}</p>
+              )}
+
+              {attachments.length === 0 && !uploadMut.isPending && (
+                <div
+                  style={{
+                    border: '1.5px dashed #e2e8f0', borderRadius: 10,
+                    padding: '18px 16px', textAlign: 'center',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip size={18} style={{ color: '#cbd5e1', marginBottom: 6 }} />
+                  <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+                    Sin adjuntos. Haz clic para subir evidencia.
+                  </p>
+                  <p style={{ fontSize: 10, color: '#cbd5e1', margin: '3px 0 0' }}>
+                    Imágenes, PDF, Excel, Word · máx 10 MB
+                  </p>
+                </div>
+              )}
+
+              {attachments.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {attachments.map((att) => {
+                    const isImage = att.mime_type.startsWith('image/');
+                    const sizeKb  = Math.round(att.file_size / 1024);
+                    return (
+                      <div
+                        key={att.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 10px', borderRadius: 8,
+                          border: '1px solid #f1f5f9', background: '#fafafa',
+                        }}
+                      >
+                        <div style={{
+                          width: 32, height: 32, borderRadius: 6, flexShrink: 0,
+                          background: isImage ? '#f0f9ff' : '#fef3f2',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {isImage
+                            ? <ImageIcon size={14} style={{ color: '#0ea5e9' }} />
+                            : <FileText  size={14} style={{ color: '#ff5e3a' }} />
+                          }
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <a
+                            href={att.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: 12, fontWeight: 600, color: '#0f172a',
+                              textDecoration: 'none', display: 'block',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {att.original_name}
+                          </a>
+                          <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>
+                            {sizeKb} KB · {att.uploader_name}
+                          </p>
+                        </div>
+                        {currentUser?.id && (
+                          <button
+                            type="button"
+                            title="Eliminar adjunto"
+                            disabled={deletAttMut.isPending}
+                            onClick={() => deletAttMut.mutate(att.id)}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              color: '#94a3b8', padding: 4, flexShrink: 0,
+                              opacity: deletAttMut.isPending ? .4 : 1,
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Reply box */}
             {!ticket.is_final && (
@@ -627,6 +916,6 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
           </div>
         </div>
       )}
-    </ModuleLayout>
+    </div>
   );
 }

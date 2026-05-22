@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
@@ -144,16 +144,21 @@ export class TicketsService {
               s.is_final,
               t.created_by,
               up.first_name || ' ' || up.last_name AS creator_name,
+              t.reprocess_count,
               st.status      AS sla_status,
               st.deadline_at AS sla_deadline_tracked,
-              st.breached_at
+              st.breached_at,
+              appr.status    AS approval_status,
+              appr.expires_at AS approval_expires_at
        FROM   tickets.tickets           t
-       JOIN   modules.modules           m  ON m.id  = t.module_id
-       LEFT JOIN modules.categories     c  ON c.id  = t.category_id
-       LEFT JOIN modules.environments   e  ON e.id  = t.environment_id
-       JOIN   tickets.states            s  ON s.id  = t.current_state_id
-       JOIN   users.profiles            up ON up.id = t.created_by
-       LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
+       JOIN   modules.modules           m    ON m.id    = t.module_id
+       LEFT JOIN modules.categories     c    ON c.id    = t.category_id
+       LEFT JOIN modules.environments   e    ON e.id    = t.environment_id
+       JOIN   tickets.states            s    ON s.id    = t.current_state_id
+       JOIN   users.profiles            up   ON up.id   = t.created_by
+       LEFT JOIN tickets.ticket_sla_tracking st   ON st.ticket_id   = t.id
+       LEFT JOIN tickets.ticket_approvals    appr ON appr.ticket_id = t.id
+                                                  AND appr.status = 'pending'
        WHERE  t.id = $1`,
       [id],
     );
@@ -263,7 +268,7 @@ export class TicketsService {
 
   async transition(userId: string, ticketId: string, dto: { transition_id: string; reason?: string }) {
     const [ticket] = await this.db.query<any[]>(
-      `SELECT id, current_state_id, workflow_version_id FROM tickets.tickets WHERE id = $1`,
+      `SELECT id, current_state_id, workflow_version_id, created_by FROM tickets.tickets WHERE id = $1`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
@@ -289,7 +294,7 @@ export class TicketsService {
 
     // Mark SLA as met/breached when reaching a final state
     const [toState] = await this.db.query<any[]>(
-      `SELECT is_final FROM tickets.states WHERE id = $1`,
+      `SELECT is_final, name FROM tickets.states WHERE id = $1`,
       [trans.to_state_id],
     );
     if (toState?.is_final) {
@@ -303,6 +308,185 @@ export class TicketsService {
       );
     }
 
+    // Auto-generate approval token when reaching "realizado" state
+    if (toState?.name === 'realizado') {
+      await this.db.query(
+        `SELECT tickets.generate_approval_token($1, $2, 48)`,
+        [ticketId, ticket.created_by],
+      );
+    }
+
+    return { ok: true };
+  }
+
+  /* ── Approve ticket (digital signature) ────────────────────────────────── */
+
+  async approveTicket(userId: string, ticketId: string, dto: { signature?: string }) {
+    const [ticket] = await this.db.query<any[]>(
+      `SELECT t.id, t.created_by, t.workflow_version_id, t.current_state_id, s.name AS state_name
+       FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
+       WHERE  t.id = $1`,
+      [ticketId],
+    );
+    if (!ticket) throw new NotFoundException('Ticket not found');
+    if (ticket.state_name !== 'realizado') throw new BadRequestException('El ticket no está pendiente de validación.');
+    if (ticket.created_by !== userId)      throw new ForbiddenException('Solo el solicitante puede validar este ticket.');
+
+    const [trans] = await this.db.query<any[]>(
+      `SELECT tr.id, tr.to_state_id
+       FROM   tickets.transitions tr
+       JOIN   tickets.states ts2 ON ts2.id = tr.to_state_id
+       WHERE  tr.workflow_version_id = $1 AND tr.from_state_id = $2
+         AND  ts2.name = 'cerrado' AND tr.is_active = true`,
+      [ticket.workflow_version_id, ticket.current_state_id],
+    );
+    if (!trans) throw new BadRequestException('No hay transición de cierre disponible.');
+
+    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
+
+    await this.db.query(
+      `UPDATE tickets.tickets SET current_state_id = $1 WHERE id = $2`,
+      [trans.to_state_id, ticketId],
+    );
+
+    const sigHash = dto.signature ? Buffer.from(dto.signature).toString('base64') : null;
+    await this.db.query(
+      `UPDATE tickets.ticket_approvals
+       SET status = 'approved', signature_hash = $1, approved_at = now()
+       WHERE ticket_id = $2 AND status = 'pending'`,
+      [sigHash, ticketId],
+    );
+
+    await this.db.query(
+      `UPDATE tickets.ticket_sla_tracking
+       SET status     = CASE WHEN deadline_at < now() THEN 'breached' ELSE 'met' END,
+           breached_at = CASE WHEN deadline_at < now() THEN now() ELSE NULL END,
+           updated_at  = now()
+       WHERE ticket_id = $1 AND status = 'active'`,
+      [ticketId],
+    );
+
+    return { ok: true };
+  }
+
+  /* ── Reject ticket → reproceso / escalation ─────────────────────────────── */
+
+  async rejectTicket(userId: string, ticketId: string, dto: { reason: string }) {
+    const [ticket] = await this.db.query<any[]>(
+      `SELECT t.id, t.created_by, t.workflow_version_id, t.current_state_id,
+              t.reprocess_count, t.module_id, t.priority, s.name AS state_name
+       FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
+       WHERE  t.id = $1`,
+      [ticketId],
+    );
+    if (!ticket) throw new NotFoundException('Ticket not found');
+    if (ticket.state_name !== 'realizado') throw new BadRequestException('El ticket no está pendiente de validación.');
+    if (ticket.created_by !== userId)      throw new ForbiddenException('Solo el solicitante puede validar este ticket.');
+
+    const [cfg] = await this.db.query<any[]>(
+      `SELECT (value::jsonb->>'reproceso_max')::int AS reproceso_max
+       FROM   config.module_settings
+       WHERE  module_id = $1 AND key = 'ticket_flow' AND is_active = true`,
+      [ticket.module_id],
+    );
+    const reproceso_max = cfg?.reproceso_max ?? 1;
+
+    const [trans] = await this.db.query<any[]>(
+      `SELECT tr.id, tr.to_state_id
+       FROM   tickets.transitions tr
+       JOIN   tickets.states ts2 ON ts2.id = tr.to_state_id
+       WHERE  tr.workflow_version_id = $1 AND tr.from_state_id = $2
+         AND  ts2.name = 'reproceso' AND tr.is_active = true`,
+      [ticket.workflow_version_id, ticket.current_state_id],
+    );
+    if (!trans) throw new BadRequestException('No hay transición de reproceso disponible.');
+
+    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
+
+    const isEscalation = ticket.reprocess_count >= reproceso_max;
+    const newPriority  = isEscalation && ticket.priority !== 'critica' ? 'alta' : ticket.priority;
+
+    await this.db.query(
+      `UPDATE tickets.tickets
+       SET current_state_id = $1,
+           reprocess_count  = reprocess_count + 1,
+           priority         = $2
+       WHERE id = $3`,
+      [trans.to_state_id, newPriority, ticketId],
+    );
+
+    await this.db.query(
+      `UPDATE tickets.ticket_approvals SET status = 'rejected' WHERE ticket_id = $1 AND status = 'pending'`,
+      [ticketId],
+    );
+
+    if (isEscalation) {
+      const [jefe] = await this.db.query<any[]>(
+        `SELECT umr.user_id
+         FROM   users.user_module_roles umr
+         JOIN   modules.roles r ON r.id = umr.role_id
+         WHERE  umr.module_id = $1 AND r.name = 'jefe_tecnico' AND umr.status = 'active'
+         LIMIT  1`,
+        [ticket.module_id],
+      );
+      if (jefe) {
+        await this.db.query(
+          `UPDATE tickets.ticket_assignments SET is_active = false WHERE ticket_id = $1 AND role = 'owner'`,
+          [ticketId],
+        );
+        await this.db.query(
+          `INSERT INTO tickets.ticket_assignments (ticket_id, user_id, role, assigned_by, is_active)
+           VALUES ($1, $2, 'owner', $3, true)`,
+          [ticketId, jefe.user_id, userId],
+        );
+      }
+    }
+
+    return { ok: true, escalated: isEscalation };
+  }
+
+  /* ── Attachments ────────────────────────────────────────────────────────── */
+
+  async getAttachments(ticketId: string) {
+    return this.db.query<any[]>(
+      `SELECT ta.id, ta.original_name, ta.mime_type, ta.file_size, ta.file_url, ta.created_at,
+              p.first_name || ' ' || p.last_name AS uploader_name
+       FROM   tickets.ticket_attachments ta
+       JOIN   users.profiles p ON p.id = ta.uploaded_by
+       WHERE  ta.ticket_id = $1 AND ta.deleted_at IS NULL
+       ORDER  BY ta.created_at ASC`,
+      [ticketId],
+    );
+  }
+
+  async addAttachment(userId: string, ticketId: string, dto: {
+    original_name: string;
+    stored_name:   string;
+    mime_type:     string;
+    file_size:     number;
+    file_url:      string;
+  }) {
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.ticket_attachments
+         (ticket_id, uploaded_by, original_name, stored_name, mime_type, file_size, file_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, original_name, mime_type, file_size, file_url, created_at`,
+      [ticketId, userId, dto.original_name, dto.stored_name, dto.mime_type, dto.file_size, dto.file_url],
+    );
+    return row;
+  }
+
+  async deleteAttachment(userId: string, attachmentId: string) {
+    const [att] = await this.db.query<any[]>(
+      `SELECT id, uploaded_by FROM tickets.ticket_attachments WHERE id = $1 AND deleted_at IS NULL`,
+      [attachmentId],
+    );
+    if (!att) throw new NotFoundException('Attachment not found');
+    if (att.uploaded_by !== userId) throw new ForbiddenException('Solo el autor puede eliminar este adjunto');
+    await this.db.query(
+      `UPDATE tickets.ticket_attachments SET deleted_at = now() WHERE id = $1`,
+      [attachmentId],
+    );
     return { ok: true };
   }
 }

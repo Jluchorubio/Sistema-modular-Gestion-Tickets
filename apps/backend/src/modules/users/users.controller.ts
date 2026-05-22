@@ -151,6 +151,13 @@ export class UsersController {
     return this.profileService.getMyRecentTickets(req.user.sub, limit ? parseInt(limit, 10) : 6);
   }
 
+  @Get('me/assigned-tickets')
+  @ApiOperation({ summary: 'Tickets activos asignados al usuario.' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getMyAssignedTickets(@Req() req: any, @Query('limit') limit?: string) {
+    return this.profileService.getMyAssignedTickets(req.user.sub, limit ? parseInt(limit, 10) : 50);
+  }
+
   @Get('me/activity-feed')
   @SkipProfileCheck()
   @ApiOperation({ summary: 'Feed de actividad propia — últimos 20 eventos.' })

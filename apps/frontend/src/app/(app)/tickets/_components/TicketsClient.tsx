@@ -6,10 +6,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, X, Clock, Ticket, Search, ChevronDown, CheckCircle,
 } from 'lucide-react';
+import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
+import { buildDynamicModuleNav } from '../../modules/[id]/_nav';
 import {
   ticketsService,
   type TicketListItem, type TicketPriority,
@@ -272,11 +274,33 @@ function TicketCard({ ticket, onClick }: { ticket: TicketListItem; onClick: () =
 }
 
 /* ── Main component ─────────────────────────────────────────────── */
-export function TicketsClient() {
+interface TicketsClientProps {
+  forcedModuleId?:   string;
+  forcedModuleSlug?: string;
+  forcedModuleName?: string;
+  forcedModuleDesc?: string | null;
+}
+
+export function TicketsClient({
+  forcedModuleId,
+  forcedModuleSlug,
+  forcedModuleName,
+  forcedModuleDesc,
+}: TicketsClientProps = {}) {
   const router      = useRouter();
   const { modules } = useModules();
-  const helpdeskId  = modules?.find(isHelpdeskModule)?.id;
-  useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
+  const isForced    = !!forcedModuleId;
+
+  const helpdeskId  = !isForced ? modules?.find(isHelpdeskModule)?.id : undefined;
+  const navItems    = useMemo(
+    () => isForced && forcedModuleSlug ? buildDynamicModuleNav(forcedModuleSlug) : HELPDESK_NAV,
+    [isForced, forcedModuleSlug],
+  );
+  useModuleNav(
+    isForced ? (forcedModuleName ?? '') : HELPDESK_MODULE_NAME,
+    navItems,
+    isForced ? forcedModuleId : helpdeskId,
+  );
 
   const user         = useAuthStore((s) => s.user);
   const isSuperadmin = user?.is_superadmin ?? false;
@@ -291,7 +315,9 @@ export function TicketsClient() {
     return unique;
   }, [user]);
 
-  const [selectedModule, setSelectedModule] = useState<string>(activeModules[0]?.module_id ?? '');
+  const [_selectedModule, setSelectedModule] = useState<string>(activeModules[0]?.module_id ?? '');
+  const selectedModule = forcedModuleId ?? _selectedModule;
+  const ticketBasePath = isForced && forcedModuleSlug ? `/${forcedModuleSlug}` : '/tickets';
   const [stateFilter,    setStateFilter]    = useState('');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
   const [mineOnly,       setMineOnly]       = useState(false);
@@ -380,23 +406,19 @@ export function TicketsClient() {
 
   const canCreate = isSuperadmin || activeModules.length > 0;
 
+  const layoutModuleId = isForced ? forcedModuleId : (helpdeskId || selectedModule || undefined);
+  const layoutTitle    = isForced ? (forcedModuleName ?? '') : 'Mesa de Ayuda';
+  const layoutDesc     = isForced
+    ? (forcedModuleDesc ?? null)
+    : 'Sistema centralizado de soporte técnico. Gestiona incidencias, solicitudes y seguimiento SLA para todos los módulos asignados.';
+
   return (
-    <div className={styles.dashboard}>
-
-      {/* ── Header ── */}
-      <div className={styles.dashHeader}>
-        <div>
-          <h1 className={styles.dashTitle}>Mesa de Ayuda</h1>
-          <p className={styles.dashSubtitle}>Sistema centralizado de soporte técnico</p>
-        </div>
-        {canCreate && selectedModule && (
-          <button type="button" className={styles.newTicketBtn} onClick={() => setShowCreate(true)}>
-            <Plus size={14} />
-            Nuevo ticket
-          </button>
-        )}
-      </div>
-
+    <ModuleLayout
+      moduleId={layoutModuleId}
+      title={layoutTitle}
+      description={layoutDesc}
+      isSuperadmin={isSuperadmin}
+    >
       {/* ── Stats row ── */}
       <div className={styles.statsRow}>
         {STAT_CARDS.map((card, i) => {
@@ -422,30 +444,37 @@ export function TicketsClient() {
         {/* ── Left: ticket list ── */}
         <div className={styles.mainPanel}>
 
-          {/* Module selector tabs */}
-          {activeModules.length > 0 && (
-            <div className={styles.moduleTabs}>
-              {!isSuperadmin && (
-                <button
-                  type="button"
-                  className={`${styles.moduleTab}${!selectedModule ? ` ${styles.moduleTabActive}` : ''}`}
-                  onClick={() => { setSelectedModule(''); setPage(1); }}
-                >
-                  Todos
-                </button>
-              )}
-              {activeModules.map((m) => (
-                <button
-                  key={m.module_id}
-                  type="button"
-                  className={`${styles.moduleTab}${selectedModule === m.module_id ? ` ${styles.moduleTabActive}` : ''}`}
-                  onClick={() => { setSelectedModule(m.module_id); setPage(1); }}
-                >
-                  {m.module_name}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Toolbar: module tabs + new ticket button */}
+          <div className={styles.listToolbar}>
+            {!isForced && (
+              <div className={styles.moduleTabs}>
+                {!isSuperadmin && (
+                  <button
+                    type="button"
+                    className={`${styles.moduleTab}${!_selectedModule ? ` ${styles.moduleTabActive}` : ''}`}
+                    onClick={() => { setSelectedModule(''); setPage(1); }}
+                  >
+                    Todos
+                  </button>
+                )}
+                {activeModules.map((m) => (
+                  <button
+                    key={m.module_id}
+                    type="button"
+                    className={`${styles.moduleTab}${_selectedModule === m.module_id ? ` ${styles.moduleTabActive}` : ''}`}
+                    onClick={() => { setSelectedModule(m.module_id); setPage(1); }}
+                  >
+                    {m.module_name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {canCreate && selectedModule && (
+              <button type="button" className={styles.newTicketBtn} onClick={() => setShowCreate(true)}>
+                <Plus size={13} /> Nuevo ticket
+              </button>
+            )}
+          </div>
 
           {/* Search + sort bar */}
           <div className={styles.filterBar}>
@@ -491,7 +520,7 @@ export function TicketsClient() {
                 <TicketCard
                   key={t.id}
                   ticket={t}
-                  onClick={() => router.push(`/tickets/ticket/${t.id}`)}
+                  onClick={() => router.push(`${ticketBasePath}/ticket/${t.id}`)}
                 />
               ))}
             </div>
@@ -532,14 +561,14 @@ export function TicketsClient() {
                   <button
                     type="button"
                     className={styles.pendingApprove}
-                    onClick={() => router.push(`/tickets/ticket/${t.id}`)}
+                    onClick={() => router.push(`${ticketBasePath}/ticket/${t.id}`)}
                   >
                     <CheckCircle size={10} /> Ver ticket
                   </button>
                   <button
                     type="button"
                     className={styles.pendingComplete}
-                    onClick={() => router.push(`/tickets/ticket/${t.id}`)}
+                    onClick={() => router.push(`${ticketBasePath}/ticket/${t.id}`)}
                   >
                     Atender
                   </button>
@@ -561,7 +590,7 @@ export function TicketsClient() {
                 <div
                   key={t.id}
                   className={styles.dueSoonItem}
-                  onClick={() => router.push(`/tickets/ticket/${t.id}`)}
+                  onClick={() => router.push(`${ticketBasePath}/ticket/${t.id}`)}
                 >
                   <div className={styles.dueSoonDot} style={{ background: slaColor }} />
                   <div className={styles.dueSoonInfo}>
@@ -582,6 +611,6 @@ export function TicketsClient() {
       {showCreate && selectedModule && (
         <CreateModal moduleId={selectedModule} onClose={() => setShowCreate(false)} />
       )}
-    </div>
+    </ModuleLayout>
   );
 }

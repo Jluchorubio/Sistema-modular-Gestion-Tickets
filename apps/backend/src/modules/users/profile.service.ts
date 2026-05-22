@@ -323,17 +323,50 @@ export class ProfileService {
 
   async getMyRecentTickets(userId: string, limit = 6) {
     return this.db.query<any[]>(
-      `SELECT t.id, t.title, t.priority, t.created_at,
+      `SELECT t.id, t.title, t.priority, t.created_at, t.updated_at,
               m.name  AS module_name,
+              m.slug  AS module_slug,
               s.label AS state_label,
               s.name  AS state_name,
-              s.is_final
+              s.is_final,
+              t.sla_status,
+              t.sla_deadline_tracked
        FROM   tickets.tickets t
        JOIN   modules.modules  m ON m.id = t.module_id
        JOIN   tickets.states   s ON s.id = t.current_state_id
        WHERE  t.created_by = $1
+         AND  t.deleted_at IS NULL
        ORDER  BY t.created_at DESC
        LIMIT  $2`,
+      [userId, limit],
+    );
+  }
+
+  async getMyAssignedTickets(userId: string, limit = 50) {
+    return this.db.query<any[]>(
+      `SELECT *
+       FROM (
+         SELECT DISTINCT ON (t.id)
+                t.id, t.title, t.priority, t.created_at, t.updated_at,
+                m.name  AS module_name,
+                m.slug  AS module_slug,
+                s.label AS state_label,
+                s.name  AS state_name,
+                s.is_final,
+                t.sla_status,
+                t.sla_deadline_tracked,
+                ta.role AS assignment_role
+         FROM   tickets.tickets t
+         JOIN   modules.modules m  ON m.id  = t.module_id
+         JOIN   tickets.states  s  ON s.id  = t.current_state_id
+         JOIN   tickets.ticket_assignments ta
+                ON ta.ticket_id = t.id AND ta.user_id = $1 AND ta.is_active = true
+         WHERE  t.deleted_at IS NULL
+           AND  s.is_final = false
+         ORDER  BY t.id
+       ) sub
+       ORDER BY updated_at DESC
+       LIMIT $2`,
       [userId, limit],
     );
   }

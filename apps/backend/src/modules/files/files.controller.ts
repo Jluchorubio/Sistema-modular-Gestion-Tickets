@@ -19,10 +19,7 @@ export class FilesController {
   @Post('upload')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    schema: {
-      type: 'object',
-      properties: { file: { type: 'string', format: 'binary' } },
-    },
+    schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },
   })
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   upload(
@@ -38,5 +35,18 @@ export class FilesController {
     file: Express.Multer.File,
   ) {
     return this.service.save(file);
+  }
+
+  @Post('attachment')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },
+  })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  uploadAttachment(
+    @UploadedFile(new ParseFilePipe({ fileIsRequired: true }))
+    file: Express.Multer.File,
+  ) {
+    return this.service.saveAttachment(file);
   }
 }

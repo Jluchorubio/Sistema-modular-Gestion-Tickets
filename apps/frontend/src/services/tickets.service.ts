@@ -67,6 +67,16 @@ export interface TicketListItem {
   breached_at:          string | null;
 }
 
+export interface TicketAttachment {
+  id:            string;
+  original_name: string;
+  mime_type:     string;
+  file_size:     number;
+  file_url:      string;
+  created_at:    string;
+  uploader_name: string;
+}
+
 export interface TicketAssignment {
   id:          string;
   role:        string;
@@ -85,12 +95,17 @@ export interface TicketHistoryEntry {
   transition_reason: string | null;
 }
 
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+
 export interface TicketDetail extends TicketListItem {
-  description:         string | null;
-  workflow_version_id: string;
-  assignments:         TicketAssignment[];
-  history:             TicketHistoryEntry[];
-  transitions:         TicketTransition[];
+  description:          string | null;
+  workflow_version_id:  string;
+  reprocess_count:      number;
+  approval_status:      ApprovalStatus | null;
+  approval_expires_at:  string | null;
+  assignments:          TicketAssignment[];
+  history:              TicketHistoryEntry[];
+  transitions:          TicketTransition[];
 }
 
 export interface CreateTicketDto {
@@ -192,6 +207,42 @@ export const ticketsService = {
 
   async addCollaborator(ticketId: string, userId: string, role: string): Promise<TicketAssignment> {
     const { data } = await api.post(`/tickets/${ticketId}/assignments`, { user_id: userId, role });
+    return data;
+  },
+
+  async approve(ticketId: string, signature: string): Promise<{ ok: boolean }> {
+    const { data } = await api.post(`/tickets/${ticketId}/approve`, { signature });
+    return data;
+  },
+
+  async reject(ticketId: string, reason: string): Promise<{ ok: boolean; escalated: boolean }> {
+    const { data } = await api.post(`/tickets/${ticketId}/reject`, { reason });
+    return data;
+  },
+
+  async getAttachments(ticketId: string): Promise<TicketAttachment[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/attachments`);
+    return data;
+  },
+
+  async uploadAttachment(ticketId: string, file: File): Promise<TicketAttachment> {
+    const form = new FormData();
+    form.append('file', file);
+    const { data: uploaded } = await api.post('/files/attachment', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const { data } = await api.post(`/tickets/${ticketId}/attachments`, {
+      original_name: file.name,
+      stored_name:   uploaded.storedName,
+      mime_type:     file.type,
+      file_size:     file.size,
+      file_url:      uploaded.url,
+    });
+    return data;
+  },
+
+  async deleteAttachment(ticketId: string, attachmentId: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/tickets/${ticketId}/attachments/${attachmentId}`);
     return data;
   },
 };

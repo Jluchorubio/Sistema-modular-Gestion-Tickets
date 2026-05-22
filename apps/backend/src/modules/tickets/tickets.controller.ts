@@ -1,5 +1,6 @@
 import {
-  Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards, ParseUUIDPipe,
+  Controller, Get, Post, Delete, Patch, Body, Param, Query, Req, UseGuards, ParseUUIDPipe,
+  HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
@@ -76,5 +77,62 @@ export class TicketsController {
     @Body() body: { transition_id: string; reason?: string },
   ) {
     return this.svc.transition(req.user.sub, id, body);
+  }
+
+  @Post(':id/approve')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  approve(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { signature?: string },
+  ) {
+    return this.svc.approveTicket(req.user.sub, id, body);
+  }
+
+  @Post(':id/reject')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  reject(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { reason: string },
+  ) {
+    return this.svc.rejectTicket(req.user.sub, id, body);
+  }
+
+  /* ── Attachments ─────────────────────────────────────────────────────── */
+
+  @Get(':id/attachments')
+  @RequirePermission('helpdesk:tickets:view')
+  getAttachments(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.getAttachments(id);
+  }
+
+  @Post(':id/attachments')
+  @RequirePermission('helpdesk:tickets:view')
+  addAttachment(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: {
+      original_name: string;
+      stored_name:   string;
+      mime_type:     string;
+      file_size:     number;
+      file_url:      string;
+    },
+  ) {
+    return this.svc.addAttachment(req.user.sub, id, body);
+  }
+
+  @Delete(':id/attachments/:attachmentId')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  deleteAttachment(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
+  ) {
+    return this.svc.deleteAttachment(req.user.sub, attachmentId);
   }
 }
