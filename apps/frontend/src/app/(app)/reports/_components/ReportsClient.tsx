@@ -202,7 +202,6 @@ export function ReportsClient() {
       title="Reportes"
       description="Análisis de rendimiento, cumplimiento SLA y tendencias de tickets por módulo."
       isSuperadmin={isSuperadmin}
-      showHero={false}
     >
     <div>
       {/* ── Module selector ── */}

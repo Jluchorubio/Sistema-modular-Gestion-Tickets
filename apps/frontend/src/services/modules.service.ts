@@ -25,12 +25,18 @@ export interface CreateModuleDto {
 }
 
 export interface UpdateModuleDto {
-  name?:        string;
-  description?: string;
-  type?:        string;
-  image_url?:   string | null;
-  color?:       string;
-  is_active?:   boolean;
+  name?:                   string;
+  description?:            string;
+  type?:                   string;
+  image_url?:              string | null;
+  color?:                  string;
+  is_active?:              boolean;
+  access_mode?:            'open' | 'request';
+  assignment_mode?:        'manual' | 'round_robin' | 'hybrid';
+  priority_mode?:          'auto' | 'manual';
+  priority_editors?:       'jefe_tecnico' | 'any_tech';
+  priority_period_start?:  string | null;
+  priority_period_end?:    string | null;
 }
 
 export const modulesService = {

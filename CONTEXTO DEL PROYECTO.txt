@@ -2333,3 +2333,1083 @@ Toda solicitud debe conservar:
 * comentarios,
 * timestamps,
 * auditoría operativa.
+
+
+---------------------------------
+# CONTEXTO GLOBAL ACTUALIZADO DEL PROYECTO
+
+# SISTEMA MODULAR DE GESTIÓN OPERATIVA + MESA DE AYUDA
+
+---
+
+# 1. VISIÓN GENERAL DEL PROYECTO
+
+El proyecto consiste en un sistema empresarial modular orientado inicialmente a una **Mesa de Ayuda (Helpdesk)** avanzada, pero diseñado desde el inicio para evolucionar hacia una plataforma completa de gestión operativa empresarial.
+
+La arquitectura visual, lógica y estructural del módulo Helpdesk será la plantilla base para futuros módulos:
+
+* Inventario
+* Gestión Administrativa
+* Gestión Comercial
+* Gestión Documental
+* Operaciones
+* RRHH
+* Compras
+* Etc.
+
+El sistema está diseñado bajo:
+
+* Arquitectura modular
+* Roles contextuales por módulo
+* Motor SLA dinámico
+* Sistema FSM (Finite State Machine)
+* Escalabilidad horizontal
+* Multi-módulo
+* Multi-rol
+* Preparado para microservicios
+
+---
+
+# 2. ARQUITECTURA GENERAL DEL SISTEMA
+
+## Stack General
+
+Frontend:
+
+* Next.js
+* TypeScript
+* Tailwind
+* Shadcn/ui
+
+Backend:
+
+* NestJS
+* PostgreSQL
+* Prisma ORM
+* Redis
+* WebSockets
+* Event-driven
+
+Infraestructura:
+
+* Docker
+* Docker Compose
+* Preparado para Kubernetes
+
+---
+
+# 3. SISTEMA DE MÓDULOS
+
+## Filosofía
+
+Cada módulo es independiente funcionalmente pero comparte:
+
+* sistema de usuarios
+* autenticación
+* roles
+* permisos
+* auditoría
+* sistema de tickets
+* sistema de notificaciones
+* motor SLA
+* métricas
+* estructura visual
+
+---
+
+# 4. RUTEO DINÁMICO POR MÓDULO
+
+## Regla principal
+
+La URL del módulo SIEMPRE debe depender del nombre del módulo.
+
+Ejemplo:
+
+```txt
+http://localhost:3000/helpdesk
+http://localhost:3000/inventario
+http://localhost:3000/gestion-administrativa
+http://localhost:3000/comercial
+```
+
+NO debe existir:
+
+```txt
+/tickets
+```
+
+porque el sistema no será únicamente de tickets.
+
+---
+
+# 5. ESTRUCTURA VISUAL GENERAL
+
+## Objetivo UX/UI
+
+Mantener la estructura visual de los mockups:
+
+* Sidebar vertical izquierdo
+* Header superior fijo
+* Área central principal
+* Panel lateral contextual
+* Diseño operativo
+* Visual empresarial moderna
+* Interfaz limpia
+* Jerarquía visual clara
+
+---
+
+# 6. SIDEBAR DEL MÓDULO
+
+## Sidebar contextual por módulo
+
+Cada módulo tendrá su propio sidebar.
+
+Ejemplo:
+
+```txt
+HELPDESK
+├── Vista general
+├── Usuarios
+├── Roles
+├── Reportes
+└── Configuración
+```
+
+---
+
+# 7. APARTADOS DEL SIDEBAR
+
+---
+
+# 7.1 VISTA GENERAL DEL MÓDULO
+
+Ruta:
+
+```txt
+/modulo
+```
+
+Ejemplo:
+
+```txt
+/helpdesk
+```
+
+## Contenido
+
+Aquí vive toda la operación principal:
+
+* Tickets
+* Estados
+* Cola de trabajo
+* SLA
+* Técnicos activos
+* Procesos
+* Resumen operativo
+
+---
+
+## Importante
+
+NO mostrar:
+
+* Inventario relacionado
+* Gestión administrativa
+* Perfil
+* Salir
+
+porque esos ya existen en otras áreas globales del sistema.
+
+---
+
+# 7.2 USUARIOS
+
+Ruta:
+
+```txt
+/modulo/usuarios
+```
+
+## Función
+
+Mostrar únicamente usuarios pertenecientes al módulo.
+
+---
+
+## Configuración importante
+
+Cada módulo podrá definir:
+
+### ✔ Acceso libre
+
+Cualquier usuario entra.
+
+### ✔ Acceso por solicitud
+
+Usuario solicita acceso.
+
+Admin/Jefe Técnico aprueba.
+
+---
+
+## Regla default
+
+Todos los módulos nuevos:
+
+```txt
+Acceso por solicitud = ACTIVADO
+```
+
+---
+
+## Excepciones
+
+Los módulos:
+
+* Inventario
+* Gestión Administrativa
+
+tienen acceso organizacional global.
+
+Pueden visualizar todos los usuarios.
+
+---
+
+# 7.3 ROLES
+
+Ruta:
+
+```txt
+/modulo/roles
+```
+
+## Funcionalidad
+
+Sistema completo RBAC contextual por módulo.
+
+---
+
+# 8. ROLES CONTEXTUALES
+
+## Roles base
+
+* Admin
+* Jefe Técnico
+* Técnico
+* Usuario
+
+---
+
+## Roles personalizados
+
+Ejemplos:
+
+* Técnico Hardware
+* Técnico Redes
+* Supervisor POS
+* Técnico CCTV
+
+---
+
+## Regla crítica
+
+Los roles son independientes por módulo.
+
+Ejemplo:
+
+| Usuario | Helpdesk | Inventario |
+| ------- | -------- | ---------- |
+| Juan    | Técnico  | Admin      |
+
+---
+
+# 9. SISTEMA DE PERMISOS
+
+## Formato árbol
+
+Cada rol posee permisos organizados jerárquicamente.
+
+Ejemplo:
+
+```txt
+Tickets
+├── Ver
+├── Crear
+├── Editar
+├── Asignar
+├── Escalar
+└── Cerrar
+```
+
+---
+
+## Funciones importantes
+
+### Crear rol
+
+### Editar rol
+
+### Activar/desactivar rol
+
+### Eliminar rol
+
+---
+
+## Regla crítica
+
+Si un rol se elimina:
+
+* NO se elimina historial
+* usuarios mantienen trazabilidad
+* simplemente pierden permisos
+
+---
+
+# 10. REPORTES
+
+Ruta:
+
+```txt
+/modulo/reportes
+```
+
+## Métricas exclusivas del módulo
+
+Ejemplos:
+
+* Tickets resueltos
+* Tiempo promedio
+* SLA cumplidos
+* Reprocesos
+* Escalamientos
+* Productividad
+* Rendimiento técnico
+
+---
+
+# 11. CONFIGURACIÓN DEL MÓDULO
+
+Ruta:
+
+```txt
+/modulo/configuracion
+```
+
+---
+
+# 12. CONFIGURACIÓN SLA
+
+## El módulo debe permitir configurar:
+
+### Prioridad automática
+
+* Baja
+* Media
+* Alta
+* Crítica
+
+---
+
+## Reglas SLA
+
+Basadas en:
+
+* Categoría
+* Subcategoría
+* Tipo de daño
+* Sede
+* Ambiente
+
+---
+
+# 13. MODOS DE ASIGNACIÓN
+
+## El sistema debe permitir:
+
+### Manual
+
+Asignación por jefe técnico.
+
+### Round Robin
+
+Distribución equitativa.
+
+### Especialización
+
+Por categorías permitidas.
+
+### Híbrido
+
+Combinación configurable.
+
+---
+
+# 14. EDICIÓN MANUAL DE PRIORIDAD
+
+Si se habilita:
+
+Debe definirse:
+
+* quién puede editar
+* fecha inicio
+* fecha cierre
+
+para reorganizar correctamente las colas.
+
+---
+
+# 15. MOTOR SLA
+
+## El SLA NO es solo tiempo.
+
+Es el núcleo inteligente operativo.
+
+---
+
+## Funciones SLA
+
+### Prioridad automática
+
+### Orden dinámico
+
+### Asignación inteligente
+
+### Escalamiento
+
+### Control de vencimientos
+
+### Alertas
+
+---
+
+# 16. FLUJO FSM DEL TICKET
+
+---
+
+# 16.1 CREACIÓN
+
+Usuario registra:
+
+* Categoría
+* Subcategoría
+* Sede
+* Ambiente
+* Descripción
+* Evidencias
+
+Estado inicial:
+
+```txt
+ABIERTO
+```
+
+---
+
+# 16.2 CÁLCULO SLA
+
+El sistema calcula automáticamente:
+
+* prioridad
+* tiempo estimado
+* orden operativo
+
+---
+
+# 16.3 ASIGNACIÓN
+
+Validaciones:
+
+* disponibilidad
+* carga laboral
+* horario
+* incapacidades
+* especialización
+
+---
+
+# 16.4 COLA DE TRABAJO DEL TÉCNICO
+
+Orden:
+
+## Primero
+
+Tickets anteriores.
+
+## Luego
+
+Tickets del día actual.
+
+---
+
+## Prioridad interna
+
+```txt
+Alta
+Media
+Baja
+```
+
+---
+
+# 16.5 EJECUCIÓN DEL TICKET
+
+Estados:
+
+* Abierto
+* En espera
+* En proceso
+* Realizado
+* Cerrado
+* Reproceso
+
+---
+
+# 17. REGLA DE ACTIVACIÓN DEL SLA
+
+## IMPORTANTE
+
+Cuando el técnico únicamente revisa:
+
+```txt
+ABIERTO → EN ESPERA
+```
+
+El SLA todavía NO inicia.
+
+---
+
+## Cuando toma el ticket
+
+```txt
+EN ESPERA → EN PROCESO
+```
+
+Aquí:
+
+* inicia SLA
+* inicia temporizador
+* inicia seguimiento
+
+---
+
+# 18. VISUAL DEL TÉCNICO
+
+## Filosofía UX
+
+El técnico NO debe ver dashboards pesados constantemente.
+
+La interfaz debe enfocarse en:
+
+* trabajo operativo
+* cola de tickets
+* prioridades
+* ejecución
+
+---
+
+# 19. PANEL ESTADÍSTICO OCULTO
+
+Las gráficas y métricas:
+
+NO estarán visibles permanentemente.
+
+---
+
+## Se mostrarán mediante:
+
+Botón hiperpuesto/flotante.
+
+---
+
+## Al abrirlo:
+
+El técnico podrá visualizar:
+
+* métricas personales
+* tickets realizados
+* tiempos promedio
+* productividad
+* historial operativo
+
+---
+
+# 20. VISUAL GENERAL DEL TÉCNICO
+
+Basado en mockup.
+
+---
+
+## Distribución
+
+### Sidebar izquierdo reducido
+
+### Header superior
+
+### Perfil técnico lateral
+
+### Lista central de tickets
+
+### Panel contextual derecho opcional
+
+---
+
+# 21. TICKETS DEL MÓDULO
+
+Ruta:
+
+```txt
+/modulo
+```
+
+Ejemplo:
+
+```txt
+/helpdesk
+```
+
+---
+
+## Importante
+
+Los admins/jefes técnicos pueden ver:
+
+* tickets propios
+* tickets globales del módulo
+
+---
+
+## Técnicos
+
+Solo:
+
+* sus tickets
+* tickets colaborativos
+
+---
+
+# 22. SISTEMA DE COLABORACIÓN
+
+## Objetivo
+
+Resolver tickets complejos mediante trabajo cooperativo.
+
+---
+
+# 23. INVITACIÓN A COLABORADORES
+
+Desde el ticket:
+
+El técnico puede invitar:
+
+* otro técnico
+* jefe técnico
+* supervisor
+
+---
+
+## Debe especificar motivo
+
+### Tipos
+
+* Trabajo cooperativo
+* Supervisión
+* Escalamiento técnico
+* Diagnóstico
+* Validación
+
+---
+
+# 24. EQUIPOS TEMPORALES
+
+Si es trabajo cooperativo:
+
+Se crea automáticamente:
+
+```txt
+Equipo temporal del ticket
+```
+
+---
+
+## Funciones
+
+* compartir evidencias
+* compartir historial
+* comentarios internos
+* seguimiento conjunto
+
+---
+
+# 25. SISTEMA DE REUNIONES
+
+## Integración
+
+Preferiblemente:
+
+* Google Meet
+
+porque es más simple de implementar inicialmente.
+
+---
+
+## Funcionalidad
+
+Dentro del ticket:
+
+* crear reunión
+* generar enlace
+* registrar fecha
+* registrar motivo
+
+---
+
+# 26. VISIBILIDAD DE REUNIONES
+
+## Técnicos/Admins
+
+Ven:
+
+* programación
+* participantes
+* historial
+
+---
+
+## Usuario final
+
+SOLO ve:
+
+* sección reuniones
+* enlace generado
+* fecha/hora
+
+---
+
+# 27. EVIDENCIAS DEL TICKET
+
+El ticket permite:
+
+* imágenes
+* PDF
+* Word
+* Excel
+
+---
+
+## Evidencias obligatorias
+
+Para pasar a:
+
+```txt
+REALIZADO
+```
+
+---
+
+# 28. HISTORIAL DEL EQUIPO
+
+## Función crítica
+
+El técnico debe poder visualizar:
+
+* historial completo del dispositivo
+* tickets anteriores
+* fallas repetidas
+* soluciones previas
+
+---
+
+# 29. RELACIÓN ENTRE TICKETS
+
+Si existe un ticket previo relacionado:
+
+El sistema debe mostrar:
+
+* técnico anterior
+* solución previa
+* evidencias previas
+
+---
+
+# 30. CONTACTO ENTRE TÉCNICOS
+
+Si un problema reaparece:
+
+El técnico nuevo puede contactar al técnico anterior directamente desde el ticket.
+
+---
+
+# 31. CIERRE DEL TICKET
+
+## Regla crítica
+
+El ticket NO se cierra automáticamente.
+
+---
+
+# 32. VALIDACIÓN DEL USUARIO
+
+El usuario recibe:
+
+* solución
+* evidencias
+* notificación
+* token/firma digital
+
+---
+
+# 33. APROBACIÓN
+
+Si acepta:
+
+```txt
+REALIZADO → CERRADO
+```
+
+---
+
+# 34. SIN RESPUESTA
+
+Si pasan 2 días:
+
+```txt
+CERRADO AUTOMÁTICO
+```
+
+---
+
+# 35. REPROCESO
+
+Si el usuario rechaza:
+
+Debe enviar:
+
+* justificación
+* evidencias
+
+---
+
+## Resultado
+
+```txt
+REALIZADO → REPROCESO
+```
+
+---
+
+# 36. REGLA CRÍTICA
+
+SOLO puede existir:
+
+```txt
+1 reproceso
+```
+
+---
+
+# 37. ESCALAMIENTO
+
+Si vuelve a fallar:
+
+* se escala
+* reasignación obligatoria
+* prioridad máxima Alta
+* jefe técnico toma control
+
+---
+
+# 38. PANEL DEL TICKET
+
+La visual del ticket debe mantener la estructura del mockup.
+
+---
+
+# 39. ESTRUCTURA DEL TICKET
+
+## Área principal
+
+* descripción
+* estado
+* prioridad
+* progreso FSM
+* solución
+* comentarios
+* evidencias
+
+---
+
+## Panel derecho
+
+* SLA
+* colaboradores
+* reuniones
+* invitados
+* participantes
+
+---
+
+## Panel superior
+
+* breadcrumb
+* módulo
+* sede
+* ambiente
+
+---
+
+# 40. HISTORIAL DEL TICKET
+
+Debe existir:
+
+Timeline completo:
+
+* creación
+* asignaciones
+* cambios estado
+* evidencias
+* reuniones
+* validaciones
+* reproceso
+
+---
+
+# 41. AUDITORÍA
+
+Registrar:
+
+* quién hizo qué
+* cuándo
+* desde dónde
+
+---
+
+# 42. NOTIFICACIONES
+
+## Internas
+
+Obligatorias.
+
+## Email
+
+Gmail por defecto.
+
+## WhatsApp
+
+Opcional.
+
+---
+
+# 43. SISTEMA DE CALIFICACIÓN
+
+Al cerrar:
+
+Usuario puede calificar:
+
+* atención
+* tiempo
+* calidad
+
+---
+
+# 44. OBJETIVO DEL DISEÑO
+
+El diseño NO debe parecer:
+
+* ERP viejo
+* dashboard saturado
+* panel administrativo pesado
+
+---
+
+# 45. OBJETIVO UX
+
+Debe sentirse:
+
+* operativo
+* moderno
+* limpio
+* modular
+* escalable
+* intuitivo
+
+---
+
+# 46. REGLAS VISUALES IMPORTANTES
+
+## Mantener mockups
+
+La estructura visual debe mantenerse lo más cercana posible a los mockups enviados.
+
+---
+
+## Prioridades visuales
+
+### Técnicos
+
+Visual enfocada en trabajo.
+
+### Admins/Jefes
+
+Visual enfocada en supervisión.
+
+---
+
+# 47. DIFERENCIA ENTRE VISTAS
+
+## Usuario final
+
+Solo ve:
+
+* crear ticket
+* historial propio
+* estado
+* evidencias
+* reuniones asignadas
+
+---
+
+## Técnico
+
+Ve:
+
+* cola
+* tickets
+* colaboración
+* ejecución
+
+---
+
+## Jefe Técnico/Admin
+
+Ve:
+
+* supervisión global
+* procesos
+* métricas
+* técnicos
+* SLA
+* reasignaciones
+
+---
+
+# 48. FILOSOFÍA FINAL DEL PROYECTO
+
+El sistema debe sentirse como:
+
+## Una plataforma operativa viva
+
+NO solo como:
+
+```txt
+“un sistema de tickets”
+```
+
+porque el objetivo real es:
+
+* gestión operativa
+* coordinación técnica
+* trazabilidad empresarial
+* automatización organizacional
+* colaboración técnica
+* escalamiento modular futuro

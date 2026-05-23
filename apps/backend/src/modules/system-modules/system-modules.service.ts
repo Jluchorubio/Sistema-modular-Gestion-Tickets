@@ -15,7 +15,9 @@ export class SystemModulesService {
     if (profile?.is_superadmin) {
       return this.db.query<any[]>(
         `SELECT id, name, slug, description, type, image_url, color, is_active,
-                maintenance_mode, maintenance_since, maintenance_message, created_at
+                maintenance_mode, maintenance_since, maintenance_message,
+                access_mode, assignment_mode, priority_mode, priority_editors,
+                priority_period_start, priority_period_end, created_at
          FROM modules.modules
          WHERE deleted_at IS NULL
          ORDER BY is_active DESC, name`,
@@ -25,7 +27,9 @@ export class SystemModulesService {
     // Non-superadmin: only modules assigned to user
     return this.db.query<any[]>(
       `SELECT DISTINCT m.id, m.name, m.slug, m.description, m.type, m.image_url,
-              m.color, m.is_active, m.maintenance_mode, m.maintenance_message, m.created_at
+              m.color, m.is_active, m.maintenance_mode, m.maintenance_message,
+              m.access_mode, m.assignment_mode, m.priority_mode, m.priority_editors,
+              m.priority_period_start, m.priority_period_end, m.created_at
        FROM   modules.modules           m
        JOIN   modules.user_module_roles umr ON umr.module_id = m.id
                                            AND umr.user_id   = $1
@@ -38,10 +42,16 @@ export class SystemModulesService {
 
   async findOne(id: string) {
     const rows = await this.db.query<any[]>(
-      `SELECT m.id, m.name, m.slug, m.description, m.type, m.image_url, m.is_active,
-              COUNT(DISTINCT umr.user_id) AS member_count
+      `SELECT m.id, m.name, m.slug, m.description, m.type, m.image_url, m.color,
+              m.is_active, m.maintenance_mode, m.maintenance_message,
+              m.access_mode, m.assignment_mode, m.priority_mode, m.priority_editors,
+              m.priority_period_start, m.priority_period_end,
+              COUNT(DISTINCT umr.user_id) AS members_count,
+              COUNT(DISTINCT CASE WHEN mr.name IN ('tecnico','jefe_tecnico') THEN umr.user_id END) AS techs_count,
+              COUNT(DISTINCT CASE WHEN mr.name = 'admin_modulo' THEN umr.user_id END) AS admins_count
        FROM   modules.modules m
        LEFT JOIN modules.user_module_roles umr ON umr.module_id = m.id AND umr.is_active = true
+       LEFT JOIN modules.module_roles      mr  ON mr.id = umr.role_id
        WHERE  m.id = $1 AND m.deleted_at IS NULL
        GROUP  BY m.id`,
       [id],
@@ -93,7 +103,11 @@ export class SystemModulesService {
   }
 
   async updateModule(id: string, dto: Record<string, unknown>) {
-    const { name, description, type, image_url, color, is_active } = dto as any;
+    const {
+      name, description, type, image_url, color, is_active,
+      access_mode, assignment_mode, priority_mode, priority_editors,
+      priority_period_start, priority_period_end,
+    } = dto as any;
     const fields: string[] = [];
     const values: any[] = [];
     let idx = 1;
@@ -123,6 +137,14 @@ export class SystemModulesService {
     if (type !== undefined) { fields.push(`type = $${idx++}`); values.push(type); }
     if (image_url !== undefined) { fields.push(`image_url = $${idx++}`); values.push(image_url); }
     if (color !== undefined) { fields.push(`color = $${idx++}`); values.push(color || null); }
+
+    /* ── Operational config (migration 004) ── */
+    if (access_mode !== undefined)          { fields.push(`access_mode = $${idx++}`);          values.push(access_mode); }
+    if (assignment_mode !== undefined)      { fields.push(`assignment_mode = $${idx++}`);      values.push(assignment_mode); }
+    if (priority_mode !== undefined)        { fields.push(`priority_mode = $${idx++}`);        values.push(priority_mode); }
+    if (priority_editors !== undefined)     { fields.push(`priority_editors = $${idx++}`);     values.push(priority_editors); }
+    if ('priority_period_start' in dto)     { fields.push(`priority_period_start = $${idx++}`); values.push(priority_period_start ?? null); }
+    if ('priority_period_end' in dto)       { fields.push(`priority_period_end = $${idx++}`);   values.push(priority_period_end ?? null); }
 
     if (!fields.length) throw new BadRequestException('Nada que actualizar');
 

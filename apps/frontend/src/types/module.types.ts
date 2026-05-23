@@ -1,3 +1,8 @@
+export type AccessMode      = 'open' | 'request';
+export type AssignmentMode  = 'manual' | 'round_robin' | 'hybrid';
+export type PriorityMode    = 'auto' | 'manual';
+export type PriorityEditors = 'jefe_tecnico' | 'any_tech';
+
 export interface SystemModule {
   id: string;
   name: string;
@@ -11,6 +16,13 @@ export interface SystemModule {
   maintenance_mode?:    boolean;
   maintenance_since?:   string | null;
   maintenance_message?: string | null;
+  /* ── Operational config (migration 004) ── */
+  access_mode?:             AccessMode;
+  assignment_mode?:         AssignmentMode;
+  priority_mode?:           PriorityMode;
+  priority_editors?:        PriorityEditors;
+  priority_period_start?:   string | null;
+  priority_period_end?:     string | null;
   created_at: string;
   deleted_at: string | null;
 }

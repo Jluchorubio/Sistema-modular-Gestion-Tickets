@@ -1050,7 +1050,7 @@ export function CalendarClient() {
   const totalDayItems = selectedDayReqs.length + selectedDayTickets.length + selectedDayMeetings.length + selectedDayCalEvents.length;
 
   return (
-    <ModuleLayout title="Calendario" description="Planificación, SLA y coordinación operativa." isSuperadmin={isSuperadmin} showHero={false}>
+    <ModuleLayout title="Calendario" description="Planificación, SLA y coordinación operativa." isSuperadmin={isSuperadmin}>
       <div className={styles.shell}>
 
         {/* ── Main panel ── */}

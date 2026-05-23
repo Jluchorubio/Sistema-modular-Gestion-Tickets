@@ -1,11 +1,25 @@
-import dynamic from 'next/dynamic';
-import { SkeletonTicketsList } from '@/components/ui/Skeleton';
+'use client';
 
-const TicketsClient = dynamic(
-  () => import('./_components/TicketsClient').then((m) => ({ default: m.TicketsClient })),
-  { ssr: false, loading: () => <div style={{ padding: '28px 32px' }}><SkeletonTicketsList /></div> },
-);
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { modulesService } from '@/services/modules.service';
+import { isHelpdeskModule } from './_nav';
+import { Spinner } from '@/components/ui/Spinner';
 
-export default function TicketsPage() {
-  return <TicketsClient />;
+export default function TicketsRedirectPage() {
+  const router = useRouter();
+  const { data: modules } = useQuery({
+    queryKey: ['modules'],
+    queryFn:  () => modulesService.getModules(),
+    staleTime: 5 * 60_000,
+  });
+
+  useEffect(() => {
+    if (!modules) return;
+    const helpdesk = modules.find(isHelpdeskModule);
+    router.replace(helpdesk ? `/${helpdesk.slug}` : '/dashboard');
+  }, [modules, router]);
+
+  return <Spinner />;
 }

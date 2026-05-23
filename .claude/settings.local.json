@@ -11,7 +11,10 @@
       "PowerShell(Get-ChildItem *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Lenovo\\\\Desktop\\\\Sistema modular Gestion Tickets\" -Recurse -Filter \"*.sql\")",
       "Bash(Select-Object FullName, Length, LastWriteTime)",
-      "Bash(Sort-Object LastWriteTime)"
+      "Bash(Sort-Object LastWriteTime)",
+      "Bash(Get-ChildItem -Recurse -Path src)",
+      "Bash(Select-Object -First 50)",
+      "Bash(Format-Table -AutoSize)"
     ]
   },
   "enabledPlugins": {
