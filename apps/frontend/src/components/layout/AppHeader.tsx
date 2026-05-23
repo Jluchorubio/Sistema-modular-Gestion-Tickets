@@ -264,16 +264,27 @@ export function AppHeader({ noSidebar = false }: Props) {
                   <p className={styles.notifEmpty}>Sin notificaciones</p>
                 )}
                 {notifications.map((n) => {
-                  const isUnread = n.status === 'pending';
+                  const isUnread  = n.status === 'pending';
+                  const subject   = typeof n.payload.subject === 'string'
+                    ? n.payload.subject
+                    : n.event_type.replace(/_/g, ' ');
+                  const ticketId  = typeof n.payload.ticketId  === 'string' ? n.payload.ticketId  : null;
+                  const requestId = typeof n.payload.requestId === 'string' ? n.payload.requestId : null;
+                  const href      = ticketId  ? `/helpdesk/ticket/${ticketId}`
+                                  : requestId ? `/requests/${requestId}`
+                                  : null;
                   return (
                     <div
                       key={n.id}
-                      className={`${styles.notifItem}${isUnread ? ` ${styles.notifItemUnread}` : ''}`}
-                      onClick={() => isUnread && markReadMut.mutate(n.id)}
+                      className={`${styles.notifItem}${isUnread ? ` ${styles.notifItemUnread}` : ''}${href ? ` ${styles.notifItemClickable}` : ''}`}
+                      onClick={() => {
+                        if (isUnread) markReadMut.mutate(n.id);
+                        if (href) { router.push(href); setNotifOpen(false); }
+                      }}
                     >
                       <span className={`${styles.notifDot}${!isUnread ? ` ${styles.notifDotRead}` : ''}`} />
                       <div className={styles.notifBody}>
-                        <p className={styles.notifEvt}>{n.event_type.replace(/_/g, ' ')}</p>
+                        <p className={styles.notifEvt}>{subject}</p>
                         <p className={styles.notifMsg}>{getNotifMessage(n)}</p>
                       </div>
                       <span className={styles.notifTime}>{fmtRelative(n.created_at)}</span>

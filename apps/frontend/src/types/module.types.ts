@@ -51,6 +51,28 @@ export interface Environment {
   description: string | null;
 }
 
+export type TechAvailStatus =
+  | 'disponible'
+  | 'ocupado'
+  | 'en_reunion'
+  | 'fuera_horario'
+  | 'ausente'
+  | 'offline';
+
+export interface ModuleTechnician {
+  id:             string;
+  first_name:     string;
+  last_name:      string;
+  username:       string | null;
+  avatar_url:     string | null;
+  role_name:      string;
+  avg_rating:     number;
+  active_tickets: number;
+  is_available:   boolean;
+  avail_status:   TechAvailStatus;
+  unavailable_to: string | null;
+}
+
 export interface ModuleMember {
   user_id: string;
   first_name: string;

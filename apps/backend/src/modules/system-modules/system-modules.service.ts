@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
@@ -283,6 +283,50 @@ export class SystemModulesService {
        WHERE deleted_at IS NOT NULL
          AND (scheduled_hard_delete_at IS NULL OR scheduled_hard_delete_at > now())
        ORDER BY deleted_at DESC`,
+    );
+  }
+
+  async getModuleTechnicians(moduleId: string, requesterId: string) {
+    const [isMember] = await this.db.query<{ ok: boolean }[]>(
+      `SELECT (
+         EXISTS(SELECT 1 FROM users.profiles WHERE id = $1 AND is_superadmin = true)
+         OR
+         EXISTS(SELECT 1 FROM modules.user_module_roles WHERE module_id = $2 AND user_id = $1 AND is_active = true)
+       ) AS ok`,
+      [requesterId, moduleId],
+    );
+    if (!isMember?.ok) throw new ForbiddenException('No eres miembro de este módulo');
+
+    return this.db.query<any[]>(
+      `SELECT p.id, p.first_name, p.last_name, p.username, p.avatar_url, mr.name AS role_name,
+              COALESCE(
+                (SELECT ROUND(AVG(COALESCE(r.score_overall,
+                   (COALESCE(r.score_attention,0) + COALESCE(r.score_clarity,0)
+                    + COALESCE(r.score_response_time,0) + COALESCE(r.score_quality,0)) / 4.0
+                 ))::numeric, 1)
+                 FROM   tickets.ticket_ratings r
+                 WHERE  r.technician_id = p.id AND r.is_expired = false),
+                0
+              )::float AS avg_rating,
+              (SELECT COUNT(*)::int
+               FROM   tickets.ticket_assignments ta3
+               JOIN   tickets.tickets t3 ON t3.id = ta3.ticket_id
+               JOIN   tickets.states  s3 ON s3.id = t3.current_state_id
+               WHERE  ta3.user_id = p.id AND ta3.role = 'owner' AND ta3.is_active = true
+                 AND  s3.is_final = false AND t3.module_id = $1
+              ) AS active_tickets,
+              COALESCE(ts.is_available, true)      AS is_available,
+              COALESCE(ts.status, 'disponible')    AS avail_status,
+              ts.unavailable_to
+       FROM   modules.user_module_roles umr
+       JOIN   users.profiles p ON p.id = umr.user_id
+       JOIN   modules.module_roles mr ON mr.id = umr.role_id
+       LEFT JOIN modules.technician_status ts ON ts.user_id = p.id AND ts.module_id = $1
+       WHERE  umr.module_id = $1 AND umr.is_active = true
+         AND  mr.name IN ('tecnico', 'jefe_tecnico')
+         AND  p.deleted_at IS NULL
+       ORDER  BY mr.name DESC, p.first_name`,
+      [moduleId],
     );
   }
 

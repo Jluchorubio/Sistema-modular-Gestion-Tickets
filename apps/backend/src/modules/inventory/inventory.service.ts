@@ -246,14 +246,14 @@ export class InventoryService {
   async getCurrentAssignment(assetId: string) {
     const [row] = await this.db.query<any[]>(
       `SELECT aa.id, aa.assigned_at, aa.notes, aa.status AS assignment_status,
-              u.id AS user_id,
-              u.first_name || ' ' || u.last_name AS user_name,
-              u.email AS user_email,
-              u.avatar_url,
+              p.id AS user_id,
+              p.first_name || ' ' || p.last_name AS user_name,
+              p.email AS user_email,
+              p.avatar_url,
               ab.first_name || ' ' || ab.last_name AS assigned_by_name
        FROM   inventory.asset_assignments aa
-       JOIN   auth.users  u  ON u.id  = aa.user_id
-       JOIN   auth.users  ab ON ab.id = aa.assigned_by
+       JOIN   users.profiles p  ON p.id  = aa.user_id
+       JOIN   users.profiles ab ON ab.id = aa.assigned_by
        WHERE  aa.asset_id = $1 AND aa.status = 'activo'
        ORDER  BY aa.assigned_at DESC LIMIT 1`,
       [assetId],
@@ -266,11 +266,11 @@ export class InventoryService {
   async getHistory(assetId: string) {
     return this.db.query<any[]>(
       `SELECT h.id, h.action, h.reason, h.created_at,
-              u.first_name || ' ' || u.last_name AS user_name,
-              ab.first_name || ' ' || ab.last_name AS actor_name
+              pu.first_name || ' ' || pu.last_name AS user_name,
+              pa.first_name || ' ' || pa.last_name AS actor_name
        FROM   inventory.asset_assignment_history h
-       LEFT JOIN auth.users u  ON u.id  = h.user_id
-       LEFT JOIN auth.users ab ON ab.id = h.assigned_by
+       LEFT JOIN users.profiles pu ON pu.id = h.user_id
+       LEFT JOIN users.profiles pa ON pa.id = h.assigned_by
        WHERE  h.asset_id = $1
        ORDER  BY h.created_at DESC`,
       [assetId],

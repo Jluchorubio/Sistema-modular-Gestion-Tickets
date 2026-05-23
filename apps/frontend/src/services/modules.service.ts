@@ -4,6 +4,7 @@ import type {
   ModuleDetail,
   Location,
   Environment,
+  ModuleTechnician,
 } from '@/types/module.types';
 
 export interface ModuleSlaRule {
@@ -147,6 +148,11 @@ export const modulesService = {
 
   async deleteModuleSlaRule(moduleId: string, priority: string): Promise<{ ok: boolean }> {
     const { data } = await api.delete(`/system-modules/${moduleId}/sla/${priority}`);
+    return data;
+  },
+
+  async getModuleTechnicians(moduleId: string): Promise<ModuleTechnician[]> {
+    const { data } = await api.get(`/system-modules/${moduleId}/technicians`);
     return data;
   },
 };

@@ -47,6 +47,12 @@ export class SystemModulesController {
     return this.service.getModuleRoles(id);
   }
 
+  @Get(':id/technicians')
+  @ApiOperation({ summary: 'Técnicos activos del módulo con rating promedio y tickets activos.' })
+  getModuleTechnicians(@Param('id') id: string, @Req() req: any) {
+    return this.service.getModuleTechnicians(id, req.user.sub);
+  }
+
   @Post()
   @UseGuards(RolesGuard)
   @Roles('superadmin')

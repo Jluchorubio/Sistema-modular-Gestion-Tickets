@@ -14,7 +14,7 @@ const PRIORITY_ORDER: Record<string, number> = { critica: 0, alta: 1, media: 2, 
 
 function ticketHref(moduleSlug: string | null, ticketId: string) {
   if (moduleSlug) return `/${moduleSlug}/ticket/${ticketId}`;
-  return `/tickets/ticket/${ticketId}`;
+  return `/helpdesk/ticket/${ticketId}`;
 }
 
 function PriorityDot({ priority }: { priority: string }) {

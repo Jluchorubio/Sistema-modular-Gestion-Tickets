@@ -11,9 +11,9 @@ export function isHelpdeskModule(m: { slug: string; type?: string | null }): boo
 }
 
 export const HELPDESK_NAV: ModuleNavItem[] = [
-  { key: 'all-tickets', label: 'Todos los Tickets', Icon: LayoutList, href: '/tickets'        },
-  { key: 'users',       label: 'Usuarios',          Icon: Users,      href: '/tickets/users'  },
-  { key: 'roles',       label: 'Roles',             Icon: Tag,        href: '/tickets/roles'  },
-  { key: 'trash',       label: 'Papelera',          Icon: Trash2,     href: '/tickets/trash'  },
-  { key: 'reports',     label: 'Reportes',          Icon: BarChart2,  href: '/reports'        },
+  { key: 'all-tickets', label: 'Todos los Tickets', Icon: LayoutList, href: '/helpdesk'        },
+  { key: 'users',       label: 'Usuarios',          Icon: Users,      href: '/helpdesk/users'  },
+  { key: 'roles',       label: 'Roles',             Icon: Tag,        href: '/helpdesk/roles'  },
+  { key: 'trash',       label: 'Papelera',          Icon: Trash2,     href: '/helpdesk/trash'  },
+  { key: 'reports',     label: 'Reportes',          Icon: BarChart2,  href: '/reports'         },
 ];

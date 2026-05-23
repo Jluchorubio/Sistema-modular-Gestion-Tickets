@@ -67,7 +67,7 @@ export function ModulesGrid({
           module={builtins.helpdesk}
           isSuperadmin={isSuperadmin}
           isBuiltIn
-          onClick={() => router.push('/tickets')}
+          onClick={() => router.push('/helpdesk')}
           {...builtinHandlers(builtins.helpdesk)}
         />
         <ModuleCard

@@ -30,6 +30,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { PreferencesDto } from './dto/preferences.dto';
 import { AssignRoleDto } from './dto/assign-role.dto';
 import { AvailabilityDto } from './dto/availability.dto';
+import { SelfAvailabilityDto } from './dto/self-availability.dto';
 import { AddSkillDto } from './dto/add-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { CompleteProfileDto } from './dto/complete-profile.dto';
@@ -154,8 +155,20 @@ export class UsersController {
   @Get('me/assigned-tickets')
   @ApiOperation({ summary: 'Tickets activos asignados al usuario.' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  getMyAssignedTickets(@Req() req: any, @Query('limit') limit?: string) {
-    return this.profileService.getMyAssignedTickets(req.user.sub, limit ? parseInt(limit, 10) : 50);
+  @ApiQuery({ name: 'module_id', required: false, type: String })
+  getMyAssignedTickets(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+    @Query('module_id') moduleId?: string,
+  ) {
+    return this.profileService.getMyAssignedTickets(req.user.sub, limit ? parseInt(limit, 10) : 50, moduleId);
+  }
+
+  @Get('me/tech-stats')
+  @ApiOperation({ summary: 'Estadísticas de rendimiento del técnico (rating, tickets calificados).' })
+  @ApiQuery({ name: 'module_id', required: false, type: String })
+  getMyTechStats(@Req() req: any, @Query('module_id') moduleId?: string) {
+    return this.profileService.getMyTechStats(req.user.sub, moduleId);
   }
 
   @Get('me/activity-feed')
@@ -311,6 +324,21 @@ export class UsersController {
     return this.profileService.getUserRequestStats(id);
   }
 
+  @Get(':id/assigned-tickets')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo', 'jefe_tecnico')
+  @RequirePermission('global:users:view')
+  @ApiOperation({ summary: 'Tickets asignados a un técnico (vista de admin/jefe técnico).' })
+  @ApiQuery({ name: 'module_id', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getUserAssignedTickets(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('module_id') moduleId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.profileService.getUserAssignedTickets(id, moduleId, limit ? parseInt(limit, 10) : 100);
+  }
+
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
@@ -368,6 +396,18 @@ export class UsersController {
   }
 
   // ─── Disponibilidad ──────────────────────────────────────────────────────────
+
+  @Get('me/availability')
+  @ApiOperation({ summary: 'Mi disponibilidad por módulo.' })
+  getMyAvailability(@Req() req: any) {
+    return this.skillService.getAvailability(req.user.sub);
+  }
+
+  @Put('me/availability')
+  @ApiOperation({ summary: 'Actualizar mi propio estado de disponibilidad (técnico).' })
+  setMyAvailability(@Req() req: any, @Body() dto: SelfAvailabilityDto) {
+    return this.skillService.setMyAvailability(req.user.sub, dto);
+  }
 
   @Get(':id/availability')
   @ApiOperation({ summary: 'Disponibilidad del técnico por módulo.' })

@@ -342,33 +342,135 @@ export class ProfileService {
     );
   }
 
-  async getMyAssignedTickets(userId: string, limit = 50) {
+  async getMyAssignedTickets(userId: string, limit = 50, moduleId?: string) {
+    const params: any[] = [userId];
+    let moduleWhere = '';
+    if (moduleId) {
+      params.push(moduleId);
+      moduleWhere = `AND t.module_id = $${params.length}`;
+    }
+    params.push(limit);
+    const limitParam = `$${params.length}`;
+
     return this.db.query<any[]>(
       `SELECT *
        FROM (
          SELECT DISTINCT ON (t.id)
                 t.id, t.title, t.priority, t.created_at, t.updated_at,
+                m.id    AS module_id,
                 m.name  AS module_name,
                 m.slug  AS module_slug,
+                c.name  AS category_name,
+                e.name  AS environment_name,
+                t.current_state_id,
                 s.label AS state_label,
                 s.name  AS state_name,
                 s.is_final,
-                t.sla_status,
-                t.sla_deadline_tracked,
-                ta.role AS assignment_role
+                t.created_by,
+                up.first_name || ' ' || up.last_name AS creator_name,
+                st.status      AS sla_status,
+                st.deadline_at AS sla_deadline_tracked,
+                ta.role        AS assignment_role
          FROM   tickets.tickets t
          JOIN   modules.modules m  ON m.id  = t.module_id
+         LEFT JOIN modules.categories c ON c.id = t.category_id
+         LEFT JOIN modules.environments e ON e.id = t.environment_id
          JOIN   tickets.states  s  ON s.id  = t.current_state_id
          JOIN   tickets.ticket_assignments ta
                 ON ta.ticket_id = t.id AND ta.user_id = $1 AND ta.is_active = true
+         JOIN   users.profiles up ON up.id = t.created_by
+         LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
          WHERE  t.deleted_at IS NULL
            AND  s.is_final = false
+           ${moduleWhere}
          ORDER  BY t.id
        ) sub
-       ORDER BY updated_at DESC
-       LIMIT $2`,
-      [userId, limit],
+       ORDER BY
+         CASE priority WHEN 'critica' THEN 0 WHEN 'alta' THEN 1 WHEN 'media' THEN 2 ELSE 3 END,
+         updated_at DESC
+       LIMIT ${limitParam}`,
+      params,
     );
+  }
+
+  async getUserAssignedTickets(targetUserId: string, moduleId?: string, limit = 100) {
+    const params: any[] = [targetUserId];
+    let moduleWhere = '';
+    if (moduleId) {
+      params.push(moduleId);
+      moduleWhere = `AND t.module_id = $${params.length}`;
+    }
+    params.push(limit);
+    const limitParam = `$${params.length}`;
+
+    return this.db.query<any[]>(
+      `SELECT *
+       FROM (
+         SELECT DISTINCT ON (t.id)
+                t.id, t.title, t.priority, t.created_at, t.updated_at,
+                m.id    AS module_id,
+                m.name  AS module_name,
+                m.slug  AS module_slug,
+                c.name  AS category_name,
+                e.name  AS environment_name,
+                t.current_state_id,
+                s.label AS state_label,
+                s.name  AS state_name,
+                s.is_final,
+                t.created_by,
+                up.first_name || ' ' || up.last_name AS creator_name,
+                st.status      AS sla_status,
+                st.deadline_at AS sla_deadline_tracked,
+                ta.role        AS assignment_role
+         FROM   tickets.tickets t
+         JOIN   modules.modules m  ON m.id  = t.module_id
+         LEFT JOIN modules.categories c ON c.id = t.category_id
+         LEFT JOIN modules.environments e ON e.id = t.environment_id
+         JOIN   tickets.states  s  ON s.id  = t.current_state_id
+         JOIN   tickets.ticket_assignments ta
+                ON ta.ticket_id = t.id AND ta.user_id = $1 AND ta.is_active = true
+         JOIN   users.profiles up ON up.id = t.created_by
+         LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
+         WHERE  t.deleted_at IS NULL
+           AND  s.is_final = false
+           ${moduleWhere}
+         ORDER  BY t.id
+       ) sub
+       ORDER BY
+         CASE priority WHEN 'critica' THEN 0 WHEN 'alta' THEN 1 WHEN 'media' THEN 2 ELSE 3 END,
+         updated_at DESC
+       LIMIT ${limitParam}`,
+      params,
+    );
+  }
+
+  async getMyTechStats(userId: string, moduleId?: string) {
+    const params: any[] = [userId];
+    let moduleJoin  = '';
+    let moduleWhere = '';
+    if (moduleId) {
+      params.push(moduleId);
+      moduleJoin  = `JOIN tickets.tickets t ON t.id = r.ticket_id`;
+      moduleWhere = `AND t.module_id = $${params.length}`;
+    }
+
+    const [stats] = await this.db.query<any[]>(
+      `SELECT
+         COUNT(r.id)::int AS rated_tickets,
+         COALESCE(ROUND(AVG(COALESCE(r.score_overall,
+           (COALESCE(r.score_attention,0) + COALESCE(r.score_clarity,0)
+            + COALESCE(r.score_response_time,0) + COALESCE(r.score_quality,0)) / 4.0
+         ))::numeric, 2), 0)::float AS avg_rating
+       FROM tickets.ticket_ratings r
+       ${moduleJoin}
+       WHERE r.technician_id = $1 AND r.is_expired = false
+         ${moduleWhere}`,
+      params,
+    );
+    return {
+      rated_tickets: stats?.rated_tickets ?? 0,
+      avg_rating:    parseFloat(stats?.avg_rating ?? '0'),
+    };
   }
 
   async getActivityFeed(userId: string) {

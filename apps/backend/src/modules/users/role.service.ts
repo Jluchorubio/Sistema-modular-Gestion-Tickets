@@ -163,13 +163,11 @@ export class RoleService {
     }[]>(`
       SELECT
         COUNT(*)                                                                        AS total_requests,
-        COUNT(*) FILTER (WHERE status IN ('pending', 'taken', 'in_progress'))           AS pending_requests,
+        COUNT(*) FILTER (WHERE status = 'pending')                                      AS pending_requests,
         COUNT(*) FILTER (WHERE status IN ('taken', 'in_progress'))                      AS in_progress_requests
       FROM requests.admin_requests
       WHERE deleted_at IS NULL
     `);
-
-    const totalModules = parseInt(moduleStats?.total_modules ?? '0', 10);
 
     return {
       users: {
@@ -178,9 +176,9 @@ export class RoleService {
         inactive: parseInt(userStats?.inactive_users ?? '0', 10),
       },
       modules: {
-        total:    totalModules,
-        active:   totalModules,
-        inactive: 0,
+        total:    parseInt(moduleStats?.total_modules    ?? '0', 10),
+        active:   parseInt(moduleStats?.active_modules   ?? '0', 10),
+        inactive: parseInt(moduleStats?.inactive_modules ?? '0', 10),
       },
       tickets: {
         total: parseInt(ticketStats?.total_tickets ?? '0', 10),

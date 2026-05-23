@@ -77,6 +77,16 @@ export interface TicketAttachment {
   uploader_name: string;
 }
 
+export interface TicketComment {
+  id:           string;
+  comment_type: 'internal' | 'public';
+  content:      string;
+  created_at:   string;
+  user_id:      string;
+  author_name:  string;
+  avatar_url:   string | null;
+}
+
 export interface TicketAssignment {
   id:          string;
   role:        string;
@@ -108,6 +118,52 @@ export interface TicketDetail extends TicketListItem {
   transitions:          TicketTransition[];
 }
 
+export interface TicketAsset {
+  link_id:          string;
+  link_notes:       string | null;
+  id:               string;
+  name:             string;
+  serial_number:    string | null;
+  qr_code:          string;
+  status:           string;
+  specifications:   Record<string, unknown> | null;
+  category_name:    string;
+  environment_name: string;
+  location_name:    string | null;
+  assigned_to_name: string | null;
+}
+
+export interface AssetHistoryEntry {
+  id:         string;
+  action:     string;
+  reason:     string | null;
+  created_at: string;
+  user_name:  string | null;
+  actor_name: string | null;
+}
+
+export const ASSET_STATUS_COLORS: Record<string, string> = {
+  disponible:    '#22C55E',
+  asignado:      '#3B82F6',
+  en_reparacion: '#F59E0B',
+  dado_de_baja:  '#EF4444',
+};
+
+export const ASSET_STATUS_LABELS: Record<string, string> = {
+  disponible:    'Disponible',
+  asignado:      'Asignado',
+  en_reparacion: 'En reparación',
+  dado_de_baja:  'Dado de baja',
+};
+
+export const ASSET_ACTION_LABELS: Record<string, string> = {
+  asignado:     'Asignado',
+  devuelto:     'Devuelto',
+  transferido:  'Transferido',
+  dado_de_baja: 'Dado de baja',
+  reparacion:   'Reparación',
+};
+
 export interface CreateTicketDto {
   module_id:      string;
   category_id:    string;
@@ -120,12 +176,16 @@ export interface CreateTicketDto {
 }
 
 export interface TicketsFilter {
-  module_id?: string;
-  state_id?:  string;
-  priority?:  TicketPriority | '';
-  mine?:      boolean;
-  page?:      number;
-  limit?:     number;
+  module_id?:   string;
+  state_id?:    string;
+  priority?:    TicketPriority | '';
+  mine?:        boolean;
+  category_id?: string;
+  assignee_id?: string;
+  sla_status?:  SlaStatus | '';
+  is_reproceso?: boolean;
+  page?:        number;
+  limit?:       number;
 }
 
 export interface PaginatedTickets {
@@ -166,12 +226,16 @@ export const SLA_STATUS_LABELS: Record<SlaStatus, string> = {
 export const ticketsService = {
   async getAll(filter: TicketsFilter = {}): Promise<PaginatedTickets> {
     const params: Record<string, string> = {};
-    if (filter.module_id)            params.module_id  = filter.module_id;
-    if (filter.state_id)             params.state_id   = filter.state_id;
-    if (filter.priority)             params.priority   = filter.priority;
-    if (filter.mine)                 params.mine       = 'true';
-    if (filter.page  != null)        params.page       = String(filter.page);
-    if (filter.limit != null)        params.limit      = String(filter.limit);
+    if (filter.module_id)             params.module_id   = filter.module_id;
+    if (filter.state_id)              params.state_id    = filter.state_id;
+    if (filter.priority)              params.priority    = filter.priority;
+    if (filter.mine)                  params.mine        = 'true';
+    if (filter.category_id)           params.category_id = filter.category_id;
+    if (filter.assignee_id)           params.assignee_id = filter.assignee_id;
+    if (filter.sla_status)            params.sla_status  = filter.sla_status;
+    if (filter.is_reproceso)          params.is_reproceso = 'true';
+    if (filter.page  != null)         params.page        = String(filter.page);
+    if (filter.limit != null)         params.limit       = String(filter.limit);
     const { data } = await api.get('/tickets', { params });
     return data;
   },
@@ -243,6 +307,80 @@ export const ticketsService = {
 
   async deleteAttachment(ticketId: string, attachmentId: string): Promise<{ ok: boolean }> {
     const { data } = await api.delete(`/tickets/${ticketId}/attachments/${attachmentId}`);
+    return data;
+  },
+
+  async getComments(ticketId: string): Promise<TicketComment[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/comments`);
+    return data;
+  },
+
+  async addComment(
+    ticketId: string,
+    content: string,
+    commentType: 'internal' | 'public' = 'public',
+  ): Promise<TicketComment> {
+    const { data } = await api.post(`/tickets/${ticketId}/comments`, {
+      content,
+      comment_type: commentType,
+    });
+    return data;
+  },
+
+  async getTicketAssets(ticketId: string): Promise<TicketAsset[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/assets`);
+    return data;
+  },
+
+  async getAssetHistory(ticketId: string, assetId: string): Promise<AssetHistoryEntry[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/assets/${assetId}/history`);
+    return data;
+  },
+
+  async searchTickets(q: string, excludeId: string): Promise<{
+    id: string; title: string; priority: string; state_label: string; is_final: boolean;
+  }[]> {
+    const { data } = await api.get('/tickets/search', { params: { q, exclude: excludeId } });
+    return data;
+  },
+
+  async getRelations(ticketId: string): Promise<{
+    id: string; relation_type: string; notes: string | null; created_at: string;
+    created_by_name: string;
+    related_id: string; related_title: string; related_priority: string;
+    related_created_at: string; related_state_label: string; related_state_name: string;
+    related_is_final: boolean; related_owner_name: string | null;
+    related_description: string | null;
+  }[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/relations`);
+    return data;
+  },
+
+  async addRelation(ticketId: string, dto: { target_ticket_id: string; relation_type: string; notes?: string }): Promise<{ id?: string; ok?: boolean }> {
+    const { data } = await api.post(`/tickets/${ticketId}/relations`, dto);
+    return data;
+  },
+
+  async removeRelation(ticketId: string, relationId: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/tickets/${ticketId}/relations/${relationId}`);
+    return data;
+  },
+
+  async getAssetPrevTickets(ticketId: string, assetId: string): Promise<{
+    id: string; title: string; priority: string; created_at: string; updated_at: string;
+    state_label: string; state_name: string; is_final: boolean;
+    creator_name: string; owner_name: string | null;
+  }[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/assets/${assetId}/prev-tickets`);
+    return data;
+  },
+
+  async addAssignment(
+    ticketId: string,
+    userId: string,
+    role: 'owner' | 'collaborator' | 'observer',
+  ): Promise<{ id: string; role: string; assigned_at: string; is_active: boolean }> {
+    const { data } = await api.post(`/tickets/${ticketId}/assignments`, { user_id: userId, role });
     return data;
   },
 };

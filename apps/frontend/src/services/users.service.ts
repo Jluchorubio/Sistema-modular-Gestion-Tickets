@@ -198,15 +198,44 @@ export const usersService = {
     return data;
   },
 
-  async getMyAssignedTickets(limit = 50): Promise<{
+  async getMyAssignedTickets(moduleId?: string, limit = 50): Promise<{
     id: string; title: string; priority: string;
     created_at: string; updated_at: string;
-    module_name: string; module_slug: string | null;
+    module_id: string; module_name: string; module_slug: string | null;
+    category_name: string | null; environment_name: string | null;
+    current_state_id: string;
     state_label: string; state_name: string; is_final: boolean;
+    created_by: string; creator_name: string;
     sla_status: string | null; sla_deadline_tracked: string | null;
     assignment_role: string;
   }[]> {
-    const { data } = await api.get('/users/me/assigned-tickets', { params: { limit } });
+    const params: Record<string, string> = { limit: String(limit) };
+    if (moduleId) params.module_id = moduleId;
+    const { data } = await api.get('/users/me/assigned-tickets', { params });
+    return data;
+  },
+
+  async getUserAssignedTickets(userId: string, moduleId?: string, limit = 100): Promise<{
+    id: string; title: string; priority: string;
+    created_at: string; updated_at: string;
+    module_id: string; module_name: string; module_slug: string | null;
+    category_name: string | null; environment_name: string | null;
+    current_state_id: string;
+    state_label: string; state_name: string; is_final: boolean;
+    created_by: string; creator_name: string;
+    sla_status: string | null; sla_deadline_tracked: string | null;
+    assignment_role: string;
+  }[]> {
+    const params: Record<string, string> = { limit: String(limit) };
+    if (moduleId) params.module_id = moduleId;
+    const { data } = await api.get(`/users/${userId}/assigned-tickets`, { params });
+    return data;
+  },
+
+  async getMyTechStats(moduleId?: string): Promise<{ rated_tickets: number; avg_rating: number }> {
+    const params: Record<string, string> = {};
+    if (moduleId) params.module_id = moduleId;
+    const { data } = await api.get('/users/me/tech-stats', { params });
     return data;
   },
 
@@ -286,6 +315,24 @@ export const usersService = {
   ): Promise<{ created: number; failed: { row: number; email: string; error: string }[]; total: number }> {
     const { data } = await api.post('/users/bulk-import', { rows });
     return data;
+  },
+
+  async getMyAvailability(): Promise<{
+    id: string; module_id: string; module_name: string; module_slug: string | null;
+    status: string; is_available: boolean; reason: string | null;
+    unavailable_from: string | null; unavailable_to: string | null; notes: string | null; updated_at: string;
+  }[]> {
+    const { data } = await api.get('/users/me/availability');
+    return data;
+  },
+
+  async setMyAvailability(payload: {
+    module_id: string;
+    status: string;
+    unavailable_to?: string;
+    notes?: string;
+  }): Promise<void> {
+    await api.put('/users/me/availability', payload);
   },
 
   async bulkImportAndAssign(

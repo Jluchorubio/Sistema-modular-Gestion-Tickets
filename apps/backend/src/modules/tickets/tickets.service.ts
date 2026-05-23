@@ -67,12 +67,16 @@ export class TicketsService {
   /* ── List ───────────────────────────────────────────────────────────────── */
 
   async findAll(opts: {
-    moduleId?:  string;
-    stateId?:   string;
-    priority?:  string;
-    userId?:    string;
-    page?:      number;
-    limit?:     number;
+    moduleId?:    string;
+    stateId?:     string;
+    priority?:    string;
+    userId?:      string;
+    categoryId?:  string;
+    assigneeId?:  string;
+    slaStatus?:   string;
+    isReproceso?: boolean;
+    page?:        number;
+    limit?:       number;
   }) {
     const page   = Math.max(1, opts.page  ?? 1);
     const limit  = Math.min(100, opts.limit ?? 25);
@@ -82,15 +86,30 @@ export class TicketsService {
     const params: any[]   = [];
     let p = 1;
 
-    if (opts.moduleId) { conds.push(`t.module_id = $${p++}`);         params.push(opts.moduleId); }
-    if (opts.stateId)  { conds.push(`t.current_state_id = $${p++}`);  params.push(opts.stateId); }
-    if (opts.priority) { conds.push(`t.priority = $${p++}`);          params.push(opts.priority); }
-    if (opts.userId)   { conds.push(`t.created_by = $${p++}`);        params.push(opts.userId); }
+    if (opts.moduleId)    { conds.push(`t.module_id = $${p++}`);           params.push(opts.moduleId); }
+    if (opts.stateId)     { conds.push(`t.current_state_id = $${p++}`);    params.push(opts.stateId); }
+    if (opts.priority)    { conds.push(`t.priority = $${p++}`);            params.push(opts.priority); }
+    if (opts.userId)      { conds.push(`t.created_by = $${p++}`);          params.push(opts.userId); }
+    if (opts.categoryId)  { conds.push(`t.category_id = $${p++}`);         params.push(opts.categoryId); }
+    if (opts.assigneeId)  {
+      conds.push(
+        `EXISTS (SELECT 1 FROM tickets.ticket_assignments ta2
+                 WHERE  ta2.ticket_id = t.id AND ta2.user_id = $${p++}
+                   AND  ta2.role = 'owner' AND ta2.is_active = true)`,
+      );
+      params.push(opts.assigneeId);
+    }
+    if (opts.slaStatus)   { conds.push(`st.status = $${p++}`);             params.push(opts.slaStatus); }
+    if (opts.isReproceso) { conds.push(`s.name = 'reproceso'`); }
 
     const where = conds.length ? conds.join(' AND ') : 'TRUE';
 
     const [{ count }] = await this.db.query<{ count: string }[]>(
-      `SELECT COUNT(*) AS count FROM tickets.tickets t WHERE ${where}`,
+      `SELECT COUNT(*) AS count
+       FROM   tickets.tickets                     t
+       JOIN   tickets.states                      s  ON s.id = t.current_state_id
+       LEFT JOIN tickets.ticket_sla_tracking      st ON st.ticket_id = t.id
+       WHERE  ${where}`,
       params,
     );
 
@@ -116,13 +135,13 @@ export class TicketsService {
               st.status      AS sla_status,
               st.deadline_at AS sla_deadline_tracked,
               st.breached_at
-       FROM   tickets.tickets           t
-       JOIN   modules.modules           m  ON m.id  = t.module_id
-       LEFT JOIN modules.categories     c  ON c.id  = t.category_id
-       LEFT JOIN modules.environments   e  ON e.id  = t.environment_id
-       JOIN   tickets.states            s  ON s.id  = t.current_state_id
-       JOIN   users.profiles            up ON up.id = t.created_by
-       LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
+       FROM   tickets.tickets                     t
+       JOIN   modules.modules                     m  ON m.id  = t.module_id
+       LEFT JOIN modules.categories               c  ON c.id  = t.category_id
+       LEFT JOIN modules.environments             e  ON e.id  = t.environment_id
+       JOIN   tickets.states                      s  ON s.id  = t.current_state_id
+       JOIN   users.profiles                      up ON up.id = t.created_by
+       LEFT JOIN tickets.ticket_sla_tracking      st ON st.ticket_id = t.id
        WHERE  ${where}
        ORDER  BY t.created_at DESC
        LIMIT  $${p} OFFSET $${p + 1}`,
@@ -279,7 +298,7 @@ export class TicketsService {
 
   async transition(userId: string, ticketId: string, dto: { transition_id: string; reason?: string }) {
     const [ticket] = await this.db.query<any[]>(
-      `SELECT id, current_state_id, workflow_version_id, created_by FROM tickets.tickets WHERE id = $1`,
+      `SELECT id, title, current_state_id, workflow_version_id, created_by FROM tickets.tickets WHERE id = $1`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
@@ -305,7 +324,7 @@ export class TicketsService {
 
     // Mark SLA as met/breached when reaching a final state
     const [toState] = await this.db.query<any[]>(
-      `SELECT is_final, name FROM tickets.states WHERE id = $1`,
+      `SELECT is_final, name, label FROM tickets.states WHERE id = $1`,
       [trans.to_state_id],
     );
     if (toState?.is_final) {
@@ -325,6 +344,20 @@ export class TicketsService {
         `SELECT tickets.generate_approval_token($1, $2, 48)`,
         [ticketId, ticket.created_by],
       );
+      this.events.emit('ticket.validation_required', {
+        ticketId,
+        title:     ticket.title,
+        createdBy: ticket.created_by,
+      });
+    } else if (!toState?.is_final) {
+      // Notify creator of state change (skip final states — handled by approval flow)
+      this.events.emit('ticket.state_changed', {
+        ticketId,
+        title:     ticket.title,
+        createdBy: ticket.created_by,
+        toLabel:   toState?.label ?? toState?.name ?? '',
+        actorId:   userId,
+      });
     }
 
     return { ok: true };
@@ -499,5 +532,221 @@ export class TicketsService {
       [attachmentId],
     );
     return { ok: true };
+  }
+
+  /* ── Comments ───────────────────────────────────────────────────────────── */
+
+  async getComments(ticketId: string) {
+    return this.db.query<any[]>(
+      `SELECT tc.id, tc.comment_type, tc.content, tc.created_at,
+              p.id         AS user_id,
+              p.avatar_url,
+              p.first_name || ' ' || p.last_name AS author_name
+       FROM   tickets.ticket_comments tc
+       JOIN   users.profiles p ON p.id = tc.user_id
+       WHERE  tc.ticket_id = $1 AND tc.deleted_at IS NULL
+       ORDER  BY tc.created_at ASC`,
+      [ticketId],
+    );
+  }
+
+  async addComment(userId: string, ticketId: string, dto: { content: string; comment_type?: string }) {
+    const [ticket] = await this.db.query<any[]>(
+      `SELECT id FROM tickets.tickets WHERE id = $1`,
+      [ticketId],
+    );
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.ticket_comments (ticket_id, user_id, comment_type, content)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, comment_type, content, created_at`,
+      [ticketId, userId, dto.comment_type ?? 'public', dto.content.trim()],
+    );
+    return row;
+  }
+
+  /* ── Linked assets (inventory) ─────────────────────────────────────────── */
+
+  async getTicketAssets(ticketId: string) {
+    return this.db.query<any[]>(
+      `SELECT ta.id AS link_id, ta.notes AS link_notes,
+              a.id, a.name, a.serial_number, a.qr_code, a.status, a.specifications,
+              c.name AS category_name,
+              e.name AS environment_name,
+              l.name AS location_name,
+              p.first_name || ' ' || p.last_name AS assigned_to_name
+       FROM   inventory.ticket_assets ta
+       JOIN   inventory.assets a ON a.id = ta.asset_id AND a.deleted_at IS NULL
+       LEFT JOIN modules.categories   c  ON c.id = a.category_id
+       LEFT JOIN modules.environments e  ON e.id = a.environment_id
+       LEFT JOIN modules.locations    l  ON l.id = e.location_id
+       LEFT JOIN inventory.asset_assignments aa ON aa.asset_id = a.id AND aa.status = 'activo'
+       LEFT JOIN users.profiles        p  ON p.id = aa.user_id
+       WHERE  ta.ticket_id = $1
+       ORDER  BY ta.created_at ASC`,
+      [ticketId],
+    );
+  }
+
+  async getTicketAssetHistory(ticketId: string, assetId: string) {
+    const [link] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM inventory.ticket_assets WHERE ticket_id = $1 AND asset_id = $2`,
+      [ticketId, assetId],
+    );
+    if (!link) throw new NotFoundException('Asset not linked to this ticket');
+
+    return this.db.query<any[]>(
+      `SELECT h.id, h.action, h.reason, h.created_at,
+              pu.first_name || ' ' || pu.last_name AS user_name,
+              pa.first_name || ' ' || pa.last_name AS actor_name
+       FROM   inventory.asset_assignment_history h
+       LEFT JOIN users.profiles pu ON pu.id = h.user_id
+       LEFT JOIN users.profiles pa ON pa.id = h.assigned_by
+       WHERE  h.asset_id = $1
+       ORDER  BY h.created_at DESC`,
+      [assetId],
+    );
+  }
+
+  async getAssetPrevTickets(currentTicketId: string, assetId: string) {
+    return this.db.query<any[]>(
+      `SELECT t.id, t.title, t.priority, t.created_at, t.updated_at,
+              s.label AS state_label, s.name AS state_name, s.is_final,
+              p.first_name || ' ' || p.last_name AS creator_name,
+              po.first_name || ' ' || po.last_name AS owner_name
+       FROM   inventory.ticket_assets ta
+       JOIN   tickets.tickets t ON t.id = ta.ticket_id
+       JOIN   tickets.states  s ON s.id = t.current_state_id
+       JOIN   users.profiles  p ON p.id = t.created_by
+       LEFT JOIN tickets.ticket_assignments oa
+         ON  oa.ticket_id = t.id AND oa.role = 'owner' AND oa.is_active = true
+       LEFT JOIN users.profiles po ON po.id = oa.user_id
+       WHERE  ta.asset_id = $1
+         AND  ta.ticket_id <> $2
+       ORDER  BY t.created_at DESC
+       LIMIT  20`,
+      [assetId, currentTicketId],
+    );
+  }
+
+  /* ── Related tickets ───────────────────────────────────────────────────── */
+
+  async getTicketRelations(ticketId: string) {
+    return this.db.query<any[]>(
+      `SELECT
+         r.id, r.relation_type, r.notes, r.created_at,
+         p.first_name || ' ' || p.last_name AS created_by_name,
+         t.id            AS related_id,
+         t.title         AS related_title,
+         t.priority      AS related_priority,
+         t.created_at    AS related_created_at,
+         s.label         AS related_state_label,
+         s.name          AS related_state_name,
+         s.is_final      AS related_is_final,
+         po.first_name || ' ' || po.last_name AS related_owner_name,
+         t.description   AS related_description
+       FROM tickets.ticket_relations r
+       JOIN tickets.tickets t  ON t.id = CASE WHEN r.source_ticket_id = $1 THEN r.target_ticket_id ELSE r.source_ticket_id END
+       JOIN tickets.states  s  ON s.id = t.current_state_id
+       JOIN users.profiles  p  ON p.id = r.created_by
+       LEFT JOIN tickets.ticket_assignments oa
+         ON  oa.ticket_id = t.id AND oa.role = 'owner' AND oa.is_active = true
+       LEFT JOIN users.profiles po ON po.id = oa.user_id
+       WHERE r.source_ticket_id = $1 OR r.target_ticket_id = $1
+       ORDER BY r.created_at DESC`,
+      [ticketId],
+    );
+  }
+
+  async searchTickets(query: string, excludeId: string) {
+    return this.db.query<any[]>(
+      `SELECT t.id, t.title, t.priority, s.label AS state_label, s.is_final
+       FROM   tickets.tickets t
+       JOIN   tickets.states  s ON s.id = t.current_state_id
+       WHERE  t.id <> $2
+         AND  t.deleted_at IS NULL
+         AND  (t.title ILIKE $1 OR t.id::text ILIKE $1)
+       ORDER BY t.created_at DESC
+       LIMIT 10`,
+      [`%${query}%`, excludeId],
+    );
+  }
+
+  async addTicketRelation(actorId: string, ticketId: string, dto: { target_ticket_id: string; relation_type: string; notes?: string }) {
+    const valid = ['related', 'duplicate', 'blocks', 'caused_by'];
+    if (!valid.includes(dto.relation_type)) {
+      throw new BadRequestException(`Tipo de relación inválido: ${dto.relation_type}`);
+    }
+
+    const [target] = await this.db.query<any[]>(
+      `SELECT id FROM tickets.tickets WHERE id = $1 AND deleted_at IS NULL`,
+      [dto.target_ticket_id],
+    );
+    if (!target) throw new NotFoundException('Ticket relacionado no encontrado');
+
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.ticket_relations (source_ticket_id, target_ticket_id, relation_type, notes, created_by)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (source_ticket_id, target_ticket_id) DO NOTHING
+       RETURNING id`,
+      [ticketId, dto.target_ticket_id, dto.relation_type, dto.notes ?? null, actorId],
+    );
+    return row ?? { ok: true };
+  }
+
+  async removeTicketRelation(ticketId: string, relationId: string) {
+    await this.db.query(
+      `DELETE FROM tickets.ticket_relations
+       WHERE id = $1 AND (source_ticket_id = $2 OR target_ticket_id = $2)`,
+      [relationId, ticketId],
+    );
+    return { ok: true };
+  }
+
+  /* ── Assignments ────────────────────────────────────────────────────────── */
+
+  async addAssignment(actorId: string, ticketId: string, dto: { user_id: string; role: string }) {
+    const validRoles = ['owner', 'collaborator', 'observer'];
+    if (!validRoles.includes(dto.role)) {
+      throw new BadRequestException(`Rol inválido. Debe ser uno de: ${validRoles.join(', ')}`);
+    }
+
+    const [ticket] = await this.db.query<any[]>(
+      `SELECT id FROM tickets.tickets WHERE id = $1`,
+      [ticketId],
+    );
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    if (dto.role === 'owner') {
+      await this.db.query(
+        `UPDATE tickets.ticket_assignments
+         SET is_active = false, unassigned_at = now()
+         WHERE ticket_id = $1 AND role = 'owner' AND is_active = true`,
+        [ticketId],
+      );
+    }
+
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.ticket_assignments (ticket_id, user_id, role, assigned_by, is_active)
+       VALUES ($1, $2, $3::assignment_role, $4, true)
+       ON CONFLICT DO NOTHING
+       RETURNING id, role, assigned_at, is_active`,
+      [ticketId, dto.user_id, dto.role, actorId],
+    );
+
+    if (row && dto.role === 'owner') {
+      const [t] = await this.db.query<{ title: string }[]>(
+        `SELECT title FROM tickets.tickets WHERE id = $1`,
+        [ticketId],
+      );
+      this.events.emit('ticket.assigned', {
+        ticketId,
+        title:      t?.title ?? '',
+        assigneeId: dto.user_id,
+      });
+    }
+
+    return row ?? { ok: true };
   }
 }

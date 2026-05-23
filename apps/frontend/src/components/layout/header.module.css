@@ -434,6 +434,9 @@
 
 .notifItem:last-child { border-bottom: none; }
 
+.notifItemClickable { cursor: pointer; }
+.notifItemClickable:hover { background: #f8fafc; }
+
 .notifItemUnread {
   background: #fff8f6;
 }

@@ -116,6 +116,31 @@ export class NotificationsService {
     });
   }
 
+  @OnEvent('ticket.validation_required')
+  async onTicketValidationRequired(ev: { ticketId: string; title: string; createdBy: string }) {
+    await this.notifyUser({
+      userId:    ev.createdBy,
+      eventType: 'ticket.validation_required',
+      subject:   `Ticket resuelto: ${ev.title}`,
+      body:      `El equipo técnico ha resuelto tu ticket "${ev.title}". Revisa y valida la solución.`,
+      channels:  ['in_app', 'email'],
+      meta:      { ticketId: ev.ticketId },
+    });
+  }
+
+  @OnEvent('ticket.state_changed')
+  async onTicketStateChanged(ev: { ticketId: string; title: string; createdBy: string; toLabel: string; actorId: string }) {
+    if (ev.createdBy === ev.actorId) return; // don't notify creator when they move their own ticket
+    await this.notifyUser({
+      userId:    ev.createdBy,
+      eventType: 'ticket.state_changed',
+      subject:   `Actualización: ${ev.title}`,
+      body:      `Tu ticket "${ev.title}" cambió a estado "${ev.toLabel}".`,
+      channels:  ['in_app'],
+      meta:      { ticketId: ev.ticketId },
+    });
+  }
+
   @OnEvent('meeting.scheduled')
   async onMeetingScheduled(ev: {
     meetingId:      string;

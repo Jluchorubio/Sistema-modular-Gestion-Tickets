@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, ChevronRight, Clock, AlertTriangle, CheckCircle2, RotateCcw,
   Users, Phone, CalendarDays, X, Paperclip, ScrollText,
-  Upload, FileText, ImageIcon, Trash2,
+  Upload, FileText, ImageIcon, Trash2, HardDrive, History, Link2, Search, Unlink,
 } from 'lucide-react';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
@@ -14,12 +14,14 @@ import { useAuthStore } from '@/stores/auth.store';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
   ticketsService,
-  type TicketPriority, type TicketAttachment,
+  type TicketPriority, type TicketAttachment, type TicketComment,
+  type TicketAsset, type AssetHistoryEntry,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
+  ASSET_STATUS_COLORS, ASSET_STATUS_LABELS, ASSET_ACTION_LABELS,
 } from '@/services/tickets.service';
-import { usersService } from '@/services/users.service';
-import { requestsService } from '@/services/requests.service';
+import { modulesService } from '@/services/modules.service';
+import type { ModuleTechnician } from '@/types/module.types';
 import {
   meetingsService,
   type TicketMeeting,
@@ -92,31 +94,26 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
 
   /* ── Ticket data ── */
-  const { data: ticket, isLoading } = useQuery({
+  const { data: ticket, isLoading, isError, error } = useQuery({
     queryKey: ['ticket-detail', ticketId],
     queryFn:  () => ticketsService.getOne(ticketId),
     staleTime: 30_000,
+    retry: 1,
   });
 
-  /* ── Module users for collaborator selection ── */
-  const { data: moduleUsers = [] } = useQuery({
-    queryKey: ['module-members', helpdeskId],
-    queryFn:  () => usersService.getModuleUsers(helpdeskId!),
+  /* ── Technicians for collaborator selection (no admin permission required) ── */
+  const { data: technicians = [] } = useQuery<ModuleTechnician[]>({
+    queryKey: ['module-technicians', helpdeskId],
+    queryFn:  () => modulesService.getModuleTechnicians(helpdeskId!),
     enabled:  !!helpdeskId,
     staleTime: 5 * 60_000,
   });
-
-  const technicians = useMemo(
-    () => moduleUsers.filter((u) =>
-      ['tecnico', 'jefe_tecnico'].includes((u as any).role_name ?? '')
-    ),
-    [moduleUsers],
-  );
 
   /* ── Left panel state ── */
   const [transReason,   setTransReason]   = useState('');
   const [activeTransId, setActiveTransId] = useState<string | null>(null);
   const [replyText,     setReplyText]     = useState('');
+  const [commentType,   setCommentType]   = useState<'public' | 'internal'>('public');
 
   /* ── Validation state ── */
   const [signature,       setSignature]       = useState('');
@@ -160,6 +157,21 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] }),
   });
 
+  /* ── Comments ── */
+  const { data: comments = [] } = useQuery<TicketComment[]>({
+    queryKey: ['ticket-comments', ticketId],
+    queryFn:  () => ticketsService.getComments(ticketId),
+    staleTime: 30_000,
+  });
+
+  const addCommentMut = useMutation({
+    mutationFn: () => ticketsService.addComment(ticketId, replyText.trim(), commentType),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket-comments', ticketId] });
+      setReplyText('');
+    },
+  });
+
   /* ── Meetings ── */
   const { data: meetings = [] } = useQuery<TicketMeeting[]>({
     queryKey: ['ticket-meetings', ticketId],
@@ -184,6 +196,87 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const cancelMeetMut = useMutation({
     mutationFn: (meetingId: string) => meetingsService.cancelMeeting(meetingId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] }),
+  });
+
+  /* ── Relations ── */
+  const { data: relations = [] } = useQuery<{
+    id: string; relation_type: string; notes: string | null; created_at: string;
+    created_by_name: string;
+    related_id: string; related_title: string; related_priority: string;
+    related_created_at: string; related_state_label: string; related_state_name: string;
+    related_is_final: boolean; related_owner_name: string | null;
+    related_description: string | null;
+  }[]>({
+    queryKey: ['ticket-relations', ticketId],
+    queryFn:  () => ticketsService.getRelations(ticketId),
+    staleTime: 60_000,
+  });
+
+  const [relSearch, setRelSearch]           = useState('');
+  const [relType, setRelType]               = useState('related');
+  const [relNotes, setRelNotes]             = useState('');
+  const [relTarget, setRelTarget]           = useState<{ id: string; title: string } | null>(null);
+  const [relSearchResults, setRelSearchResults] = useState<{ id: string; title: string; priority: string; state_label: string; is_final: boolean }[]>([]);
+  const [relSearching, setRelSearching]     = useState(false);
+  const [showRelForm, setShowRelForm]       = useState(false);
+
+  const addRelMut = useMutation({
+    mutationFn: () => ticketsService.addRelation(ticketId, {
+      target_ticket_id: relTarget!.id,
+      relation_type:    relType,
+      notes:            relNotes.trim() || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket-relations', ticketId] });
+      setRelTarget(null); setRelSearch(''); setRelNotes(''); setRelSearchResults([]);
+      setShowRelForm(false);
+    },
+  });
+
+  const removeRelMut = useMutation({
+    mutationFn: (relId: string) => ticketsService.removeRelation(ticketId, relId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-relations', ticketId] }),
+  });
+
+  async function handleRelSearch(q: string) {
+    setRelSearch(q);
+    setRelTarget(null);
+    if (q.trim().length < 2) { setRelSearchResults([]); return; }
+    setRelSearching(true);
+    try {
+      const res = await ticketsService.searchTickets(q.trim(), ticketId);
+      setRelSearchResults(res);
+    } finally {
+      setRelSearching(false);
+    }
+  }
+
+  /* ── Linked assets ── */
+  const { data: linkedAssets = [] } = useQuery<TicketAsset[]>({
+    queryKey: ['ticket-assets', ticketId],
+    queryFn:  () => ticketsService.getTicketAssets(ticketId),
+    staleTime: 60_000,
+  });
+
+  const [expandedAssetId, setExpandedAssetId] = useState<string | null>(null);
+  const [assetTab, setAssetTab] = useState<'history' | 'tickets'>('history');
+
+  const { data: assetHistory = [], isFetching: historyFetching } = useQuery<AssetHistoryEntry[]>({
+    queryKey: ['asset-history', ticketId, expandedAssetId],
+    queryFn:  () => ticketsService.getAssetHistory(ticketId, expandedAssetId!),
+    enabled:  !!expandedAssetId && assetTab === 'history',
+    staleTime: 120_000,
+  });
+
+  const { data: assetPrevTickets = [], isFetching: prevTicketsFetching } = useQuery<{
+    id: string; title: string; priority: string; created_at: string; updated_at: string;
+    state_label: string; state_name: string; is_final: boolean;
+    creator_name: string; owner_name: string | null;
+  }[]>({
+    queryKey: ['asset-prev-tickets', ticketId, expandedAssetId],
+    queryFn:  () => ticketsService.getAssetPrevTickets(ticketId, expandedAssetId!),
+    enabled:  !!expandedAssetId && assetTab === 'tickets',
+    staleTime: 120_000,
   });
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -212,21 +305,22 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     if (!selectedUserId) return;
     setIsCalling(true);
 
-    const user = moduleUsers.find((u) => u.id === selectedUserId);
+    const user = technicians.find((u) => u.id === selectedUserId);
     if (!user) { setIsCalling(false); return; }
 
     try {
-      await ticketsService.addCollaborator(ticketId, selectedUserId, 'colaborador');
+      await ticketsService.addAssignment(ticketId, selectedUserId, 'collaborator');
+      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
     } catch {
-      // backend may not yet support — still add locally
+      // ignore — still add to local guest list for UI
     }
 
     setTimeout(() => {
       setIsCalling(false);
-      const name = `${(user as any).first_name ?? ''} ${(user as any).last_name ?? ''}`.trim() || user.email;
+      const name = `${user.first_name} ${user.last_name}`.trim();
       setLocalGuests((prev) => {
         if (prev.some((g) => g.id === user.id)) return prev;
-        return [...prev, { id: user.id, name, role: (user as any).role_name ?? 'Técnico', isLocal: true }];
+        return [...prev, { id: user.id, name, role: user.role_name, isLocal: true }];
       });
     }, 2000);
   }
@@ -301,12 +395,61 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     ? (SLA_STATUS_LABELS[ticket.sla_status as keyof typeof SLA_STATUS_LABELS] ?? ticket.sla_status)
     : null;
 
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const slaCountdown = useMemo(() => {
+    const deadline = ticket?.sla_deadline_tracked;
+    const status   = ticket?.sla_status;
+    if (!deadline) return null;
+    if (status === 'met')    return 'SLA cumplido';
+    if (status === 'paused') return 'Pausado';
+    const diffMs = new Date(deadline).getTime() - now;
+    const abs    = Math.abs(diffMs);
+    const h      = Math.floor(abs / 3_600_000);
+    const m      = Math.floor((abs % 3_600_000) / 60_000);
+    const past   = diffMs < 0 || status === 'breached';
+    if (h === 0)   return past ? `Vencido hace ${m}m`       : `Vence en ${m}m`;
+    if (h < 24)    return past ? `Vencido hace ${h}h ${m}m` : `Vence en ${h}h ${m}m`;
+    const d    = Math.floor(h / 24);
+    const remH = h % 24;
+    return past
+      ? `Vencido hace ${d}d ${remH}h`
+      : (remH > 0 ? `Vence en ${d}d ${remH}h` : `Vence en ${d}d`);
+  }, [ticket?.sla_deadline_tracked, ticket?.sla_status, now]);
+
   /* ── Render ── */
   return (
     <div className={styles.workspacePage}>
       {isLoading && (
         <div style={{ padding: '80px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>
           Cargando ticket…
+        </div>
+      )}
+
+      {isError && (
+        <div style={{ padding: '80px 0', textAlign: 'center' }}>
+          <AlertTriangle size={32} style={{ color: '#ef4444', marginBottom: 12 }} />
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
+            No se pudo cargar el ticket
+          </p>
+          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 20px' }}>
+            {(error as any)?.response?.status === 404
+              ? 'El ticket no existe o fue eliminado.'
+              : (error as any)?.response?.status === 403
+              ? 'No tienes permiso para ver este ticket.'
+              : 'Error de conexión. Intenta de nuevo.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            style={{ fontSize: 13, fontWeight: 600, padding: '8px 18px', borderRadius: 8, border: 'none', background: '#0e2235', color: '#fff', cursor: 'pointer' }}
+          >
+            Volver
+          </button>
         </div>
       )}
 
@@ -317,7 +460,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
           <div className={styles.wMain}>
 
             {/* Back */}
-            <button type="button" onClick={() => router.push('/tickets')} className={styles.backBtn}>
+            <button type="button" onClick={() => router.push('/helpdesk')} className={styles.backBtn}>
               <ArrowLeft size={13} />
               Volver al listado
             </button>
@@ -342,12 +485,65 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               <PriorityBadge priority={ticket.priority} />
               <StateBadge label={ticket.state_label} isFinal={ticket.is_final} />
               <SlaBadge status={ticket.sla_status} deadline={ticket.sla_deadline_tracked} />
-              {ticket.is_final && (
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600, background: '#22C55E22', color: '#22C55E', border: '1px solid #22C55E44', display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <CheckCircle2 size={9} /> Requiere acción
+              {ticket.state_name === 'realizado' && (
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600, background: '#F59E0B22', color: '#D97706', border: '1px solid #F59E0B44', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <CheckCircle2 size={9} /> Requiere validación
                 </span>
               )}
             </div>
+
+            {/* Participant bar */}
+            {allGuests.length > 0 && (() => {
+              const ROLE_COLORS: Record<string, string> = {
+                owner:        '#0e2235',
+                collaborator: '#3b82f6',
+                observer:     '#94a3b8',
+              };
+              const MAX_SHOWN = 6;
+              const shown    = allGuests.slice(0, MAX_SHOWN);
+              const overflow = allGuests.length - MAX_SHOWN;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, color: '#94A3B8', fontWeight: 500 }}>Participantes:</span>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    {shown.map((g, i) => {
+                      const borderColor = ROLE_COLORS[g.role] ?? '#94a3b8';
+                      return (
+                        <div
+                          key={g.id}
+                          title={`${g.name} (${g.role})`}
+                          style={{
+                            width: 26, height: 26, borderRadius: '50%',
+                            background: '#1e3044',
+                            border: `2px solid ${borderColor}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 10, fontWeight: 700, color: '#e2e8f0',
+                            marginLeft: i === 0 ? 0 : -8,
+                            zIndex: shown.length - i,
+                            position: 'relative',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {g.name.charAt(0).toUpperCase()}
+                        </div>
+                      );
+                    })}
+                    {overflow > 0 && (
+                      <div style={{
+                        width: 26, height: 26, borderRadius: '50%',
+                        background: '#334155',
+                        border: '2px solid #475569',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 9, fontWeight: 700, color: '#94A3B8',
+                        marginLeft: -8, position: 'relative', flexShrink: 0,
+                      }}>
+                        +{overflow}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Description */}
             {ticket.description && (
@@ -667,25 +863,72 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               )}
             </div>
 
+            {/* Comments list */}
+            {comments.length > 0 && (
+              <div style={{ marginBottom: 22 }}>
+                <p className={styles.sectionHeader}>
+                  Comentarios
+                  <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 6px', borderRadius: 99, background: '#e2e8f0', color: '#64748b', fontWeight: 600 }}>
+                    {comments.length}
+                  </span>
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {comments.map((c) => (
+                    <div key={c.id} style={{
+                      padding: '10px 12px', borderRadius: 8,
+                      background: c.comment_type === 'internal' ? '#fef9ec' : '#f8fafc',
+                      border: `1px solid ${c.comment_type === 'internal' ? '#fde68a' : '#e2e8f0'}`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: 6, background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#fff' }}>
+                            {c.author_name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#0f172a' }}>{c.author_name}</span>
+                        {c.comment_type === 'internal' && (
+                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: '#fde68a', color: '#92400e', fontWeight: 600 }}>
+                            Interno
+                          </span>
+                        )}
+                        <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 'auto' }}>{fmtRelative(c.created_at)}</span>
+                      </div>
+                      <p style={{ fontSize: 13, color: '#334155', margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{c.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Reply box */}
             {!ticket.is_final && (
               <div className={styles.replyBox} style={{ marginTop: 22 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>T</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
+                      {currentUser?.first_name?.charAt(0).toUpperCase() ?? 'T'}
+                    </span>
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#64748B' }}>Respuesta del equipo de soporte</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#64748B' }}>Agregar comentario</span>
+                  <select
+                    value={commentType}
+                    onChange={(e) => setCommentType(e.target.value as 'public' | 'internal')}
+                    style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 6px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    <option value="public">Público</option>
+                    <option value="internal">Interno</option>
+                  </select>
                 </div>
                 <textarea
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="Escribe tu respuesta técnica aquí…"
+                  placeholder={commentType === 'internal' ? 'Nota interna (solo el equipo técnico la verá)…' : 'Escribe tu respuesta técnica aquí…'}
                   rows={3}
                   className={styles.replyTextarea}
                 />
                 <div className={styles.replyActions}>
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <button type="button" className={styles.replyIconBtn} title="Adjuntar archivo">
+                    <button type="button" className={styles.replyIconBtn} title="Adjuntar archivo" onClick={() => fileInputRef.current?.click()}>
                       <Paperclip size={14} />
                     </button>
                     <button type="button" className={styles.replyIconBtn} title="Insertar plantilla">
@@ -695,14 +938,221 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                   <button
                     type="button"
                     className={styles.replySubmitBtn}
-                    disabled={!replyText.trim()}
-                    onClick={() => setReplyText('')}
+                    disabled={!replyText.trim() || addCommentMut.isPending}
+                    onClick={() => addCommentMut.mutate()}
                   >
-                    Responder Ticket
+                    {addCommentMut.isPending ? 'Enviando…' : 'Responder Ticket'}
                   </button>
                 </div>
+                {addCommentMut.isError && (
+                  <p style={{ fontSize: 11, color: '#dc2626', marginTop: 6 }}>
+                    Error al enviar comentario.
+                  </p>
+                )}
               </div>
             )}
+
+            {/* ── Related tickets ── */}
+            <div style={{ marginTop: 28 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <p className={styles.sectionHeader} style={{ margin: 0 }}>
+                  Tickets relacionados
+                  {relations.length > 0 && (
+                    <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 6px', borderRadius: 99, background: '#e2e8f0', color: '#64748b', fontWeight: 600 }}>
+                      {relations.length}
+                    </span>
+                  )}
+                </p>
+                {!ticket.is_final && (
+                  <button
+                    type="button"
+                    onClick={() => setShowRelForm((v) => !v)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      fontSize: 11, fontWeight: 600, padding: '4px 10px',
+                      borderRadius: 6, cursor: 'pointer',
+                      background: showRelForm ? '#e2e8f0' : '#0e2235',
+                      color: showRelForm ? '#334155' : '#fff',
+                      border: 'none',
+                    }}
+                  >
+                    <Link2 size={11} />
+                    {showRelForm ? 'Cancelar' : 'Vincular ticket'}
+                  </button>
+                )}
+              </div>
+
+              {/* Add relation form */}
+              {showRelForm && (
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: '#374151', margin: '0 0 8px' }}>Buscar ticket a vincular</p>
+
+                  <div style={{ position: 'relative', marginBottom: 8 }}>
+                    <Search size={12} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      placeholder="Buscar por título o ID…"
+                      value={relSearch}
+                      onChange={(e) => handleRelSearch(e.target.value)}
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        paddingLeft: 28, paddingRight: 10, paddingTop: 7, paddingBottom: 7,
+                        fontSize: 12, borderRadius: 7, border: '1px solid #e2e8f0',
+                        background: '#fff', fontFamily: 'inherit', outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  {/* Search results dropdown */}
+                  {relSearch.trim().length >= 2 && !relTarget && (
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: 7, background: '#fff', marginBottom: 8, maxHeight: 160, overflowY: 'auto' }}>
+                      {relSearching ? (
+                        <p style={{ fontSize: 11, color: '#94a3b8', padding: '8px 10px', margin: 0 }}>Buscando…</p>
+                      ) : relSearchResults.length === 0 ? (
+                        <p style={{ fontSize: 11, color: '#94a3b8', padding: '8px 10px', margin: 0 }}>Sin resultados.</p>
+                      ) : (
+                        relSearchResults.map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => { setRelTarget({ id: r.id, title: r.title }); setRelSearch(r.title); setRelSearchResults([]); }}
+                            style={{
+                              display: 'block', width: '100%', textAlign: 'left',
+                              padding: '8px 10px', background: 'none', border: 'none',
+                              borderBottom: '1px solid #f1f5f9', cursor: 'pointer',
+                              fontSize: 12,
+                            }}
+                          >
+                            <span style={{ fontWeight: 600, color: '#0f172a' }}>{r.title}</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 8 }}>{r.state_label}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {relTarget && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', background: '#e0f2fe', borderRadius: 6, marginBottom: 8 }}>
+                      <Link2 size={11} style={{ color: '#0284c7', flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: '#0284c7', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{relTarget.title}</span>
+                      <button type="button" onClick={() => { setRelTarget(null); setRelSearch(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: 0 }}>
+                        <X size={11} />
+                      </button>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 10, fontWeight: 600, color: '#64748b', margin: '0 0 3px' }}>Tipo de relación</p>
+                      <select
+                        value={relType}
+                        onChange={(e) => setRelType(e.target.value)}
+                        style={{ width: '100%', fontSize: 12, padding: '5px 7px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', fontFamily: 'inherit', cursor: 'pointer' }}
+                      >
+                        <option value="related">Relacionado</option>
+                        <option value="duplicate">Duplicado</option>
+                        <option value="blocks">Bloquea</option>
+                        <option value="caused_by">Causado por</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={relNotes}
+                    onChange={(e) => setRelNotes(e.target.value)}
+                    placeholder="Notas opcionales…"
+                    rows={2}
+                    style={{ width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '7px 9px', borderRadius: 6, border: '1px solid #e2e8f0', fontFamily: 'inherit', resize: 'vertical', marginBottom: 8, outline: 'none' }}
+                  />
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      disabled={!relTarget || addRelMut.isPending}
+                      onClick={() => addRelMut.mutate()}
+                      style={{
+                        fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 7,
+                        background: relTarget ? '#0e2235' : '#e2e8f0',
+                        color: relTarget ? '#fff' : '#94a3b8',
+                        border: 'none', cursor: relTarget ? 'pointer' : 'default',
+                      }}
+                    >
+                      {addRelMut.isPending ? 'Vinculando…' : 'Vincular'}
+                    </button>
+                  </div>
+                  {addRelMut.isError && (
+                    <p style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>Error al vincular.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Relations list */}
+              {relations.length === 0 ? (
+                <p style={{ fontSize: 12, color: '#94a3b8' }}>Sin tickets vinculados.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {relations.map((r) => {
+                    const stateColor = r.related_is_final ? '#22C55E' : '#6366F1';
+                    const prioColor  = TICKET_PRIORITY_COLORS[r.related_priority as TicketPriority] ?? '#94a3b8';
+                    const REL_LABELS: Record<string, string> = {
+                      related:    'Relacionado',
+                      duplicate:  'Duplicado',
+                      blocks:     'Bloquea',
+                      caused_by:  'Causado por',
+                    };
+                    return (
+                      <div key={r.id} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 12px', background: '#f8fafc' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: '#dbeafe', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                                {REL_LABELS[r.relation_type] ?? r.relation_type}
+                              </span>
+                              <span style={{ fontSize: 9, color: '#94a3b8' }}>{fmtRelative(r.related_created_at)}</span>
+                            </div>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {r.related_title}
+                            </p>
+                            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99, background: `${prioColor}22`, color: prioColor, border: `1px solid ${prioColor}44` }}>
+                                {TICKET_PRIORITY_LABELS[r.related_priority as TicketPriority] ?? r.related_priority}
+                              </span>
+                              <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 99, background: `${stateColor}22`, color: stateColor, border: `1px solid ${stateColor}44` }}>
+                                {r.related_state_label}
+                              </span>
+                            </div>
+                            {r.related_owner_name && (
+                              <p style={{ fontSize: 10, color: '#64748b', margin: '4px 0 0' }}>
+                                Técnico: {r.related_owner_name}
+                              </p>
+                            )}
+                            {r.related_description && (
+                              <p style={{ fontSize: 11, color: '#64748b', margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                                {r.related_description}
+                              </p>
+                            )}
+                            {r.notes && (
+                              <p style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic', margin: '3px 0 0' }}>{r.notes}</p>
+                            )}
+                          </div>
+                          {!ticket.is_final && (
+                            <button
+                              type="button"
+                              title="Desvincular"
+                              disabled={removeRelMut.isPending}
+                              onClick={() => removeRelMut.mutate(r.id)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2, flexShrink: 0 }}
+                            >
+                              <Unlink size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ══ RIGHT DARK PANEL ══════════════════════════════════ */}
@@ -719,7 +1169,14 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 <div className={styles.slaCardContent}>
                   <p className={styles.slaCardLabel}>Tiempo Límite</p>
                   {ticket.sla_deadline_tracked ? (
-                    <p className={styles.slaCardDate}>{fmtDate(ticket.sla_deadline_tracked)}</p>
+                    <>
+                      <p className={styles.slaCardDate}>{fmtDate(ticket.sla_deadline_tracked)}</p>
+                      {slaCountdown && (
+                        <p style={{ fontSize: 11, fontWeight: 700, color: slaColor, margin: '2px 0 0' }}>
+                          {slaCountdown}
+                        </p>
+                      )}
+                    </>
                   ) : (
                     <p className={styles.slaCardEmpty}>Sin SLA configurado</p>
                   )}
@@ -748,18 +1205,11 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                   className={styles.callSelect}
                 >
                   <option value="">Seleccionar técnico…</option>
-                  {technicians.length > 0
-                    ? technicians.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {(u as any).first_name} {(u as any).last_name} — {(u as any).role_name === 'jefe_tecnico' ? 'Jefe Técnico' : 'Técnico'}
-                        </option>
-                      ))
-                    : moduleUsers.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {(u as any).first_name} {(u as any).last_name}
-                        </option>
-                      ))
-                  }
+                  {technicians.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.first_name} {u.last_name} — {u.role_name === 'jefe_tecnico' ? 'Jefe Técnico' : 'Técnico'}
+                    </option>
+                  ))}
                 </select>
                 <button
                   type="button"
@@ -856,6 +1306,179 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 )}
               </div>
             </div>
+
+            {/* Linked devices (inventory) */}
+            {linkedAssets.length > 0 && (
+              <div className={styles.darkSection}>
+                <p className={styles.sectionLabel}>
+                  <HardDrive size={10} />
+                  Dispositivos vinculados ({linkedAssets.length})
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {linkedAssets.map((asset) => {
+                    const statusColor = ASSET_STATUS_COLORS[asset.status] ?? '#94a3b8';
+                    const statusLabel = ASSET_STATUS_LABELS[asset.status] ?? asset.status;
+                    const isExpanded  = expandedAssetId === asset.id;
+
+                    return (
+                      <div
+                        key={asset.id}
+                        style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 12px' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: '#fff', margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {asset.name}
+                            </p>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                              <span style={{
+                                fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                                background: `${statusColor}28`, color: statusColor,
+                                border: `1px solid ${statusColor}44`, textTransform: 'uppercase',
+                              }}>
+                                {statusLabel}
+                              </span>
+                              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
+                                {asset.category_name}
+                              </span>
+                            </div>
+                            {asset.serial_number && (
+                              <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', margin: '4px 0 0', fontFamily: 'monospace' }}>
+                                S/N {asset.serial_number}
+                              </p>
+                            )}
+                            {asset.assigned_to_name && (
+                              <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', margin: '2px 0 0' }}>
+                                → {asset.assigned_to_name}
+                              </p>
+                            )}
+                            {asset.link_notes && (
+                              <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', margin: '2px 0 0', fontStyle: 'italic' }}>
+                                {asset.link_notes}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            title={isExpanded ? 'Ocultar' : 'Ver historial y tickets'}
+                            onClick={() => {
+                              if (isExpanded) {
+                                setExpandedAssetId(null);
+                              } else {
+                                setExpandedAssetId(asset.id);
+                                setAssetTab('history');
+                              }
+                            }}
+                            style={{
+                              background: isExpanded ? 'rgba(255,255,255,0.15)' : 'none',
+                              border: '1px solid rgba(255,255,255,0.15)',
+                              borderRadius: 6, cursor: 'pointer', padding: '4px 6px',
+                              color: 'rgba(255,255,255,0.55)', flexShrink: 0,
+                            }}
+                          >
+                            <History size={12} />
+                          </button>
+                        </div>
+
+                        {/* Inline history / prev tickets */}
+                        {isExpanded && (
+                          <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8 }}>
+                            {/* Tab bar */}
+                            <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                              {(['history', 'tickets'] as const).map((tab) => (
+                                <button
+                                  key={tab}
+                                  type="button"
+                                  onClick={() => setAssetTab(tab)}
+                                  style={{
+                                    fontSize: 10, padding: '2px 8px', borderRadius: 99, cursor: 'pointer',
+                                    fontWeight: assetTab === tab ? 700 : 400,
+                                    background: assetTab === tab ? 'rgba(255,255,255,0.18)' : 'none',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    color: assetTab === tab ? '#fff' : 'rgba(255,255,255,0.45)',
+                                  }}
+                                >
+                                  {tab === 'history' ? 'Historial asignaciones' : 'Tickets anteriores'}
+                                </button>
+                              ))}
+                            </div>
+
+                            {assetTab === 'history' && (
+                              historyFetching ? (
+                                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Cargando…</p>
+                              ) : assetHistory.length === 0 ? (
+                                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Sin historial.</p>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                  {assetHistory.map((h) => (
+                                    <div key={h.id} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                                      <span style={{
+                                        fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99,
+                                        background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)',
+                                        textTransform: 'uppercase', flexShrink: 0,
+                                      }}>
+                                        {ASSET_ACTION_LABELS[h.action] ?? h.action}
+                                      </span>
+                                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {h.actor_name ?? h.user_name ?? '—'}
+                                        {h.reason ? ` · ${h.reason}` : ''}
+                                      </span>
+                                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
+                                        {fmtRelative(h.created_at)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            )}
+
+                            {assetTab === 'tickets' && (
+                              prevTicketsFetching ? (
+                                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Cargando…</p>
+                              ) : assetPrevTickets.length === 0 ? (
+                                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Sin tickets anteriores.</p>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                  {assetPrevTickets.map((pt) => {
+                                    const stateColor = pt.is_final ? '#22C55E' : '#6366F1';
+                                    const prioColor  = TICKET_PRIORITY_COLORS[pt.priority as TicketPriority] ?? '#94a3b8';
+                                    return (
+                                      <div key={pt.id} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '7px 10px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                                          <p style={{ fontSize: 11, fontWeight: 600, color: '#fff', margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {pt.title}
+                                          </p>
+                                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
+                                            {fmtRelative(pt.created_at)}
+                                          </span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap' }}>
+                                          <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99, background: `${prioColor}22`, color: prioColor, border: `1px solid ${prioColor}44` }}>
+                                            {TICKET_PRIORITY_LABELS[pt.priority as TicketPriority] ?? pt.priority}
+                                          </span>
+                                          <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 99, background: `${stateColor}22`, color: stateColor, border: `1px solid ${stateColor}44` }}>
+                                            {pt.state_label}
+                                          </span>
+                                        </div>
+                                        {pt.owner_name && (
+                                          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', margin: '3px 0 0' }}>
+                                            Técnico: {pt.owner_name}
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Guest list */}
             <div className={styles.darkSection}>

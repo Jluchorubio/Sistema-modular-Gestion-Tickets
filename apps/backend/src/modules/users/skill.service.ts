@@ -8,6 +8,7 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { AvailabilityDto } from './dto/availability.dto';
+import { SelfAvailabilityDto } from './dto/self-availability.dto';
 import { AddSkillDto } from './dto/add-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 
@@ -99,6 +100,41 @@ export class SkillService {
     }
 
     this.logger.log(`Disponibilidad de ${userId} en módulo ${dto.module_id} actualizada por ${actorId}`);
+    return this.getAvailability(userId);
+  }
+
+  async setMyAvailability(userId: string, dto: SelfAvailabilityDto) {
+    await this.assertUserExists(userId);
+    await this.assertModuleExists(dto.module_id);
+
+    const [membership] = await this.db.query<{ id: string }[]>(
+      `SELECT umr.id
+       FROM   modules.user_module_roles umr
+       JOIN   modules.module_roles      mr ON mr.id = umr.role_id
+       WHERE  umr.user_id   = $1
+         AND  umr.module_id  = $2
+         AND  umr.is_active  = true
+         AND  mr.name IN ('tecnico', 'jefe_tecnico')`,
+      [userId, dto.module_id],
+    );
+    if (!membership) throw new ForbiddenException('No eres técnico en este módulo');
+
+    const unavailableStatuses = ['fuera_horario', 'ausente', 'offline'];
+    const is_available = !unavailableStatuses.includes(dto.status);
+
+    await this.db.query(
+      `INSERT INTO modules.technician_status
+         (user_id, module_id, is_available, status, unavailable_to, notes, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $1)
+       ON CONFLICT (user_id, module_id) DO UPDATE SET
+         is_available     = EXCLUDED.is_available,
+         status           = EXCLUDED.status,
+         unavailable_to   = EXCLUDED.unavailable_to,
+         notes            = EXCLUDED.notes,
+         updated_at       = now()`,
+      [userId, dto.module_id, is_available, dto.status, dto.unavailable_to ?? null, dto.notes ?? null],
+    );
+
     return this.getAvailability(userId);
   }
 
