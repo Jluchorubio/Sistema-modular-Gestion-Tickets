@@ -3,5 +3,5 @@
 import { TicketsClient } from '@/app/(app)/tickets/_components/TicketsClient';
 
 export default function HelpdeskPage() {
-  return <TicketsClient />;
+  return <TicketsClient visualVariant="helpdeskMockup" />;
 }

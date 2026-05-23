@@ -516,9 +516,10 @@ interface AdminViewProps {
   moduleId:  string;
   basePath:  string;
   canCreate: boolean;
+  visualVariant?: 'helpdeskMockup' | 'default';
 }
 
-function AdminView({ moduleId, basePath, canCreate }: AdminViewProps) {
+function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }: AdminViewProps) {
   const user         = useAuthStore((s) => s.user);
   const router       = useRouter();
   const [stateFilter,     setStateFilter]    = useState('');
@@ -650,6 +651,7 @@ function AdminView({ moduleId, basePath, canCreate }: AdminViewProps) {
   }, [techs, techSearch]);
 
   function toggleQuickFilter(key: QuickFilter) { setQuickFilter((p) => p === key ? null : key); }
+  const isHelpdeskMockup = visualVariant === 'helpdeskMockup';
 
   const iconBtn: React.CSSProperties = {
     width: 38, height: 38, borderRadius: 9, border: '1.5px solid #e2e8f0',
@@ -661,7 +663,7 @@ function AdminView({ moduleId, basePath, canCreate }: AdminViewProps) {
   return (
     <>
       {/* ── Stats row ── */}
-      <div className={styles.statsRow}>
+      {!isHelpdeskMockup && <div className={styles.statsRow}>
         {STAT_CARDS.map((card, i) => {
           const isActive = quickFilter === card.key;
           return (
@@ -677,13 +679,16 @@ function AdminView({ moduleId, basePath, canCreate }: AdminViewProps) {
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {/* ── Main area: inner sidebar + ticket list + tech panel ── */}
-      <div style={{ display: 'flex', flex: 1, gap: 0, overflow: 'hidden' }}>
+      <div
+        className={isHelpdeskMockup ? styles.helpdeskAdminShell : undefined}
+        style={!isHelpdeskMockup ? { display: 'flex', flex: 1, gap: 0, overflow: 'hidden' } : undefined}
+      >
 
         {/* Inner left sidebar (64px) */}
-        <div style={{ width: 64, flexShrink: 0, background: '#f8fafc', borderRight: '1px solid #eef2f6', borderLeft: '1px solid #eef2f6', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', gap: 14 }}>
+        {!isHelpdeskMockup && <div style={{ width: 64, flexShrink: 0, background: '#f8fafc', borderRight: '1px solid #eef2f6', borderLeft: '1px solid #eef2f6', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', gap: 14 }}>
           <button type="button" title="Módulo Principal" style={iconBtn} onClick={() => router.push(basePath)}>
             <Home size={15} />
           </button>
@@ -706,10 +711,32 @@ function AdminView({ moduleId, basePath, canCreate }: AdminViewProps) {
               <Plus size={15} />
             </button>
           )}
-        </div>
+        </div>}
 
         {/* Central: ticket list (flex-1) */}
-        <div style={{ flex: 1, minWidth: 0, padding: '20px 24px 0', overflowY: 'auto', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div
+          className={isHelpdeskMockup ? styles.helpdeskAdminMain : undefined}
+          style={!isHelpdeskMockup ? { flex: 1, minWidth: 0, padding: '20px 24px 0', overflowY: 'auto', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 12 } : undefined}
+        >
+          {isHelpdeskMockup && (
+            <div className={styles.helpdeskStatsGrid}>
+              {STAT_CARDS.map((card, i) => {
+                const isActive = quickFilter === card.key;
+                return (
+                  <div
+                    key={card.key}
+                    className={`${styles.statCard}${isActive ? ` ${styles.statCardActive}` : ''}`}
+                    style={{ '--accent': card.accent } as React.CSSProperties}
+                    onClick={() => toggleQuickFilter(card.key)}
+                  >
+                    <p className={styles.statCount}>{statCounts[i]}</p>
+                    <p className={styles.statLabel}>{card.label}</p>
+                    <p className={styles.statDesc}>{card.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Search + filter toggle */}
           {(() => {
@@ -729,6 +756,15 @@ function AdminView({ moduleId, basePath, canCreate }: AdminViewProps) {
                     />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {isHelpdeskMockup && canCreate && moduleId && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCreate(true)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: 'none', background: '#ff5e3a', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, boxShadow: '0 1px 4px rgba(255,94,58,.25)' }}
+                      >
+                        <Plus size={12} />Reportar Nuevo Incidente
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setShowFilters((v) => !v)}
@@ -877,7 +913,10 @@ function AdminView({ moduleId, basePath, canCreate }: AdminViewProps) {
         </div>
 
         {/* Right: tech panel (300px) */}
-        <div style={{ width: 300, flexShrink: 0, background: '#f8fafc', borderLeft: '1px solid #eef2f6', padding: '20px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div
+          className={isHelpdeskMockup ? styles.helpdeskTechPanel : undefined}
+          style={!isHelpdeskMockup ? { width: 300, flexShrink: 0, background: '#f8fafc', borderLeft: '1px solid #eef2f6', padding: '20px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 } : undefined}
+        >
 
           {/* Search techs */}
           <div style={{ background: '#fff', borderRadius: 10, border: '1.5px solid #e2e8f0', padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1236,6 +1275,7 @@ interface TicketsClientProps {
   forcedModuleSlug?: string;
   forcedModuleName?: string;
   forcedModuleDesc?: string | null;
+  visualVariant?: 'helpdeskMockup' | 'default';
 }
 
 export function TicketsClient({
@@ -1243,6 +1283,7 @@ export function TicketsClient({
   forcedModuleSlug,
   forcedModuleName,
   forcedModuleDesc,
+  visualVariant = 'default',
 }: TicketsClientProps = {}) {
   const { modules } = useModules();
   const isForced    = !!forcedModuleId;
@@ -1290,7 +1331,7 @@ export function TicketsClient({
       isSuperadmin={isSuperadmin}
     >
       {isAdminView ? (
-        <AdminView moduleId={moduleId} basePath={ticketBasePath} canCreate={canCreate} />
+        <AdminView moduleId={moduleId} basePath={ticketBasePath} canCreate={canCreate} visualVariant={visualVariant} />
       ) : isTechView && user ? (
         <TechView user={user} moduleId={moduleId} basePath={ticketBasePath} moduleRole={moduleRole!} canCreate={canCreate} />
       ) : (

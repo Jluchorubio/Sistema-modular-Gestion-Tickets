@@ -1391,3 +1391,150 @@
   .statCard { min-width: 90px; padding: 12px 12px 10px; }
   .statCount { font-size: 22px; }
 }
+
+/* Helpdesk mockup variant: scoped to /helpdesk only */
+.helpdeskAdminShell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #fafbfc;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.helpdeskAdminMain {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 28px 0;
+  overflow-y: auto;
+  background: #fafbfc;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.helpdeskStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.helpdeskStatsGrid .statCard {
+  min-width: 0;
+  border: 1px solid #eef2f6;
+  border-bottom: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 16px 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .035);
+}
+
+.helpdeskStatsGrid .statCard::after { display: none; }
+
+.helpdeskStatsGrid .statCard:hover {
+  transform: scale(1.02);
+  box-shadow: 0 5px 14px rgba(15, 23, 42, .07);
+}
+
+.helpdeskStatsGrid .statCount {
+  font-size: 24px;
+  margin: 0 0 8px;
+  color: #0f172a;
+}
+
+.helpdeskStatsGrid .statLabel {
+  font-size: 12px;
+  color: #0f172a;
+  margin: 0 0 2px;
+}
+
+.helpdeskStatsGrid .statDesc {
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.helpdeskAdminShell .cardGrid { gap: 16px; }
+
+.helpdeskAdminShell .ticketCard {
+  border: 1px solid #eef2f6;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .035);
+  transform: none;
+}
+
+.helpdeskAdminShell .ticketCard:hover {
+  transform: none;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, .07);
+}
+
+.helpdeskAdminShell .cardTitle {
+  color: #0e2235;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.helpdeskAdminShell .cardBreadcrumb {
+  color: #8fa0af;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.helpdeskAdminShell .ownerAvatar {
+  width: 28px;
+  height: 28px;
+  background: rgba(14, 34, 53, .10);
+  color: #0e2235;
+}
+
+.helpdeskAdminShell .ownerName {
+  color: #0e2235;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.helpdeskAdminShell .ownerMeta {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.helpdeskAdminShell .ticketIdBadgeSm {
+  background: #0e2235;
+  color: #fff;
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.helpdeskTechPanel {
+  width: 320px;
+  flex-shrink: 0;
+  background: #f8fafc;
+  border-left: 1px solid #eef2f6;
+  padding: 20px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.helpdeskTechPanel input::placeholder { color: #9aa9b8; }
+.helpdeskTechPanel button { line-height: 1.15; }
+
+@media (max-width: 1100px) {
+  .helpdeskStatsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .helpdeskTechPanel { width: 290px; }
+}
+
+@media (max-width: 900px) {
+  .helpdeskAdminShell { flex-direction: column; }
+  .helpdeskTechPanel { width: 100%; border-left: 0; border-top: 1px solid #eef2f6; }
+}
+
+@media (max-width: 720px) {
+  .helpdeskAdminMain { padding: 16px; }
+  .helpdeskStatsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
