@@ -2,6 +2,9 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
+  Delete,
+  Param,
   Body,
   Req,
   Res,
@@ -17,12 +20,11 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { LogoutDto } from './dto/logout.dto';
-import { VerifyTotpDto } from './dto/verify-totp.dto';
-import { MfaEnableDto } from './dto/mfa-setup.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailOtpDto } from './dto/email-otp.dto';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
+import { SkipProfileCheck } from '../../gateway/decorators/skip-profile-check.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -35,9 +37,9 @@ export class AuthController {
   // ─── Email/password ──────────────────────────────────────────────────────────
 
   @Post('login')
-  @ApiOperation({ summary: 'Login. Retorna tokens o { requires_mfa, mfa_token } si 2FA activo.' })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+  @ApiOperation({ summary: 'Login. Retorna { requires_mfa, mfa_type, otp_token } para verificación por email.' })
+  login(@Req() req: any, @Body() dto: LoginDto) {
+    return this.authService.login(dto.email, dto.password, req.ip, req.headers['user-agent']);
   }
 
   @Post('refresh')
@@ -49,7 +51,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get('me')
-  @ApiOperation({ summary: 'Usuario autenticado + estado MFA.' })
+  @ApiOperation({ summary: 'Usuario autenticado.' })
   getMe(@Req() req: any) {
     return this.authService.getMe(req.user.sub);
   }
@@ -74,73 +76,78 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() req: any, @Res() res: Response) {
-    const result = await this.authService.loginWithGoogle(req.user);
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
-    // Redirigir a modules-test.html con tokens en hash (evita logs de servidor)
-    return res.redirect(
-      `${appUrl}/modules-test.html` +
-      `#access_token=${result.access_token}` +
-      `&refresh_token=${result.refresh_token}` +
-      `&name=${encodeURIComponent(result.user.name)}`,
-    );
+    try {
+      const result = await this.authService.loginWithGoogle(req.user, req.ip, req.headers['user-agent']);
+      const u      = result.user;
+      return res.redirect(
+        `${appUrl}/auth/callback` +
+        `#access_token=${result.access_token}` +
+        `&refresh_token=${result.refresh_token}` +
+        `&profile_complete=${u.profile_complete ? '1' : '0'}` +
+        `&force_pw=${u.force_password_change ? '1' : '0'}` +
+        `&is_superadmin=${u.is_superadmin ? '1' : '0'}` +
+        `&name=${encodeURIComponent(u.name ?? '')}` +
+        `&email=${encodeURIComponent(u.email ?? '')}`,
+      );
+    } catch (err) {
+      const message = encodeURIComponent(err.message ?? 'Error de autenticación');
+      return res.redirect(`${appUrl}/login?error=${message}`);
+    }
   }
 
-  // ─── MFA (TOTP) ──────────────────────────────────────────────────────────────
+  // ─── Microsoft OAuth ─────────────────────────────────────────────────────────
 
-  @Post('mfa/verify')
-  @ApiOperation({ summary: 'Verificar código TOTP durante login. Requiere mfa_token en Authorization.' })
-  verifyMfa(
-    @Body() dto: VerifyTotpDto,
-    @Headers('authorization') auth: string,
-  ) {
-    const token = auth?.replace('Bearer ', '').trim();
-    if (!token) throw new UnauthorizedException('mfa_token requerido en Authorization header');
-    return this.authService.verifyMfa(token, dto.code);
+  @Get('microsoft')
+  @UseGuards(AuthGuard('microsoft'))
+  @ApiOperation({ summary: 'Redirige a Microsoft para OAuth. Abrir en browser.' })
+  microsoftAuth() {
+    // Passport redirige automáticamente
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Get('mfa/setup')
-  @ApiOperation({ summary: 'Generar QR para enrolar Google Authenticator.' })
-  setupMfa(@Req() req: any) {
-    return this.authService.setupMfa(req.user.sub, req.user.email);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Post('mfa/enable')
-  @ApiOperation({ summary: 'Confirmar enrolamiento MFA con primer código TOTP.' })
-  enableMfa(@Req() req: any, @Body() dto: MfaEnableDto) {
-    return this.authService.enableMfa(req.user.sub, dto.code);
+  @Get('microsoft/callback')
+  @UseGuards(AuthGuard('microsoft'))
+  async microsoftCallback(@Req() req: any, @Res() res: Response) {
+    const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
+    try {
+      const result = await this.authService.loginWithGoogle(req.user, req.ip, req.headers['user-agent']);
+      const u      = result.user;
+      return res.redirect(
+        `${appUrl}/auth/callback` +
+        `#access_token=${result.access_token}` +
+        `&refresh_token=${result.refresh_token}` +
+        `&profile_complete=${u.profile_complete ? '1' : '0'}` +
+        `&force_pw=${u.force_password_change ? '1' : '0'}` +
+        `&is_superadmin=${u.is_superadmin ? '1' : '0'}` +
+        `&name=${encodeURIComponent(u.name ?? '')}` +
+        `&email=${encodeURIComponent(u.email ?? '')}`,
+      );
+    } catch (err) {
+      const message = encodeURIComponent(err.message ?? 'Error de autenticación con Microsoft');
+      return res.redirect(`${appUrl}/login?error=${message}`);
+    }
   }
 
   // ─── Email OTP ───────────────────────────────────────────────────────────────
 
   @Post('otp/verify')
-  @ApiOperation({ summary: 'Verificar código OTP recibido por email. Requiere otp_token en Authorization.' })
+  @ApiOperation({ summary: 'Verificar código OTP. Requiere otp_token en Authorization.' })
   verifyEmailOtp(
+    @Req() req: any,
     @Body() dto: VerifyEmailOtpDto,
     @Headers('authorization') auth: string,
   ) {
     const token = auth?.replace('Bearer ', '').trim();
     if (!token) throw new UnauthorizedException('otp_token requerido en Authorization header');
-    return this.authService.verifyEmailOtp(token, dto.code);
+    return this.authService.verifyEmailOtp(token, dto.code, req.ip, req.headers['user-agent']);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Post('otp/enable')
-  @ApiOperation({ summary: 'Habilitar 2FA por email OTP para el usuario autenticado.' })
-  enableEmailOtp(@Req() req: any) {
-    return this.authService.enableEmailOtp(req.user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Post('otp/disable')
-  @ApiOperation({ summary: 'Deshabilitar 2FA por email OTP.' })
-  disableEmailOtp(@Req() req: any) {
-    return this.authService.disableEmailOtp(req.user.sub);
+  @Post('otp/resend')
+  @ApiOperation({ summary: 'Reenviar código OTP por email. Requiere otp_token en Authorization.' })
+  resendEmailOtp(@Headers('authorization') auth: string) {
+    const token = auth?.replace('Bearer ', '').trim();
+    if (!token) throw new UnauthorizedException('otp_token requerido en Authorization header');
+    return this.authService.resendOtp(token);
   }
 
   // ─── Password recovery ───────────────────────────────────────────────────────
@@ -156,4 +163,82 @@ export class AuthController {
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.new_password);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('verify-credentials')
+  @ApiOperation({ summary: 'Verificar contraseña del usuario autenticado sin generar sesión.' })
+  async verifyCredentials(@Req() req: any, @Body() body: { password: string }) {
+    const valid = await this.authService.verifyCredentials(req.user.sub, body.password);
+    if (!valid) throw new UnauthorizedException('Contraseña incorrecta');
+    return { ok: true };
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('otp-setting')
+  @ApiOperation({ summary: 'Activar/desactivar verificación en dos pasos por email OTP.' })
+  setOtpSetting(@Req() req: any, @Body() body: { enabled: boolean }) {
+    return this.authService.setOtpEnabled(req.user.sub, body.enabled);
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('setup-password')
+  @ApiOperation({ summary: 'Establecer contraseña inicial (onboarding). No requiere contraseña actual.' })
+  setupPassword(@Req() req: any, @Body() body: { new_password: string }) {
+    return this.authService.setupPassword(req.user.sub, body.new_password);
+  }
+
+  // ─── Heartbeat + Session management ─────────────────────────────────────────
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('heartbeat')
+  @ApiOperation({ summary: 'Registrar actividad — mantiene el estado online.' })
+  heartbeat(@Req() req: any) {
+    return this.authService.heartbeat(req.user.sub);
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Delete('sessions/:id')
+  @ApiOperation({ summary: 'Terminar una sesión activa específica.' })
+  terminateSession(@Req() req: any, @Param('id') id: string) {
+    return this.authService.terminateSession(req.user.sub, id);
+  }
+
+  // ─── TOTP (Google Authenticator) ─────────────────────────────────────────────
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('totp/setup')
+  @ApiOperation({ summary: 'Generar secreto + QR para configurar autenticador TOTP.' })
+  setupTotp(@Req() req: any) {
+    return this.authService.setupTotp(req.user.sub);
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('totp/enable')
+  @ApiOperation({ summary: 'Verificar código TOTP y activar 2FA.' })
+  enableTotp(@Req() req: any, @Body() body: { code: string }) {
+    return this.authService.enableTotp(req.user.sub, body.code);
+  }
+
+  @SkipProfileCheck()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('totp/disable')
+  @ApiOperation({ summary: 'Verificar código TOTP y desactivar 2FA.' })
+  disableTotp(@Req() req: any, @Body() body: { code: string }) {
+    return this.authService.disableTotp(req.user.sub, body.code);
+  }
+
 }

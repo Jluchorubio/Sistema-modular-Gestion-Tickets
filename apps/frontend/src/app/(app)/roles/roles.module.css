@@ -1,0 +1,94 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.title { font-size: 18px; font-weight: 600; color: #0f172a; }
+.count { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+.btnPrimary {
+  padding: 8px 16px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .15s;
+  font-family: inherit;
+}
+
+.btnPrimary:hover { opacity: .88; }
+
+/* ── Roles list ── */
+.list { display: flex; flex-direction: column; gap: 6px; }
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.rowInactive { opacity: 0.55; }
+
+.rowLeft { display: flex; align-items: flex-start; gap: 10px; }
+
+.cb { width: 15px; height: 15px; accent-color: #6366f1; cursor: pointer; margin-top: 2px; }
+
+.name { font-size: 14px; font-weight: 600; color: #0f172a; }
+.desc { font-size: 12px; color: #64748b; margin-top: 2px; }
+.userCount { font-size: 12px; color: #64748b; margin-top: 1px; }
+
+.rowActions { display: flex; gap: 6px; align-items: center; }
+
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 500; margin-left: 6px;
+}
+
+.badgeInactive { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+.btnIconDanger {
+  padding: 4px 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+}
+
+.btnIconDanger:hover { border-color: #ef4444; color: #ef4444; }
+
+.btnReactivate {
+  padding: 4px 10px;
+  background: #f0fdf4;
+  border: none;
+  border-radius: 6px;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btnReactivate:hover { background: #bbf7d0; }
+
+/* ── Empty / error ── */
+.emptyMsg {
+  color: #64748b; font-size: 13px;
+  padding: 40px; text-align: center;
+}
+
+.errorMsg { color: #ef4444; font-size: 13px; padding: 20px; }

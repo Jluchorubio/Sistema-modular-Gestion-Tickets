@@ -1,0 +1,485 @@
+/* ── Wrap ───────────────────────────────────────────────────────────────────── */
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Role banner ─────────────────────────────────────────────────────────────── */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+
+.bannerSuper {
+  background: #1e1b4b;
+  border-color: #4338ca;
+  color: #c7d2fe;
+}
+
+.bannerAdmin {
+  background: #0c4a6e;
+  border-color: #0284c7;
+  color: #bae6fd;
+}
+
+.bannerUser {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────────────── */
+.pageHeader { }
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 3px 0 0;
+}
+
+/* ── Stats bar ───────────────────────────────────────────────────────────────── */
+.statsBar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+/* ── Search ──────────────────────────────────────────────────────────────────── */
+.searchRow { }
+
+.searchWrap {
+  position: relative;
+  max-width: 380px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 9px 14px 9px 36px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  font-size: 13px;
+  color: #0f172a;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+/* ── List ────────────────────────────────────────────────────────────────────── */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.empty {
+  padding: 40px 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+/* ── User row ────────────────────────────────────────────────────────────────── */
+.row {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color .12s;
+}
+
+.row:hover { border-color: #cbd5e1; }
+
+.rowExpanded { border-color: #6366f1 !important; }
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  flex-wrap: wrap;
+}
+
+/* Avatar */
+.avatar {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatarImg {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+.inactiveDot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid #fff;
+}
+
+/* User info */
+.userInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.userName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.superBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #312e81;
+  color: #c7d2fe;
+  border-radius: 5px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.userMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.moduleRoles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+
+.modulePill {
+  font-size: 11px;
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 5px;
+  padding: 2px 7px;
+  border: 1px solid #c7d2fe;
+}
+
+.moreRoles {
+  font-size: 11px;
+  color: #94a3b8;
+  padding: 2px 5px;
+}
+
+/* Stats col */
+.statsCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.pendingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f59e0b;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.totalReqs {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btnAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .12s;
+  font-family: inherit;
+}
+
+.btnAction:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background: #eef2ff;
+}
+
+.btnActionSecondary {
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+.btnActionSecondary:hover {
+  border-color: #cbd5e1;
+  color: #374151;
+  background: #f8fafc;
+}
+
+/* ── Expanded requests panel ─────────────────────────────────────────────────── */
+.requestsPanel {
+  padding: 12px 14px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.requestsPanelTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+
+.reqRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.reqLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.reqRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.reqPill {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 5px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.reqTitle {
+  font-size: 13px;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.reqStatus {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.reqDate {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.btnManage {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6366f1;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  padding: 3px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all .12s;
+}
+
+.btnManage:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+
+.escalatedTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fb923c;
+  background: #431407;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* ── Own profile card ────────────────────────────────────────────────────────── */
+.ownCard {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ownTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.ownAvatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ownAvatarImg {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+}
+
+.ownName {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ownEmail {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.ownStats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ownStat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+
+.ownRequests {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

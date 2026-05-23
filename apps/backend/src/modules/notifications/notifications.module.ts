@@ -1,11 +1,24 @@
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NotificationsService } from './notifications.service';
+import { NotificationsController } from './notifications.controller';
 import { EmailChannel } from './channels/email.channel';
 import { WhatsappChannel } from './channels/whatsapp.channel';
+import { NotificationsGateway } from '../../gateway/notifications.gateway';
 
-// future microservice: notifications-service (consumes Redis events)
 @Module({
-  providers: [NotificationsService, EmailChannel, WhatsappChannel],
+  imports: [
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+      }),
+    }),
+  ],
+  controllers: [NotificationsController],
+  providers: [NotificationsService, EmailChannel, WhatsappChannel, NotificationsGateway],
   exports: [NotificationsService],
 })
 export class NotificationsModule {}

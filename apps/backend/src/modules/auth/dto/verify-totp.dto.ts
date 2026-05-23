@@ -1,9 +1,0 @@
-import { IsString, Length } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-
-export class VerifyTotpDto {
-  @ApiProperty({ example: '123456', description: 'Código de 6 dígitos de Google Authenticator' })
-  @IsString()
-  @Length(6, 6)
-  code: string;
-}

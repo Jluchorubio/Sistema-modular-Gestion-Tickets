@@ -1,0 +1,2335 @@
+# CONTEXTO MEJORADO — FLUJO DE ACCESO, PRIMER INGRESO Y CONFIGURACIÓN INICIAL DEL SISTEMA
+
+# FILOSOFÍA GENERAL DEL ACCESO
+
+El sistema NO permite auto-registro público.
+
+Toda cuenta debe ser creada previamente por:
+
+* Superadmin
+* Administrador autorizado
+
+El sistema está diseñado para entornos empresariales internos donde:
+
+* los usuarios ya pertenecen a la organización,
+* los accesos son controlados,
+* y la identidad organizacional ya existe antes del ingreso.
+
+Por lo tanto:
+
+* NO existe botón de “Registrarse”
+* NO existe onboarding público
+* NO existe creación autónoma de cuentas
+
+---
+
+# SISTEMA DE AUTENTICACIÓN
+
+## Métodos de acceso permitidos
+
+El sistema permite únicamente:
+
+### 1. Login tradicional
+
+Mediante:
+
+* Usuario/email
+* Contraseña
+
+---
+
+### 2. OAuth con Google
+
+Permitido únicamente si:
+
+* el usuario YA existe en la base de datos,
+* y su cuenta fue creada previamente por un administrador.
+
+## Regla importante
+
+OAuth NO crea usuarios automáticamente.
+
+Si el correo no existe:
+
+→ acceso denegado.
+
+---
+
+# SEGURIDAD DEL LOGIN
+
+## Protección anti-spam y fuerza bruta
+
+El sistema implementa límites de intentos fallidos.
+
+### Reglas iniciales
+
+* Máximo 3 intentos fallidos consecutivos
+* Bloqueo temporal automático
+* Tiempo configurable (ejemplo: 15 minutos)
+* Registro en auditoría de seguridad
+
+---
+
+## Mensajes del sistema
+
+El sistema debe evitar revelar información sensible.
+
+Ejemplo correcto:
+
+```txt
+Usuario o contraseña incorrectos
+```
+
+NO debe indicar:
+
+* si el usuario existe,
+* si el email es válido,
+* ni qué dato falló.
+
+---
+
+# FLUJOS PRINCIPALES DE INGRESO
+
+Existen 2 escenarios operativos principales:
+
+---
+
+# ESCENARIO 1 — PRIMER INGRESO AL SISTEMA
+
+Ocurre cuando:
+
+* la cuenta fue creada por un admin/superadmin,
+* pero el usuario aún no completa su configuración inicial.
+
+El sistema detecta automáticamente:
+
+```txt
+profile_completed = false
+```
+
+y redirige al flujo onboarding inicial.
+
+---
+
+# PRIMER INGRESO — USUARIO ESTÁNDAR
+
+## Objetivo
+
+Completar información organizacional y asegurar la cuenta.
+
+---
+
+# CONFIGURACIÓN INICIAL DEL USUARIO
+
+El usuario debe completar:
+
+## Información personal
+
+* Nombre
+* Username
+* Teléfono
+* Dirección
+* País
+* Departamento/estado
+* Ciudad
+
+---
+
+## Información organizacional
+
+Estos datos NO son libres.
+
+Deben provenir dinámicamente desde la configuración del sistema creada por el superadmin.
+
+Ejemplos:
+
+* Sede
+* Área
+* Departamento
+* Cargo
+* División
+* Tipo de usuario
+
+Todos estos campos deben utilizar:
+
+* dropdowns,
+* listas dinámicas,
+* búsquedas,
+* selects relacionados.
+
+---
+
+# CONTRASEÑA INICIAL
+
+Toda cuenta creada por administradores tendrá:
+
+```txt
+Ticket2026!
+```
+
+como contraseña temporal inicial.
+
+---
+
+# CAMBIO OBLIGATORIO DE CONTRASEÑA
+
+En el primer ingreso:
+
+* el sistema obliga a cambiar contraseña,
+* antes de permitir acceso operativo completo.
+
+La contraseña temporal NO puede reutilizarse.
+
+---
+
+# CONFIGURACIÓN DE SEGURIDAD
+
+Durante el onboarding inicial el usuario podrá configurar:
+
+## 2FA interno del sistema
+
+Basado en:
+
+* El codigo de verificacion ya puesto en este sistema con smtp con resend
+
+El usuario podrá:
+
+* activar,
+* desactivar,
+* o posponer la activación (según política definida).
+
+---
+
+# OBJETIVO DEL ONBOARDING
+
+El flujo inicial busca:
+
+* completar identidad organizacional,
+* asegurar cuentas,
+* preparar automatizaciones futuras,
+* permitir trazabilidad,
+* habilitar permisos contextuales,
+* alimentar reportes y métricas.
+
+---
+
+# PRIMER INGRESO — SUPERADMIN
+
+## Condición especial
+
+Si el sistema detecta que NO existe configuración organizacional global:
+
+```txt
+company_initialized = false
+```
+
+entonces el primer superadmin NO entra al dashboard operativo.
+
+---
+
+# FLUJO DE INICIALIZACIÓN DEL SISTEMA
+
+El superadmin entra primero a un proceso de configuración empresarial inicial.
+
+Este flujo reutiliza visualmente la experiencia de onboarding de usuario, pero funcionalmente configura TODO el sistema.
+
+---
+
+# OBJETIVO DE LA CONFIGURACIÓN INICIAL DEL SUPERADMIN
+
+Inicializar toda la estructura organizacional requerida por:
+
+* automatizaciones,
+* workflows,
+* permisos,
+* módulos,
+* SLA,
+* formularios,
+* asignaciones,
+* reportes,
+* trazabilidad.
+
+---
+
+# INFORMACIÓN EMPRESARIAL INICIAL
+
+El sistema debe permitir configurar:
+
+## Información corporativa
+
+* Nombre empresa
+* Logo
+* Branding
+* Dominio corporativo
+* Correos organizacionales
+
+---
+
+## Estructura organizacional
+
+* Sedes
+* Departamentos
+* Áreas
+* Cargos
+* Jerarquías
+
+---
+
+## Configuración operacional
+
+* Categorías
+* Prioridades
+* SLA
+* Roles base
+* Tipos de solicitudes
+* Políticas
+
+---
+
+# DEPENDENCIA OPERACIONAL
+
+Muchos procesos posteriores dependen de esta configuración.
+
+Ejemplo:
+
+* dropdowns organizacionales,
+* asignaciones automáticas,
+* permisos,
+* filtros,
+* reportes,
+* módulos,
+* workflows.
+
+Por lo tanto:
+
+la configuración inicial empresarial es obligatoria.
+
+---
+
+# ESCENARIO 2 — INGRESO COTIDIANO
+
+Cuando:
+
+```txt
+profile_completed = true
+```
+
+y:
+
+```txt
+company_initialized = true
+```
+
+el usuario entra directamente al sistema operativo.
+
+---
+
+# ACCESO SEGÚN ROL GLOBAL
+
+## Usuario estándar
+
+El usuario NO verá el sidebar administrativo global.
+
+Su experiencia será más limpia y enfocada únicamente en:
+
+* módulos asignados,
+* tickets,
+* solicitudes,
+* operaciones personales.
+
+---
+
+## Superadmin
+
+El superadmin tendrá acceso completo a:
+
+* sidebar global,
+* configuraciones,
+* administración,
+* reportes,
+* módulos,
+* usuarios,
+* roles,
+* sistema completo.
+
+---
+
+# SIDEBAR GLOBAL
+
+El sidebar será:
+
+* componente reutilizable,
+* desacoplado,
+* configurable por props,
+* reutilizable en futuros módulos.
+
+El renderizado dependerá de:
+
+* rol global,
+* permisos,
+* módulo activo,
+* contexto operativo.
+
+---
+
+# ARQUITECTURA DEL ONBOARDING
+
+El onboarding NO debe ser un formulario simple gigante.
+
+Debe funcionar como:
+
+* wizard multi-step,
+* guardado progresivo,
+* validación por secciones,
+* experiencia guiada.
+
+---
+
+# REGLAS IMPORTANTES
+
+## El usuario NO puede operar el sistema hasta:
+
+* completar onboarding,
+* cambiar contraseña temporal,
+* completar información obligatoria.
+
+---
+
+## El sistema debe mantener:
+
+* auditoría de accesos,
+* auditoría de cambios,
+* historial de seguridad,
+* sesiones activas,
+* trazabilidad de onboarding.
+
+---
+
+# CONSIDERACIONES FUTURAS IMPORTANTES
+
+La arquitectura del acceso debe permitir posteriormente:
+
+* SSO empresarial
+* Azure AD
+* LDAP
+* MFA avanzado
+* políticas por empresa
+* expiración de sesiones
+* dispositivos confiables
+* revocación de sesiones
+* control geográfico
+* detección de actividad sospechosa
+
+sin necesidad de rediseñar el sistema completo.
+
+-------------------------------------------------------
+
+
+# DASHBOARD PRINCIPAL, ADMINISTRACIÓN GLOBAL, HEADER Y ESTRUCTURA OPERATIVA DEL SISTEMA
+
+# ARQUITECTURA GENERAL DEL SISTEMA
+
+El sistema funciona bajo arquitectura:
+
+* Single Tenant
+* Instancia individual por servidor
+* Configuración empresarial personalizada
+* Modularidad desacoplada
+* Roles globales y roles por módulo
+
+Aunque el sistema es configurable, cada despliegue pertenece a una única organización.
+
+NO existe multiempresa compartiendo la misma instancia.
+
+Toda la configuración organizacional pertenece únicamente a la empresa propietaria del servidor desplegado.
+
+---
+
+# VISTA PRINCIPAL DEL SISTEMA
+
+Una vez autenticado correctamente y completado el onboarding:
+
+el usuario entra al sistema operativo principal.
+
+La experiencia visual y funcional cambia dinámicamente según:
+
+* rol global,
+* permisos,
+* módulos asignados,
+* contexto operativo.
+
+---
+
+# ESTRUCTURA GENERAL DE LA INTERFAZ
+
+La aplicación se divide en:
+
+## 1. Sidebar lateral izquierdo
+
+Visible principalmente para:
+
+* superadmin
+* roles con permisos administrativos globales
+
+---
+
+## 2. Header superior global
+
+Visible para todos los usuarios autenticados.
+
+---
+
+## 3. Área central dinámica
+
+Aquí se renderizan:
+
+* dashboard,
+* módulos,
+* reportes,
+* configuraciones,
+* tickets,
+* perfiles,
+* vistas internas.
+
+---
+
+# SIDEBAR GLOBAL
+
+## Objetivo
+
+Centralizar navegación administrativa y operativa global.
+
+---
+
+# VISIBILIDAD DEL SIDEBAR
+
+## Superadmin
+
+Tiene acceso completo al sidebar.
+
+---
+
+## Usuarios normales
+
+NO necesariamente verán el sidebar completo.
+
+La navegación dependerá de:
+
+* permisos,
+* rol global,
+* contexto del módulo.
+
+---
+
+# COMPORTAMIENTO DEL SIDEBAR
+
+El sidebar:
+
+* es persistente,
+* reutilizable,
+* desacoplado,
+* configurable mediante props,
+* preparado para crecimiento futuro.
+
+Debe soportar:
+
+* colapsado,
+* scroll,
+* agrupación dinámica,
+* renderizado condicional por permisos.
+
+---
+
+# OPCIONES ACTUALES DEL SIDEBAR
+
+## Dashboard
+
+Path:
+
+```txt
+/dashboard
+```
+
+---
+
+## Reportes
+
+Path:
+
+```txt
+/reports
+```
+
+---
+
+## Usuarios
+
+Path:
+
+```txt
+/users
+```
+
+---
+
+## Roles
+
+Path:
+
+```txt
+/roles
+```
+
+---
+
+## Papelera
+
+Path:
+
+```txt
+/trash
+```
+
+---
+
+## Configuración
+
+Path:
+
+```txt
+/config
+```
+
+---
+
+# PERFIL EN SIDEBAR
+
+El apartado:
+
+```txt
+/profile
+```
+
+será removido progresivamente del sidebar global.
+
+Razón:
+
+Ya existe acceso desde el dropdown del header y mantenerlo duplicado rompe coherencia UX.
+
+---
+
+# DASHBOARD PRINCIPAL
+
+Path:
+
+```txt
+/dashboard
+```
+
+---
+
+# OBJETIVO DEL DASHBOARD
+
+Mostrar todos los módulos disponibles según permisos del usuario.
+
+El dashboard actúa como:
+
+* hub operativo,
+* entrada principal al sistema,
+* selector contextual de módulos.
+
+---
+
+# MÓDULOS POR DEFECTO
+
+El sistema siempre incluye:
+
+## 1. Helpdesk
+
+Mesa de ayuda y tickets.
+
+---
+
+## 2. Inventario
+
+Gestión de activos y trazabilidad.
+
+---
+
+## 3. Gestión Administrativa
+
+Solicitudes internas organizacionales.
+
+---
+
+# MÓDULOS PERSONALIZADOS
+
+El superadmin podrá crear módulos adicionales dinámicamente.
+
+Estos módulos heredarán:
+
+* estructura visual,
+* permisos,
+* configuraciones,
+* SLA,
+* roles,
+* automatizaciones base.
+
+---
+
+# CARDS DE MÓDULOS
+
+Cada módulo se representa mediante una card operativa.
+
+---
+
+# REGLAS DE LAS CARDS
+
+Todas las cards deben mantener:
+
+* mismo tamaño,
+* misma altura,
+* grid uniforme,
+* consistencia visual,
+* truncamiento de texto,
+* hover states,
+* responsive design.
+
+---
+
+# MENÚ CONTEXTUAL DE MÓDULOS
+
+Cada card posee menú contextual de 3 puntos.
+
+---
+
+# ACCIONES DISPONIBLES
+
+## Editar
+
+Permite modificar:
+
+* nombre,
+* descripción,
+* imagen,
+* configuraciones visuales,
+* comportamiento básico.
+
+---
+
+## Activar / Desactivar
+
+Permite habilitar o deshabilitar operativamente el módulo.
+
+Cuando un módulo está desactivado:
+
+* usuarios normales no pueden acceder,
+* puede mostrarse estado visual deshabilitado.
+
+---
+
+## Modo mantenimiento
+
+Permite que:
+
+* únicamente admins autorizados,
+* o superadmin,
+
+puedan ingresar temporalmente al módulo.
+
+Objetivo:
+
+realizar cambios críticos como:
+
+* SLA,
+* workflows,
+* automatizaciones,
+* configuraciones,
+* permisos.
+
+Mientras mantenimiento esté activo:
+
+* el módulo puede restringirse al resto de usuarios.
+
+---
+
+## Eliminar módulo
+
+Solo disponible para:
+
+* módulos personalizados creados dinámicamente.
+
+Los módulos core NO pueden eliminarse:
+
+* Helpdesk
+* Inventario
+* Gestión Administrativa
+
+---
+
+# ELIMINACIÓN DE MÓDULOS
+
+La eliminación requiere validación reforzada.
+
+---
+
+# MODAL DE CONFIRMACIÓN
+
+Para eliminar un módulo se solicitará:
+
+## Confirmar manualmente:
+
+* nombre exacto del módulo,
+* nombre del usuario autenticado.
+
+Esto evita:
+
+* eliminaciones accidentales,
+* acciones masivas peligrosas.
+
+---
+
+# TIPO DE ELIMINACIÓN
+
+La eliminación realiza:
+
+```txt
+soft delete
+```
+
+El módulo pasa automáticamente a:
+
+```txt
+/trash
+```
+
+---
+
+# GESTIÓN DE USUARIOS
+
+Path:
+
+```txt
+/users
+```
+
+---
+
+# OBJETIVO
+
+Administrar usuarios globales del sistema.
+
+---
+
+# LISTADO DE USUARIOS
+
+Debe permitir:
+
+* búsqueda,
+* filtros,
+* paginación,
+* selección múltiple,
+* acciones masivas.
+
+---
+
+# CREACIÓN DE USUARIOS
+
+La creación se realiza mediante modal.
+
+---
+
+# DATOS MÍNIMOS REQUERIDOS
+
+## Información obligatoria
+
+* Nombre
+* Apellido
+* Correo electrónico
+
+---
+
+# ROL GLOBAL POR DEFECTO
+
+Si no se selecciona privilegio especial:
+
+el usuario se crea automáticamente como:
+
+```txt
+usuario
+```
+
+---
+
+# CREACIÓN DE SUPERADMIN
+
+Si el creador activa:
+
+```txt
+activar superadmin
+```
+
+entonces el usuario obtiene rol global:
+
+```txt
+superadmin
+```
+
+---
+
+# IMPORTACIÓN MASIVA DE USUARIOS
+
+El sistema debe permitir:
+
+* importar Excel,
+* importar CSV,
+* plantillas descargables,
+* creación masiva.
+
+---
+
+# OBJETIVO DE LA IMPORTACIÓN
+
+Reducir tiempo operativo en:
+
+* onboarding empresarial,
+* migraciones,
+* carga inicial,
+* asignaciones masivas.
+
+---
+
+# IMPORTACIÓN MASIVA DE ROLES
+
+La importación también debe permitir:
+
+* asignar roles múltiples,
+* asignar módulos,
+* aplicar configuraciones masivas.
+
+---
+
+# ACCIONES SOBRE USUARIOS
+
+Cada usuario podrá:
+
+* editarse,
+* desactivarse,
+* eliminarse,
+* restaurarse.
+
+---
+
+# ACCIONES MASIVAS
+
+El sistema soportará selección múltiple para:
+
+* eliminar,
+* activar,
+* desactivar,
+* restaurar,
+* asignar permisos.
+
+---
+
+# ELIMINACIÓN DE USUARIOS
+
+Las eliminaciones globales envían usuarios a:
+
+```txt
+/trash
+```
+
+Nunca se elimina directamente desde la tabla principal.
+
+---
+
+# VISUALIZACIÓN DETALLADA DE USUARIO
+
+Al abrir un usuario:
+
+se muestra exactamente la misma estructura visual del profile del usuario.
+
+---
+
+# PERMISOS DEL SUPERADMIN SOBRE PERFIL
+
+El superadmin puede modificar:
+
+* información personal,
+* roles,
+* permisos,
+* estado,
+* sesiones,
+* configuración,
+* módulos asignados,
+* configuración operativa.
+
+---
+
+# SISTEMA DE ROLES
+
+Path:
+
+```txt
+/roles
+```
+
+---
+
+# IMPORTANCIA DEL MÓDULO
+
+El sistema de roles es uno de los núcleos críticos de toda la plataforma.
+
+---
+
+# TIPOS DE ROLES
+
+## Roles globales
+
+Ejemplo:
+
+* usuario
+* superadmin
+
+---
+
+## Roles por módulo
+
+Ejemplo:
+
+* técnico
+* supervisor
+* auditor
+* aprobador
+
+---
+
+# MULTIROL
+
+Un usuario puede tener múltiples roles simultáneamente.
+
+Ejemplo:
+
+```txt
+Global:
+- usuario
+
+Helpdesk:
+- técnico
+
+Gestión Administrativa:
+- aprobador
+```
+
+---
+
+# SISTEMA DE PERMISOS
+
+Cada rol posee permisos editables.
+
+Los permisos son completamente dinámicos.
+
+---
+
+# ESTRUCTURA DE PERMISOS
+
+Funcionan tipo árbol jerárquico.
+
+Ejemplo conceptual:
+
+```txt
+Sidebar
+ ├── Dashboard
+ ├── Usuarios
+ ├── Reportes
+```
+
+---
+
+# REGLA IMPORTANTE
+
+Habilitar permiso padre:
+
+NO habilita automáticamente permisos hijos.
+
+Todo permiso debe definirse explícitamente.
+
+---
+
+# PERMISOS OPERATIVOS
+
+Los permisos pueden controlar:
+
+* visualización,
+* acceso,
+* acciones,
+* edición,
+* eliminación,
+* restauración,
+* exportación,
+* configuración,
+* mantenimiento,
+* administración.
+
+---
+
+# ESCALABILIDAD DE PERMISOS
+
+Cada nueva funcionalidad del sistema:
+
+debe poder convertirse en permiso configurable.
+
+---
+
+# PAPELERA GLOBAL
+
+Path:
+
+```txt
+/trash
+```
+
+---
+
+# OBJETIVO
+
+Centralizar todos los elementos eliminados mediante soft delete.
+
+---
+
+# ELEMENTOS SOPORTADOS
+
+La papelera puede contener:
+
+* usuarios,
+* módulos,
+* roles,
+* configuraciones,
+* registros futuros.
+
+---
+
+# ACCIONES DISPONIBLES
+
+## Restaurar
+
+Restaura completamente el elemento.
+
+---
+
+## Eliminación definitiva
+
+Realiza:
+
+```txt
+hard delete
+```
+
+---
+
+# RETENCIÓN
+
+Los elementos permanecen:
+
+```txt
+90 días
+```
+
+Luego:
+
+* eliminación automática definitiva.
+
+---
+
+# ELIMINACIÓN INMEDIATA
+
+Si un usuario autorizado desea eliminar permanentemente antes del vencimiento:
+
+el sistema solicitará:
+
+* contraseña actual,
+* validación reforzada,
+* permisos autorizados.
+
+---
+
+# CONFIGURACIÓN GLOBAL DEL SISTEMA
+
+Path:
+
+```txt
+/config
+```
+
+---
+
+# OBJETIVO
+
+Centralizar toda la configuración empresarial y operacional.
+
+---
+
+# RELACIÓN CON EL ONBOARDING INICIAL
+
+La configuración inicial realizada por el superadmin:
+
+vive posteriormente dentro de este módulo.
+
+---
+
+# FUNCIONALIDAD
+
+Aquí se podrá:
+
+* visualizar,
+* editar,
+* ampliar,
+* reorganizar,
+* actualizar,
+
+toda la configuración organizacional del sistema.
+
+---
+
+# PRINCIPIO IMPORTANTE
+
+Ningún dato importante de la DB debe quedar “suelto” o inaccesible administrativamente.
+
+Toda configuración relevante debe poder:
+
+* visualizarse,
+* editarse,
+* administrarse,
+
+desde interfaces controladas.
+
+---
+
+# HEADER GLOBAL
+
+Visible para todos los usuarios autenticados.
+
+---
+
+# ESTRUCTURA DEL HEADER
+
+El header contiene:
+
+## 1. Logotipo
+
+Ubicado a la izquierda.
+
+---
+
+## 2. Calendario global
+
+Sistema transversal operativo.
+
+---
+
+## 3. Notificaciones
+
+Centro de eventos del sistema.
+
+---
+
+## 4. Dropdown de perfil
+
+Panel rápido del usuario autenticado.
+
+---
+
+CONTEXTO MEJORADO — CALENDARIO OPERATIVO GLOBAL DEL SISTEMA
+NATURALEZA DEL CALENDARIO
+
+El calendario NO es una funcionalidad secundaria.
+
+Es un núcleo operativo transversal conectado directamente con:
+
+módulos,
+tickets,
+SLA,
+tareas,
+usuarios,
+disponibilidad,
+actividad operativa,
+automatizaciones,
+reuniones,
+mantenimiento,
+colaboración.
+
+Debe funcionar como un sistema vivo de organización operacional empresarial.
+
+UBICACIÓN DEL CALENDARIO
+
+El calendario NO vive dentro del sidebar.
+
+Debe integrarse dentro del:
+
+header global
+
+mediante:
+
+botón contextual,
+dropdown expandible,
+panel lateral,
+modal rápido,
+acceso instantáneo.
+OBJETIVO UX/UI
+
+La integración en el header busca:
+
+acceso rápido,
+reducción de clics,
+navegación transversal,
+menor saturación visual,
+disponibilidad permanente.
+
+Todos los roles utilizan el calendario.
+
+Por lo tanto:
+
+NO pertenece exclusivamente a un área administrativa.
+
+IMPORTANCIA OPERATIVA
+
+El calendario centraliza:
+
+planificación,
+disponibilidad,
+seguimiento,
+coordinación,
+vencimientos,
+reuniones,
+SLA,
+tareas personales,
+eventos globales.
+RELACIÓN CON EL SISTEMA
+
+El calendario se conecta directamente con:
+
+Helpdesk
+tickets,
+SLA,
+escalaciones,
+reuniones,
+tareas técnicas.
+Inventario
+mantenimientos,
+auditorías,
+préstamos,
+revisiones,
+vencimientos.
+Gestión Administrativa
+aprobaciones,
+reuniones,
+solicitudes,
+validaciones.
+Sistema global
+eventos corporativos,
+mantenimientos globales,
+actividad operativa,
+cambios críticos.
+TIPOS DE EVENTOS Y TAREAS
+
+El calendario maneja múltiples categorías operativas.
+
+1. EVENTOS PERSONALES
+Visibilidad
+
+Solo visibles para:
+
+usuario creador.
+USOS
+
+Ejemplos:
+
+recordatorios,
+reuniones personales,
+seguimiento individual,
+tareas privadas,
+organización diaria.
+CARACTERÍSTICAS
+
+Los eventos personales:
+
+NO afectan SLA,
+NO generan automatizaciones globales,
+NO aparecen en métricas compartidas,
+NO son visibles por otros usuarios.
+2. EVENTOS DE MÓDULO
+
+Relacionados directamente con módulos específicos.
+
+VISIBILIDAD
+
+Depende de:
+
+rol dentro del módulo,
+permisos,
+asignaciones,
+contexto activo.
+EJEMPLOS
+Helpdesk
+soporte programado,
+revisiones técnicas,
+reuniones de escalamiento,
+auditorías SLA,
+mantenimientos.
+Inventario
+revisiones de activos,
+mantenimientos preventivos,
+inventarios físicos,
+auditorías.
+Gestión Administrativa
+aprobaciones,
+revisiones,
+reuniones internas,
+validaciones.
+3. EVENTOS GLOBALES
+
+Eventos organizacionales visibles globalmente.
+
+VISIBILIDAD
+
+Disponibles para:
+
+usuarios autorizados,
+admins,
+superadmin,
+roles definidos.
+EJEMPLOS
+mantenimiento del sistema,
+caída programada,
+reuniones corporativas,
+cambios organizacionales,
+eventos empresariales,
+capacitaciones.
+SISTEMA MULTIROL
+
+Un usuario puede pertenecer simultáneamente a:
+
+múltiples módulos,
+múltiples roles,
+múltiples contextos operativos.
+REGLA DE CONTEXTO ACTIVO
+
+Inicialmente el sistema utilizará:
+
+primer rol asignado históricamente
+
+como contexto principal.
+
+CAMBIO MANUAL DE CONTEXTO
+
+El usuario podrá cambiar manualmente:
+
+módulo activo,
+rol operativo,
+contexto funcional.
+IMPACTO DEL CONTEXTO ACTIVO
+
+El contexto cambia dinámicamente:
+
+eventos visibles,
+permisos,
+tareas disponibles,
+creación de eventos,
+filtros,
+automatizaciones,
+accesos.
+COMPORTAMIENTO SEGÚN ROL
+USUARIO ESTÁNDAR
+
+Puede:
+
+visualizar calendario,
+consultar horarios,
+ver tareas asignadas,
+gestionar eventos personales.
+
+NO puede:
+
+crear eventos globales,
+modificar tareas del sistema,
+administrar eventos organizacionales.
+TÉCNICO
+
+Puede:
+
+ver tareas técnicas,
+gestionar asignaciones propias,
+programar seguimientos,
+crear tareas internas del módulo,
+asociar reuniones a tickets.
+
+NO puede:
+
+crear eventos globales,
+alterar configuraciones críticas.
+TÉCNICO EN JEFE / SUPERVISOR
+
+Puede:
+
+visualizar calendario del equipo,
+reasignar tareas,
+coordinar técnicos,
+gestionar disponibilidad,
+validar mantenimientos,
+supervisar SLA relacionados.
+ADMIN DE MÓDULO
+
+Puede:
+
+crear eventos del módulo,
+gestionar tareas colectivas,
+programar mantenimientos,
+visualizar métricas del módulo,
+coordinar reuniones operativas.
+SUPERADMIN
+
+Tiene acceso completo.
+
+Puede:
+
+visualizar todos los eventos,
+filtrar globalmente,
+administrar tareas organizacionales,
+coordinar módulos,
+visualizar métricas cruzadas,
+crear eventos globales,
+gestionar disponibilidad organizacional.
+MODOS DE VISUALIZACIÓN
+
+El calendario debe soportar múltiples vistas.
+
+VISTA DÍA
+
+Enfocada en:
+
+tareas detalladas,
+horas específicas,
+disponibilidad operativa.
+VISTA SEMANA
+
+Permite:
+
+planificación semanal,
+coordinación técnica,
+distribución operativa.
+VISTA MES
+
+Permite:
+
+visión general,
+mantenimientos,
+eventos corporativos,
+tendencias operativas.
+VISTA AGENDA
+
+Visualización lineal de:
+
+tareas,
+eventos,
+seguimientos,
+reuniones.
+VISTA TIMELINE
+
+Orientada a:
+
+operaciones complejas,
+supervisión,
+disponibilidad,
+actividad extendida.
+FILTROS DEL CALENDARIO
+
+El sistema debe soportar filtros dinámicos avanzados.
+
+FILTROS DISPONIBLES
+Por módulo
+
+Ejemplo:
+
+Helpdesk
+Inventario
+Gestión Administrativa
+Por usuario
+técnico,
+supervisor,
+admin,
+usuario específico.
+Por prioridad
+baja,
+media,
+alta,
+crítica.
+Por estado
+pendiente,
+en progreso,
+completado,
+cancelado,
+vencido.
+Por rol
+técnico,
+admin,
+supervisor,
+usuario.
+Por tipo
+reunión,
+mantenimiento,
+auditoría,
+tarea,
+seguimiento.
+Por fecha
+rango personalizado,
+hoy,
+semana,
+mes,
+vencidos.
+VISUALIZACIÓN DE EVENTOS
+
+Cada evento debe mostrar información contextual rápida.
+
+DATOS VISIBLES EN EVENTOS
+avatar/foto,
+nombre creador,
+módulo asociado,
+prioridad,
+tipo,
+fecha,
+duración,
+estado,
+color contextual.
+SISTEMA DE COLORES
+
+Los colores deben representar:
+
+Prioridad
+
+Ejemplo:
+
+rojo → crítico
+amarillo → medio
+verde → bajo
+Tipo de evento
+
+Ejemplo:
+
+reunión,
+mantenimiento,
+SLA,
+auditoría.
+Estado
+
+Ejemplo:
+
+completado,
+pendiente,
+vencido.
+RELACIÓN CON SLA
+
+El calendario debe integrarse directamente con:
+
+SLA,
+vencimientos,
+escalaciones,
+alertas.
+EVENTOS AUTOMÁTICOS POR SLA
+
+El sistema podrá generar automáticamente:
+
+alertas,
+recordatorios,
+vencimientos,
+escalaciones programadas.
+RECORDATORIOS Y ALERTAS
+
+Cada evento puede tener:
+
+recordatorios,
+notificaciones,
+alertas progresivas,
+avisos previos.
+NOTIFICACIONES DEL CALENDARIO
+
+Las notificaciones pueden enviarse mediante:
+
+sistema interno,
+correo,
+websocket,
+alertas visuales.
+EVENTOS RECURRENTES
+
+El calendario debe soportar recurrencia.
+
+Ejemplos:
+
+reuniones semanales,
+mantenimientos mensuales,
+auditorías periódicas.
+CONFIGURACIÓN DE RECURRENCIA
+
+Debe permitir:
+
+diaria,
+semanal,
+mensual,
+personalizada.
+DISPONIBILIDAD OPERATIVA
+
+El calendario debe manejar disponibilidad de usuarios.
+
+ESTADOS DE DISPONIBILIDAD
+
+Ejemplo:
+
+disponible,
+ocupado,
+ausente,
+reunión,
+fuera de horario.
+RELACIÓN CON VIDEOLLAMADAS
+
+El calendario debe integrarse posteriormente con:
+
+Google Meet,
+reuniones,
+invitaciones,
+sesiones colaborativas.
+CREACIÓN DE REUNIONES
+
+Desde el calendario podrá:
+
+programarse reunión,
+asociarse a ticket,
+invitar participantes,
+generar enlaces automáticos.
+TRAZABILIDAD
+
+Toda acción del calendario debe generar auditoría.
+
+EVENTOS AUDITABLES
+creación,
+edición,
+cancelación,
+participación,
+cambios de estado,
+reprogramaciones.
+MÉTRICAS FUTURAS
+
+El calendario alimentará métricas relacionadas con:
+
+productividad,
+disponibilidad,
+carga operativa,
+cumplimiento,
+SLA,
+coordinación.
+OPTIMIZACIÓN UX/UI
+
+El calendario debe priorizar:
+
+rapidez,
+bajo número de clics,
+claridad visual,
+consistencia,
+acceso inmediato,
+navegación fluida.
+REGLA IMPORTANTE DE DISEÑO
+
+La estructura visual actual del calendario:
+
+NO debe reinterpretarse,
+NO debe rediseñarse,
+NO debe alterarse visualmente,
+
+salvo instrucción explícita futura.
+
+Actualmente el enfoque principal es:
+
+comportamiento,
+lógica,
+permisos,
+trazabilidad,
+automatización,
+integración operacional.
+-----------------------
+
+# NOTIFICACIONES
+
+El sistema tendrá un centro centralizado de notificaciones.
+
+Las reglas exactas se definirán posteriormente.
+
+---
+
+# DROPDOWN DEL PERFIL
+
+Inspirado en experiencias modernas tipo Discord/Slack.
+
+---
+
+# OPCIONES DEL DROPDOWN
+
+## Perfil
+
+Redirige a:
+
+```txt
+/profile
+```
+
+---
+
+## Tema
+
+Permite:
+
+* claro,
+* oscuro,
+* sincronizado con sistema.
+
+---
+
+## Historial de tickets
+
+Acceso rápido a tickets personales.
+
+---
+
+## Descargar aplicación
+
+Preparado para futura app/PWA.
+
+---
+
+## Cerrar sesión
+
+Finaliza sesión activa actual.
+
+---
+
+# PERFIL DEL USUARIO
+
+El perfil mantiene la estructura ya definida previamente.
+
+Incluye:
+
+* información personal,
+* organizacional,
+* sesiones,
+* métricas,
+* actividad,
+* roles,
+* estado online/offline.
+
+---
+
+# IMPORTANTE
+
+Las estructuras visuales actuales:
+
+* NO deben modificarse,
+* NO deben reinterpretarse,
+* NO deben rediseñarse,
+
+salvo indicación explícita futura.
+
+Actualmente el enfoque prioritario es:
+
+* funcionalidad,
+* arquitectura,
+* comportamiento,
+* permisos,
+* trazabilidad,
+* lógica operativa.
+
+--------------------------------------
+
+# CONTEXTO MEJORADO — ACCESO A MÓDULOS, ESTRUCTURA INTERNA DE MÓDULOS Y FUNCIONAMIENTO DE GESTIÓN ADMINISTRATIVA
+
+# VISIBILIDAD DEL SISTEMA SEGÚN ROL GLOBAL
+
+# USUARIO GLOBAL ESTÁNDAR
+
+El rol global:
+
+```txt
+usuario
+```
+
+tendrá una experiencia simplificada y enfocada únicamente en operación básica.
+
+---
+
+# RESTRICCIÓN DEL SIDEBAR GLOBAL
+
+El usuario estándar:
+
+* NO verá el sidebar global administrativo,
+* NO tendrá acceso directo a:
+
+  * usuarios globales,
+  * roles globales,
+  * configuración global,
+  * reportes globales,
+  * papelera global.
+
+La navegación del usuario estará enfocada principalmente en:
+
+* módulos disponibles,
+* solicitudes,
+* tickets,
+* acciones personales.
+
+---
+
+# VISUALIZACIÓN DE MÓDULOS
+
+Aunque el usuario pueda visualizar todos los módulos existentes:
+
+NO podrá ingresar automáticamente a ellos.
+
+El acceso a módulos específicos debe aprobarse previamente.
+
+---
+
+# SOLICITUD DE ACCESO A MÓDULOS
+
+Para ingresar a un módulo, el usuario deberá crear una solicitud desde:
+
+```txt
+/modules/administrative-management
+```
+
+---
+
+# OBJETIVO DE GESTIÓN ADMINISTRATIVA
+
+El módulo:
+
+```txt
+Gestión Administrativa
+```
+
+funciona como:
+
+* hub de autorizaciones,
+* centro de solicitudes organizacionales,
+* sistema de acceso interno,
+* gestor de cambios operativos y administrativos.
+
+---
+
+# ROLES DENTRO DE LOS MÓDULOS
+
+Cada módulo puede tener roles independientes.
+
+Ejemplo:
+
+## en el caso de gestion administrativa
+
+* usuario
+* admin/aprobador
+* supervisor
+* auditor
+
+Además del:
+
+```txt
+superadmin
+```
+
+que mantiene acceso transversal completo.
+
+---
+
+# ACCESO A MÓDULOS
+
+El acceso a un módulo depende de:
+
+* aprobación administrativa,
+* asignación de rol,
+* permisos asociados,
+* estado del módulo,
+* políticas organizacionales.
+
+---
+
+# ESTRUCTURA VISUAL BASE DE LOS MÓDULOS
+
+Todos los módulos del sistema, incluyendo:
+
+* módulos core,
+* módulos personalizados,
+* módulos futuros,
+
+deben compartir una estructura visual y funcional consistente.
+
+---
+
+# ESTRUCTURA BASE OBLIGATORIA
+
+Cada módulo debe contener:
+
+## 1. Header global reutilizado
+
+Manteniendo:
+
+* notificaciones,
+* calendario,
+* perfil,
+* navegación contextual.
+
+---
+
+## 2. Sidebar contextual del módulo
+
+El sidebar interno cambia dinámicamente mediante props según:
+
+* módulo,
+* permisos,
+* rol,
+* funcionalidades habilitadas.
+
+---
+
+## 3. Banner/cabecera del módulo
+
+Debe contener:
+
+* imagen/banner configurable,
+* nombre del módulo,
+* bienvenida contextual,
+* descripción operativa.
+
+---
+
+## 4. Área operativa central
+
+Donde se renderizan:
+
+* tickets,
+* solicitudes,
+* tablas,
+* dashboards,
+* métricas,
+* workflows.
+
+---
+
+# CONSISTENCIA ENTRE MÓDULOS
+
+Todos los módulos deben mantener:
+
+* misma lógica visual,
+* mismas bases UX,
+* estructura operacional consistente,
+* navegación coherente.
+
+Esto reduce:
+
+* curva de aprendizaje,
+* fricción operativa,
+* desorientación del usuario.
+
+---
+
+# ESTRUCTURA BASE DE TICKETS EN TODOS LOS MÓDULOS
+
+Todos los módulos, incluso los personalizados, deben heredar una estructura base de trabajo tipo tickets.
+
+Esto significa que cada módulo debe soportar conceptualmente:
+
+* solicitudes,
+* estados,
+* responsables,
+* historial,
+* comentarios,
+* trazabilidad,
+* prioridades,
+* flujo operativo.
+
+La referencia principal para esta arquitectura será:
+
+```txt
+Helpdesk
+```
+
+---
+
+# RUTAS INTERNAS DE LOS MÓDULOS
+
+Las rutas internas deben seguir estructura contextual.
+
+Ejemplo:
+
+```txt
+/modules/helpdesk/trash
+/modules/inventory/reports
+/modules/administrative-management/users
+```
+
+Esto garantiza:
+
+* modularidad,
+* separación lógica,
+* reutilización de componentes,
+* permisos contextuales.
+
+---
+
+# GESTIÓN ADMINISTRATIVA — SISTEMA DE SOLICITUDES
+
+# CREACIÓN DE SOLICITUDES
+
+Las solicitudes se crean mediante modal contextual.
+
+---
+
+# TIPOS DE SOLICITUDES DISPONIBLES
+
+Inicialmente el sistema soportará:
+
+* Cambio de rol
+* Acceso a módulo
+* Ajustes de permisos
+* Problema de cuenta
+* Reactivación
+* Revocación de acceso
+* Traslado de usuarios
+* Problemas técnicos
+* Corrección de datos
+* Tareas internas
+* Otros
+
+---
+
+# TIPO “OTROS”
+
+Cuando se selecciona:
+
+```txt
+Otros
+```
+
+el sistema debe mostrar explicación contextual indicando:
+
+* qué casos aplican,
+* limitaciones,
+* alcance de la solicitud.
+
+---
+
+# ESTRUCTURA DEL FORMULARIO
+
+La solicitud debe permitir seleccionar:
+
+## Tipo de solicitud
+
+Desde dropdown dinámico.
+
+---
+
+## Módulo relacionado
+
+El usuario podrá seleccionar:
+
+* módulo global,
+* Helpdesk,
+* Inventario,
+* Gestión Administrativa,
+* módulos personalizados existentes en DB.
+
+Todo debe provenir dinámicamente desde configuración real del sistema.
+
+---
+
+# PRIORIDAD AUTOMÁTICA
+
+La prioridad NO será manual en la mayoría de casos.
+
+El sistema calculará automáticamente:
+
+* prioridad,
+* urgencia,
+* impacto,
+
+según:
+
+* tipo de solicitud,
+* rol del usuario,
+* contexto organizacional,
+* reglas definidas.
+
+---
+
+# CAMPOS PRINCIPALES
+
+La solicitud incluye:
+
+* título,
+* descripción,
+* contexto,
+* módulo relacionado,
+* trazabilidad.
+
+---
+
+# SISTEMA DE USUARIOS DENTRO DE LOS MÓDULOS
+
+# VISIBILIDAD ESPECIAL DE USUARIOS
+
+Los módulos:
+
+* Gestión Administrativa
+* Inventario
+
+requieren acceso global a usuarios organizacionales.
+
+Por esta razón:
+
+NO necesitan solicitar permisos para visualizar usuarios.
+
+---
+
+# VISIBILIDAD EN OTROS MÓDULOS
+
+En módulos distintos:
+
+el acceso sí requiere autorización previa.
+
+---
+
+# FLUJO DE APROBACIÓN DE SOLICITUDES
+
+Cuando un usuario solicita:
+
+* ingreso a módulo,
+* cambio de rol,
+* permisos,
+* ajustes operativos,
+
+la solicitud se envía automáticamente al:
+
+```txt
+admin/aprobador del módulo correspondiente
+```
+
+---
+
+# ESCALAMIENTO AUTOMÁTICO
+
+Si el módulo no posee admin asignado:
+
+la solicitud escala automáticamente al:
+
+```txt
+superadmin
+```
+
+---
+
+# NOTIFICACIONES OPERATIVAS
+
+El admin del módulo recibe la solicitud mediante:
+
+## 1. Centro de notificaciones
+
+Header global.
+
+---
+
+## 2. Bandeja interna de Gestión Administrativa
+
+Vista operativa de solicitudes pendientes.
+
+---
+
+# REGLA OPERATIVA IMPORTANTE
+
+Aunque la solicitud se gestione desde:
+
+```txt
+Gestión Administrativa
+```
+
+los cambios reales deben ejecutarse desde el módulo correspondiente.
+
+---
+
+# EJEMPLO
+
+Si un usuario solicita:
+
+```txt
+Cambio de rol en Inventario
+```
+
+entonces:
+
+* la solicitud aparece en Gestión Administrativa,
+* el admin de Inventario la revisa,
+* pero el cambio real se ejecuta desde:
+
+```txt
+/modules/inventory
+```
+
+porque ese módulo controla:
+
+* sus roles,
+* permisos,
+* estructura interna.
+
+---
+
+# PRINCIPIO DE RESPONSABILIDAD MODULAR
+
+Cada módulo es responsable de administrar:
+
+* sus roles,
+* usuarios internos,
+* permisos contextuales,
+* configuraciones operativas.
+
+Gestión Administrativa únicamente:
+
+* centraliza solicitudes,
+* enruta procesos,
+* mantiene trazabilidad,
+* coordina aprobaciones.
+
+---
+
+# REESCALAMIENTO DE SOLICITUDES
+
+Los admins de módulo pueden:
+
+* escalar solicitudes,
+* reenviarlas,
+* solicitar revisión superior.
+
+Especialmente cuando:
+
+* la acción supera sus permisos,
+* afecta múltiples módulos,
+* involucra seguridad,
+* requiere aprobación organizacional.
+
+---
+
+# TRAZABILIDAD OBLIGATORIA
+
+Toda solicitud debe conservar:
+
+* historial completo,
+* responsables,
+* cambios realizados,
+* aprobaciones,
+* rechazos,
+* escalamientos,
+* comentarios,
+* timestamps,
+* auditoría operativa.

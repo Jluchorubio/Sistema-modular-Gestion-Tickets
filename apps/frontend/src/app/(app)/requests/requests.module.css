@@ -1,0 +1,285 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.title { font-size: 18px; font-weight: 600; color: #0f172a; }
+.count { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+.btnPrimary {
+  padding: 8px 16px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btnPrimary:hover { opacity: .88; }
+
+/* ── Tab bar ── */
+.tabBar {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0;
+}
+
+.tab {
+  padding: 8px 18px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.tab:hover { color: #0f172a; }
+
+.tabActive {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+  font-weight: 600;
+}
+
+/* ── Admin filter bar ── */
+.filterBar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.filterSelect {
+  padding: 7px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.filterSelect:focus { border-color: #6366f1; }
+
+.onlyMine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+}
+.onlyMineCb { width: 14px; height: 14px; accent-color: #6366f1; }
+
+/* ── Request card ── */
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.cardTitle { font-size: 14px; font-weight: 600; color: #0f172a; }
+
+.cardMeta {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.typeLabel {
+  font-size: 11px;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.cardReview {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ── Status pills ── */
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pillPending     { background: #eff6ff; color: #1d4ed8; }
+.pillTaken       { background: #f5f3ff; color: #6d28d9; }
+.pillInProgress  { background: #eff6ff; color: #1d4ed8; }
+.pillCompleted   { background: #f0fdf4; color: #15803d; }
+.pillUnderReview { background: #fffbeb; color: #92400e; }
+.pillApproved    { background: #f0fdf4; color: #15803d; }
+.pillRejected    { background: #fef2f2; color: #991b1b; }
+.pillCancelled   { background: #f8fafc; color: #64748b; }
+
+/* ── Review action buttons ── */
+.reviewActions { display: flex; gap: 8px; margin-top: 12px; }
+
+.reviewBtn {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  background: #ffffff;
+  font-family: inherit;
+}
+.reviewBtnPending { color: #92400e; border-color: #fde68a; }
+.reviewBtnPending:hover { background: #fffbeb; }
+.reviewBtnApprove { color: #15803d; border-color: #bbf7d0; }
+.reviewBtnApprove:hover { background: #f0fdf4; }
+.reviewBtnReject  { color: #991b1b; border-color: #fecaca; }
+.reviewBtnReject:hover  { background: #fef2f2; }
+
+/* ── Priority dot ── */
+.priorityDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Cancel / expand buttons ── */
+.cancelBtn,
+.expandBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  color: #64748b;
+  transition: all .15s;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+.cancelBtn:hover  { border-color: #fca5a5; color: #ef4444; background: #fef2f2; }
+.expandBtn:hover  { border-color: #c7d2fe; color: #6366f1; background: #eef2ff; }
+
+/* ── Timeline ── */
+.timelineWrap {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.timeline { display: flex; flex-direction: column; gap: 0; }
+
+.timelineEntry {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.timelineDotWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  padding-top: 3px;
+}
+
+.timelineDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.timelineLine {
+  width: 2px;
+  flex: 1;
+  min-height: 20px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+
+.timelineContent { padding-bottom: 16px; flex: 1; }
+
+.timelineAction { font-size: 13px; font-weight: 600; color: #0f172a; }
+
+.timelineMeta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+.timelineNotes {
+  font-size: 12px;
+  color: #475569;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* ── Empty / error ── */
+.emptyMsg { color: #64748b; font-size: 13px; padding: 40px; text-align: center; }
+.errorMsg { color: #ef4444; font-size: 13px; padding: 20px; }
+
+/* ── Reject notes modal field ── */
+.rejectNotes {
+  width: 100%;
+  padding: 9px 13px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color .15s;
+  margin-top: 6px;
+}
+.rejectNotes:focus { border-color: #6366f1; }

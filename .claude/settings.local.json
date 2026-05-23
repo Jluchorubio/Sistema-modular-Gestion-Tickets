@@ -7,7 +7,11 @@
       "Bash(PGPASSWORD=QddVqogSJPlPVqTmxpkEmrKHKhiviFFX /c/Program Files/PostgreSQL/18/bin/psql.exe *)",
       "Bash(npm run *)",
       "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3000\" -MaximumRedirection 0 -ErrorAction SilentlyContinue; Write-Output \"Status: $\\($r.StatusCode\\)\"; Write-Output \"Location: $\\($r.Headers.Location\\)\")",
-      "PowerShell(netstat *)"
+      "PowerShell(netstat *)",
+      "PowerShell(Get-ChildItem *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Lenovo\\\\Desktop\\\\Sistema modular Gestion Tickets\" -Recurse -Filter \"*.sql\")",
+      "Bash(Select-Object FullName, Length, LastWriteTime)",
+      "Bash(Sort-Object LastWriteTime)"
     ]
   },
   "enabledPlugins": {

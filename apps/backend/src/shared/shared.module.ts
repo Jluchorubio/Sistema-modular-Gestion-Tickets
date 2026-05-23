@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MailService } from './mail.service';
 
 @Global()
 @Module({
@@ -12,10 +13,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         type: 'postgres',
         url: config.get<string>('DATABASE_URL'),
         autoLoadEntities: true,
-        synchronize: config.get('NODE_ENV') === 'development',
+        synchronize: false,
       }),
     }),
   ],
-  exports: [TypeOrmModule],
+  providers: [MailService],
+  exports: [TypeOrmModule, MailService],
 })
 export class SharedModule {}

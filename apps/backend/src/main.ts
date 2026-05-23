@@ -1,8 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import * as helmet from 'helmet';
 import * as compression from 'compression';
+import * as express from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './gateway/filters/http-exception.filter';
 
@@ -10,6 +14,17 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
+
+  // ── Static uploads ──────────────────────────────────────────────────────────
+  const uploadsDir = path.resolve(process.env.STORAGE_PATH ?? './uploads');
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  app.use('/uploads', express.static(uploadsDir));
+
+  // Trust Railway/nginx reverse proxy so req.ip reflects the real client IP
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
+  // WebSocket adapter (socket.io)
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // ── Security ────────────────────────────────────────────────────────────────
   app.use((helmet as any).default());

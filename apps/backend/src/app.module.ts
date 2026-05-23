@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { PermissionGuard } from './gateway/guards/permission.guard';
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SystemModulesModule } from './modules/system-modules/system-modules.module';
@@ -11,12 +13,19 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { FilesModule } from './modules/files/files.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
+import { UsersModule } from './modules/users/users.module';
+import { RequestsModule } from './modules/requests/requests.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { HealthModule } from './health/health.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
 
     // Rate limiting global: 100 req / 60s por IP
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
@@ -30,10 +39,16 @@ import { HealthModule } from './health/health.module';
     FilesModule,
     NotificationsModule,
     ReportingModule,
+    UsersModule,
+    RequestsModule,
+    AdminModule,
+    SystemConfigModule,
+    PermissionsModule,
+    CalendarModule,
   ],
   providers: [
-    // Rate limit guard aplicado globalmente
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: PermissionGuard },
   ],
 })
 export class AppModule {}

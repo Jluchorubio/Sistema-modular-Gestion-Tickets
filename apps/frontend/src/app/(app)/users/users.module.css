@@ -1,0 +1,177 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.title { font-size: 18px; font-weight: 600; color: #0f172a; }
+.count { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+.filterRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.searchBar {
+  flex: 1;
+  min-width: 200px;
+  max-width: 340px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+
+.searchBar:focus { border-color: #6366f1; }
+.searchBar::placeholder { color: #94a3b8; }
+
+.filterSelect {
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+
+.filterSelect:focus { border-color: #6366f1; }
+
+.btnPrimary {
+  padding: 8px 16px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.btnPrimary:hover { opacity: .88; }
+
+/* ── Table ── */
+.tableWrap {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table { width: 100%; border-collapse: collapse; }
+
+.table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.table th:last-child { text-align: right; }
+
+.table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.table tr:last-child td { border-bottom: none; }
+.table tr:hover td { background: #f8fafc; }
+.table tr { cursor: pointer; }
+
+.cbTh { width: 40px; padding: 0 8px !important; }
+.cbTd { width: 40px; padding: 0 8px !important; text-align: center; cursor: default; }
+.rowCb { width: 15px; height: 15px; accent-color: #6366f1; cursor: pointer; }
+
+/* ── User cell ── */
+.userCell { display: flex; align-items: center; gap: 10px; }
+
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #312e81;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #c7d2fe;
+  flex-shrink: 0; overflow: hidden;
+}
+
+.avatarImg { width: 32px; height: 32px; object-fit: cover; }
+.userName  { font-weight: 500; color: #0f172a; }
+.userSub   { font-size: 11px; color: #64748b; margin-top: 1px; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 500;
+}
+
+.badgeSuper    { background: #312e81; color: #c7d2fe; }
+.badgeActive   { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.badgeInactive { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.badgeIncomplete { background: #fef3c7; color: #92400e; font-size: 10px; }
+.badgeGlobal   { background: #eff6ff; color: #1d4ed8; }
+.badgeRole     { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; margin: 1px; }
+
+.rolesWrap { display: flex; flex-wrap: wrap; gap: 2px; }
+
+/* ── Action buttons ── */
+.actionsCell { display: flex; gap: 6px; justify-content: flex-end; }
+
+.btnSm {
+  padding: 4px 10px; border: none; border-radius: 6px;
+  font-size: 11px; font-weight: 500; cursor: pointer;
+  transition: all .15s; font-family: inherit; white-space: nowrap;
+}
+
+.btnEdit      { background: #eff6ff; color: #1d4ed8; }
+.btnEdit:hover { background: #dbeafe; }
+.btnToggleOff { background: #fff7ed; color: #c2410c; }
+.btnToggleOff:hover { background: #fed7aa; }
+.btnToggleOn  { background: #f0fdf4; color: #15803d; }
+.btnToggleOn:hover  { background: #bbf7d0; }
+.btnDanger    { background: #fef2f2; color: #991b1b; }
+.btnDanger:hover { background: #fecaca; }
+
+/* ── Empty / error ── */
+.emptyRow td { text-align: center; padding: 40px; color: #64748b; font-size: 13px; }
+.errorMsg { color: #ef4444; font-size: 13px; padding: 20px; }
+
+/* ── Pagination ── */
+.pagination {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-top: 14px; flex-wrap: wrap; gap: 8px;
+}
+
+.paginationInfo { font-size: 12px; color: #64748b; }
+.paginationBtns { display: flex; gap: 8px; align-items: center; }
+
+.btnSecondary {
+  padding: 8px 14px; background: #ffffff; color: #475569;
+  border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px;
+  cursor: pointer; transition: all .15s; font-family: inherit;
+}
+
+.btnSecondary:hover { border-color: #cbd5e1; color: #0f172a; }
+.btnSecondary:disabled { opacity: .4; cursor: not-allowed; }
