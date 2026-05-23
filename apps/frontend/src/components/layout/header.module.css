@@ -531,6 +531,36 @@
 
 
 /* ── Calendar mini-popover ─────────────────────────────────────────────── */
+/* ── PWA Install button ──────────────────────────────────────────────────── */
+.installBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1.5px solid #6366f1;
+  background: #eef2ff;
+  color: #4f46e5;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.installBtn:hover {
+  background: #e0e7ff;
+  border-color: #4f46e5;
+}
+
+.installBtnLabel {
+  display: none;
+}
+
+@media (min-width: 600px) {
+  .installBtnLabel { display: inline; }
+}
+
 .calWrap {
   position: relative;
 }
@@ -701,4 +731,159 @@
 @media (max-width: 640px) {
   .calDropdown { width: 280px; right: -60px; }
   .centerNav { display: none; }
+}
+
+/* ── Theme switcher ─────────────────────────────────────────────────────────── */
+.themeSwitch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 2px;
+}
+.themeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+  font-family: inherit;
+}
+.themeBtn:hover {
+  background: #e2e8f0;
+  color: #374151;
+}
+.themeBtnActive {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+
+/* ── Dark mode ──────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .header {
+  background: #0e2235;
+  border-color: rgba(255,255,255,0.07);
+}
+:global([data-theme="dark"]) .brandName { color: #f1f5f9; }
+:global([data-theme="dark"]) .uname     { color: #cbd5e1; }
+
+:global([data-theme="dark"]) .notifBtn {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.10);
+  color: #94a3b8;
+}
+:global([data-theme="dark"]) .notifBtn:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.15);
+}
+
+:global([data-theme="dark"]) .installBtn {
+  background: rgba(99,102,241,0.15);
+  border-color: #6366f1;
+  color: #a5b4fc;
+}
+
+:global([data-theme="dark"]) .installBtn:hover {
+  background: rgba(99,102,241,0.25);
+}
+
+:global([data-theme="dark"]) .calBtn {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.10);
+  color: #e2e8f0;
+}
+:global([data-theme="dark"]) .calBtn:hover,
+:global([data-theme="dark"]) .calBtnOpen {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.15);
+}
+
+:global([data-theme="dark"]) .trigger:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.10);
+}
+:global([data-theme="dark"]) .triggerOpen {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.12);
+}
+
+:global([data-theme="dark"]) .dropdown,
+:global([data-theme="dark"]) .notifDropdown,
+:global([data-theme="dark"]) .calDropdown {
+  background: #1e293b;
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.3);
+}
+
+:global([data-theme="dark"]) .ddSep    { background: rgba(255,255,255,0.07); }
+:global([data-theme="dark"]) .ddItem   { color: #cbd5e1; }
+:global([data-theme="dark"]) .ddItem:hover {
+  background: rgba(255,255,255,0.06);
+  color: #f1f5f9;
+}
+:global([data-theme="dark"]) .ddItemIcon {
+  background: rgba(255,255,255,0.08);
+  color: #94a3b8;
+}
+:global([data-theme="dark"]) .ddItem:hover .ddItemIcon {
+  background: rgba(255,255,255,0.12);
+}
+:global([data-theme="dark"]) .ddDanger { color: #f87171; }
+:global([data-theme="dark"]) .ddDanger:hover {
+  background: rgba(239,68,68,0.1);
+  color: #fca5a5;
+}
+:global([data-theme="dark"]) .ddDanger .ddItemIcon {
+  background: rgba(239,68,68,0.15);
+  color: #f87171;
+}
+
+:global([data-theme="dark"]) .notifHeader { border-color: rgba(255,255,255,0.07); }
+:global([data-theme="dark"]) .notifTitle  { color: #f1f5f9; }
+:global([data-theme="dark"]) .notifItem   { border-color: rgba(255,255,255,0.04); }
+:global([data-theme="dark"]) .notifItemUnread  { background: rgba(255,94,58,0.06); }
+:global([data-theme="dark"]) .notifEvt   { color: #f1f5f9; }
+:global([data-theme="dark"]) .notifMsg   { color: #94a3b8; }
+:global([data-theme="dark"]) .notifEmpty { color: #64748b; }
+
+:global([data-theme="dark"]) .calHeader    { border-color: rgba(255,255,255,0.07); }
+:global([data-theme="dark"]) .calTodayLabel { color: #f1f5f9; }
+:global([data-theme="dark"]) .calItem      { border-color: rgba(255,255,255,0.04); }
+:global([data-theme="dark"]) .calItemTitle { color: #f1f5f9; }
+:global([data-theme="dark"]) .calItemMeta  { color: #64748b; }
+:global([data-theme="dark"]) .calFooter   {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.07);
+}
+:global([data-theme="dark"]) .calEmpty    { color: #64748b; }
+
+:global([data-theme="dark"]) .centerNavLink { color: #94a3b8; }
+:global([data-theme="dark"]) .centerNavLink:hover {
+  background: rgba(255,255,255,0.06);
+  color: #f1f5f9;
+}
+:global([data-theme="dark"]) .centerNavLinkActive {
+  background: rgba(255,255,255,0.08);
+  color: #f1f5f9;
+}
+
+:global([data-theme="dark"]) .themeSwitch {
+  background: rgba(255,255,255,0.08);
+}
+:global([data-theme="dark"]) .themeBtn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #e2e8f0;
+}
+:global([data-theme="dark"]) .themeBtnActive {
+  background: rgba(255,255,255,0.18);
+  color: #f1f5f9;
+  box-shadow: none;
 }

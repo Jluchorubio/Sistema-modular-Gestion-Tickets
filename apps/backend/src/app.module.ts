@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { PermissionGuard } from './gateway/guards/permission.guard';
@@ -18,11 +19,13 @@ import { AdminModule } from './modules/admin/admin.module';
 import { HealthModule } from './health/health.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
 
     // Rate limiting global: 100 req / 60s por IP
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
@@ -41,6 +44,7 @@ import { PermissionsModule } from './modules/permissions/permissions.module';
     AdminModule,
     SystemConfigModule,
     PermissionsModule,
+    CalendarModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -6,10 +6,13 @@ import { useRouter, usePathname } from 'next/navigation';
 import {
   Bell, User, LogOut, ChevronDown,
   CalendarDays, Clock, ChevronRight,
-  Ticket, Sun, Download,
+  Ticket, Sun, Moon, Monitor, Download,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
+import { useUIStore } from '@/stores/ui.store';
+import type { AppTheme } from '@/stores/ui.store';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { authService } from '@/services/auth.service';
 import { notificationsService, type AppNotification } from '@/services/notifications.service';
 import { requestsService, type AdmRequest } from '@/services/requests.service';
@@ -37,6 +40,11 @@ export function AppHeader({ noSidebar = false }: Props) {
   const qc          = useQueryClient();
   const user        = useAuthStore((s) => s.user);
   const clearAuth   = useAuthStore((s) => s.clearAuth);
+  const theme       = useUIStore((s) => s.theme);
+  const setTheme    = useUIStore((s) => s.setTheme);
+
+  const THEME_ICON: Record<AppTheme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
+  const ThemeIcon = THEME_ICON[theme];
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen,   setNotifOpen]   = useState(false);
@@ -107,6 +115,8 @@ export function AppHeader({ noSidebar = false }: Props) {
   const unread = notifData?.unread_count ?? 0;
   const notifications = notifData?.notifications ?? [];
 
+  const { canInstall, install } = usePWAInstall();
+
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/requests',  label: 'Solicitudes' },
@@ -139,6 +149,19 @@ export function AppHeader({ noSidebar = false }: Props) {
         )}
 
         <div className={styles.right}>
+          {/* ── PWA install button ── */}
+          {canInstall && (
+            <button
+              type="button"
+              className={styles.installBtn}
+              onClick={install}
+              title="Instalar aplicación"
+            >
+              <Download size={14} />
+              <span className={styles.installBtnLabel}>Instalar</span>
+            </button>
+          )}
+
           {/* ── Calendar mini-popover ── */}
           <div className={styles.calWrap} ref={calRef}>
             <button
@@ -335,10 +358,26 @@ export function AppHeader({ noSidebar = false }: Props) {
 
               {/* ── Preferences ── */}
               <div className={styles.ddSection}>
-                <div className={`${styles.ddItem} ${styles.ddItemDisabled}`}>
-                  <span className={styles.ddItemIcon}><Sun size={14} /></span>
+                <div className={styles.ddItem} style={{ cursor: 'default' }}>
+                  <span className={styles.ddItemIcon}><ThemeIcon size={14} /></span>
                   Tema
-                  <span className={styles.ddProxBadge}>Próximamente</span>
+                  <div className={styles.themeSwitch}>
+                    {([
+                      ['light',  Sun,     'Claro' ],
+                      ['dark',   Moon,    'Oscuro'],
+                      ['system', Monitor, 'Sistema'],
+                    ] as [AppTheme, typeof Sun, string][]).map(([t, Icon, label]) => (
+                      <button
+                        key={t}
+                        type="button"
+                        className={`${styles.themeBtn}${theme === t ? ` ${styles.themeBtnActive}` : ''}`}
+                        onClick={() => setTheme(t)}
+                        title={label}
+                      >
+                        <Icon size={12} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className={`${styles.ddItem} ${styles.ddItemDisabled}`}>
                   <span className={styles.ddItemIcon}><Download size={14} /></span>

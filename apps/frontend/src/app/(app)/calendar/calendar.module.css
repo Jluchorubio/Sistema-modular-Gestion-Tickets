@@ -424,6 +424,22 @@
   display: inline-block;
 }
 
+.dotMeet {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #34a853;
+  display: inline-block;
+}
+
+.dotCal {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #8b5cf6;
+  display: inline-block;
+}
+
 /* ── FullCalendar overrides ─────────────────────────────────────────────────── */
 .calWrap :global(.fc) {
   --fc-border-color:               #eef2f6;

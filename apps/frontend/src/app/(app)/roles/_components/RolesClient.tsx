@@ -22,8 +22,11 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>;
 
 export function RolesClient() {
-  const loaded  = usePermissionsStore(s => s.loaded);
-  const canView = usePermission('global:sidebar:roles');
+  const loaded     = usePermissionsStore(s => s.loaded);
+  const canView    = usePermission('global:sidebar:roles');
+  const canCreate  = usePermission('global:roles:create');
+  const canDelete  = usePermission('global:roles:delete');
+  const canEdit    = usePermission('global:roles:edit');
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [serverMsg,  setServerMsg]  = useState<{ ok: boolean; text: string } | null>(null);
@@ -90,10 +93,12 @@ export function RolesClient() {
             </div>
           )}
         </div>
-        <button className={styles.btnPrimary} onClick={openCreate}>
-          <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-          Crear rol
-        </button>
+        {canCreate && (
+          <button className={styles.btnPrimary} onClick={openCreate}>
+            <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            Crear rol
+          </button>
+        )}
       </div>
 
       {isLoading && <Spinner />}
@@ -126,21 +131,25 @@ export function RolesClient() {
                 </div>
                 <div className={styles.rowActions}>
                   {isActive ? (
-                    <button
-                      className={styles.btnIconDanger}
-                      onClick={() => handleDeactivate(r)}
-                      disabled={deleteMut.isPending}
-                    >
-                      Desactivar
-                    </button>
+                    canDelete && (
+                      <button
+                        className={styles.btnIconDanger}
+                        onClick={() => handleDeactivate(r)}
+                        disabled={deleteMut.isPending}
+                      >
+                        Desactivar
+                      </button>
+                    )
                   ) : (
-                    <button
-                      className={styles.btnReactivate}
-                      onClick={() => reactivateMut.mutate(r.id)}
-                      disabled={reactivateMut.isPending}
-                    >
-                      Reactivar
-                    </button>
+                    canEdit && (
+                      <button
+                        className={styles.btnReactivate}
+                        onClick={() => reactivateMut.mutate(r.id)}
+                        disabled={reactivateMut.isPending}
+                      >
+                        Reactivar
+                      </button>
+                    )
                   )}
                 </div>
               </div>

@@ -53,3 +53,14 @@
 @media (max-width: 720px) {
   .mainUser { padding: 22px; }
 }
+
+/* ── Dark mode ──────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .shell,
+:global([data-theme="dark"]) .shellUser {
+  background: #0d1b2a;
+  color: #e2e8f0;
+}
+:global([data-theme="dark"]) .main,
+:global([data-theme="dark"]) .mainUser {
+  background: #0d1b2a;
+}

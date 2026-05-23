@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { QrService } from './qr/qr.service';
+
+export type AssetStatus = 'disponible' | 'asignado' | 'en_reparacion' | 'dado_de_baja';
 
 export interface CreateAssetDto {
   module_id:       string;
@@ -12,6 +14,13 @@ export interface CreateAssetDto {
   serial_number?:  string;
   specifications?: Record<string, unknown>;
 }
+
+const FSM: Record<AssetStatus, AssetStatus[]> = {
+  disponible:    ['asignado', 'en_reparacion', 'dado_de_baja'],
+  asignado:      ['disponible', 'en_reparacion', 'dado_de_baja'],
+  en_reparacion: ['disponible', 'dado_de_baja'],
+  dado_de_baja:  [],
+};
 
 @Injectable()
 export class InventoryService {
@@ -81,14 +90,191 @@ export class InventoryService {
   }
 
   async updateStatus(id: string, status: string) {
-    const validStatuses = ['disponible', 'asignado', 'en_reparacion', 'dado_de_baja'];
-    if (!validStatuses.includes(status)) throw new NotFoundException(`Estado inválido: ${status}`);
+    const validStatuses: AssetStatus[] = ['disponible', 'asignado', 'en_reparacion', 'dado_de_baja'];
+    if (!validStatuses.includes(status as AssetStatus)) throw new BadRequestException(`Estado inválido: ${status}`);
     const [asset] = await this.db.query<any[]>(
       `UPDATE inventory.assets SET status = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING id, name, status`,
       [status, id],
     );
     if (!asset) throw new NotFoundException(`Asset ${id} no encontrado`);
     return asset;
+  }
+
+  /* ── FSM: assign to user ─────────────────────────────────────────────────── */
+
+  async assign(assetId: string, actorId: string, dto: { user_id: string; notes?: string }) {
+    const [asset] = await this.db.query<{ status: AssetStatus }[]>(
+      `SELECT status FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
+      [assetId],
+    );
+    if (!asset) throw new NotFoundException(`Asset ${assetId} no encontrado`);
+    if (!FSM[asset.status].includes('asignado')) {
+      throw new BadRequestException(`No se puede asignar un activo en estado "${asset.status}"`);
+    }
+    if (asset.status === 'asignado') {
+      throw new BadRequestException('El activo ya está asignado. Devuélvelo primero.');
+    }
+
+    await this.db.query(
+      `UPDATE inventory.assets SET status = 'asignado' WHERE id = $1`,
+      [assetId],
+    );
+
+    const [assignment] = await this.db.query<{ id: string }[]>(
+      `INSERT INTO inventory.asset_assignments (asset_id, user_id, assigned_by, notes)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [assetId, dto.user_id, actorId, dto.notes ?? null],
+    );
+
+    await this.db.query(
+      `INSERT INTO inventory.asset_assignment_history
+         (asset_id, user_id, assigned_by, assignment_id, action, reason)
+       VALUES ($1, $2, $3, $4, 'asignado', $5)`,
+      [assetId, dto.user_id, actorId, assignment.id, dto.notes ?? null],
+    );
+
+    return { ok: true, assignment_id: assignment.id };
+  }
+
+  /* ── FSM: unassign ───────────────────────────────────────────────────────── */
+
+  async unassign(assetId: string, actorId: string, reason?: string) {
+    const [asset] = await this.db.query<{ status: AssetStatus }[]>(
+      `SELECT status FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
+      [assetId],
+    );
+    if (!asset) throw new NotFoundException(`Asset ${assetId} no encontrado`);
+    if (asset.status !== 'asignado') {
+      throw new BadRequestException('El activo no está asignado actualmente.');
+    }
+
+    const [activeAssignment] = await this.db.query<{ id: string; user_id: string }[]>(
+      `SELECT id, user_id FROM inventory.asset_assignments
+       WHERE asset_id = $1 AND status = 'activo'
+       ORDER BY assigned_at DESC LIMIT 1`,
+      [assetId],
+    );
+
+    await this.db.query(
+      `UPDATE inventory.assets SET status = 'disponible' WHERE id = $1`,
+      [assetId],
+    );
+
+    if (activeAssignment) {
+      await this.db.query(
+        `UPDATE inventory.asset_assignments
+         SET status = 'devuelto', unassigned_at = now()
+         WHERE id = $1`,
+        [activeAssignment.id],
+      );
+
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history
+           (asset_id, user_id, assigned_by, assignment_id, action, reason)
+         VALUES ($1, $2, $3, $4, 'devuelto', $5)`,
+        [assetId, activeAssignment.user_id, actorId, activeAssignment.id, reason ?? null],
+      );
+    }
+
+    return { ok: true };
+  }
+
+  /* ── FSM: generic transition ─────────────────────────────────────────────── */
+
+  async transition(assetId: string, actorId: string, dto: { status: AssetStatus; reason?: string }) {
+    const [asset] = await this.db.query<{ status: AssetStatus }[]>(
+      `SELECT status FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
+      [assetId],
+    );
+    if (!asset) throw new NotFoundException(`Asset ${assetId} no encontrado`);
+
+    const allowed = FSM[asset.status];
+    if (!allowed.includes(dto.status)) {
+      throw new BadRequestException(
+        `Transición inválida: ${asset.status} → ${dto.status}. Permitidas: ${allowed.join(', ') || 'ninguna'}`,
+      );
+    }
+    if (dto.status === 'asignado') {
+      throw new BadRequestException('Para asignar usa el endpoint /assign');
+    }
+
+    if (asset.status === 'asignado' && dto.status !== 'disponible') {
+      const [activeAssignment] = await this.db.query<{ id: string; user_id: string }[]>(
+        `SELECT id, user_id FROM inventory.asset_assignments
+         WHERE asset_id = $1 AND status = 'activo'
+         ORDER BY assigned_at DESC LIMIT 1`,
+        [assetId],
+      );
+      if (activeAssignment) {
+        await this.db.query(
+          `UPDATE inventory.asset_assignments SET status = 'devuelto', unassigned_at = now() WHERE id = $1`,
+          [activeAssignment.id],
+        );
+        await this.db.query(
+          `INSERT INTO inventory.asset_assignment_history
+             (asset_id, user_id, assigned_by, assignment_id, action, reason)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [assetId, activeAssignment.user_id, actorId, activeAssignment.id,
+           dto.status === 'dado_de_baja' ? 'dado_de_baja' : 'reparacion', dto.reason ?? null],
+        );
+      }
+    } else {
+      const actionMap: Record<string, string> = {
+        en_reparacion: 'reparacion',
+        dado_de_baja:  'dado_de_baja',
+        disponible:    'devuelto',
+      };
+      const histAction = actionMap[dto.status] ?? dto.status;
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history
+           (asset_id, user_id, assigned_by, action, reason)
+         VALUES ($1, $1, $2, $3, $4)`,
+        [assetId, actorId, histAction, dto.reason ?? null],
+      );
+    }
+
+    await this.db.query(
+      `UPDATE inventory.assets SET status = $1 WHERE id = $2`,
+      [dto.status, assetId],
+    );
+
+    return { ok: true, status: dto.status };
+  }
+
+  /* ── Current assignment ──────────────────────────────────────────────────── */
+
+  async getCurrentAssignment(assetId: string) {
+    const [row] = await this.db.query<any[]>(
+      `SELECT aa.id, aa.assigned_at, aa.notes, aa.status AS assignment_status,
+              u.id AS user_id,
+              u.first_name || ' ' || u.last_name AS user_name,
+              u.email AS user_email,
+              u.avatar_url,
+              ab.first_name || ' ' || ab.last_name AS assigned_by_name
+       FROM   inventory.asset_assignments aa
+       JOIN   auth.users  u  ON u.id  = aa.user_id
+       JOIN   auth.users  ab ON ab.id = aa.assigned_by
+       WHERE  aa.asset_id = $1 AND aa.status = 'activo'
+       ORDER  BY aa.assigned_at DESC LIMIT 1`,
+      [assetId],
+    );
+    return row ?? null;
+  }
+
+  /* ── History ─────────────────────────────────────────────────────────────── */
+
+  async getHistory(assetId: string) {
+    return this.db.query<any[]>(
+      `SELECT h.id, h.action, h.reason, h.created_at,
+              u.first_name || ' ' || u.last_name AS user_name,
+              ab.first_name || ' ' || ab.last_name AS actor_name
+       FROM   inventory.asset_assignment_history h
+       LEFT JOIN auth.users u  ON u.id  = h.user_id
+       LEFT JOIN auth.users ab ON ab.id = h.assigned_by
+       WHERE  h.asset_id = $1
+       ORDER  BY h.created_at DESC`,
+      [assetId],
+    );
   }
 
   async getQr(id: string) {

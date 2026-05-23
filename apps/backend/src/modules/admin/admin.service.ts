@@ -145,7 +145,7 @@ export class AdminService {
       const body = `Los siguientes elementos serán eliminados permanentemente en ${days} día${days !== 1 ? 's' : ''}:\n\n${list}\n\nPuedes restaurarlos desde la papelera antes de que expire el plazo.`;
 
       for (const admin of admins) {
-        await this.notifications.send({ userId: admin.id, subject, body, channels: ['email', 'internal'] });
+        await this.notifications.notifyUser({ userId: admin.id, eventType: 'trash.warning', subject, body, channels: ['email', 'in_app'] });
       }
       this.logger.warn(`Trash warning sent (${days}d): ${items.length} items to ${admins.length} admin(s)`);
     }

@@ -81,7 +81,7 @@ export class TicketsController {
 
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)
-  @RequirePermission('helpdesk:tickets:view')
+  @RequirePermission('helpdesk:tickets:edit')
   approve(
     @Req() req: any,
     @Param('id', ParseUUIDPipe) id: string,
@@ -92,7 +92,7 @@ export class TicketsController {
 
   @Post(':id/reject')
   @HttpCode(HttpStatus.OK)
-  @RequirePermission('helpdesk:tickets:view')
+  @RequirePermission('helpdesk:tickets:edit')
   reject(
     @Req() req: any,
     @Param('id', ParseUUIDPipe) id: string,
@@ -110,7 +110,7 @@ export class TicketsController {
   }
 
   @Post(':id/attachments')
-  @RequirePermission('helpdesk:tickets:view')
+  @RequirePermission('helpdesk:tickets:edit')
   addAttachment(
     @Req() req: any,
     @Param('id', ParseUUIDPipe) id: string,
@@ -127,7 +127,7 @@ export class TicketsController {
 
   @Delete(':id/attachments/:attachmentId')
   @HttpCode(HttpStatus.OK)
-  @RequirePermission('helpdesk:tickets:view')
+  @RequirePermission('helpdesk:tickets:delete')
   deleteAttachment(
     @Req() req: any,
     @Param('id', ParseUUIDPipe) id: string,

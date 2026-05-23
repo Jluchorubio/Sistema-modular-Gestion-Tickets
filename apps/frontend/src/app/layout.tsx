@@ -12,7 +12,16 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: 'Tickets System',
-  description: 'Sistema modular de gestión de tickets',
+  description: 'Sistema modular de gestión de tickets empresariales',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Tickets',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 };
 
 export default function RootLayout({
@@ -22,6 +31,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={jakarta.variable}>
+      <head>
+        <meta name="theme-color" content="#0e2235" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+      </head>
       <body className={jakarta.className}>
         <Providers>{children}</Providers>
       </body>

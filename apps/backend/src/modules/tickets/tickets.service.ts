@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class TicketsService {
-  constructor(@InjectDataSource() private readonly db: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly db: DataSource,
+    private readonly events: EventEmitter2,
+  ) {}
 
   /* ── Module meta ────────────────────────────────────────────────────────── */
 
@@ -260,6 +264,13 @@ export class TicketsService {
         dto.description?.trim() ?? null,
       ],
     );
+
+    this.events.emit('ticket.created', {
+      ticketId:  ticket.id,
+      title:     ticket.title,
+      createdBy: userId,
+      moduleId:  dto.module_id,
+    });
 
     return ticket;
   }

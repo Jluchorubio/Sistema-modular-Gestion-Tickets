@@ -30,6 +30,21 @@ import {
   SLA_STATUS_LABELS,
   SLA_STATUS_COLORS,
 } from '@/services/tickets.service';
+import {
+  meetingsService,
+  type CalendarMeeting,
+  PROVIDER_LABELS,
+  PROVIDER_COLORS,
+  STATUS_LABELS as MEET_STATUS_LABELS,
+  STATUS_COLORS as MEET_STATUS_COLORS,
+} from '@/services/meetings.service';
+import {
+  calendarEventsService,
+  type CalendarEvent,
+  type CalEventType,
+  EVENT_TYPE_LABELS,
+  EVENT_COLORS,
+} from '@/services/calendar-events.service';
 import { usersService } from '@/services/users.service';
 import {
   REQUEST_STATUS_LABELS,
@@ -154,15 +169,17 @@ function eventColor(req: AdmRequest): string {
 
 /* ── Month grid ────────────────────────────────────────────────────────────── */
 interface MonthGridProps {
-  year:            number;
-  month:           number;
-  daysWithEvents:  Set<string>;
-  daysWithSla:     Set<string>;
-  selectedDay:     Date | null;
-  onDaySelect:     (d: Date) => void;
+  year:               number;
+  month:              number;
+  daysWithEvents:     Set<string>;
+  daysWithSla:        Set<string>;
+  daysWithMeetings:   Set<string>;
+  daysWithCalEvents:  Set<string>;
+  selectedDay:        Date | null;
+  onDaySelect:        (d: Date) => void;
 }
 
-function MonthGrid({ year, month, daysWithEvents, daysWithSla, selectedDay, onDaySelect }: MonthGridProps) {
+function MonthGrid({ year, month, daysWithEvents, daysWithSla, daysWithMeetings, daysWithCalEvents, selectedDay, onDaySelect }: MonthGridProps) {
   const todayStr    = toDateStr(new Date());
   const selectedStr = selectedDay ? toDateStr(selectedDay) : null;
 
@@ -195,6 +212,8 @@ function MonthGrid({ year, month, daysWithEvents, daysWithSla, selectedDay, onDa
           const isSelected = ds === selectedStr;
           const hasReqs    = daysWithEvents.has(ds);
           const hasSla     = daysWithSla.has(ds);
+          const hasMeet    = daysWithMeetings.has(ds);
+          const hasCalEvt  = daysWithCalEvents.has(ds);
 
           let cls = styles.dayCell;
           if (!cur)            cls += ` ${styles.dayCellOther}`;
@@ -204,10 +223,12 @@ function MonthGrid({ year, month, daysWithEvents, daysWithSla, selectedDay, onDa
           return (
             <div key={i} className={cls} onClick={() => cur && onDaySelect(date)}>
               <span className={styles.dayNum}>{date.getDate()}</span>
-              {!isSelected && (hasReqs || hasSla) && (
+              {!isSelected && (hasReqs || hasSla || hasMeet || hasCalEvt) && (
                 <div className={styles.dotRow}>
-                  {hasReqs && <span className={styles.dotCoral} />}
-                  {hasSla  && <span className={styles.dotSla}   />}
+                  {hasReqs   && <span className={styles.dotCoral} />}
+                  {hasSla    && <span className={styles.dotSla}   />}
+                  {hasMeet   && <span className={styles.dotMeet}  />}
+                  {hasCalEvt && <span className={styles.dotCal}   />}
                 </div>
               )}
             </div>
@@ -377,30 +398,44 @@ interface CreateModalProps {
   onClose:      () => void;
   onCreated:    () => void;
   isSuperadmin: boolean;
+  moduleId?:    string;
   onAudit:      (cat: string, msg: string) => void;
 }
 
-function CreateEventModal({ onClose, onCreated, isSuperadmin, onAudit }: CreateModalProps) {
+function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, onAudit }: CreateModalProps) {
   const qc = useQueryClient();
   const [title,      setTitle]      = useState('');
   const [desc,       setDesc]       = useState('');
   const [priority,   setPriority]   = useState<RequestPriority>('media');
-  const [dueDate,    setDueDate]    = useState('');
-  const [taskSource, setTaskSource] = useState<TaskSource>('user');
+  const [startDate,  setStartDate]  = useState('');
+  const [startTime,  setStartTime]  = useState('09:00');
+  const [endDate,    setEndDate]    = useState('');
+  const [endTime,    setEndTime]    = useState('10:00');
+  const [allDay,     setAllDay]     = useState(false);
+  const [eventType,  setEventType]  = useState<CalEventType>('personal');
+  const [color,      setColor]      = useState('#6366f1');
   const [error,      setError]      = useState('');
 
   const mut = useMutation({
-    mutationFn: () => requestsService.create({
-      type:        'task',
-      title:       title.trim(),
-      description: desc.trim() || 'Tarea de calendario.',
-      priority,
-      task_source: taskSource,
-      metadata:    dueDate ? { due_date: dueDate } : undefined,
-    }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['calendar-requests'] });
-      onAudit('CREACIÓN', `Tarea "${title.trim()}" registrada.`);
+    mutationFn: () => {
+      const startIso = allDay ? `${startDate}T00:00:00.000Z` : new Date(`${startDate}T${startTime}:00`).toISOString();
+      const endIso   = allDay ? `${endDate  || startDate}T23:59:59.000Z` : new Date(`${endDate || startDate}T${endTime}:00`).toISOString();
+      return calendarEventsService.createEvent({
+        title:      title.trim(),
+        description: desc.trim() || undefined,
+        event_type:  eventType,
+        visibility:  eventType === 'module' ? 'module' : eventType === 'global' ? 'global' : 'private',
+        module_id:   eventType === 'module' ? (moduleId ?? undefined) : undefined,
+        start_at:    startIso,
+        end_at:      endIso,
+        all_day:     allDay,
+        priority,
+        color,
+      });
+    },
+    onSuccess: (ev) => {
+      qc.invalidateQueries({ queryKey: ['calendar-events'] });
+      onAudit('EVENTO', `"${ev.title}" creado en el calendario.`);
       onCreated(); onClose();
     },
     onError: () => setError('Error al crear. Intenta de nuevo.'),
@@ -409,6 +444,7 @@ function CreateEventModal({ onClose, onCreated, isSuperadmin, onAudit }: CreateM
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (title.trim().length < 3) { setError('Título mínimo 3 caracteres.'); return; }
+    if (!startDate) { setError('Fecha de inicio requerida.'); return; }
     setError('');
     mut.mutate();
   }
@@ -417,21 +453,20 @@ function CreateEventModal({ onClose, onCreated, isSuperadmin, onAudit }: CreateM
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Crear Tarea u Evento</h3>
+          <h3 className={styles.modalTitle}>Nuevo Evento de Calendario</h3>
           <button className={styles.closeBtn} onClick={onClose}><X size={15} /></button>
         </div>
         <form onSubmit={submit} className={styles.form}>
           {isSuperadmin && (
             <div>
-              <label className={styles.fLabel}>Tipo de tarea</label>
+              <label className={styles.fLabel}>Tipo</label>
               <div className={styles.typeRow}>
-                {(['user', 'system'] as TaskSource[]).map((src) => (
-                  <button
-                    key={src} type="button"
-                    className={`${styles.typeBtn} ${taskSource === src ? styles.typeBtnActive : ''}`}
-                    onClick={() => setTaskSource(src)}
+                {(['personal', 'module', 'global'] as CalEventType[]).map((t) => (
+                  <button key={t} type="button"
+                    className={`${styles.typeBtn} ${eventType === t ? styles.typeBtnActive : ''}`}
+                    onClick={() => setEventType(t)}
                   >
-                    {src === 'system' ? <><Settings size={12} /> Del sistema</> : <><User size={12} /> Personal</>}
+                    {t === 'personal' ? <><User size={12} /> Personal</> : t === 'module' ? <><Settings size={12} /> Módulo</> : '🌐 Global'}
                   </button>
                 ))}
               </div>
@@ -439,12 +474,44 @@ function CreateEventModal({ onClose, onCreated, isSuperadmin, onAudit }: CreateM
           )}
           <div>
             <label className={styles.fLabel}>Título *</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nombre de la tarea u evento…" className={styles.fInput} maxLength={200} />
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nombre del evento…" className={styles.fInput} maxLength={200} />
           </div>
           <div>
             <label className={styles.fLabel}>Descripción</label>
-            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descripción opcional…" rows={3} className={styles.fTextarea} />
+            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descripción opcional…" rows={2} className={styles.fTextarea} />
           </div>
+
+          {/* All-day toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#94a3b8', cursor: 'pointer' }}>
+            <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+            Todo el día
+          </label>
+
+          <div className={styles.fRow2}>
+            <div>
+              <label className={styles.fLabel}>Inicio *</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={styles.fInput} />
+              {!allDay && (
+                <select value={startTime} onChange={(e) => setStartTime(e.target.value)} className={styles.fSelect} style={{ marginTop: 4 }}>
+                  {['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'].map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div>
+              <label className={styles.fLabel}>Fin</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={styles.fInput} />
+              {!allDay && (
+                <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className={styles.fSelect} style={{ marginTop: 4 }}>
+                  {['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'].map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+
           <div className={styles.fRow2}>
             <div>
               <label className={styles.fLabel}>Prioridad</label>
@@ -453,15 +520,20 @@ function CreateEventModal({ onClose, onCreated, isSuperadmin, onAudit }: CreateM
               </select>
             </div>
             <div>
-              <label className={styles.fLabel}>Fecha límite</label>
-              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={styles.fInput} />
+              <label className={styles.fLabel}>Color</label>
+              <select value={color} onChange={(e) => setColor(e.target.value)} className={styles.fSelect}>
+                {Object.entries(EVENT_COLORS).map(([hex, name]) => (
+                  <option key={hex} value={hex}>{name}</option>
+                ))}
+              </select>
             </div>
           </div>
+
           {error && <p className={styles.fError}>{error}</p>}
           <div className={styles.modalActions}>
             <button type="button" className={styles.btnSecondary} onClick={onClose}>Cancelar</button>
             <button type="submit" className={styles.btnPrimary} disabled={mut.isPending}>
-              <CheckCircle2 size={13} /> {mut.isPending ? 'Guardando…' : 'Guardar Evento'}
+              <CheckCircle2 size={13} /> {mut.isPending ? 'Guardando…' : 'Crear Evento'}
             </button>
           </div>
         </form>
@@ -567,6 +639,148 @@ function EventDetailPopup({ req, role, onClose, onRefresh, onAudit }: PopupProps
   );
 }
 
+/* ── Day meeting card ──────────────────────────────────────────────────────── */
+function DayMeetingCard({ meeting, onClick }: { meeting: CalendarMeeting; onClick: () => void }) {
+  const provColor   = PROVIDER_COLORS[meeting.provider] ?? '#64748b';
+  const statusColor = MEET_STATUS_COLORS[meeting.status] ?? '#64748b';
+  const dt          = new Date(meeting.scheduled_at);
+  return (
+    <div className={`${styles.dayEventCard} ${styles.ticketCard}`} onClick={onClick} style={{ borderLeft: `3px solid ${provColor}` }}>
+      <div className={styles.dayEventTop}>
+        <span className={styles.slaTag} style={{ background: `${provColor}22`, color: provColor, border: `1px solid ${provColor}44` }}>
+          📹 {PROVIDER_LABELS[meeting.provider]}
+        </span>
+        <span style={{ fontSize: 9, fontWeight: 600, color: statusColor, textTransform: 'uppercase' }}>
+          {MEET_STATUS_LABELS[meeting.status]}
+        </span>
+      </div>
+      <h4 className={styles.dayEventTitle}>{meeting.reason}</h4>
+      <div className={styles.dayEventMeta}>
+        <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>{meeting.module_name}</span>
+        <span className={styles.dayEventUser}>{dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Meeting detail popup ──────────────────────────────────────────────────── */
+function MeetingPopup({ meeting, onClose }: { meeting: CalendarMeeting; onClose: () => void }) {
+  const provColor   = PROVIDER_COLORS[meeting.provider] ?? '#64748b';
+  const statusColor = MEET_STATUS_COLORS[meeting.status] ?? '#64748b';
+  const dt          = new Date(meeting.scheduled_at);
+  return (
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
+        <button className={styles.closeBtn} onClick={onClose} style={{ position: 'absolute', top: 14, right: 14 }}>
+          <X size={15} />
+        </button>
+        <div className={styles.popupType}>📹 Reunión — {PROVIDER_LABELS[meeting.provider]}</div>
+        <div className={styles.popupTitle}>{meeting.reason}</div>
+        <div className={styles.badgeRow}>
+          <span className={styles.badge} style={{ background: `${provColor}22`, color: provColor, border: `1px solid ${provColor}44` }}>
+            {PROVIDER_LABELS[meeting.provider]}
+          </span>
+          <span className={styles.badge} style={{ background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44` }}>
+            {MEET_STATUS_LABELS[meeting.status]}
+          </span>
+        </div>
+        <div className={styles.popupMeta}>
+          <span>Ticket: {meeting.ticket_title}</span>
+          <span>Módulo: {meeting.module_name}</span>
+          <span>Organiza: {meeting.created_by_name}</span>
+          <span>Fecha: {dt.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          <span>Hora: {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
+          {meeting.duration_minutes && <span>Duración: {meeting.duration_minutes} min</span>}
+          <span>Participantes: {meeting.participant_count}</span>
+        </div>
+        {meeting.meeting_url && (
+          <div style={{ marginTop: 14 }}>
+            <a
+              href={meeting.meeting_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 16px', background: provColor, color: '#fff',
+                borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none',
+              }}
+            >
+              Unirse a la reunión →
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Calendar event card ────────────────────────────────────────────────────── */
+function DayCalEventCard({ ev, onClick }: { ev: CalendarEvent; onClick: () => void }) {
+  const color    = ev.color ?? '#8b5cf6';
+  const typeLabel = EVENT_TYPE_LABELS[ev.event_type] ?? ev.event_type;
+  const start    = ev.all_day ? null : new Date(ev.start_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  return (
+    <div className={`${styles.dayEventCard} ${styles.ticketCard}`} onClick={onClick} style={{ borderLeft: `3px solid ${color}` }}>
+      <div className={styles.dayEventTop}>
+        <span className={styles.slaTag} style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
+          📅 {typeLabel}
+        </span>
+        {ev.all_day && <span style={{ fontSize: 9, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>Todo el día</span>}
+        {start       && <span className={styles.dayEventUser}>{start}</span>}
+      </div>
+      <h4 className={styles.dayEventTitle}>{ev.title}</h4>
+      {ev.module_name && (
+        <div className={styles.dayEventMeta}>
+          <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>{ev.module_name}</span>
+          <span className={styles.dayEventUser}>{ev.created_by_name}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Calendar event popup ───────────────────────────────────────────────────── */
+function CalEventPopup({ ev, onClose }: { ev: CalendarEvent; onClose: () => void }) {
+  const color      = ev.color ?? '#8b5cf6';
+  const typeLabel  = EVENT_TYPE_LABELS[ev.event_type] ?? ev.event_type;
+  const startDt    = new Date(ev.start_at);
+  const endDt      = new Date(ev.end_at);
+  const dateStr    = startDt.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const timeStr    = ev.all_day ? 'Todo el día' : `${startDt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })} – ${endDt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`;
+  return (
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
+        <button className={styles.closeBtn} onClick={onClose} style={{ position: 'absolute', top: 14, right: 14 }}>
+          <X size={15} />
+        </button>
+        <div className={styles.popupType}>📅 Evento — {typeLabel}</div>
+        <div className={styles.popupTitle}>{ev.title}</div>
+        <div className={styles.badgeRow}>
+          <span className={styles.badge} style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
+            {typeLabel}
+          </span>
+          {ev.priority && (
+            <span className={styles.badge} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+              {ev.priority}
+            </span>
+          )}
+          <span className={styles.badge} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+            {ev.status}
+          </span>
+        </div>
+        {ev.description && <p className={styles.popupDesc}>{ev.description}</p>}
+        <div className={styles.popupMeta}>
+          <span>Fecha: {dateStr}</span>
+          <span>Hora: {timeStr}</span>
+          {ev.module_name       && <span>Módulo: {ev.module_name}</span>}
+          {ev.created_by_name   && <span>Organizador: {ev.created_by_name}</span>}
+          {ev.participant_count > 0 && <span>Participantes: {ev.participant_count}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── FC view map ────────────────────────────────────────────────────────────── */
 const FC_VIEW: Record<Exclude<CalendarView, 'mes'>, string> = {
   semana: 'dayGridWeek',
@@ -596,9 +810,11 @@ export function CalendarClient() {
   const [sourceFilter,   setSourceFilter]   = useState<SourceFilter>('');
   const [priorityFilter, setPriorityFilter] = useState<RequestPriority | ''>('');
 
-  const [showCreate,    setShowCreate]    = useState(false);
-  const [selectedReq,   setSelectedReq]   = useState<AdmRequest | null>(null);
-  const [selectedTicket, setSelectedTicket] = useState<TicketListItem | null>(null);
+  const [showCreate,       setShowCreate]       = useState(false);
+  const [selectedReq,      setSelectedReq]      = useState<AdmRequest | null>(null);
+  const [selectedTicket,   setSelectedTicket]   = useState<TicketListItem | null>(null);
+  const [selectedMeeting,  setSelectedMeeting]  = useState<CalendarMeeting | null>(null);
+  const [selectedCalEvent, setSelectedCalEvent] = useState<CalendarEvent | null>(null);
 
   /* ── Requests query ── */
   const { data: reqData, isLoading: reqLoading, refetch } = useQuery({
@@ -620,9 +836,25 @@ export function CalendarClient() {
     staleTime: 2 * 60_000,
   });
 
+  /* ── Meetings query ── */
+  const { data: meetingData = [] } = useQuery({
+    queryKey: ['calendar-meetings', ctxIdx, ctx.moduleId],
+    queryFn:  () => meetingsService.getCalendarMeetings(ctx.moduleId ? { module_id: ctx.moduleId } : undefined),
+    staleTime: 2 * 60_000,
+  });
+
+  /* ── Calendar events query ── */
+  const { data: calEventData = [] } = useQuery({
+    queryKey: ['calendar-events', ctxIdx, ctx.moduleId],
+    queryFn:  () => calendarEventsService.getEvents(ctx.moduleId ? { module_id: ctx.moduleId } : undefined),
+    staleTime: 2 * 60_000,
+  });
+
   const isLoading = reqLoading || ticketLoading;
   const requests  = reqData?.data   ?? [];
   const tickets   = ticketData?.data ?? [];
+  const meetings  = meetingData;
+  const calEvents = calEventData;
 
   /* ── Client-side filter on requests ── */
   const filteredRequests = useMemo(() => {
@@ -654,6 +886,18 @@ export function CalendarClient() {
     return s;
   }, [slaTickets]);
 
+  const daysWithMeetings = useMemo(() => {
+    const s = new Set<string>();
+    meetings.forEach((m) => s.add(m.scheduled_at.slice(0, 10)));
+    return s;
+  }, [meetings]);
+
+  const daysWithCalEvents = useMemo(() => {
+    const s = new Set<string>();
+    calEvents.forEach((e) => s.add(e.start_at.slice(0, 10)));
+    return s;
+  }, [calEvents]);
+
   /* ── Right panel: selected day items ── */
   const selectedDayReqs = useMemo(() => {
     if (!selectedDay) return [];
@@ -667,6 +911,18 @@ export function CalendarClient() {
     return slaTickets.filter((t) => t.sla_deadline!.slice(0, 10) === ds);
   }, [slaTickets, selectedDay]);
 
+  const selectedDayMeetings = useMemo(() => {
+    if (!selectedDay) return [];
+    const ds = toDateStr(selectedDay);
+    return meetings.filter((m) => m.scheduled_at.slice(0, 10) === ds);
+  }, [meetings, selectedDay]);
+
+  const selectedDayCalEvents = useMemo(() => {
+    if (!selectedDay) return [];
+    const ds = toDateStr(selectedDay);
+    return calEvents.filter((e) => e.start_at.slice(0, 10) === ds);
+  }, [calEvents, selectedDay]);
+
   /* ── Stats ── */
   const stats = useMemo(() => ({
     total:    requests.length,
@@ -674,7 +930,9 @@ export function CalendarClient() {
     inProg:   requests.filter((r) => r.status === 'in_progress').length,
     done:     requests.filter((r) => r.status === 'completed').length,
     slaOpen:  slaTickets.filter((t) => t.sla_status === 'active').length,
-  }), [requests, slaTickets]);
+    meetings: meetings.filter((m) => m.status === 'scheduled').length,
+    eventos:  calEvents.filter((e) => e.status === 'active').length,
+  }), [requests, slaTickets, meetings, calEvents]);
 
   /* ── Month nav ── */
   function prevMonth() {
@@ -730,12 +988,49 @@ export function CalendarClient() {
       };
     });
 
-    return [...reqEvts, ...ticketEvts];
-  }, [filteredRequests, slaTickets]);
+    const meetEvts = meetings.map((m) => {
+      const color = PROVIDER_COLORS[m.provider] ?? '#64748b';
+      return {
+        id:              `meet-${m.id}`,
+        title:           `📹 ${m.reason}`,
+        start:           m.scheduled_at,
+        allDay:          false,
+        backgroundColor: color,
+        borderColor:     color,
+        textColor:       '#fff',
+        extendedProps:   { meeting: m },
+      };
+    });
+
+    const calEvts = calEvents.map((e) => {
+      const color = e.color ?? '#8b5cf6';
+      return {
+        id:              `cal-${e.id}`,
+        title:           `📅 ${e.title}`,
+        start:           e.start_at,
+        end:             e.end_at,
+        allDay:          e.all_day,
+        backgroundColor: color,
+        borderColor:     color,
+        textColor:       '#fff',
+        extendedProps:   { calEvent: e },
+      };
+    });
+
+    return [...reqEvts, ...ticketEvts, ...meetEvts, ...calEvts];
+  }, [filteredRequests, slaTickets, meetings, calEvents]);
 
   function handleFCClick(info: EventClickArg) {
     info.jsEvent.preventDefault();
-    if (info.event.extendedProps.ticket) {
+    if (info.event.extendedProps.meeting) {
+      const m = info.event.extendedProps.meeting as CalendarMeeting;
+      setSelectedMeeting(m);
+      audit.add('REUNIÓN', `Abriendo: "${m.reason}".`);
+    } else if (info.event.extendedProps.calEvent) {
+      const e = info.event.extendedProps.calEvent as CalendarEvent;
+      setSelectedCalEvent(e);
+      audit.add('EVENTO', `Abriendo: "${e.title}".`);
+    } else if (info.event.extendedProps.ticket) {
       const t = info.event.extendedProps.ticket as TicketListItem;
       setSelectedTicket(t);
       audit.add('SLA', `Ticket SLA: "${t.title}".`);
@@ -752,7 +1047,7 @@ export function CalendarClient() {
   }
 
   const hasFilters = !!(statusFilter || typeFilter || sourceFilter || priorityFilter);
-  const totalDayItems = selectedDayReqs.length + selectedDayTickets.length;
+  const totalDayItems = selectedDayReqs.length + selectedDayTickets.length + selectedDayMeetings.length + selectedDayCalEvents.length;
 
   return (
     <ModuleLayout title="Calendario" description="Planificación, SLA y coordinación operativa." isSuperadmin={isSuperadmin} showHero={false}>
@@ -801,11 +1096,13 @@ export function CalendarClient() {
           {/* Stats strip */}
           <div className={styles.statsStrip}>
             {[
-              { label: 'Total',      value: stats.total,   color: '#0e2235' },
-              { label: 'Pendientes', value: stats.pending, color: REQUEST_STATUS_COLORS.pending },
-              { label: 'En proceso', value: stats.inProg,  color: REQUEST_STATUS_COLORS.in_progress },
-              { label: 'Completados',value: stats.done,    color: REQUEST_STATUS_COLORS.completed },
-              { label: 'SLA activos',value: stats.slaOpen, color: SLA_STATUS_COLORS.active },
+              { label: 'Total',      value: stats.total,    color: '#0e2235' },
+              { label: 'Pendientes', value: stats.pending,  color: REQUEST_STATUS_COLORS.pending },
+              { label: 'En proceso', value: stats.inProg,   color: REQUEST_STATUS_COLORS.in_progress },
+              { label: 'Completados',value: stats.done,     color: REQUEST_STATUS_COLORS.completed },
+              { label: 'SLA activos',value: stats.slaOpen,  color: SLA_STATUS_COLORS.active },
+              { label: 'Reuniones',  value: stats.meetings, color: '#34a853' },
+              { label: 'Eventos',    value: stats.eventos,  color: '#8b5cf6' },
             ].map(({ label, value, color }) => (
               <div key={label} className={styles.statChip}>
                 <span className={styles.statValue} style={{ color }}>{value}</span>
@@ -820,6 +1117,12 @@ export function CalendarClient() {
               </span>
               <span className={styles.dotLegendItem}>
                 <span className={styles.dotSla} style={{ position: 'relative', display: 'inline-block' }} /> SLA Tickets
+              </span>
+              <span className={styles.dotLegendItem}>
+                <span className={styles.dotMeet} style={{ position: 'relative', display: 'inline-block' }} /> Reuniones
+              </span>
+              <span className={styles.dotLegendItem}>
+                <span className={styles.dotCal} style={{ position: 'relative', display: 'inline-block' }} /> Eventos
               </span>
             </div>
           </div>
@@ -885,6 +1188,8 @@ export function CalendarClient() {
                   month={calMonth}
                   daysWithEvents={daysWithEvents}
                   daysWithSla={daysWithSla}
+                  daysWithMeetings={daysWithMeetings}
+                  daysWithCalEvents={daysWithCalEvents}
                   selectedDay={selectedDay}
                   onDaySelect={handleDaySelect}
                 />
@@ -953,7 +1258,23 @@ export function CalendarClient() {
                   </div>
                 ) : (
                   <>
-                    {/* SLA tickets first (higher urgency) */}
+                    {/* Calendar events */}
+                    {selectedDayCalEvents.map((e) => (
+                      <DayCalEventCard
+                        key={e.id}
+                        ev={e}
+                        onClick={() => { setSelectedCalEvent(e); audit.add('EVENTO', `Evento: "${e.title}".`); }}
+                      />
+                    ))}
+                    {/* Meetings (scheduled today) */}
+                    {selectedDayMeetings.map((m) => (
+                      <DayMeetingCard
+                        key={m.id}
+                        meeting={m}
+                        onClick={() => { setSelectedMeeting(m); audit.add('REUNIÓN', `Reunión: "${m.reason}".`); }}
+                      />
+                    ))}
+                    {/* SLA tickets */}
                     {selectedDayTickets.map((t) => (
                       <TicketSlaCard
                         key={t.id}
@@ -961,7 +1282,7 @@ export function CalendarClient() {
                         onClick={() => { setSelectedTicket(t); audit.add('SLA', `Ticket: "${t.title}".`); }}
                       />
                     ))}
-                    {/* Then requests/tasks */}
+                    {/* Requests/tasks */}
                     {selectedDayReqs.map((req) => (
                       <DayEventCard
                         key={req.id}
@@ -988,13 +1309,19 @@ export function CalendarClient() {
       </div>
 
       {showCreate && (
-        <CreateEventModal onClose={() => setShowCreate(false)} onCreated={() => refetch()} isSuperadmin={isSuperadmin} onAudit={audit.add} />
+        <CreateEventModal onClose={() => setShowCreate(false)} onCreated={() => refetch()} isSuperadmin={isSuperadmin} moduleId={ctx.moduleId} onAudit={audit.add} />
       )}
       {selectedReq && (
         <EventDetailPopup req={selectedReq} role={role} onClose={() => setSelectedReq(null)} onRefresh={() => refetch()} onAudit={audit.add} />
       )}
       {selectedTicket && (
         <TicketSlaPopup ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+      )}
+      {selectedMeeting && (
+        <MeetingPopup meeting={selectedMeeting} onClose={() => setSelectedMeeting(null)} />
+      )}
+      {selectedCalEvent && (
+        <CalEventPopup ev={selectedCalEvent} onClose={() => setSelectedCalEvent(null)} />
       )}
     </ModuleLayout>
   );

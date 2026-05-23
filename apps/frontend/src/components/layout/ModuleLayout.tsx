@@ -1,10 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Mail } from 'lucide-react';
+import { Mail, LockKeyhole } from 'lucide-react';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { getInitials } from '@/lib/utils';
+import { useModuleAccess } from '@/hooks/useModuleAccess';
+import { RequestModuleAccessModal } from '@/components/modules/RequestModuleAccessModal';
 import styles from './module-layout.module.css';
 
 interface Props {
@@ -24,6 +27,9 @@ export function ModuleLayout({
   showHero = true,
   children,
 }: Props) {
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const { hasAccess, isChecking } = useModuleAccess(moduleId);
+
   /* ── Fetch module data & members ── */
   const { data: mod } = useQuery({
     queryKey: ['module', moduleId],
@@ -56,6 +62,55 @@ export function ModuleLayout({
   const adminInitials = admin
     ? getInitials(admin.first_name, admin.last_name)
     : null;
+
+  /* ── Access guard ── */
+  if (!isChecking && !hasAccess) {
+    const displayName = mod?.name ?? title;
+    return (
+      <>
+        <div className={styles.card}>
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '80px 24px', gap: 16, textAlign: 'center',
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'rgba(255,94,58,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <LockKeyhole size={24} style={{ color: '#ff5e3a' }} />
+            </div>
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
+                Sin acceso a {displayName}
+              </p>
+              <p style={{ fontSize: 13, color: '#64748b', margin: 0, maxWidth: 340 }}>
+                No tienes un rol activo en este módulo. Solicita acceso para que un administrador lo revise.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAccessModal(true)}
+              style={{
+                padding: '9px 20px', borderRadius: 8, border: 'none',
+                background: '#ff5e3a', color: '#fff', fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Solicitar acceso
+            </button>
+          </div>
+        </div>
+        {showAccessModal && moduleId && (
+          <RequestModuleAccessModal
+            moduleName={displayName}
+            moduleId={moduleId}
+            onClose={() => setShowAccessModal(false)}
+          />
+        )}
+      </>
+    );
+  }
 
   /* ── Hero overlay color style ── */
   const overlayStyle: React.CSSProperties = {

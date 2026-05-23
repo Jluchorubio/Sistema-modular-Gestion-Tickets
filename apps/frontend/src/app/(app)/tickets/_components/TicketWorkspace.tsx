@@ -20,10 +20,16 @@ import {
 } from '@/services/tickets.service';
 import { usersService } from '@/services/users.service';
 import { requestsService } from '@/services/requests.service';
+import {
+  meetingsService,
+  type TicketMeeting,
+  PROVIDER_LABELS,
+  PROVIDER_COLORS,
+  STATUS_LABELS,
+  STATUS_COLORS,
+} from '@/services/meetings.service';
 import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import styles from '../tickets.module.css';
-
-type MeetingType = 'asesoramiento' | 'usuario';
 
 interface LocalGuest {
   id:       string;
@@ -121,14 +127,14 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [validationError, setValidationError] = useState('');
 
   /* ── Right panel state ── */
-  const [meetingType,    setMeetingType]    = useState<MeetingType>('asesoramiento');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [isCalling,      setIsCalling]      = useState(false);
   const [scheduledDate,  setScheduledDate]  = useState('');
   const [scheduledTime,  setScheduledTime]  = useState('10:00');
+  const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'teams' | 'zoom' | 'internal'>('google_meet');
+  const [meetingUrl,      setMeetingUrl]      = useState('');
+  const [meetingReason,   setMeetingReason]   = useState('Asesoramiento técnico');
   const [localGuests,    setLocalGuests]    = useState<LocalGuest[]>([]);
-  const [scheduledDetails, setScheduledDetails] = useState<{ date: string; time: string; type: MeetingType } | null>(null);
-  const [isScheduling,   setIsScheduling]   = useState(false);
 
   /* ── Attachments ── */
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -152,6 +158,32 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const deletAttMut = useMutation({
     mutationFn: (attId: string) => ticketsService.deleteAttachment(ticketId, attId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] }),
+  });
+
+  /* ── Meetings ── */
+  const { data: meetings = [] } = useQuery<TicketMeeting[]>({
+    queryKey: ['ticket-meetings', ticketId],
+    queryFn:  () => meetingsService.getMeetings(ticketId),
+    staleTime: 30_000,
+  });
+
+  const scheduleMut = useMutation({
+    mutationFn: () => meetingsService.createMeeting(ticketId, {
+      reason:       meetingReason.trim() || 'Reunión de soporte',
+      provider:     meetingProvider,
+      meeting_url:  meetingUrl.trim() || undefined,
+      scheduled_at: new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString(),
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] });
+      setScheduledDate(''); setScheduledTime('10:00');
+      setMeetingUrl(''); setMeetingReason('Asesoramiento técnico');
+    },
+  });
+
+  const cancelMeetMut = useMutation({
+    mutationFn: (meetingId: string) => meetingsService.cancelMeeting(meetingId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] }),
   });
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -200,38 +232,9 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   }
 
   /* ── Collaboration: schedule meeting ── */
-  async function handleSchedule() {
+  function handleSchedule() {
     if (!scheduledDate || !scheduledTime) return;
-    setIsScheduling(true);
-
-    const methodLabels: Record<MeetingType, string> = {
-      asesoramiento: 'Asesoramiento Técnico',
-      usuario:       'Llamada con Usuario',
-    };
-
-    try {
-      await requestsService.create({
-        type:        'task',
-        title:       `[${methodLabels[meetingType]}] ${ticket?.title ?? ticketId}`,
-        description: `Sesión programada para resolver el ticket #${ticketId}.\nFecha: ${scheduledDate}  Hora: ${scheduledTime}`,
-        priority:    (ticket?.priority as any) ?? 'media',
-        task_source: 'system',
-        metadata: {
-          ticket_id:      ticketId,
-          meeting_type:   meetingType,
-          scheduled_date: scheduledDate,
-          scheduled_time: scheduledTime,
-          due_date:       scheduledDate,
-        },
-      });
-
-      setScheduledDetails({ date: scheduledDate, time: scheduledTime, type: meetingType });
-      qc.invalidateQueries({ queryKey: ['requests'] });
-    } catch {
-      setScheduledDetails({ date: scheduledDate, time: scheduledTime, type: meetingType });
-    } finally {
-      setIsScheduling(false);
-    }
+    scheduleMut.mutate();
   }
 
   /* ── Guest helpers ── */
@@ -777,18 +780,43 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
             {/* Programar reunión */}
             <div className={styles.darkSection}>
-              <p className={styles.inviteTitle}>Programar en Calendario</p>
+              <p className={styles.inviteTitle}>Programar Reunión</p>
               <p className={styles.inviteSubtitle}>
-                Agenda una sesión y quedará registrada en el calendario del equipo.
+                Agenda una sesión vinculada a este ticket.
               </p>
+
+              {/* Provider */}
               <select
-                value={meetingType}
-                onChange={(e) => setMeetingType(e.target.value as MeetingType)}
+                value={meetingProvider}
+                onChange={(e) => setMeetingProvider(e.target.value as typeof meetingProvider)}
                 className={styles.methodSelect}
               >
-                <option value="asesoramiento">Asesoramiento Técnico</option>
-                <option value="usuario">Llamada con Usuario</option>
+                <option value="google_meet">Google Meet</option>
+                <option value="teams">Microsoft Teams</option>
+                <option value="zoom">Zoom</option>
+                <option value="internal">Enlace interno</option>
               </select>
+
+              {/* Reason */}
+              <input
+                type="text"
+                value={meetingReason}
+                onChange={(e) => setMeetingReason(e.target.value)}
+                placeholder="Motivo de la reunión *"
+                className={styles.scheduleInput}
+                style={{ marginTop: 8 }}
+              />
+
+              {/* Optional link */}
+              <input
+                type="url"
+                value={meetingUrl}
+                onChange={(e) => setMeetingUrl(e.target.value)}
+                placeholder="Enlace de reunión (opcional)"
+                className={styles.scheduleInput}
+                style={{ marginTop: 6 }}
+              />
+
               <div className={styles.schedulePanel}>
                 <div className={styles.scheduleGrid}>
                   <div className={styles.scheduleFld}>
@@ -798,7 +826,6 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                       value={scheduledDate}
                       onChange={(e) => setScheduledDate(e.target.value)}
                       className={styles.scheduleInput}
-                      required
                     />
                   </div>
                   <div className={styles.scheduleFld}>
@@ -808,27 +835,25 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                       onChange={(e) => setScheduledTime(e.target.value)}
                       className={styles.scheduleSelect}
                     >
-                      <option value="08:00">08:00 AM</option>
-                      <option value="09:00">09:00 AM</option>
-                      <option value="10:00">10:00 AM</option>
-                      <option value="11:00">11:00 AM</option>
-                      <option value="12:00">12:00 PM</option>
-                      <option value="13:00">01:00 PM</option>
-                      <option value="14:00">02:00 PM</option>
-                      <option value="15:00">03:00 PM</option>
-                      <option value="16:00">04:00 PM</option>
-                      <option value="17:00">05:00 PM</option>
+                      {['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
                 <button
                   type="button"
                   className={styles.scheduleSubmitBtn}
-                  disabled={!scheduledDate || !scheduledTime || isScheduling}
+                  disabled={!scheduledDate || !scheduledTime || !meetingReason.trim() || scheduleMut.isPending}
                   onClick={handleSchedule}
                 >
-                  {isScheduling ? 'Programando…' : 'Registrar en el Calendario'}
+                  {scheduleMut.isPending ? 'Programando…' : 'Registrar Reunión'}
                 </button>
+                {scheduleMut.isError && (
+                  <p style={{ fontSize: 11, color: '#ff8a80', marginTop: 6 }}>
+                    Error al programar reunión.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -871,46 +896,64 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               )}
             </div>
 
-            {/* Sesión programada */}
-            {scheduledDetails && (
+            {/* Meetings list */}
+            {meetings.length > 0 && (
               <div className={styles.darkSection}>
                 <p className={styles.sectionLabel}>
                   <CalendarDays size={10} />
-                  Sesión programada
+                  Reuniones ({meetings.length})
                 </p>
-                <div className={styles.solutionDetails}>
-                  <div className={styles.solutionRow}>
-                    <CalendarDays size={14} className={styles.solutionIcon} />
-                    <div>
-                      <p className={styles.solutionRowLabel}>
-                        {scheduledDetails.type === 'asesoramiento' ? 'Asesoramiento Técnico' : 'Llamada con Usuario'}
-                      </p>
-                      <p className={styles.solutionRowValue}>
-                        {new Date(scheduledDetails.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className={styles.solutionRow}>
-                    <Clock size={14} className={styles.solutionIcon} />
-                    <div>
-                      <p className={styles.solutionRowLabel}>Hora</p>
-                      <p className={styles.solutionRowValue}>{scheduledDetails.time}</p>
-                    </div>
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {meetings.map((m) => {
+                    const provColor   = PROVIDER_COLORS[m.provider] ?? '#64748b';
+                    const statusColor = STATUS_COLORS[m.status]     ?? '#64748b';
+                    const dt = new Date(m.scheduled_at);
+                    const isCancelled = m.status === 'cancelled';
+                    return (
+                      <div
+                        key={m.id}
+                        style={{
+                          background: 'rgba(255,255,255,0.06)', borderRadius: 8,
+                          padding: '10px 12px', opacity: isCancelled ? 0.5 : 1,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: provColor, textTransform: 'uppercase' }}>
+                            {PROVIDER_LABELS[m.provider]}
+                          </span>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: statusColor }}>
+                            {STATUS_LABELS[m.status]}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 12, fontWeight: 500, color: '#fff', margin: '0 0 3px' }}>{m.reason}</p>
+                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+                          {dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} · {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        {m.meeting_url && !isCancelled && (
+                          <a
+                            href={m.meeting_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: 11, color: provColor, textDecoration: 'none', display: 'inline-block', marginTop: 4 }}
+                          >
+                            Unirse →
+                          </a>
+                        )}
+                        {!isCancelled && m.status === 'scheduled' && (
+                          <button
+                            type="button"
+                            onClick={() => cancelMeetMut.mutate(m.id)}
+                            disabled={cancelMeetMut.isPending}
+                            style={{ display: 'block', marginTop: 6, fontSize: 10, color: '#ff8a80', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                          >
+                            Cancelar reunión
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            )}
-
-            {/* Action button */}
-            {(scheduledDetails || allGuests.length > 0) && (
-              <button
-                type="button"
-                className={styles.actionBtn}
-                style={{ marginTop: 'auto' }}
-              >
-                <CalendarDays size={15} />
-                Notificar a Participantes
-              </button>
             )}
 
           </div>

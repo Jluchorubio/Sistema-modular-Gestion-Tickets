@@ -288,6 +288,23 @@ export const usersService = {
     return data;
   },
 
+  async bulkImportAndAssign(
+    moduleId: string,
+    payload: {
+      rows:    { first_name: string; last_name: string; email: string; username?: string }[];
+      role_id: string;
+    },
+  ): Promise<{
+    created:  number;
+    existing: number;
+    assigned: number;
+    failed:   { row: number; email: string; error: string }[];
+    total:    number;
+  }> {
+    const { data } = await api.post(`/users/module/${moduleId}/bulk-import-assign`, payload);
+    return data;
+  },
+
 };
 
 export interface TrashItem {

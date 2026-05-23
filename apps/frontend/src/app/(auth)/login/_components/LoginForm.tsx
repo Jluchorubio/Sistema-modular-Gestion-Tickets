@@ -62,8 +62,14 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
     }
   }
 
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
   function doGoogle() {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/v1/auth/google`;
+    window.location.href = `${API_URL}/api/v1/auth/google`;
+  }
+
+  function doMicrosoft() {
+    window.location.href = `${API_URL}/api/v1/auth/microsoft`;
   }
 
   return (
@@ -138,6 +144,20 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
           <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.3 4.1-4.2 5.5l6.2 5.2C36.9 36.3 44 31 44 24c0-1.3-.1-2.7-.4-3.9z"/>
         </svg>
         Continuar con Google
+      </button>
+
+      <button
+        type="button"
+        className={`${styles.btn} ${styles.btnMicrosoft}`}
+        onClick={doMicrosoft}
+      >
+        <svg width="18" height="18" viewBox="0 0 21 21" fill="none">
+          <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
+          <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
+          <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
+          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+        </svg>
+        Continuar con Microsoft
       </button>
     </form>
   );

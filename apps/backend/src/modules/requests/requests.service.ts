@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ReviewRequestDto } from './dto/review-request.dto';
 import { calculatePriority } from './priority.engine';
@@ -11,6 +12,7 @@ import { SystemConfigService } from '../system-config/system-config.service';
 export class RequestsService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
+    private readonly events: EventEmitter2,
     private readonly systemConfig: SystemConfigService,
   ) {}
 
@@ -269,6 +271,17 @@ export class RequestsService {
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [requestId, reviewerId, `reviewed_${dto.status}`, req.status, dto.status, dto.review_notes ?? null],
     );
+
+    if (dto.status === 'approved' || dto.status === 'rejected') {
+      const event = dto.status === 'approved' ? 'request.approved' : 'request.rejected';
+      this.events.emit(event, {
+        requestId:   updated.id,
+        title:       updated.title,
+        requesterId: updated.requester_id,
+        notes:       dto.review_notes,
+      });
+    }
+
     return updated;
   }
 
@@ -302,6 +315,13 @@ export class RequestsService {
        VALUES ($1, $2, 'taken', 'pending', 'taken')`,
       [requestId, userId],
     );
+
+    this.events.emit('request.taken', {
+      requestId:   updated.id,
+      title:       updated.title,
+      requesterId: updated.requester_id,
+    });
+
     return updated;
   }
 

@@ -6,6 +6,16 @@ import type {
   Environment,
 } from '@/types/module.types';
 
+export interface ModuleSlaRule {
+  priority:                       string;
+  hours_to_resolve:               number;
+  hours_to_first_response:        number;
+  is_override:                    boolean;
+  override_id:                    string | null;
+  global_hours_to_resolve:        number;
+  global_hours_to_first_response: number;
+}
+
 export interface CreateModuleDto {
   name:         string;
   description?: string;
@@ -110,6 +120,27 @@ export const modulesService = {
 
   async setRolePermissions(roleId: string, permissionIds: string[]): Promise<{ id: string; name: string }[]> {
     const { data } = await api.put(`/system-modules/roles/${roleId}/permissions`, { permission_ids: permissionIds });
+    return data;
+  },
+
+  /* ── Module SLA rules ── */
+
+  async getModuleSlaRules(moduleId: string): Promise<ModuleSlaRule[]> {
+    const { data } = await api.get(`/system-modules/${moduleId}/sla`);
+    return data;
+  },
+
+  async upsertModuleSlaRule(
+    moduleId: string,
+    priority: string,
+    dto: { hours_to_resolve: number; hours_to_first_response: number },
+  ): Promise<ModuleSlaRule> {
+    const { data } = await api.put(`/system-modules/${moduleId}/sla/${priority}`, dto);
+    return data;
+  },
+
+  async deleteModuleSlaRule(moduleId: string, priority: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/system-modules/${moduleId}/sla/${priority}`);
     return data;
   },
 };

@@ -44,12 +44,14 @@ export class RequestsController {
   }
 
   @Delete('me/:id')
+  @RequirePermission('gestion:requests:view_own')
   @ApiOperation({ summary: 'Cancelar mi solicitud (solo si está pendiente).' })
   cancelMine(@Req() req: any, @Param('id') id: string) {
     return this.service.cancelMine(req.user.sub, id);
   }
 
   @Patch('me/:id/complete')
+  @RequirePermission('gestion:requests:view_own')
   @ApiOperation({ summary: 'Marcar tarea propia como completada.' })
   completeTask(@Req() req: any, @Param('id') id: string) {
     return this.service.completeMineTask(req.user.sub, id);
@@ -141,12 +143,14 @@ export class RequestsController {
   @Delete(':id/escalate')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('gestion:requests:escalate')
   @ApiOperation({ summary: 'Resolver escalación (superadmin).' })
   deescalate(@Req() req: any, @Param('id') id: string) {
     return this.service.deescalate(req.user.sub, id);
   }
 
   @Get(':id/timeline')
+  @RequirePermission('gestion:requests:view_own')
   @ApiOperation({ summary: 'Historial de cambios de una solicitud.' })
   getTimeline(@Req() req: any, @Param('id') id: string) {
     return this.service.getTimeline(id, req.user.sub);

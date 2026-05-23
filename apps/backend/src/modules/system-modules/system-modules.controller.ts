@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Put, Body, Param, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
@@ -121,6 +121,40 @@ export class SystemModulesController {
   @ApiOperation({ summary: 'Desactivar un rol. Solo superadmin.' })
   deleteRole(@Param('roleId') roleId: string) {
     return this.service.deleteRole(roleId);
+  }
+
+  /* ── Module SLA rules ───────────────────────────────────────────── */
+
+  @Get(':id/sla')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Reglas SLA del módulo (overrides + fallback global).' })
+  getModuleSlaRules(@Param('id') id: string) {
+    return this.service.getModuleSlaRules(id);
+  }
+
+  @Put(':id/sla/:priority')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Crear o actualizar override SLA para una prioridad.' })
+  upsertModuleSlaRule(
+    @Param('id')       moduleId: string,
+    @Param('priority') priority: string,
+    @Body() dto: { hours_to_resolve: number; hours_to_first_response: number },
+  ) {
+    return this.service.upsertModuleSlaRule(moduleId, priority, dto);
+  }
+
+  @Delete(':id/sla/:priority')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Eliminar override SLA (vuelve a regla global).' })
+  deleteModuleSlaRule(
+    @Param('id')       moduleId: string,
+    @Param('priority') priority: string,
+  ) {
+    return this.service.deleteModuleSlaRule(moduleId, priority);
   }
 
 }

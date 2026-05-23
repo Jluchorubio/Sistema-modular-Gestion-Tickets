@@ -4,6 +4,7 @@ import { useUIStore } from '@/stores/ui.store';
 import { useHeartbeat } from '@/hooks/useHeartbeat';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoadPermissions } from '@/hooks/usePermission';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { ADMIN_ROLES } from '@/constants/roles';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
@@ -21,6 +22,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const expanded = useUIStore((s) => s.sidebarExpanded);
   useHeartbeat();
   useLoadPermissions();
+  useRealtimeNotifications();
 
   const { user, isLoading } = useCurrentUser();
 

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import * as helmet from 'helmet';
 import * as compression from 'compression';
 import * as express from 'express';
@@ -21,6 +22,9 @@ async function bootstrap() {
 
   // Trust Railway/nginx reverse proxy so req.ip reflects the real client IP
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
+  // WebSocket adapter (socket.io)
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // ── Security ────────────────────────────────────────────────────────────────
   app.use((helmet as any).default());

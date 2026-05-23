@@ -284,4 +284,72 @@ export class SystemModulesService {
       [locationId],
     );
   }
+
+  /* ── Module SLA rules ───────────────────────────────────────────── */
+
+  async getModuleSlaRules(moduleId: string) {
+    const priorities = ['baja', 'media', 'alta', 'critica'];
+
+    const [globals, overrides] = await Promise.all([
+      this.db.query<any[]>(
+        `SELECT priority, hours_to_resolve, hours_to_first_response
+         FROM   config.sla_rules
+         WHERE  request_type IS NULL
+         ORDER  BY CASE priority WHEN 'baja' THEN 1 WHEN 'media' THEN 2 WHEN 'alta' THEN 3 WHEN 'critica' THEN 4 END`,
+      ),
+      this.db.query<any[]>(
+        `SELECT id, priority, hours_to_resolve, hours_to_first_response
+         FROM   modules.module_sla_rules
+         WHERE  module_id = $1`,
+        [moduleId],
+      ),
+    ]);
+
+    const overrideMap = new Map(overrides.map((r) => [r.priority, r]));
+    const globalMap   = new Map(globals.map((r) => [r.priority, r]));
+
+    return priorities.map((p) => {
+      const override = overrideMap.get(p);
+      const global   = globalMap.get(p);
+      return {
+        priority:               p,
+        hours_to_resolve:       override?.hours_to_resolve        ?? global?.hours_to_resolve        ?? 24,
+        hours_to_first_response: override?.hours_to_first_response ?? global?.hours_to_first_response ?? 1,
+        is_override:            !!override,
+        override_id:            override?.id ?? null,
+        global_hours_to_resolve:        global?.hours_to_resolve        ?? 24,
+        global_hours_to_first_response: global?.hours_to_first_response ?? 1,
+      };
+    });
+  }
+
+  async upsertModuleSlaRule(
+    moduleId: string,
+    priority: string,
+    dto: { hours_to_resolve: number; hours_to_first_response: number },
+  ) {
+    const validPriorities = ['baja', 'media', 'alta', 'critica'];
+    if (!validPriorities.includes(priority)) {
+      throw new BadRequestException(`Prioridad inválida: ${priority}`);
+    }
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO modules.module_sla_rules (module_id, priority, hours_to_resolve, hours_to_first_response)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (module_id, priority) DO UPDATE
+         SET hours_to_resolve        = EXCLUDED.hours_to_resolve,
+             hours_to_first_response = EXCLUDED.hours_to_first_response,
+             updated_at              = now()
+       RETURNING *`,
+      [moduleId, priority, dto.hours_to_resolve, dto.hours_to_first_response],
+    );
+    return row;
+  }
+
+  async deleteModuleSlaRule(moduleId: string, priority: string) {
+    await this.db.query(
+      `DELETE FROM modules.module_sla_rules WHERE module_id = $1 AND priority = $2`,
+      [moduleId, priority],
+    );
+    return { ok: true };
+  }
 }

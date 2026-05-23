@@ -96,6 +96,38 @@ export class AuthController {
     }
   }
 
+  // ─── Microsoft OAuth ─────────────────────────────────────────────────────────
+
+  @Get('microsoft')
+  @UseGuards(AuthGuard('microsoft'))
+  @ApiOperation({ summary: 'Redirige a Microsoft para OAuth. Abrir en browser.' })
+  microsoftAuth() {
+    // Passport redirige automáticamente
+  }
+
+  @Get('microsoft/callback')
+  @UseGuards(AuthGuard('microsoft'))
+  async microsoftCallback(@Req() req: any, @Res() res: Response) {
+    const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
+    try {
+      const result = await this.authService.loginWithGoogle(req.user, req.ip, req.headers['user-agent']);
+      const u      = result.user;
+      return res.redirect(
+        `${appUrl}/auth/callback` +
+        `#access_token=${result.access_token}` +
+        `&refresh_token=${result.refresh_token}` +
+        `&profile_complete=${u.profile_complete ? '1' : '0'}` +
+        `&force_pw=${u.force_password_change ? '1' : '0'}` +
+        `&is_superadmin=${u.is_superadmin ? '1' : '0'}` +
+        `&name=${encodeURIComponent(u.name ?? '')}` +
+        `&email=${encodeURIComponent(u.email ?? '')}`,
+      );
+    } catch (err) {
+      const message = encodeURIComponent(err.message ?? 'Error de autenticación con Microsoft');
+      return res.redirect(`${appUrl}/login?error=${message}`);
+    }
+  }
+
   // ─── Email OTP ───────────────────────────────────────────────────────────────
 
   @Post('otp/verify')

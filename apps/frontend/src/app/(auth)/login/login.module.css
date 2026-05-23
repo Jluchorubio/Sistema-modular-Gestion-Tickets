@@ -370,6 +370,22 @@
   border-color: #263347;
 }
 
+.btnMicrosoft {
+  background: rgba(23, 32, 51, 0.6);
+  color: #d0dde8;
+  border: 1.5px solid #1e2d3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btnMicrosoft:hover:not(:disabled) {
+  background: #1a2840;
+  border-color: #263347;
+}
+
 .btnBack {
   background: transparent;
   border: 1.5px solid #1e2d3d;

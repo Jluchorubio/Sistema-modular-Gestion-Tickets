@@ -2,16 +2,18 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, QrCode, ChevronDown, Package } from 'lucide-react';
+import { Plus, X, QrCode, Package, User, Clock } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
+import { usersService } from '@/services/users.service';
 import { INVENTORY_NAV, INVENTORY_MODULE_NAME, isInventoryModule } from '../_nav';
 import {
   inventoryService,
   type AssetListItem, type AssetDetail, type AssetStatus, type CreateAssetDto,
-  ASSET_STATUS_LABELS, ASSET_STATUS_COLORS, ASSET_STATUSES,
+  type AssetAssignment, type AssetHistoryEntry,
+  ASSET_STATUS_LABELS, ASSET_STATUS_COLORS, ASSET_STATUSES, ASSET_ACTION_LABELS, ASSET_ACTION_COLORS,
 } from '@/services/inventory.service';
 import { ticketsService } from '@/services/tickets.service';
 import { ADMIN_ROLES } from '@/constants/roles';
@@ -69,15 +71,31 @@ function QrModal({ assetId, assetName, onClose }: { assetId: string; assetName: 
 
 /* ── Asset detail modal ──────────────────────────────────────────────────── */
 
+type DetailTab = 'info' | 'asignacion' | 'historial';
+
 interface DetailModalProps {
-  assetId:  string;
-  canEdit:  boolean;
-  onClose:  () => void;
+  assetId:    string;
+  moduleId:   string;
+  canEdit:    boolean;
+  onClose:    () => void;
 }
 
-function DetailModal({ assetId, canEdit, onClose }: DetailModalProps) {
-  const qc = useQueryClient();
-  const [showQr, setShowQr] = useState(false);
+function DetailModal({ assetId, moduleId, canEdit, onClose }: DetailModalProps) {
+  const qc  = useQueryClient();
+  const [tab,       setTab]       = useState<DetailTab>('info');
+  const [showQr,    setShowQr]    = useState(false);
+  const [assignUid, setAssignUid] = useState('');
+  const [assignNote, setAssignNote] = useState('');
+  const [unassignReason, setUnassignReason] = useState('');
+  const [transReason, setTransReason] = useState('');
+  const [actionErr, setActionErr] = useState('');
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['inventory'] });
+    qc.invalidateQueries({ queryKey: ['asset-detail', assetId] });
+    qc.invalidateQueries({ queryKey: ['asset-assignment', assetId] });
+    qc.invalidateQueries({ queryKey: ['asset-history', assetId] });
+  };
 
   const { data: asset, isLoading } = useQuery<AssetDetail>({
     queryKey: ['asset-detail', assetId],
@@ -85,17 +103,74 @@ function DetailModal({ assetId, canEdit, onClose }: DetailModalProps) {
     staleTime: 30_000,
   });
 
-  const statusMut = useMutation({
-    mutationFn: (status: AssetStatus) => inventoryService.updateStatus(assetId, status),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['inventory'] });
-      qc.invalidateQueries({ queryKey: ['asset-detail', assetId] });
-    },
+  const { data: assignment } = useQuery<AssetAssignment | null>({
+    queryKey: ['asset-assignment', assetId],
+    queryFn:  () => inventoryService.getCurrentAssignment(assetId),
+    staleTime: 30_000,
+    enabled:  tab === 'asignacion' || asset?.status === 'asignado',
+  });
+
+  const { data: history = [] } = useQuery<AssetHistoryEntry[]>({
+    queryKey: ['asset-history', assetId],
+    queryFn:  () => inventoryService.getHistory(assetId),
+    staleTime: 30_000,
+    enabled:  tab === 'historial',
+  });
+
+  const { data: moduleUsers = [] } = useQuery({
+    queryKey: ['module-members', moduleId],
+    queryFn:  () => usersService.getModuleUsers(moduleId),
+    staleTime: 5 * 60_000,
+    enabled:  tab === 'asignacion' && canEdit,
+  });
+
+  const assignMut = useMutation({
+    mutationFn: () => inventoryService.assign(assetId, { user_id: assignUid, notes: assignNote || undefined }),
+    onSuccess: () => { setActionErr(''); setAssignUid(''); setAssignNote(''); invalidate(); },
+    onError: (e: any) => setActionErr(e?.response?.data?.message ?? 'Error al asignar'),
+  });
+
+  const unassignMut = useMutation({
+    mutationFn: () => inventoryService.unassign(assetId, unassignReason || undefined),
+    onSuccess: () => { setActionErr(''); setUnassignReason(''); invalidate(); },
+    onError: (e: any) => setActionErr(e?.response?.data?.message ?? 'Error al devolver'),
+  });
+
+  const transMut = useMutation({
+    mutationFn: (status: AssetStatus) => inventoryService.transition(assetId, { status, reason: transReason || undefined }),
+    onSuccess: () => { setActionErr(''); setTransReason(''); invalidate(); },
+    onError: (e: any) => setActionErr(e?.response?.data?.message ?? 'Error al cambiar estado'),
+  });
+
+  const FSM_LABELS: Partial<Record<AssetStatus, string>> = {
+    en_reparacion: 'Enviar a reparación',
+    dado_de_baja:  'Dar de baja',
+    disponible:    'Marcar disponible',
+  };
+
+  const FSM_COLORS: Partial<Record<AssetStatus, string>> = {
+    en_reparacion: '#F59E0B',
+    dado_de_baja:  '#EF4444',
+    disponible:    '#22C55E',
+  };
+
+  const FSM_TRANSITIONS: Record<AssetStatus, AssetStatus[]> = {
+    disponible:    ['en_reparacion', 'dado_de_baja'],
+    asignado:      ['en_reparacion', 'dado_de_baja'],
+    en_reparacion: ['disponible', 'dado_de_baja'],
+    dado_de_baja:  [],
+  };
+
+  const TAB_STYLE = (active: boolean): React.CSSProperties => ({
+    padding: '8px 16px', fontSize: 12, fontWeight: active ? 700 : 500,
+    border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit',
+    color: active ? '#0F172A' : '#94A3B8',
+    borderBottom: `2px solid ${active ? '#6366F1' : 'transparent'}`,
   });
 
   const inputStyle: React.CSSProperties = {
-    padding: '7px 10px', borderRadius: 8, border: '1px solid #E2E8F0',
-    fontSize: 12, background: '#fff', fontFamily: 'inherit', cursor: 'pointer',
+    width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 12,
+    border: '1px solid #E2E8F0', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
   };
 
   return (
@@ -105,10 +180,10 @@ function DetailModal({ assetId, canEdit, onClose }: DetailModalProps) {
         onClick={onClose}
       >
         <div
-          style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 560, padding: '28px 28px 24px', position: 'relative' }}
+          style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 580, position: 'relative' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button type="button" onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}>
+          <button type="button" onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', zIndex: 1 }}>
             <X size={16} />
           </button>
 
@@ -117,12 +192,12 @@ function DetailModal({ assetId, canEdit, onClose }: DetailModalProps) {
           {asset && (
             <>
               {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 20 }}>
+              <div style={{ padding: '24px 24px 0', display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: '#6366F115', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Package size={18} style={{ color: '#6366F1' }} />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', margin: '0 0 6px' }}>{asset.name}</h2>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', margin: '0 0 6px', paddingRight: 28 }}>{asset.name}</h2>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     <StatusBadge status={asset.status} />
                     {asset.serial_number && (
@@ -133,80 +208,220 @@ function DetailModal({ assetId, canEdit, onClose }: DetailModalProps) {
                 <button
                   type="button"
                   onClick={() => setShowQr(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#fff', fontSize: 11, fontWeight: 600, color: '#475569', cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#fff', fontSize: 11, fontWeight: 600, color: '#475569', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, marginRight: 28 }}
                 >
                   <QrCode size={13} /> QR
                 </button>
               </div>
 
-              {/* Description */}
-              {asset.description && (
-                <div style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: 8, fontSize: 13, color: '#334155', marginBottom: 16, lineHeight: 1.6 }}>
-                  {asset.description}
-                </div>
-              )}
-
-              {/* Meta grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px', fontSize: 12, marginBottom: 20 }}>
-                {([
-                  ['Módulo',      asset.module_name],
-                  ['Categoría',   asset.category_name],
-                  ['Ambiente',    asset.environment_name],
-                  ['Sede',        asset.location_name],
-                  ['QR Code',     asset.qr_code],
-                  ['Actualizado', fmtDate(asset.updated_at)],
-                ] as [string, string][]).map(([label, val]) => (
-                  <div key={label}>
-                    <span style={{ color: '#94A3B8', fontWeight: 500 }}>{label}: </span>
-                    <span style={{ color: '#334155', fontWeight: 600 }}>{val}</span>
-                  </div>
+              {/* Tabs */}
+              <div style={{ display: 'flex', borderBottom: '1px solid #F1F5F9', padding: '0 24px' }}>
+                {(['info', 'asignacion', 'historial'] as DetailTab[]).map((t) => (
+                  <button key={t} type="button" style={TAB_STYLE(tab === t)} onClick={() => { setTab(t); setActionErr(''); }}>
+                    {t === 'info' ? 'Información' : t === 'asignacion' ? 'Asignación' : 'Historial'}
+                  </button>
                 ))}
               </div>
 
-              {/* Specifications */}
-              {asset.specifications && Object.keys(asset.specifications).length > 0 && (
-                <div style={{ marginBottom: 20 }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', margin: '0 0 8px' }}>ESPECIFICACIONES</p>
-                  <div style={{ background: '#F8FAFC', borderRadius: 8, padding: '10px 14px' }}>
-                    {Object.entries(asset.specifications).map(([k, v]) => (
-                      <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12, marginBottom: 4 }}>
-                        <span style={{ color: '#94A3B8', fontWeight: 500, minWidth: 100 }}>{k}:</span>
-                        <span style={{ color: '#334155' }}>{String(v)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Tab content */}
+              <div style={{ padding: '20px 24px 24px' }}>
 
-              {/* Status change */}
-              {canEdit && !['dado_de_baja'].includes(asset.status) && (
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', margin: '0 0 8px' }}>CAMBIAR ESTADO</p>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {ASSET_STATUSES.filter((s) => s !== asset.status).map((s) => {
-                      const color = ASSET_STATUS_COLORS[s];
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => statusMut.mutate(s)}
-                          disabled={statusMut.isPending}
-                          style={{
-                            padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                            border: `1.5px solid ${color}66`,
-                            background: `${color}11`,
-                            color,
-                            cursor: 'pointer', fontFamily: 'inherit',
-                            opacity: statusMut.isPending ? .6 : 1,
-                          }}
+                {/* ── INFO ── */}
+                {tab === 'info' && (
+                  <>
+                    {asset.description && (
+                      <div style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: 8, fontSize: 13, color: '#334155', marginBottom: 16, lineHeight: 1.6 }}>
+                        {asset.description}
+                      </div>
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px', fontSize: 12, marginBottom: 20 }}>
+                      {([
+                        ['Módulo',      asset.module_name],
+                        ['Categoría',   asset.category_name],
+                        ['Ambiente',    asset.environment_name],
+                        ['Sede',        asset.location_name],
+                        ['QR Code',     asset.qr_code],
+                        ['Actualizado', fmtDate(asset.updated_at)],
+                      ] as [string, string][]).map(([label, val]) => (
+                        <div key={label}>
+                          <span style={{ color: '#94A3B8', fontWeight: 500 }}>{label}: </span>
+                          <span style={{ color: '#334155', fontWeight: 600 }}>{val}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {asset.specifications && Object.keys(asset.specifications).length > 0 && (
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', margin: '0 0 8px' }}>ESPECIFICACIONES</p>
+                        <div style={{ background: '#F8FAFC', borderRadius: 8, padding: '10px 14px' }}>
+                          {Object.entries(asset.specifications).map(([k, v]) => (
+                            <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12, marginBottom: 4 }}>
+                              <span style={{ color: '#94A3B8', fontWeight: 500, minWidth: 100 }}>{k}:</span>
+                              <span style={{ color: '#334155' }}>{String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* FSM transitions (non-assign) */}
+                    {canEdit && asset.status !== 'dado_de_baja' && FSM_TRANSITIONS[asset.status].length > 0 && (
+                      <div style={{ marginTop: 20 }}>
+                        <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', margin: '0 0 8px' }}>ACCIONES</p>
+                        <input
+                          style={{ ...inputStyle, marginBottom: 10 }}
+                          placeholder="Motivo (opcional)…"
+                          value={transReason}
+                          onChange={(e) => setTransReason(e.target.value)}
+                        />
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {FSM_TRANSITIONS[asset.status].map((s) => {
+                            const color = FSM_COLORS[s] ?? '#64748B';
+                            return (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => transMut.mutate(s)}
+                                disabled={transMut.isPending}
+                                style={{ padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1.5px solid ${color}66`, background: `${color}11`, color, cursor: 'pointer', fontFamily: 'inherit', opacity: transMut.isPending ? .6 : 1 }}
+                              >
+                                {FSM_LABELS[s] ?? s}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {actionErr && <p style={{ fontSize: 11, color: '#EF4444', marginTop: 8 }}>{actionErr}</p>}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ── ASIGNACIÓN ── */}
+                {tab === 'asignacion' && (
+                  <>
+                    {/* Current assignment */}
+                    {assignment ? (
+                      <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: '14px 16px', marginBottom: 20 }}>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#3B82F620', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <User size={16} style={{ color: '#3B82F6' }} />
+                          </div>
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#1E3A5F', margin: 0 }}>{assignment.user_name}</p>
+                            <p style={{ fontSize: 11, color: '#3B82F6', margin: 0 }}>{assignment.user_email}</p>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#475569' }}>
+                          <span>Asignado por <strong>{assignment.assigned_by_name}</strong></span>
+                          <span style={{ margin: '0 6px' }}>·</span>
+                          <span>{fmtDate(assignment.assigned_at)}</span>
+                        </div>
+                        {assignment.notes && (
+                          <p style={{ fontSize: 11, color: '#64748B', marginTop: 6, fontStyle: 'italic' }}>{assignment.notes}</p>
+                        )}
+                        {canEdit && (
+                          <div style={{ marginTop: 14 }}>
+                            <input
+                              style={{ ...inputStyle, marginBottom: 8 }}
+                              placeholder="Motivo de devolución (opcional)…"
+                              value={unassignReason}
+                              onChange={(e) => setUnassignReason(e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              disabled={unassignMut.isPending}
+                              onClick={() => unassignMut.mutate()}
+                              style={{ padding: '7px 16px', borderRadius: 8, border: '1.5px solid #EF444466', background: '#EF444411', color: '#EF4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: unassignMut.isPending ? .6 : 1 }}
+                            >
+                              {unassignMut.isPending ? 'Devolviendo…' : 'Registrar devolución'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '16px', background: '#F8FAFC', borderRadius: 10, marginBottom: 20, textAlign: 'center' }}>
+                        <p style={{ fontSize: 13, color: '#94A3B8', margin: 0 }}>
+                          {asset.status === 'disponible' ? 'Sin asignación activa.' : `Estado actual: ${ASSET_STATUS_LABELS[asset.status]}`}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Assign form */}
+                    {canEdit && asset.status === 'disponible' && (
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', margin: '0 0 10px' }}>ASIGNAR A USUARIO</p>
+                        <select
+                          style={{ ...inputStyle, marginBottom: 8 }}
+                          value={assignUid}
+                          onChange={(e) => setAssignUid(e.target.value)}
                         >
-                          → {ASSET_STATUS_LABELS[s]}
+                          <option value="">Seleccionar usuario…</option>
+                          {(moduleUsers as any[]).map((u: any) => (
+                            <option key={u.id} value={u.id}>
+                              {u.first_name} {u.last_name} — {u.role_name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          style={{ ...inputStyle, marginBottom: 10 }}
+                          placeholder="Notas de asignación (opcional)…"
+                          value={assignNote}
+                          onChange={(e) => setAssignNote(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          disabled={!assignUid || assignMut.isPending}
+                          onClick={() => assignMut.mutate()}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: '#3B82F6', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: (!assignUid || assignMut.isPending) ? .5 : 1 }}
+                        >
+                          <User size={13} />
+                          {assignMut.isPending ? 'Asignando…' : 'Asignar activo'}
                         </button>
-                      );
-                    })}
+                      </div>
+                    )}
+
+                    {actionErr && <p style={{ fontSize: 11, color: '#EF4444', marginTop: 10 }}>{actionErr}</p>}
+                  </>
+                )}
+
+                {/* ── HISTORIAL ── */}
+                {tab === 'historial' && (
+                  <div>
+                    {history.length === 0 && (
+                      <div style={{ padding: '32px 0', textAlign: 'center' }}>
+                        <Clock size={24} style={{ color: '#CBD5E1', marginBottom: 8 }} />
+                        <p style={{ fontSize: 13, color: '#94A3B8', margin: 0 }}>Sin eventos registrados.</p>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                      {history.map((h, i) => {
+                        const color  = ASSET_ACTION_COLORS[h.action] ?? '#94A3B8';
+                        const label  = ASSET_ACTION_LABELS[h.action] ?? h.action;
+                        return (
+                          <div key={h.id} style={{ display: 'flex', gap: 12, paddingBottom: 16, position: 'relative' }}>
+                            {i < history.length - 1 && (
+                              <div style={{ position: 'absolute', left: 15, top: 26, width: 2, height: 'calc(100% - 10px)', background: '#F1F5F9' }} />
+                            )}
+                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: `${color}15`, border: `2px solid ${color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1 }}>
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
+                            </div>
+                            <div style={{ flex: 1, paddingTop: 4 }}>
+                              <p style={{ fontSize: 12, fontWeight: 600, color: '#0F172A', margin: '0 0 2px' }}>
+                                {label} {h.user_name && h.user_name !== h.actor_name && <span style={{ fontWeight: 400, color: '#64748B' }}>{h.user_name}</span>}
+                              </p>
+                              <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 2px' }}>
+                                por {h.actor_name} · {fmtDate(h.created_at)}
+                              </p>
+                              {h.reason && (
+                                <p style={{ fontSize: 11, color: '#64748B', margin: 0, fontStyle: 'italic' }}>{h.reason}</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+              </div>
             </>
           )}
         </div>
@@ -518,7 +733,12 @@ export function InventoryClient() {
         <CreateModal moduleId={selectedModule} onClose={() => setShowCreate(false)} />
       )}
       {detailId && (
-        <DetailModal assetId={detailId} canEdit={canEdit} onClose={() => setDetailId(null)} />
+        <DetailModal
+          assetId={detailId}
+          moduleId={selectedModule || inventoryId || ''}
+          canEdit={canEdit}
+          onClose={() => setDetailId(null)}
+        />
       )}
     </ModuleLayout>
   );

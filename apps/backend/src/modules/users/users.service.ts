@@ -364,4 +364,51 @@ export class UsersService {
     this.logger.log(`Bulk import: ${created} creados, ${failed.length} fallidos — actor ${actorId}`);
     return { created, failed, total: rows.length };
   }
+
+  async bulkImportForModule(
+    actorId: string,
+    rows: { first_name: string; last_name: string; email: string; username?: string }[],
+  ): Promise<{
+    user_ids: string[];
+    created:  number;
+    existing: number;
+    failed:   { row: number; email: string; error: string }[];
+  }> {
+    const userIds: string[] = [];
+    const failed: { row: number; email: string; error: string }[] = [];
+    let created  = 0;
+    let existing = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row   = rows[i];
+      const email = row.email.trim().toLowerCase();
+
+      const [cred] = await this.db.query<{ user_id: string }[]>(
+        `SELECT user_id FROM auth.credentials WHERE email = $1`,
+        [email],
+      );
+
+      if (cred) {
+        userIds.push(cred.user_id);
+        existing++;
+        continue;
+      }
+
+      try {
+        const newUser = await this.createUser(actorId, {
+          first_name: row.first_name.trim(),
+          last_name:  row.last_name.trim(),
+          email,
+          username:   row.username?.trim() || undefined,
+        } as any);
+        userIds.push(newUser.id);
+        created++;
+      } catch (err: any) {
+        failed.push({ row: i + 1, email, error: err?.message ?? 'Error desconocido' });
+      }
+    }
+
+    this.logger.log(`BulkImportForModule: ${created} creados, ${existing} existentes, ${failed.length} fallidos`);
+    return { user_ids: userIds, created, existing, failed };
+  }
 }

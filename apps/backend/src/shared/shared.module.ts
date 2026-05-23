@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MailService } from './mail.service';
 
 @Global()
 @Module({
@@ -16,6 +17,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
     }),
   ],
-  exports: [TypeOrmModule],
+  providers: [MailService],
+  exports: [TypeOrmModule, MailService],
 })
 export class SharedModule {}

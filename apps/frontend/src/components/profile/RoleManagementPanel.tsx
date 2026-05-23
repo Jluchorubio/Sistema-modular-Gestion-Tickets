@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, Check, ShieldCheck } from 'lucide-react';
 import { usersService } from '@/services/users.service';
 import { modulesService } from '@/services/modules.service';
+import { usePermission } from '@/hooks/usePermission';
 import type { GlobalRole } from '@/types/user.types';
 import styles from './profile.module.css';
 
@@ -14,7 +15,8 @@ interface Props {
 }
 
 export function RoleManagementPanel({ userId, currentGlobalRoleId }: Props) {
-  const qc = useQueryClient();
+  const qc        = useQueryClient();
+  const canAssign = usePermission('global:users:assign_role');
 
   const [assignOpen,   setAssignOpen]   = useState(false);
   const [selModule,    setSelModule]    = useState('');
@@ -117,19 +119,21 @@ export function RoleManagementPanel({ userId, currentGlobalRoleId }: Props) {
             <option key={r.id} value={r.id}>{r.name}</option>
           ))}
         </select>
-        <button
-          type="button"
-          className={styles.btnPrimary}
-          style={{ padding: '7px 12px', flexShrink: 0 }}
-          disabled={
-            globalRoleMut.isPending ||
-            selectedGlobalRoleId === (currentGlobalRoleId ?? '')
-          }
-          onClick={() => globalRoleMut.mutate(selectedGlobalRoleId || null)}
-          title="Guardar rol global"
-        >
-          <Check size={13} />
-        </button>
+        {canAssign && (
+          <button
+            type="button"
+            className={styles.btnPrimary}
+            style={{ padding: '7px 12px', flexShrink: 0 }}
+            disabled={
+              globalRoleMut.isPending ||
+              selectedGlobalRoleId === (currentGlobalRoleId ?? '')
+            }
+            onClick={() => globalRoleMut.mutate(selectedGlobalRoleId || null)}
+            title="Guardar rol global"
+          >
+            <Check size={13} />
+          </button>
+        )}
       </div>
       {globalMsg && (
         <p style={{ fontSize: 11, color: '#15803D', marginBottom: 8 }}>{globalMsg}</p>
@@ -153,27 +157,31 @@ export function RoleManagementPanel({ userId, currentGlobalRoleId }: Props) {
               </p>
               <p style={{ fontSize: 11, color: '#64748B', margin: 0 }}>{r.role_name}</p>
             </div>
-            <button
-              type="button"
-              className={styles.roleRemoveBtn}
-              onClick={() => removeMut.mutate(r.umr_id)}
-              disabled={removingId === r.umr_id}
-              title="Quitar rol"
-            >
-              <X size={12} />
-            </button>
+            {canAssign && (
+              <button
+                type="button"
+                className={styles.roleRemoveBtn}
+                onClick={() => removeMut.mutate(r.umr_id)}
+                disabled={removingId === r.umr_id}
+                title="Quitar rol"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         ))}
       </div>
 
-      <button
-        type="button"
-        className={styles.btnSecondary}
-        style={{ fontSize: 12, padding: '6px 12px', width: '100%' }}
-        onClick={() => { setAssignOpen(true); setAssignMsg(null); }}
-      >
-        <Plus size={12} /> Asignar a módulo
-      </button>
+      {canAssign && (
+        <button
+          type="button"
+          className={styles.btnSecondary}
+          style={{ fontSize: 12, padding: '6px 12px', width: '100%' }}
+          onClick={() => { setAssignOpen(true); setAssignMsg(null); }}
+        >
+          <Plus size={12} /> Asignar a módulo
+        </button>
+      )}
 
       {/* ── Assign modal ──────────────────────────────── */}
       {assignOpen && (

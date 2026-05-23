@@ -249,6 +249,31 @@ export class UsersController {
     return this.roleService.bulkAssignModuleRole(req.user.sub, body.user_ids, moduleId, body.role_id);
   }
 
+  @Post('module/:moduleId/bulk-import-assign')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:users:create')
+  @ApiOperation({ summary: 'Importar usuarios desde CSV y asignarlos a un módulo.' })
+  async bulkImportAssign(
+    @Req() req: any,
+    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Body() body: { rows: { first_name: string; last_name: string; email: string; username?: string }[]; role_id: string },
+  ) {
+    if (!Array.isArray(body.rows) || body.rows.length === 0) throw new BadRequestException('No hay filas para importar');
+    if (body.rows.length > 200) throw new BadRequestException('Máximo 200 usuarios por importación');
+    if (!body.role_id) throw new BadRequestException('Se requiere role_id');
+
+    const { user_ids, created, existing, failed } = await this.usersService.bulkImportForModule(req.user.sub, body.rows);
+
+    let assigned = 0;
+    if (user_ids.length > 0) {
+      await this.roleService.bulkAssignModuleRole(req.user.sub, user_ids, moduleId, body.role_id);
+      assigned = user_ids.length;
+    }
+
+    return { created, existing, assigned, failed, total: body.rows.length };
+  }
+
   @Get(':id/activity')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')

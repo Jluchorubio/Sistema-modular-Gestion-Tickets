@@ -15,6 +15,7 @@ import { useGeoData } from '@/hooks/useGeoData';
 import { GeoCombobox } from '@/components/ui/GeoCombobox';
 import { usersService } from '@/services/users.service';
 import type { UpdateMeDto, AdminUpdateUserDto } from '@/services/users.service';
+import { systemConfigService } from '@/services/system-config.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { getInitials } from '@/lib/utils';
 import type { CurrentUser } from '@/types/user.types';
@@ -135,6 +136,14 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
     staleTime: 30_000,
   });
   const isOnline = sessionsData?.is_online ?? false;
+
+  /* ── Org dropdowns ── */
+  const { data: positions = [] }    = useQuery({ queryKey: ['positions'],    queryFn: systemConfigService.getPositions,    staleTime: 5 * 60_000 });
+  const { data: areas = [] }        = useQuery({ queryKey: ['areas'],        queryFn: () => systemConfigService.getAreas(), staleTime: 5 * 60_000 });
+  const { data: headquarters = [] } = useQuery({ queryKey: ['headquarters'], queryFn: systemConfigService.getHeadquarters,  staleTime: 5 * 60_000 });
+
+  const activePositions = positions.filter(p => p.is_active);
+  const activeHQ        = headquarters.filter(h => h.is_active);
 
   const fullName      = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre';
   const initials      = getInitials(user.first_name || '?', user.last_name || '?');
@@ -756,16 +765,47 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
                     </p>
                     <div className={styles.formGroup}>
                       <label className={styles.formLabel}>Cargo</label>
-                      <input className={styles.formInput} placeholder="Desarrollador, Técnico…" {...regEdit('job_title')} />
+                      {activePositions.length > 0 ? (
+                        <select className={styles.formInput} {...regEdit('job_title')}>
+                          <option value="">Sin especificar</option>
+                          {activePositions.map(p => (
+                            <option key={p.id} value={p.name}>{p.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input className={styles.formInput} placeholder="Desarrollador, Técnico…" {...regEdit('job_title')} />
+                      )}
                     </div>
                     <div className={styles.formRow}>
                       <div className={styles.formGroup}>
                         <label className={styles.formLabel}>Área / Departamento</label>
-                        <input className={styles.formInput} placeholder="TI, Soporte…" {...regEdit('department')} />
+                        {areas.length > 0 ? (
+                          <select className={styles.formInput} {...regEdit('department')}>
+                            <option value="">Sin especificar</option>
+                            {areas.map(a => (
+                              <option key={a.id} value={a.name}>
+                                {a.department_name ? `${a.name} (${a.department_name})` : a.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input className={styles.formInput} placeholder="TI, Soporte…" {...regEdit('department')} />
+                        )}
                       </div>
                       <div className={styles.formGroup}>
                         <label className={styles.formLabel}>Sede principal</label>
-                        <input className={styles.formInput} placeholder="Sede Centro" {...regEdit('primary_sede')} />
+                        {activeHQ.length > 0 ? (
+                          <select className={styles.formInput} {...regEdit('primary_sede')}>
+                            <option value="">Sin especificar</option>
+                            {activeHQ.map(h => (
+                              <option key={h.id} value={h.name}>
+                                {h.city ? `${h.name} — ${h.city}` : h.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input className={styles.formInput} placeholder="Sede Centro" {...regEdit('primary_sede')} />
+                        )}
                       </div>
                     </div>
                   </>
