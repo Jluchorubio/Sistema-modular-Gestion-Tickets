@@ -138,7 +138,7 @@ export default function MyTicketsPage() {
 
   const { data: assigned, isLoading: loadingAssigned } = useQuery({
     queryKey: ['my-assigned-tickets'],
-    queryFn:  () => usersService.getMyAssignedTickets(100),
+    queryFn:  () => usersService.getMyAssignedTickets(undefined, 100),
     staleTime: 60_000,
   });
 

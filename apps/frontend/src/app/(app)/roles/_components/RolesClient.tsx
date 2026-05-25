@@ -141,8 +141,8 @@ export function RolesClient() {
     if (!activeRoleId) return;
     setSaveStatus('saving');
 
-    const toGrant  = [...localGrants].filter(k => !savedGrants.has(k));
-    const toRevoke = [...savedGrants].filter(k => !localGrants.has(k));
+    const toGrant  = Array.from(localGrants).filter(k => !savedGrants.has(k));
+    const toRevoke = Array.from(savedGrants).filter(k => !localGrants.has(k));
 
     try {
       await Promise.all([
@@ -161,8 +161,8 @@ export function RolesClient() {
   /* ── Derived ── */
   const activeRole    = roles.find(r => r.id === activeRoleId);
   const selectedPerm  = selectedPermKey ? tree.find(p => p.key === selectedPermKey) : null;
-  const isDirty       = [...localGrants].some(k => !savedGrants.has(k)) ||
-                        [...savedGrants].some(k => !localGrants.has(k));
+  const isDirty       = Array.from(localGrants).some(k => !savedGrants.has(k)) ||
+                        Array.from(savedGrants).some(k => !localGrants.has(k));
 
   /* ── Permission guard ── */
   if (loaded && !canView) return (

@@ -888,75 +888,81 @@ export default function GlobalConfigPage() {
   if (loaded && !canView) return null;
 
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <div className={styles.title}>Configuración del Sistema</div>
-        <div className={styles.subtitle}>Solo superadmin · Cambios aplicados inmediatamente</div>
-      </div>
+    <div className={styles.pageWrap}>
+      <div className={styles.mainContent}>
 
-      <div className={styles.tabBar}>
-        {TABS.map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            type="button"
-            className={`${styles.tabBtn}${tab === key ? ` ${styles.tabBtnActive}` : ''}`}
-            onClick={() => setTab(key)}
-          >
-            <Icon size={14} />
-            <span>{label}</span>
-          </button>
-        ))}
-      </div>
+        <div className={styles.header}>
+          <div>
+            <h1 className={styles.title}>Configuración del Sistema</h1>
+            <p className={styles.subtitle}>Solo superadmin · Cambios aplicados inmediatamente</p>
+          </div>
+        </div>
 
-      <div className={styles.content}>
-        {tab === 'empresa'       && <CompanyTab />}
-        {tab === 'sedes'         && (
-          <ListTab<Headquarter>
-            queryKey={['sys-config-hq']}
-            queryFn={systemConfigService.getHeadquarters}
-            createFn={systemConfigService.createHeadquarter}
-            deleteFn={systemConfigService.deleteHeadquarter}
-            label="Sedes"
-            fields={[
-              { key: 'name',    label: 'Nombre',   required: true },
-              { key: 'city',    label: 'Ciudad' },
-              { key: 'address', label: 'Dirección' },
-              { key: 'phone',   label: 'Teléfono' },
-              { key: 'email',   label: 'Email' },
-            ]}
-          />
-        )}
-        {tab === 'departamentos' && (
-          <ListTab<Department>
-            queryKey={['sys-config-depts']}
-            queryFn={systemConfigService.getDepartments}
-            createFn={systemConfigService.createDepartment}
-            deleteFn={systemConfigService.deleteDepartment}
-            label="Departamentos"
-            fields={[
-              { key: 'name',        label: 'Nombre',      required: true },
-              { key: 'description', label: 'Descripción' },
-            ]}
-          />
-        )}
-        {tab === 'cargos'        && (
-          <ListTab<Position>
-            queryKey={['sys-config-positions']}
-            queryFn={systemConfigService.getPositions}
-            createFn={systemConfigService.createPosition}
-            deleteFn={systemConfigService.deletePosition}
-            label="Cargos"
-            fields={[
-              { key: 'name',        label: 'Nombre',                   required: true },
-              { key: 'level',       label: 'Nivel jerárquico (1–10)',  type: 'number', required: true, min: 1, max: 10 },
-              { key: 'description', label: 'Descripción' },
-            ]}
-          />
-        )}
-        {tab === 'sla'           && <SlaTab />}
-        {tab === 'tipos'         && <RequestTypesTab />}
-        {tab === 'permisos'      && <RolesPermissionsTab />}
-        {tab === 'importar'      && <ImportTab />}
+        <div className={styles.tabBar}>
+          {TABS.map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              type="button"
+              className={`${styles.tabBtn}${tab === key ? ` ${styles.tabBtnActive}` : ''}`}
+              onClick={() => setTab(key)}
+            >
+              <Icon size={13} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.content}>
+          {tab === 'empresa'       && <CompanyTab />}
+          {tab === 'sedes'         && (
+            <ListTab<Headquarter>
+              queryKey={['sys-config-hq']}
+              queryFn={systemConfigService.getHeadquarters}
+              createFn={systemConfigService.createHeadquarter}
+              deleteFn={systemConfigService.deleteHeadquarter}
+              label="Sedes"
+              fields={[
+                { key: 'name',    label: 'Nombre',   required: true },
+                { key: 'city',    label: 'Ciudad' },
+                { key: 'address', label: 'Dirección' },
+                { key: 'phone',   label: 'Teléfono' },
+                { key: 'email',   label: 'Email' },
+              ]}
+            />
+          )}
+          {tab === 'departamentos' && (
+            <ListTab<Department>
+              queryKey={['sys-config-depts']}
+              queryFn={systemConfigService.getDepartments}
+              createFn={systemConfigService.createDepartment}
+              deleteFn={systemConfigService.deleteDepartment}
+              label="Departamentos"
+              fields={[
+                { key: 'name',        label: 'Nombre',      required: true },
+                { key: 'description', label: 'Descripción' },
+              ]}
+            />
+          )}
+          {tab === 'cargos'        && (
+            <ListTab<Position>
+              queryKey={['sys-config-positions']}
+              queryFn={systemConfigService.getPositions}
+              createFn={systemConfigService.createPosition}
+              deleteFn={systemConfigService.deletePosition}
+              label="Cargos"
+              fields={[
+                { key: 'name',        label: 'Nombre',                   required: true },
+                { key: 'level',       label: 'Nivel jerárquico (1–10)',  type: 'number', required: true, min: 1, max: 10 },
+                { key: 'description', label: 'Descripción' },
+              ]}
+            />
+          )}
+          {tab === 'sla'           && <SlaTab />}
+          {tab === 'tipos'         && <RequestTypesTab />}
+          {tab === 'permisos'      && <RolesPermissionsTab />}
+          {tab === 'importar'      && <ImportTab />}
+        </div>
+
       </div>
     </div>
   );
