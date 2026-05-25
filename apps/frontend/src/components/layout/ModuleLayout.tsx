@@ -14,6 +14,7 @@ interface Props {
   title: string;
   description?: string | null;
   isSuperadmin?: boolean;
+  subBar?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -22,6 +23,7 @@ export function ModuleLayout({
   title,
   description,
   isSuperadmin = false,
+  subBar,
   children,
 }: Props) {
   const [showAccessModal, setShowAccessModal] = useState(false);
@@ -105,6 +107,7 @@ export function ModuleLayout({
 
   return (
     <div className={styles.card}>
+      {subBar}
       {/* ── Module info ── */}
       <div className={styles.info}>
 

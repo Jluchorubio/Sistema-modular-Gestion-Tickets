@@ -319,13 +319,72 @@ function TechQueueItem({ ticket, basePath }: { ticket: AssignedTicket; basePath:
 /* ─────────────────── Tech card (admin right panel) ─────────────────────── */
 
 function TechCard({
-  tech, isSelected, onVerProcesos,
+  tech, isSelected, onVerProcesos, isHelpdeskMockup = false,
 }: {
   tech: ModuleTechnician;
   isSelected: boolean;
   onVerProcesos: () => void;
+  isHelpdeskMockup?: boolean;
 }) {
-  const rating = parseFloat(String(tech.avg_rating ?? 0));
+  const rating  = parseFloat(String(tech.avg_rating ?? 0));
+  const availSt = (tech.avail_status ?? 'disponible') as TechAvailStatus;
+  const availC  = AVAIL_COLORS[availSt] ?? '#94a3b8';
+
+  if (isHelpdeskMockup) {
+    return (
+      <div style={{
+        background: '#fff',
+        border: '1px solid #eef2f6',
+        borderRadius: 12,
+        padding: '14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 1px 3px rgba(15,23,42,.03)',
+        transition: 'border-color .15s',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            {tech.avatar_url ? (
+              <img src={tech.avatar_url} alt={tech.first_name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,.1)' }} />
+            ) : (
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#0e2235', color: '#fff', fontSize: 12, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,.1)' }}>
+                {initials(`${tech.first_name} ${tech.last_name}`)}
+              </div>
+            )}
+            <span style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, background: availC, border: '2px solid #f8fafc', borderRadius: '50%' }} />
+          </div>
+          <div>
+            <p style={{ margin: '0 0 1px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.2 }}>
+              {tech.first_name} {tech.last_name}
+            </p>
+            {tech.username && (
+              <p style={{ margin: '0 0 3px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>@{tech.username}</p>
+            )}
+            <span style={{ fontSize: 9, color: availC, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: availC, display: 'inline-block' }} />
+              {AVAIL_LABELS[availSt] ?? availSt}
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onVerProcesos}
+          style={{
+            fontSize: 9, fontWeight: 900,
+            border: '1px solid #e2e8f0',
+            padding: '5px 10px', borderRadius: 8,
+            background: '#fff', color: '#1e293b',
+            cursor: 'pointer', fontFamily: 'inherit',
+            letterSpacing: '.02em', flexShrink: 0,
+            boxShadow: '0 1px 2px rgba(0,0,0,.04)',
+          }}
+        >
+          VER PROCESOS
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -535,6 +594,7 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
   const [quickFilter,     setQuickFilter]    = useState<QuickFilter | null>(null);
   const [techSearch,      setTechSearch]     = useState('');
   const [showFilters,     setShowFilters]    = useState(false);
+  const [showTechPanel,   setShowTechPanel]  = useState(true);
 
   const { data, isLoading } = useQuery({
     queryKey: ['tickets', moduleId, stateFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, reprocesoFilter, page],
@@ -579,6 +639,7 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
     staleTime: 60_000,
     enabled:  !!user?.id,
   });
+
 
   const allTickets = data?.data  ?? [];
   const total      = data?.total ?? 0;
@@ -652,6 +713,350 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
 
   function toggleQuickFilter(key: QuickFilter) { setQuickFilter((p) => p === key ? null : key); }
   const isHelpdeskMockup = visualVariant === 'helpdeskMockup';
+
+  /* ── Helpdesk mockup view ────────────────────────────────────────── */
+  if (isHelpdeskMockup) {
+    /* ── Admin bandeja ── */
+
+    return (
+      <>
+        <div className={styles.helpdeskAdminShell}>
+
+          {/* Main content */}
+          <div className={styles.helpdeskAdminMain}>
+
+            {/* Stats */}
+            <div className={styles.helpdeskStatsGrid}>
+              {STAT_CARDS.map((card, i) => (
+                <div key={card.key}
+                  className={`${styles.statCard}${quickFilter === card.key ? ` ${styles.statCardActive}` : ''}`}
+                  style={{ '--accent': card.accent } as React.CSSProperties}
+                  onClick={() => toggleQuickFilter(card.key)}>
+                  <p className={styles.statCount}>{statCounts[i]}</p>
+                  <p className={styles.statLabel}>{card.label}</p>
+                  <p className={styles.statDesc}>{card.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Search + actions row */}
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '10px 14px', borderRadius: 12, border: '1px solid #eef2f6', boxShadow: '0 1px 3px rgba(15,23,42,.04)', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar tickets..."
+                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, fontFamily: 'inherit', background: 'transparent', color: '#334155' }}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {canCreate && moduleId && (
+                  <button type="button" onClick={() => setShowCreate(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: '#ff5e3a', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 3px rgba(255,94,58,.25)' }}>
+                    <Plus size={12} /> Reportar Nuevo Incidente
+                  </button>
+                )}
+                <button type="button"
+                  onClick={() => setShowFilters((v) => !v)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: showFilters ? '1px solid #ff5e3a' : '1px solid #e2e8f0', background: showFilters ? '#fff5f0' : '#fff', color: showFilters ? '#ff5e3a' : '#475569', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <Filter size={10} /> Filtros{(priorityFilter || stateFilter || categoryFilter) ? ' ●' : ''}
+                </button>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
+                  style={{ fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 8px', fontFamily: 'inherit', cursor: 'pointer', background: '#f8fafc', color: '#475569', fontWeight: 700 }}>
+                  <option value="auto">Automático (SLA)</option>
+                  <option value="newest">Recientes</option>
+                  <option value="priority">Prioridad</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Filter panel */}
+            {showFilters && (
+              <div className={styles.helpdeskFilterPanel}>
+                {/* Priority chips */}
+                <div>
+                  <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Prioridad</p>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {PRIORITIES.map((p) => {
+                      const c = TICKET_PRIORITY_COLORS[p];
+                      const active = priorityFilter === p;
+                      return (
+                        <button key={p} type="button"
+                          onClick={() => setPriorityFilter(active ? '' : p)}
+                          style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 99, border: `1px solid ${active ? c : c + '60'}`, background: active ? c : `${c}15`, color: active ? '#fff' : c, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {TICKET_PRIORITY_LABELS[p]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* State chips */}
+                {(workflow?.states ?? []).length > 0 && (
+                  <div>
+                    <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Estado</p>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {(workflow?.states ?? []).map((s) => {
+                        const active = stateFilter === s.id;
+                        return (
+                          <button key={s.id} type="button"
+                            onClick={() => setStateFilter(active ? '' : s.id)}
+                            style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 99, border: `1px solid ${active ? '#0e2235' : '#e2e8f0'}`, background: active ? '#0e2235' : '#f8fafc', color: active ? '#fff' : '#475569', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Category */}
+                {(categories ?? []).length > 0 && (
+                  <div>
+                    <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Categoría</p>
+                    <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
+                      style={{ fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 10px', fontFamily: 'inherit', background: '#f8fafc', color: '#475569', fontWeight: 600 }}>
+                      <option value="">Todas las categorías</option>
+                      {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {/* Reset */}
+                {(priorityFilter || stateFilter || categoryFilter) && (
+                  <button type="button"
+                    onClick={() => { setPriorityFilter(''); setStateFilter(''); setCategoryFilter(''); }}
+                    style={{ alignSelf: 'flex-start', fontSize: 10, fontWeight: 700, padding: '4px 12px', borderRadius: 8, border: '1px solid #fee2e2', background: '#fff5f5', color: '#ef4444', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    × Limpiar filtros
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Ticket sections */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>BANDEJA DE CASOS ACTIVOS</span>
+                <span style={{ fontSize: 10, background: '#f1f5f9', color: '#475569', fontWeight: 800, padding: '2px 8px', borderRadius: 6 }}>
+                  Consola Global • {total}
+                </span>
+              </div>
+
+              {isLoading ? (
+                <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>Cargando tickets…</p>
+              ) : (
+                <>
+                  {/* Anteriores / vencidos */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#e53e3e', textTransform: 'uppercase', letterSpacing: '.04em' }}>● ANTERIORES — VENCIDOS / ALTA PRIORIDAD</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{ticketsOld.length} tickets</span>
+                    </div>
+                    {ticketsOld.length === 0 ? (
+                      <div style={{ background: '#fff', borderRadius: 16, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>
+                        Sin tickets anteriores
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                        {ticketsOld.map((t) => {
+                          const pColor = TICKET_PRIORITY_COLORS[t.priority];
+                          return (
+                            <div key={t.id} className={styles.helpdeskCard}
+                              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  {t.assignee_name ?? '? Sin asignar'}
+                                  <ChevronDown size={9} style={{ color: '#94a3b8' }} />
+                                </span>
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
+                                  {TICKET_PRIORITY_LABELS[t.priority]}
+                                </span>
+                              </div>
+                              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
+                              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
+                              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {initials(t.creator_name)}
+                                  </div>
+                                  <div>
+                                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
+                                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>
+                                  #{t.id.slice(-6).toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hoy / actuales */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.04em' }}>● HOY — ACTUALES</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{ticketsToday.length} tickets</span>
+                    </div>
+                    {ticketsToday.length === 0 ? (
+                      <div style={{ background: '#fff', borderRadius: 16, padding: '28px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>
+                        Sin tickets nuevos hoy
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                        {ticketsToday.map((t) => {
+                          const pColor = TICKET_PRIORITY_COLORS[t.priority];
+                          return (
+                            <div key={t.id} className={styles.helpdeskCard}
+                              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  {t.assignee_name ?? '? Sin asignar'}
+                                  <ChevronDown size={9} style={{ color: '#94a3b8' }} />
+                                </span>
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
+                                  {TICKET_PRIORITY_LABELS[t.priority]}
+                                </span>
+                              </div>
+                              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
+                              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
+                              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {initials(t.creator_name)}
+                                  </div>
+                                  <div>
+                                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
+                                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>
+                                  #{t.id.slice(-6).toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Footer note */}
+              <div style={{ textAlign: 'center', paddingBottom: 8, flexShrink: 0 }}>
+                <p style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: 0 }}>
+                  ☉ TODOS LOS TICKETS DE ESTE MÓDULO (SOLO ACCESIBLE PARA ADMIN, SUPERADMIN Y JEFE TÉCNICO)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tech panel — collapsible */}
+          <div className={styles.helpdeskTechPanelWrap}>
+            {/* Ribbon toggle tab */}
+            <button
+              type="button"
+              className={styles.helpdeskTechTab}
+              onClick={() => setShowTechPanel((v) => !v)}
+              title={showTechPanel ? 'Ocultar técnicos' : 'Ver técnicos'}
+            >
+              <span className={styles.helpdeskTechTabLabel}>
+                {showTechPanel ? '◂ TÉCNICOS' : 'VER TÉCNICOS ▸'}
+              </span>
+            </button>
+
+            {showTechPanel && (
+              <div className={styles.helpdeskTechPanel}>
+
+                {/* Search técnico */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '8px 12px', boxShadow: '0 1px 2px rgba(15,23,42,.03)' }}>
+                  <Search size={12} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                  <input
+                    type="text"
+                    value={techSearch}
+                    onChange={(e) => setTechSearch(e.target.value)}
+                    placeholder="Buscar técnico..."
+                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, fontFamily: 'inherit', background: 'transparent' }}
+                  />
+                </div>
+
+                {/* Filtros + Mesa de Ayuda badge */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button type="button" style={{ fontSize: 11, fontWeight: 700, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4, padding: 0 }}>
+                    <Filter size={10} /> FILTROS
+                  </button>
+                  <span style={{ fontSize: 10, background: '#e0f2fe', color: '#0369a1', fontWeight: 800, padding: '3px 12px', borderRadius: 99 }}>
+                    Mesa de Ayuda
+                  </span>
+                </div>
+
+                {/* Técnicos header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: '1px solid #eef2f6' }}>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '.07em' }}>TÉCNICOS</span>
+                  <span style={{ fontSize: 10, background: '#20c933', color: '#fff', fontWeight: 800, padding: '1px 8px', borderRadius: 4 }}>
+                    {filteredTechs.filter((t) => t.is_available).length}/{filteredTechs.length} disp.
+                  </span>
+                </div>
+
+                {/* Tech cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, overflowY: 'auto' }}>
+                  {filteredTechs.length === 0 ? (
+                    <p style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>Sin técnicos asignados</p>
+                  ) : filteredTechs.map((tech) => {
+                    const st = (tech.avail_status ?? 'disponible') as TechAvailStatus;
+                    const c  = AVAIL_COLORS[st] ?? '#94a3b8';
+                    return (
+                      <div key={tech.id}
+                        style={{ background: '#fff', border: '1px solid #eef2f6', borderRadius: 12, padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ position: 'relative', flexShrink: 0 }}>
+                            {tech.avatar_url ? (
+                              <img src={tech.avatar_url} alt={tech.first_name}
+                                style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,.1)' }} />
+                            ) : (
+                              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#0e2235', color: '#fff', fontSize: 12, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,.1)' }}>
+                                {initials(`${tech.first_name} ${tech.last_name}`)}
+                              </div>
+                            )}
+                            <span style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, background: c, border: '2px solid #f8fafc', borderRadius: '50%' }} />
+                          </div>
+                          <div>
+                            <p style={{ margin: '0 0 1px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.2 }}>
+                              {tech.first_name} {tech.last_name}
+                            </p>
+                            {tech.username && (
+                              <p style={{ margin: '0 0 2px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>@{tech.username}</p>
+                            )}
+                            <span style={{ fontSize: 9, color: c, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: c, display: 'inline-block' }} />
+                              {AVAIL_LABELS[st]}
+                            </span>
+                          </div>
+                        </div>
+                        <button type="button"
+                          onClick={() => router.push(`${basePath}/tech/${tech.id}`)}
+                          style={{ fontSize: 9, fontWeight: 900, border: '1px solid #e2e8f0', padding: '5px 9px', borderRadius: 8, background: '#fff', color: '#1e293b', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '.02em', flexShrink: 0 }}>
+                          VER PROCESOS
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        {showCreate && moduleId && <CreateModal moduleId={moduleId} onClose={() => setShowCreate(false)} />}
+      </>
+    );
+  }
 
   const iconBtn: React.CSSProperties = {
     width: 38, height: 38, borderRadius: 9, border: '1.5px solid #e2e8f0',
@@ -835,7 +1240,15 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
           {/* Section label */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em' }}>Bandeja de Casos Activos</span>
-            <span style={{ fontSize: 10, color: '#94a3b8', background: '#fff', border: '1px solid #e2e8f0', padding: '3px 10px', borderRadius: 8, fontWeight: 700 }}>Consola Global · {total}</span>
+            <span style={{
+              fontSize: 10,
+              color: isHelpdeskMockup ? '#4a5568' : '#94a3b8',
+              background: isHelpdeskMockup ? '#f1f5f9' : '#fff',
+              border: isHelpdeskMockup ? 'none' : '1px solid #e2e8f0',
+              padding: isHelpdeskMockup ? '2px 8px' : '3px 10px',
+              borderRadius: 6,
+              fontWeight: isHelpdeskMockup ? 900 : 700,
+            }}>Consola Global · {total}</span>
           </div>
 
           {/* Cards */}
@@ -862,8 +1275,8 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
               {ticketsOld.length > 0 && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5e3a', flexShrink: 0, display: 'inline-block' }} />
-                    <span style={{ fontSize: 10, fontWeight: 800, color: '#ff5e3a', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: isHelpdeskMockup ? '#e53e3e' : '#ff5e3a', flexShrink: 0, display: 'inline-block' }} />
+                    <span style={{ fontSize: 10, fontWeight: 800, color: isHelpdeskMockup ? '#e53e3e' : '#ff5e3a', textTransform: 'uppercase', letterSpacing: '.07em' }}>
                       Anteriores — Vencidos / Alta Prioridad
                     </span>
                     <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsOld.length} ticket{ticketsOld.length !== 1 ? 's' : ''}</span>
@@ -877,14 +1290,20 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
               )}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', flexShrink: 0, display: 'inline-block' }} />
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: isHelpdeskMockup ? '#94a3b8' : '#3b82f6', flexShrink: 0, display: 'inline-block' }} />
+                  <span style={{ fontSize: 10, fontWeight: 800, color: isHelpdeskMockup ? '#94a3b8' : '#3b82f6', textTransform: 'uppercase', letterSpacing: '.07em' }}>
                     Hoy — Actuales
                   </span>
                   <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsToday.length} ticket{ticketsToday.length !== 1 ? 's' : ''}</span>
                 </div>
                 {ticketsToday.length === 0 ? (
+                  isHelpdeskMockup ? (
+                    <div style={{ background: '#fff', borderRadius: 16, padding: '32px 24px', textAlign: 'center', border: '1px solid #f1f5f9', color: '#94a3b8' }}>
+                      <p style={{ fontSize: 12, fontWeight: 500, margin: 0 }}>Sin tickets nuevos hoy</p>
+                    </div>
+                  ) : (
                   <p style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>Sin tickets nuevos hoy</p>
+                  )
                 ) : (
                   <div className={styles.cardGrid}>
                     {ticketsToday.map((t) => (
@@ -919,7 +1338,7 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
         >
 
           {/* Search techs */}
-          <div style={{ background: '#fff', borderRadius: 10, border: '1.5px solid #e2e8f0', padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ background: '#fff', borderRadius: isHelpdeskMockup ? 12 : 10, border: '1px solid #e2e8f0', padding: isHelpdeskMockup ? '8px 12px' : '9px 14px', display: 'flex', alignItems: 'center', gap: 8, boxShadow: isHelpdeskMockup ? '0 1px 3px rgba(0,0,0,.04)' : 'none' }}>
             <Search size={12} style={{ color: '#94a3b8', flexShrink: 0 }} />
             <input
               type="text"
@@ -931,21 +1350,32 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
           </div>
 
           {/* Filter row */}
-          <div style={{ background: '#fff', borderRadius: 10, border: '1.5px solid #e2e8f0', padding: '9px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#334155', letterSpacing: '.05em' }}>
-              <Filter size={11} /> Filtros
-            </span>
-            <span style={{ fontSize: 9.5, background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 5, fontWeight: 800 }}>
-              Mesa de Ayuda
-            </span>
-          </div>
+          {isHelpdeskMockup ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '.05em', cursor: 'default' }}>
+                <Filter size={10} /> Filtros
+              </span>
+              <span style={{ fontSize: 9.5, background: '#e0f2fe', color: '#0369a1', padding: '2px 10px', borderRadius: 99, fontWeight: 800 }}>
+                Mesa de Ayuda
+              </span>
+            </div>
+          ) : (
+            <div style={{ background: '#fff', borderRadius: 10, border: '1.5px solid #e2e8f0', padding: '9px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#334155', letterSpacing: '.05em' }}>
+                <Filter size={11} /> Filtros
+              </span>
+              <span style={{ fontSize: 9.5, background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 5, fontWeight: 800 }}>
+                Mesa de Ayuda
+              </span>
+            </div>
+          )}
 
           {/* Techs header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#475569', letterSpacing: '.05em' }}>
-              <Users size={12} /> Técnicos
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: isHelpdeskMockup ? '1px solid #eef2f6' : 'none', paddingBottom: isHelpdeskMockup ? 8 : 0 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#475569', letterSpacing: '.05em' }}>
+              {!isHelpdeskMockup && <Users size={12} />} Técnicos
             </span>
-            <span style={{ fontSize: 9, fontWeight: 800, background: '#20c933', color: '#fff', padding: '2px 9px', borderRadius: 99 }}>
+            <span style={{ fontSize: 9, fontWeight: 800, background: '#20c933', color: '#fff', padding: '2px 9px', borderRadius: isHelpdeskMockup ? 4 : 99 }}>
               {filteredTechs.filter((t) => t.is_available).length}/{filteredTechs.length} disp.
             </span>
           </div>
@@ -959,6 +1389,7 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
               tech={tech}
               isSelected={false}
               onVerProcesos={() => router.push(`${basePath}/tech/${tech.id}`)}
+              isHelpdeskMockup={isHelpdeskMockup}
             />
           ))}
         </div>
@@ -972,14 +1403,16 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
 /* ─────────────────── Tech view (logged-in tech's own queue) ─────────────── */
 
 interface TechViewProps {
-  user:       CurrentUser;
-  moduleId:   string;
-  basePath:   string;
-  moduleRole: string;
-  canCreate:  boolean;
+  user:          CurrentUser;
+  moduleId:      string;
+  basePath:      string;
+  moduleRole:    string;
+  canCreate:     boolean;
+  visualVariant?: 'helpdeskMockup' | 'default';
 }
 
-function TechView({ user, moduleId, basePath, moduleRole, canCreate }: TechViewProps) {
+function TechView({ user, moduleId, basePath, moduleRole, canCreate, visualVariant = 'default' }: TechViewProps) {
+  const router         = useRouter();
   const [showDrawer,   setShowDrawer]   = useState(false);
   const [showCreate,   setShowCreate]   = useState(false);
 
@@ -1021,6 +1454,140 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate }: TechViewP
   const fullName   = `${user.first_name} ${user.last_name}`;
   const avgRating  = parseFloat(String(techStats?.avg_rating ?? 0));
   const ratedCount = techStats?.rated_tickets ?? 0;
+
+  const techStatCards = useMemo(() => {
+    const all = (assigned ?? []) as AssignedTicket[];
+    return [
+      { label: 'Pendientes', value: all.filter((t) => !t.is_final).length,                   accent: '#ff5e3a' },
+      { label: 'En proceso', value: all.filter((t) => t.state_name === 'en_proceso').length,  accent: '#3b82f6' },
+      { label: 'Realizados', value: all.filter((t) => t.state_name === 'realizado').length,   accent: '#20c933' },
+      { label: 'Reproceso',  value: all.filter((t) => t.state_name === 'reproceso').length,   accent: '#f59e0b' },
+      { label: 'Cerrados',   value: all.filter((t) => t.is_final).length,                    accent: '#64748b' },
+      { label: 'Tareas',     value: all.filter((t) => t.assignment_role === 'owner').length,  accent: '#a855f7' },
+    ];
+  }, [assigned]);
+
+  /* ── helpdeskMockup layout: no left profile panel, stats grid ── */
+  if (visualVariant === 'helpdeskMockup') {
+    return (
+      <>
+        <div className={styles.helpdeskAdminMain}>
+          {/* Stats grid */}
+          <div className={styles.helpdeskStatsGrid}>
+            {techStatCards.map((card) => (
+              <div key={card.label} className={styles.statCard}
+                style={{ '--accent': card.accent } as React.CSSProperties}>
+                <p className={styles.statCount}>{card.value}</p>
+                <p className={styles.statLabel}>{card.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #f1f5f9', paddingBottom: 12, flexShrink: 0 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 800, color: '#0e2235' }}>TICKETS ASIGNADOS</span>
+            {canCreate && moduleId && (
+              <button type="button" onClick={() => setShowCreate(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: '#ff5e3a', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 3px rgba(255,94,58,.25)' }}>
+                <Plus size={12} /> Reportar Nuevo Incidente
+              </button>
+            )}
+          </div>
+
+          {isLoading ? (
+            <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>Cargando cola de trabajo…</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* ANTERIORES */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#e53e3e', textTransform: 'uppercase', letterSpacing: '.04em' }}>● ANTERIORES — VENCIDOS / ALTA PRIORIDAD</span>
+                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{previous.length} tickets</span>
+                </div>
+                {previous.length === 0 ? (
+                  <div style={{ background: '#fff', borderRadius: 16, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets anteriores</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    {previous.map((t) => {
+                      const pColor = TICKET_PRIORITY_COLORS[t.priority as TicketPriority] ?? '#94a3b8';
+                      return (
+                        <div key={t.id} className={styles.helpdeskCard}
+                          onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                            <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              {t.creator_name ?? '?'}<ChevronDown size={9} style={{ color: '#94a3b8' }} />
+                            </span>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
+                              {TICKET_PRIORITY_LABELS[t.priority as TicketPriority] ?? t.priority}
+                            </span>
+                          </div>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
+                          <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
+                          <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initials(t.creator_name)}</div>
+                              <div>
+                                <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
+                                <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>#{t.id.slice(-6).toUpperCase()}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* HOY */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.04em' }}>● HOY — ACTUALES</span>
+                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{today.length} tickets</span>
+                </div>
+                {today.length === 0 ? (
+                  <div style={{ background: '#fff', borderRadius: 16, padding: '28px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets nuevos hoy</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    {today.map((t) => {
+                      const pColor = TICKET_PRIORITY_COLORS[t.priority as TicketPriority] ?? '#94a3b8';
+                      return (
+                        <div key={t.id} className={styles.helpdeskCard}
+                          onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                            <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              {t.creator_name ?? '?'}<ChevronDown size={9} style={{ color: '#94a3b8' }} />
+                            </span>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
+                              {TICKET_PRIORITY_LABELS[t.priority as TicketPriority] ?? t.priority}
+                            </span>
+                          </div>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
+                          <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
+                          <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initials(t.creator_name)}</div>
+                              <div>
+                                <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
+                                <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>#{t.id.slice(-6).toUpperCase()}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        {showCreate && moduleId && <CreateModal moduleId={moduleId} onClose={() => setShowCreate(false)} />}
+      </>
+    );
+  }
 
   const infoStyle: React.CSSProperties = { background: '#fff', padding: '14px', borderRadius: 14, border: '1px solid #e8edf3', fontSize: 11, color: '#475569', lineHeight: 1.6 };
   const groupHeader = (label: string, count: number, color: string) => (
@@ -1089,20 +1656,15 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate }: TechViewP
         </div>
 
         {/* Center: queue */}
-        <div style={{ flex: 1, minWidth: 0, background: '#fff', padding: '28px 32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, background: '#fff', padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, borderBottom: '2px solid #f1f5f9', paddingBottom: 12, marginBottom: 24 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 800, color: '#0e2235', borderBottom: '2px solid #ff5e3a', paddingBottom: 14, marginBottom: -14 }}>
-              TICKETS
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8' }}>Organización Automática Activa</span>
+          {/* Header row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #f1f5f9', paddingBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 800, color: '#0e2235' }}>TICKETS ASIGNADOS</span>
             {canCreate && moduleId && (
-              <button
-                type="button"
-                onClick={() => setShowCreate(true)}
-                style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: '#ff5e3a', border: 'none', borderRadius: 8, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-              >
-                <Plus size={11} />Nuevo
+              <button type="button" onClick={() => setShowCreate(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: '#ff5e3a', border: 'none', borderRadius: 8, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <Plus size={11} /> Reportar Nuevo Incidente
               </button>
             )}
           </div>
@@ -1139,11 +1701,8 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate }: TechViewP
           )}
 
           <div style={{ marginTop: 'auto', paddingTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={() => setShowDrawer(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: '#0e2235', border: 'none', borderRadius: 12, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-            >
+            <button type="button" onClick={() => setShowDrawer(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: '#0e2235', border: 'none', borderRadius: 12, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <BarChart2 size={13} style={{ color: '#ff5e3a' }} />
               Ver Rendimiento y Estadísticas
             </button>
@@ -1194,10 +1753,13 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate }: TechViewP
 
 /* ─────────────────── User view ──────────────────────────────────────────── */
 
-function UserView({ moduleId, basePath, canCreate }: { moduleId: string; basePath: string; canCreate: boolean }) {
-  const router       = useRouter();
-  const [showCreate, setShowCreate] = useState(false);
-  const [page,       setPage]       = useState(1);
+function UserView({ moduleId, basePath, canCreate, visualVariant = 'default' }: { moduleId: string; basePath: string; canCreate: boolean; visualVariant?: 'helpdeskMockup' | 'default' }) {
+  const router              = useRouter();
+  const [showCreate,        setShowCreate]       = useState(false);
+  const [search,            setSearch]           = useState('');
+  const [page,              setPage]             = useState(1);
+  const [showFilters,       setShowFilters]       = useState(false);
+  const [priorityFilter,    setPriorityFilter]   = useState<TicketPriority | ''>('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['tickets', moduleId, 'mine', page],
@@ -1209,6 +1771,188 @@ function UserView({ moduleId, basePath, canCreate }: { moduleId: string; basePat
   const tickets    = data?.data  ?? [];
   const total      = data?.total ?? 0;
   const totalPages = Math.ceil(total / 20);
+
+  const filtered = useMemo(() => {
+    let list = tickets;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((t) => t.title.toLowerCase().includes(q) || t.category_name.toLowerCase().includes(q));
+    }
+    if (priorityFilter) list = list.filter((t) => t.priority === priorityFilter);
+    return list;
+  }, [tickets, search, priorityFilter]);
+
+  const { ticketsOld, ticketsToday } = useMemo(() => {
+    const old: typeof filtered = [];
+    const today: typeof filtered = [];
+    for (const t of filtered) {
+      (isToday(t.created_at) ? today : old).push(t);
+    }
+    return { ticketsOld: old, ticketsToday: today };
+  }, [filtered]);
+
+  if (visualVariant === 'helpdeskMockup') {
+    return (
+      <>
+        <div className={styles.helpdeskAdminShell}>
+          <div className={styles.helpdeskAdminMain}>
+
+            {/* Search + actions */}
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '10px 14px', borderRadius: 12, border: '1px solid #eef2f6', boxShadow: '0 1px 3px rgba(15,23,42,.04)', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar tickets..."
+                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, fontFamily: 'inherit', background: 'transparent', color: '#334155' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {canCreate && moduleId && (
+                  <button type="button" onClick={() => setShowCreate(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: '#ff5e3a', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 3px rgba(255,94,58,.25)' }}>
+                    <Plus size={12} /> Reportar Nuevo Incidente
+                  </button>
+                )}
+                <button type="button"
+                  onClick={() => setShowFilters((v) => !v)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: showFilters ? '1px solid #ff5e3a' : '1px solid #e2e8f0', background: showFilters ? '#fff5f0' : '#fff', color: showFilters ? '#ff5e3a' : '#475569', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <Filter size={10} /> Filtros{priorityFilter ? ' ●' : ''}
+                </button>
+              </div>
+            </div>
+
+            {/* Filter panel */}
+            {showFilters && (
+              <div className={styles.helpdeskFilterPanel}>
+                <div>
+                  <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Prioridad</p>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {PRIORITIES.map((p) => {
+                      const c = TICKET_PRIORITY_COLORS[p];
+                      const active = priorityFilter === p;
+                      return (
+                        <button key={p} type="button"
+                          onClick={() => setPriorityFilter(active ? '' : p)}
+                          style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 99, border: `1px solid ${active ? c : c + '60'}`, background: active ? c : `${c}15`, color: active ? '#fff' : c, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {TICKET_PRIORITY_LABELS[p]}
+                        </button>
+                      );
+                    })}
+                    {priorityFilter && (
+                      <button type="button"
+                        onClick={() => setPriorityFilter('')}
+                        style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 99, border: '1px solid #fee2e2', background: '#fff5f5', color: '#ef4444', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        × Limpiar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Ticket sections */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>MIS TICKETS ACTIVOS</span>
+                <span style={{ fontSize: 10, background: '#f1f5f9', color: '#475569', fontWeight: 800, padding: '2px 8px', borderRadius: 6 }}>Total • {total}</span>
+              </div>
+
+              {isLoading ? (
+                <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>Cargando tickets…</p>
+              ) : (
+                <>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#e53e3e', textTransform: 'uppercase', letterSpacing: '.04em' }}>● ANTERIORES</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{ticketsOld.length} tickets</span>
+                    </div>
+                    {ticketsOld.length === 0 ? (
+                      <div style={{ background: '#fff', borderRadius: 16, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets anteriores</div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                        {ticketsOld.map((t) => {
+                          const pColor = TICKET_PRIORITY_COLORS[t.priority];
+                          return (
+                            <div key={t.id} className={styles.helpdeskCard}
+                              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  {t.assignee_name ?? '? Sin asignar'}<ChevronDown size={9} style={{ color: '#94a3b8' }} />
+                                </span>
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
+                                  {TICKET_PRIORITY_LABELS[t.priority]}
+                                </span>
+                              </div>
+                              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
+                              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
+                              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {initials(t.creator_name)}
+                                  </div>
+                                  <div>
+                                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
+                                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>#{t.id.slice(-6).toUpperCase()}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.04em' }}>● HOY — ACTUALES</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{ticketsToday.length} tickets</span>
+                    </div>
+                    {ticketsToday.length === 0 ? (
+                      <div style={{ background: '#fff', borderRadius: 16, padding: '28px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets nuevos hoy</div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                        {ticketsToday.map((t) => {
+                          const pColor = TICKET_PRIORITY_COLORS[t.priority];
+                          return (
+                            <div key={t.id} className={styles.helpdeskCard}
+                              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  {t.assignee_name ?? '? Sin asignar'}<ChevronDown size={9} style={{ color: '#94a3b8' }} />
+                                </span>
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
+                                  {TICKET_PRIORITY_LABELS[t.priority]}
+                                </span>
+                              </div>
+                              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
+                              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
+                              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {initials(t.creator_name)}
+                                  </div>
+                                  <div>
+                                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
+                                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>#{t.id.slice(-6).toUpperCase()}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        {showCreate && moduleId && <CreateModal moduleId={moduleId} onClose={() => setShowCreate(false)} />}
+      </>
+    );
+  }
 
   return (
     <>
@@ -1323,6 +2067,7 @@ export function TicketsClient({
     ? (forcedModuleDesc ?? null)
     : 'Sistema centralizado de soporte técnico. Gestiona incidencias, solicitudes y seguimiento SLA.';
 
+
   return (
     <ModuleLayout
       moduleId={moduleId || undefined}
@@ -1333,9 +2078,9 @@ export function TicketsClient({
       {isAdminView ? (
         <AdminView moduleId={moduleId} basePath={ticketBasePath} canCreate={canCreate} visualVariant={visualVariant} />
       ) : isTechView && user ? (
-        <TechView user={user} moduleId={moduleId} basePath={ticketBasePath} moduleRole={moduleRole!} canCreate={canCreate} />
+        <TechView user={user} moduleId={moduleId} basePath={ticketBasePath} moduleRole={moduleRole!} canCreate={canCreate} visualVariant={visualVariant} />
       ) : (
-        <UserView moduleId={moduleId} basePath={ticketBasePath} canCreate={canCreate} />
+        <UserView moduleId={moduleId} basePath={ticketBasePath} canCreate={canCreate} visualVariant={visualVariant} />
       )}
     </ModuleLayout>
   );

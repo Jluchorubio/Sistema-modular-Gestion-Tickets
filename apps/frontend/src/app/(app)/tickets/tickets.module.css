@@ -1393,11 +1393,54 @@
 }
 
 /* Helpdesk mockup variant: scoped to /helpdesk only */
+
+.helpdeskSubBar {
+  background: #f8fafc;
+  border-bottom: 1px solid #eef2f6;
+  padding: 7px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.helpdeskSubBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.helpdeskRoleBadge {
+  padding: 3px 10px;
+  background: rgba(14, 34, 53, 0.08);
+  color: #0e2235;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.helpdeskSubBarSep {
+  font-size: 12px;
+  color: #cbd5e1;
+  user-select: none;
+}
+
+.helpdeskSubBarDesc {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin: 0;
+}
+
 .helpdeskAdminShell {
   display: flex;
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  align-items: flex-start;
   background: #fafbfc;
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -1405,8 +1448,7 @@
 .helpdeskAdminMain {
   flex: 1;
   min-width: 0;
-  padding: 24px 28px 0;
-  overflow-y: auto;
+  padding: 24px 28px 40px;
   background: #fafbfc;
   display: flex;
   flex-direction: column;
@@ -1509,6 +1551,47 @@
   font-weight: 900;
 }
 
+/* ── Collapsible tech panel wrapper (handles sticky) ── */
+.helpdeskTechPanelWrap {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+/* Vertical ribbon tab — always visible */
+.helpdeskTechTab {
+  width: 26px;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  border: none;
+  border-left: 1px solid #eef2f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  transition: background .15s;
+}
+.helpdeskTechTab:hover { background: #e8edf3; }
+
+.helpdeskTechTabLabel {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: 9px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  user-select: none;
+  white-space: nowrap;
+}
+
 .helpdeskTechPanel {
   width: 320px;
   flex-shrink: 0;
@@ -1519,10 +1602,38 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  height: 100vh;
 }
 
 .helpdeskTechPanel input::placeholder { color: #9aa9b8; }
 .helpdeskTechPanel button { line-height: 1.15; }
+
+/* ── Inline ticket cards (helpdeskMockup) ── */
+.helpdeskCard {
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px 18px 14px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 1px 4px rgba(15,23,42,.06);
+  cursor: pointer;
+  transition: box-shadow .15s, transform .15s;
+}
+.helpdeskCard:hover {
+  box-shadow: 0 6px 20px rgba(15,23,42,.11);
+  transform: scale(1.02);
+}
+
+/* ── Filter panel ── */
+.helpdeskFilterPanel {
+  background: #fff;
+  border: 1px solid #eef2f6;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(15,23,42,.04);
+}
 
 @media (max-width: 1100px) {
   .helpdeskStatsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1530,11 +1641,615 @@
 }
 
 @media (max-width: 900px) {
-  .helpdeskAdminShell { flex-direction: column; }
-  .helpdeskTechPanel { width: 100%; border-left: 0; border-top: 1px solid #eef2f6; }
+  .helpdeskAdminShell  { flex-direction: column; }
+  .helpdeskTechPanelWrap { position: static; height: auto; }
+  .helpdeskTechPanel   { width: 100%; border-left: 0; border-top: 1px solid #eef2f6; height: auto; }
+  .helpdeskTechTab     { display: none; }
 }
 
 @media (max-width: 720px) {
   .helpdeskAdminMain { padding: 16px; }
   .helpdeskStatsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   HELPDESK WORKSPACE — ticket detail page (.hw* classes)
+   ════════════════════════════════════════════════════════════════════ */
+
+.hwPage {
+  margin: -32px;
+  background: #f8fafc;
+  padding: 24px 28px 40px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────── */
+.hwTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(15,23,42,.04);
+}
+
+.hwBackBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background .15s, color .15s;
+}
+.hwBackBtn:hover { background: #f1f5f9; color: #0e2235; }
+
+.hwTopBarTitle {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0e2235;
+}
+
+.hwIdBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+/* ── Participants band ───────────────────────────────────────────── */
+.hwParticipantsBand {
+  background: #0e2235;
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hwTechChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 5px 12px;
+}
+
+.hwTechChipAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.hwTechChipName {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
+
+/* ── Device grid ─────────────────────────────────────────────────── */
+.hwDeviceGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.hwDeviceImageCard {
+  background: #1e3044;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(226,232,240,0.8);
+  box-shadow: 0 1px 4px rgba(15,23,42,.06);
+  position: relative;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hwDeviceImagePlaceholder {
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hwDeviceImageOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(14,34,53,0.92) 0%, transparent 100%);
+  padding: 20px 14px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.hwSpecsCard {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15,23,42,.035);
+}
+
+.hwHistoryCard {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15,23,42,.035);
+}
+
+.hwHistoryItem {
+  background: #f8fafc;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hwCardTab {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ff5e3a;
+}
+
+/* ── Ticket info card ────────────────────────────────────────────── */
+.hwInfoCard {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(15,23,42,.04);
+  margin-bottom: 14px;
+}
+
+.hwInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.hwInfoCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hwInfoLabel {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.hwInfoValue {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.hwSlaBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 0;
+}
+
+/* ── FSM action buttons ──────────────────────────────────────────── */
+.hwFsmBtns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.hwTakeBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 16px;
+  background: #ff5e3a;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: uppercase;
+  transition: background .15s;
+}
+.hwTakeBtn:hover { background: #e84f2e; }
+
+.hwDoneBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 16px;
+  background: #20c933;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: uppercase;
+  transition: background .15s;
+}
+.hwDoneBtn:hover { background: #1ab32b; }
+
+.hwGenericTransBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 16px;
+  background: #0e2235;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: uppercase;
+  transition: background .15s;
+}
+.hwGenericTransBtn:hover { background: #162e45; }
+
+/* ── Progress timeline ───────────────────────────────────────────── */
+.hwTimeline {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(15,23,42,.04);
+  margin-bottom: 14px;
+}
+
+.hwStepsRow {
+  display: flex;
+  align-items: flex-start;
+}
+
+.hwStepItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  position: relative;
+}
+
+.hwStepLine {
+  position: absolute;
+  top: 11px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  z-index: 0;
+}
+
+.hwStepDot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  transition: box-shadow .2s;
+}
+
+.hwStepLabel {
+  font-size: 10px;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* ── Split area ──────────────────────────────────────────────────── */
+.hwSplit {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.hwLogs {
+  flex: 1 1 63%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hwDarkStack {
+  flex: 0 0 37%;
+  width: 37%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hwDarkCard {
+  background: #0e2235;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.hwLogCard {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15,23,42,.035);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .hwDeviceGrid { grid-template-columns: 1fr 1fr; }
+  .hwInfoGrid   { grid-template-columns: 1fr 1fr; }
+  .hwDarkStack  { flex: 0 0 300px; width: 300px; }
+}
+
+@media (max-width: 900px) {
+  .hwSplit      { flex-direction: column; }
+  .hwDarkStack  { flex: none; width: 100%; }
+  .hwLogs       { flex: none; width: 100%; }
+  .hwDeviceGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .hwPage       { margin: -22px; padding: 16px 16px 32px; }
+  .hwInfoGrid   { grid-template-columns: 1fr 1fr; }
+  .hwStepLabel  { font-size: 9px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   HELPDESK MOCKUP — inner secondary sidebar
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Inner module sidebar (70 px, white, icons only) */
+.helpdeskInnerSidebar {
+  width: 70px;
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid #eef2f6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+}
+
+.helpdeskInnerSidebarTop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.helpdeskSidebarItem {
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  color: #b0becb;
+  border: none;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.helpdeskSidebarItem:hover { color: #0e2235; background: #f1f5f9; }
+
+/* Search row */
+.helpdeskSearchRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eef2f6;
+  flex-shrink: 0;
+}
+
+/* Ticket list */
+.helpdeskTicketList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+
+.helpdeskTicketRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #eef2f6;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: box-shadow .15s, border-color .15s;
+  flex-shrink: 0;
+}
+.helpdeskTicketRow:hover {
+  border-color: #d0dae4;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .06);
+}
+
+/* Footer bar */
+.helpdeskFooterBar {
+  padding: 10px 0;
+  border-top: 1px solid #eef2f6;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── VISTA 2: Tech processes view ── */
+.helpdeskV2Shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: #fafbfc;
+}
+
+.helpdeskV2Header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 24px;
+  background: #fff;
+  border-bottom: 1px solid #eef2f6;
+  flex-shrink: 0;
+}
+
+.helpdeskV2MetricsBar {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  flex-shrink: 0;
+  background: #fff;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.helpdeskV2MetricCell {
+  padding: 12px 16px;
+  border-right: 1px solid #eef2f6;
+}
+.helpdeskV2MetricCell:last-child { border-right: none; }
+
+.helpdeskV2Body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.helpdeskV2Profile {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid #eef2f6;
+  padding: 20px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.helpdeskV2Queue {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fafbfc;
+}
+
+.helpdeskV2QueueHeader {
+  padding: 12px 20px;
+  border-bottom: 1px solid #eef2f6;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0e2235;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.helpdeskV2QueueList {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.helpdeskV2Metrics {
+  width: 320px;
+  flex-shrink: 0;
+  border-left: 1px solid #eef2f6;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+@media (max-width: 1200px) {
+  .helpdeskV2MetricsBar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .helpdeskV2Metrics    { width: 280px; }
+}
+
+@media (max-width: 900px) {
+  .helpdeskInnerSidebar { display: none; }
+  .helpdeskV2Body       { flex-direction: column; }
+  .helpdeskV2Profile    { width: 100%; border-right: none; border-bottom: 1px solid #eef2f6; }
+  .helpdeskV2Metrics    { width: 100%; border-left: none; border-top: 1px solid #eef2f6; }
 }

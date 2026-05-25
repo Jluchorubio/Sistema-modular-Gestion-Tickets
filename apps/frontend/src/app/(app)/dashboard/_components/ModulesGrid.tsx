@@ -8,9 +8,9 @@ import type { SystemModule } from '@/types/module.types';
 import styles from '../dashboard.module.css';
 
 interface Builtins {
-  helpdesk:  SystemModule;
-  inventory: SystemModule;
-  gestion:   SystemModule;
+  helpdesk:  SystemModule | null;
+  inventory: SystemModule | null;
+  gestion:   SystemModule | null;
 }
 
 interface Props {
@@ -59,34 +59,31 @@ export function ModulesGrid({
     };
   }
 
+  const visibleBuiltins = [
+    builtins.helpdesk  ? { m: builtins.helpdesk,  route: '/helpdesk'  } : null,
+    builtins.inventory ? { m: builtins.inventory, route: '/inventory' } : null,
+    builtins.gestion   ? { m: builtins.gestion,   route: '/requests'  } : null,
+  ].filter(Boolean) as { m: SystemModule; route: string }[];
+
+  const totalVisible = visibleBuiltins.length + active.length;
+
   return (
     <>
       <div className={styles.sectionTitle}>Módulos disponibles</div>
       <div className={styles.grid}>
-        <ModuleCard
-          module={builtins.helpdesk}
-          isSuperadmin={isSuperadmin}
-          isBuiltIn
-          onClick={() => router.push('/helpdesk')}
-          {...builtinHandlers(builtins.helpdesk)}
-        />
-        <ModuleCard
-          module={builtins.inventory}
-          isSuperadmin={isSuperadmin}
-          isBuiltIn
-          onClick={() => router.push('/inventory')}
-          {...builtinHandlers(builtins.inventory)}
-        />
-        <ModuleCard
-          module={builtins.gestion}
-          isSuperadmin={isSuperadmin}
-          isBuiltIn
-          onClick={() => router.push('/requests')}
-          {...builtinHandlers(builtins.gestion)}
-        />
+        {visibleBuiltins.map(({ m, route }) => (
+          <ModuleCard
+            key={m.id}
+            module={m}
+            isSuperadmin={isSuperadmin}
+            isBuiltIn
+            onClick={() => router.push(route)}
+            {...builtinHandlers(m)}
+          />
+        ))}
 
-        {!active.length && !isSuperadmin && (
-          <span className={styles.emptyMsg}>No tienes módulos personalizados asignados.</span>
+        {!active.length && !isSuperadmin && totalVisible === 0 && (
+          <span className={styles.emptyMsg}>No se encontraron módulos.</span>
         )}
 
         {active.map((m) => (
