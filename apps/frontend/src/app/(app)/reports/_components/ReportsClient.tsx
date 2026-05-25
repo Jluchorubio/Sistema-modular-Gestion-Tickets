@@ -2,9 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, Ticket, CheckCircle2, Clock } from 'lucide-react';
+import { Ticket } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
-import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { ADMIN_ROLES } from '@/constants/roles';
 import { reportingService, type DailyTrend, type SlaByPriority } from '@/services/reporting.service';
 import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
@@ -18,28 +17,7 @@ function num(v: string | null | undefined): number {
   return v ? parseFloat(v) : 0;
 }
 
-/* ── Stat card ───────────────────────────────────────────────────────────── */
-
-function StatCard({ label, value, sub, icon: Icon, color }: {
-  label: string; value: string | number; sub?: string;
-  icon: typeof Ticket; color: string;
-}) {
-  return (
-    <div className={styles.statCard}>
-      <div className={styles.statIcon} style={{ background: `${color}15` }}>
-        <Icon size={20} style={{ color }} />
-      </div>
-      <div>
-        <p className={styles.statValue}>{value}</p>
-        <p className={styles.statLabel}>{label}</p>
-        {sub && <p className={styles.statSub}>{sub}</p>}
-      </div>
-    </div>
-  );
-}
-
-/* ── Horizontal bar ──────────────────────────────────────────────────────── */
-
+/* ── Horizontal bar ── */
 function HBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
@@ -57,8 +35,7 @@ function HBar({ label, value, total, color }: { label: string; value: number; to
   );
 }
 
-/* ── Trend bar chart ─────────────────────────────────────────────────────── */
-
+/* ── Trend bar chart ── */
 function TrendChart({ trend }: { trend: DailyTrend[] }) {
   const maxVal = useMemo(() => Math.max(...trend.map((d) => num(d.created)), 1), [trend]);
 
@@ -67,38 +44,41 @@ function TrendChart({ trend }: { trend: DailyTrend[] }) {
   }
 
   return (
-    <div className={styles.trendBars}>
-      {trend.map((d) => {
-        const h   = Math.max(4, Math.round((num(d.created) / maxVal) * 80));
-        const val = num(d.created);
-        return (
-          <div
-            key={d.day}
-            className={styles.trendBarWrap}
-            title={`${fmtDay(d.day)}: ${val} ticket${val !== 1 ? 's' : ''}`}
-          >
+    <>
+      <div className={styles.trendBars}>
+        {trend.map((d) => {
+          const h   = Math.max(4, Math.round((num(d.created) / maxVal) * 80));
+          const val = num(d.created);
+          return (
             <div
-              className={styles.trendBarFill}
-              style={{ height: h, opacity: val === 0 ? 0.2 : 1 }}
-            />
-          </div>
-        );
-      })}
-    </div>
+              key={d.day}
+              className={styles.trendBarWrap}
+              title={`${fmtDay(d.day)}: ${val} ticket${val !== 1 ? 's' : ''}`}
+            >
+              <div className={styles.trendBarFill} style={{ height: h, opacity: val === 0 ? 0.2 : 1 }} />
+            </div>
+          );
+        })}
+      </div>
+      <div className={styles.trendFooter}>
+        <span>{fmtDay(trend[0].day)}</span>
+        <span>Total: {trend.reduce((s, d) => s + num(d.created), 0)} tickets</span>
+        <span>{fmtDay(trend[trend.length - 1].day)}</span>
+      </div>
+    </>
   );
 }
 
-/* ── SLA ring ────────────────────────────────────────────────────────────── */
-
+/* ── SLA ring ── */
 function SlaRing({ pct }: { pct: number }) {
-  const r            = 44;
+  const r             = 44;
   const circumference = 2 * Math.PI * r;
-  const dash         = (pct / 100) * circumference;
-  const color        = pct >= 90 ? '#22C55E' : pct >= 70 ? '#F59E0B' : '#EF4444';
+  const dash          = (pct / 100) * circumference;
+  const color         = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
 
   return (
     <svg width={110} height={110} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={55} cy={55} r={r} fill="none" stroke="#F1F5F9" strokeWidth={12} />
+      <circle cx={55} cy={55} r={r} fill="none" stroke="#f1f5f9" strokeWidth={12} />
       <circle
         cx={55} cy={55} r={r} fill="none"
         stroke={color} strokeWidth={12}
@@ -110,8 +90,7 @@ function SlaRing({ pct }: { pct: number }) {
   );
 }
 
-/* ── SLA priority table ──────────────────────────────────────────────────── */
-
+/* ── SLA priority table ── */
 function SlaPriorityTable({ rows }: { rows: SlaByPriority[] }) {
   if (rows.length === 0) return <p className={styles.noData}>Sin datos</p>;
   return (
@@ -125,7 +104,7 @@ function SlaPriorityTable({ rows }: { rows: SlaByPriority[] }) {
       </thead>
       <tbody className={styles.tableBody}>
         {rows.map((r) => {
-          const color  = PRIORITY_COLORS[r.priority] ?? '#94A3B8';
+          const color  = PRIORITY_COLORS[r.priority] ?? '#94a3b8';
           const breach = num(r.breached);
           return (
             <tr key={r.priority}>
@@ -136,7 +115,7 @@ function SlaPriorityTable({ rows }: { rows: SlaByPriority[] }) {
                 </span>
               </td>
               <td className={styles.tableTotal}>{num(r.total)}</td>
-              <td style={{ color: breach > 0 ? '#EF4444' : '#22C55E', fontWeight: 600 }}>{breach}</td>
+              <td style={{ color: breach > 0 ? '#ef4444' : '#22c55e', fontWeight: 600 }}>{breach}</td>
               <td className={styles.tableAvg}>{r.avg_sla_hours ? `${Math.round(num(r.avg_sla_hours))}h` : '—'}</td>
             </tr>
           );
@@ -146,19 +125,7 @@ function SlaPriorityTable({ rows }: { rows: SlaByPriority[] }) {
   );
 }
 
-/* ── Section card ────────────────────────────────────────────────────────── */
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className={styles.section}>
-      <p className={styles.sectionTitle}>{title}</p>
-      {children}
-    </div>
-  );
-}
-
-/* ── Main ────────────────────────────────────────────────────────────────── */
-
+/* ── Main ── */
 export function ReportsClient() {
   const user         = useAuthStore((s) => s.user);
   const isSuperadmin = user?.is_superadmin ?? false;
@@ -198,141 +165,229 @@ export function ReportsClient() {
   const hasData      = totalTickets > 0;
 
   return (
-    <ModuleLayout
-      title="Reportes"
-      description="Análisis de rendimiento, cumplimiento SLA y tendencias de tickets por módulo."
-      isSuperadmin={isSuperadmin}
-    >
-    <div>
-      {/* ── Module selector ── */}
-      {(isSuperadmin || adminModules.length > 1) && (
-        <div className={styles.filterBar}>
-          <button
-            type="button"
-            className={`${styles.filterBtn} ${!selectedModule ? styles.filterBtnActive : ''}`}
-            onClick={() => setSelectedModule('')}
-          >
-            Todos
-          </button>
-          {adminModules.map((m) => (
-            <button
-              key={m.module_id}
-              type="button"
-              className={`${styles.filterBtn} ${selectedModule === m.module_id ? styles.filterBtnActive : ''}`}
-              onClick={() => setSelectedModule(m.module_id)}
-            >
-              {m.module_name}
-            </button>
-          ))}
-        </div>
-      )}
+    <div className={styles.pageWrap}>
+      <div className={styles.mainContent}>
 
-      {isLoading && <div className={styles.loading}>Cargando métricas…</div>}
-
-      {!isLoading && (
-        <>
-          {/* ── Stat cards ── */}
-          <div className={styles.statsGrid}>
-            <StatCard label="Total tickets"   value={num(totals?.total)}      icon={Ticket}       color="#6366F1" />
-            <StatCard label="Abiertos"         value={num(totals?.open)}       sub="En progreso"   icon={Clock}        color="#F59E0B" />
-            <StatCard label="Cerrados"         value={num(totals?.closed)}     sub="Completados"   icon={CheckCircle2} color="#22C55E" />
-            <StatCard label="Últimos 7 días"   value={num(totals?.last_7_days)} sub="Nuevos tickets" icon={TrendingUp}  color="#3B82F6" />
+        {/* ── Header ── */}
+        <div className={styles.header}>
+          <div>
+            <h1 className={styles.title}>Centro de Reportes y Auditoría</h1>
+            <p className={styles.sub}>Estadísticas avanzadas, nivel de servicio de acuerdos de SLA y registro de auditoría de seguridad global.</p>
           </div>
+        </div>
 
-          {!hasData && (
-            <div className={styles.emptyState}>
-              <Ticket size={32} className={styles.emptyIcon} />
-              <p className={styles.emptyMsg}>Sin datos para mostrar. Crea tickets para ver métricas.</p>
+        {/* ── Module filter ── */}
+        {(isSuperadmin || adminModules.length > 1) && (
+          <div className={styles.filterBar}>
+            <button
+              type="button"
+              className={`${styles.filterBtn}${!selectedModule ? ` ${styles.filterBtnActive}` : ''}`}
+              onClick={() => setSelectedModule('')}
+            >
+              Todos los módulos
+            </button>
+            {adminModules.map((m) => (
+              <button
+                key={m.module_id}
+                type="button"
+                className={`${styles.filterBtn}${selectedModule === m.module_id ? ` ${styles.filterBtnActive}` : ''}`}
+                onClick={() => setSelectedModule(m.module_id)}
+              >
+                {m.module_name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {isLoading && <div className={styles.loading}>Cargando métricas…</div>}
+
+        {!isLoading && (
+          <>
+            {/* ── 4 metric cards ── */}
+            <div className={styles.metricsGrid}>
+              <div className={styles.metricCard}>
+                <span className={styles.metricLabel}>Cumplimiento SLA General</span>
+                <span className={`${styles.metricValue} ${styles.metricValueGreen}`}>
+                  {sla?.summary.compliance_pct ? `${compliance}%` : '—'}
+                </span>
+                <span className={styles.metricTrend}>
+                  ↑ Basado en tickets con SLA activo
+                </span>
+              </div>
+
+              <div className={styles.metricCard}>
+                <span className={styles.metricLabel}>Total Tickets</span>
+                <span className={`${styles.metricValue} ${styles.metricValueDark}`}>
+                  {num(totals?.total)}
+                </span>
+                <span className={styles.metricTrend}>
+                  Abiertos: {num(totals?.open)} · Cerrados: {num(totals?.closed)}
+                </span>
+              </div>
+
+              <div className={styles.metricCard}>
+                <span className={styles.metricLabel}>Tickets Vencidos SLA</span>
+                <span className={`${styles.metricValue} ${styles.metricValueCoral}`}>
+                  {num(sla?.summary.breached)}
+                </span>
+                <span className={styles.metricTrend}>
+                  Sin SLA asignado: {num(sla?.summary.without_sla)}
+                </span>
+              </div>
+
+              <div className={styles.metricCard}>
+                <span className={styles.metricLabel}>Últimos 7 Días</span>
+                <span className={`${styles.metricValue} ${styles.metricValueDark}`}>
+                  {num(totals?.last_7_days)} tickets
+                </span>
+                <span className={styles.metricTrend}>
+                  <span className={styles.metricTrendDot} />
+                  Nuevos tickets creados
+                </span>
+              </div>
             </div>
-          )}
 
-          {hasData && (
-            <>
-              {/* ── SLA compliance + by priority ── */}
-              <div className={styles.gridSla}>
-                <Section title="Cumplimiento SLA">
-                  <div className={styles.slaWrap}>
-                    <div className={styles.slaRingWrap}>
-                      <SlaRing pct={compliance} />
-                      <div className={styles.slaRingInner}>
-                        <span
-                          className={styles.slaRingPct}
-                          style={{ color: compliance >= 90 ? '#22C55E' : compliance >= 70 ? '#F59E0B' : '#EF4444' }}
-                        >
-                          {sla?.summary.compliance_pct ? `${compliance}%` : '—'}
-                        </span>
+            {!hasData && (
+              <div className={styles.emptyState}>
+                <Ticket size={32} className={styles.emptyIcon} />
+                <p className={styles.emptyMsg}>Sin datos para mostrar. Crea tickets para ver métricas.</p>
+              </div>
+            )}
+
+            {hasData && (
+              <>
+                {/* ── Charts split 7/5 ── */}
+                <div className={styles.chartsGrid}>
+                  {/* Left: 30-day trend */}
+                  <div className={styles.chartPanel}>
+                    <div>
+                      <h3 className={styles.chartPanelTitle}>
+                        <span className={styles.chartPanelTitleAccent}>▲</span>
+                        Tendencia de Creación de Tickets (30 días)
+                      </h3>
+                      <p className={styles.chartPanelSub}>
+                        Volumen diario de tickets abiertos en el período reciente.
+                      </p>
+                    </div>
+                    <div className={styles.chartArea}>
+                      <TrendChart trend={trend} />
+                    </div>
+                  </div>
+
+                  {/* Right: SLA ring */}
+                  <div className={styles.chartPanel}>
+                    <div>
+                      <h3 className={styles.chartPanelTitle}>
+                        Cumplimiento de SLA
+                      </h3>
+                      <p className={styles.chartPanelSub}>
+                        Porcentaje de tickets resueltos antes del vencimiento límite.
+                      </p>
+                    </div>
+                    <div className={styles.chartArea} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div className={styles.slaWrap}>
+                        <div className={styles.slaRingWrap}>
+                          <SlaRing pct={compliance} />
+                          <div className={styles.slaRingInner}>
+                            <span
+                              className={styles.slaRingPct}
+                              style={{ color: compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444' }}
+                            >
+                              {sla?.summary.compliance_pct ? `${compliance}%` : '—'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className={styles.slaStats}>
+                          {([
+                            ['Total',     num(sla?.summary.total),       '#0e2235'],
+                            ['Conformes', num(sla?.summary.compliant),   '#22c55e'],
+                            ['Vencidos',  num(sla?.summary.breached),    '#ef4444'],
+                            ['Sin SLA',   num(sla?.summary.without_sla), '#94a3b8'],
+                          ] as [string, number, string][]).map(([label, val, color]) => (
+                            <div key={label} className={styles.slaStatItem}>
+                              <p className={styles.slaStatValue} style={{ color }}>{val}</p>
+                              <p className={styles.slaStatLabel}>{label}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                    <div className={styles.slaStats}>
-                      {([
-                        ['Total',     num(sla?.summary.total),       '#0D1B2A'],
-                        ['Conformes', num(sla?.summary.compliant),   '#22C55E'],
-                        ['Vencidos',  num(sla?.summary.breached),    '#EF4444'],
-                        ['Sin SLA',   num(sla?.summary.without_sla), '#94A3B8'],
-                      ] as [string, number, string][]).map(([label, val, color]) => (
-                        <div key={label} className={styles.slaStatItem}>
-                          <p className={styles.slaStatValue} style={{ color }}>{val}</p>
-                          <p className={styles.slaStatLabel}>{label}</p>
-                        </div>
-                      ))}
-                    </div>
                   </div>
-                </Section>
+                </div>
 
-                <Section title="SLA por prioridad">
-                  <SlaPriorityTable rows={sla?.by_priority ?? []} />
-                </Section>
-              </div>
-
-              {/* ── By state + by priority ── */}
-              <div className={styles.gridTwo}>
-                <Section title="Tickets por estado">
-                  {byState.length === 0
-                    ? <p className={styles.noData}>Sin datos</p>
-                    : byState.map((s) => (
-                      <HBar
-                        key={s.state_name}
-                        label={s.state_label}
-                        value={num(s.total)}
-                        total={totalTickets}
-                        color={s.is_final ? '#22C55E' : '#6366F1'}
-                      />
-                    ))
-                  }
-                </Section>
-
-                <Section title="Tickets por prioridad">
-                  {byPriority.length === 0
-                    ? <p className={styles.noData}>Sin datos</p>
-                    : byPriority.map((p) => (
-                      <HBar
-                        key={p.priority}
-                        label={PRIORITY_LABELS[p.priority] ?? p.priority}
-                        value={num(p.total)}
-                        total={totalTickets}
-                        color={PRIORITY_COLORS[p.priority] ?? '#94A3B8'}
-                      />
-                    ))
-                  }
-                </Section>
-              </div>
-
-              {/* ── 30-day trend ── */}
-              <Section title="Tendencia de creación — últimos 30 días">
-                <TrendChart trend={trend} />
-                {trend.length > 0 && (
-                  <div className={styles.trendFooter}>
-                    <span>{fmtDay(trend[0].day)}</span>
-                    <span>Total: {trend.reduce((s, d) => s + num(d.created), 0)} tickets</span>
-                    <span>{fmtDay(trend[trend.length - 1].day)}</span>
+                {/* ── Detail sections ── */}
+                <div className={styles.sectionsGrid}>
+                  <div className={styles.section}>
+                    <p className={styles.sectionTitle}>Tickets por Estado</p>
+                    {byState.length === 0
+                      ? <p className={styles.noData}>Sin datos</p>
+                      : byState.map((s) => (
+                        <HBar
+                          key={s.state_name}
+                          label={s.state_label}
+                          value={num(s.total)}
+                          total={totalTickets}
+                          color={s.is_final ? '#22c55e' : '#4f46e5'}
+                        />
+                      ))
+                    }
                   </div>
-                )}
-              </Section>
-            </>
-          )}
-        </>
-      )}
+
+                  <div className={styles.section}>
+                    <p className={styles.sectionTitle}>Tickets por Prioridad</p>
+                    {byPriority.length === 0
+                      ? <p className={styles.noData}>Sin datos</p>
+                      : byPriority.map((p) => (
+                        <HBar
+                          key={p.priority}
+                          label={PRIORITY_LABELS[p.priority] ?? p.priority}
+                          value={num(p.total)}
+                          total={totalTickets}
+                          color={PRIORITY_COLORS[p.priority] ?? '#94a3b8'}
+                        />
+                      ))
+                    }
+                  </div>
+
+                  <div className={styles.section}>
+                    <p className={styles.sectionTitle}>SLA por Prioridad</p>
+                    <SlaPriorityTable rows={sla?.by_priority ?? []} />
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── Audit log table ── */}
+        <div className={styles.auditWrap}>
+          <div className={styles.auditHead}>
+            <span className={styles.auditHeadTitle}>Logs e Historial de Auditoría de Seguridad</span>
+            <span className={styles.auditBadge}>AUDIT REALTIME</span>
+          </div>
+          <div className={styles.auditScroll}>
+            <table className={styles.auditTable}>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Actor / Operador</th>
+                  <th>Acción / Subsistema</th>
+                  <th>Descripción del Evento de Auditoría</th>
+                  <th>IP Origen</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan={5} className={styles.auditEmpty}>
+                    Módulo de auditoría en configuración. Los registros aparecerán aquí cuando el sistema empiece a capturar eventos.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
     </div>
-    </ModuleLayout>
   );
 }

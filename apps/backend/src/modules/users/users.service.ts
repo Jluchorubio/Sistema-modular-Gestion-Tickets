@@ -154,6 +154,7 @@ export class UsersService {
               p.is_active,
               p.profile_complete,
               p.created_at,
+              p.last_seen_at,
               c.email,
               c.last_login_at,
               p.global_role_id,
@@ -176,7 +177,7 @@ export class UsersService {
        LEFT JOIN modules.modules           m   ON m.id        = umr.module_id
        LEFT JOIN modules.module_roles      mr  ON mr.id       = umr.role_id
        WHERE  ${where}
-       GROUP  BY p.id, c.email, c.last_login_at, gr.id, gr.name
+       GROUP  BY p.id, p.last_seen_at, c.email, c.last_login_at, gr.id, gr.name
        ORDER  BY p.created_at DESC
        LIMIT  $${limitIdx} OFFSET $${offsetIdx}`,
       params,

@@ -17,6 +17,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   @WebSocketServer() server: Server;
 
   private readonly logger = new Logger(NotificationsGateway.name);
+  private readonly connectedUsers = new Set<string>();
 
   constructor(
     private readonly jwt: JwtService,
@@ -33,19 +34,29 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
       const payload = this.jwt.verify<{ sub: string }>(token, {
         secret: this.config.get<string>('JWT_SECRET'),
       });
-      client.join(`user:${payload.sub}`);
-      client.data.userId = payload.sub;
+      const userId = payload.sub;
+      client.join(`user:${userId}`);
+      client.data.userId = userId;
+      this.connectedUsers.add(userId);
+      this.server.emit('presence:change', { userId, connected: true });
     } catch {
       client.disconnect();
     }
   }
 
   handleDisconnect(client: Socket) {
-    const userId = (client.data as Record<string, unknown>).userId;
-    if (userId) this.logger.debug(`WS disconnected: ${userId}`);
+    const userId = (client.data as Record<string, unknown>).userId as string | undefined;
+    if (!userId) return;
+    this.logger.debug(`WS disconnected: ${userId}`);
+    this.connectedUsers.delete(userId);
+    this.server.emit('presence:change', { userId, connected: false });
   }
 
   sendToUser(userId: string, event: string, data: unknown): void {
     this.server?.to(`user:${userId}`).emit(event, data);
+  }
+
+  isConnected(userId: string): boolean {
+    return this.connectedUsers.has(userId);
   }
 }

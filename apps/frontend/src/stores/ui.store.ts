@@ -18,7 +18,7 @@ interface UIState {
 }
 
 export const useUIStore = create<UIState>((set) => ({
-  sidebarExpanded: false,
+  sidebarExpanded: true,
   moduleNav:       null,
   moduleName:      null,
   moduleId:        null,

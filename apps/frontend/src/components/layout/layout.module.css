@@ -1,7 +1,7 @@
 .shell {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
-  grid-template-rows: 56px minmax(calc(100vh - 56px), auto);
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 52px minmax(calc(100vh - 52px), auto);
   min-height: 100vh;
   align-items: start;
   background: #f1f5f9;
@@ -9,28 +9,17 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.shell.expanded {
-  grid-template-columns: 220px minmax(0, 1fr);
-}
+/* .expanded is kept for backwards compat — grid column is now driven by sidebar width */
+.shell.expanded {}
 
 .main {
   grid-column: 2;
   grid-row: 2;
   min-width: 0;
-  padding: 32px;
+  padding: 0;
   overflow: visible;
-}
-
-@media (max-width: 720px) {
-  .shell {
-    grid-template-columns: 64px minmax(0, 1fr);
-  }
-  .shell.expanded {
-    grid-template-columns: 188px minmax(0, 1fr);
-  }
-  .main {
-    padding: 22px;
-  }
+  min-height: calc(100vh - 52px);
+  box-sizing: border-box;
 }
 
 /* ── No-sidebar layout (usuario role) ─────────────────────────────────── */

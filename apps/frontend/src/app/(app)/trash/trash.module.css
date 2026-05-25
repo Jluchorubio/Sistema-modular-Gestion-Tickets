@@ -1,143 +1,83 @@
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+/* ── Page shell ── */
+.pageWrap {
+  width: 100%;
+  min-height: calc(100vh - 52px);
+  background: #f8fafc;
 }
 
-.title { font-size: 18px; font-weight: 600; color: #0f172a; }
-.count { font-size: 12px; color: #64748b; margin-top: 2px; }
+.mainContent {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
 
-.sub { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+@media (min-width: 768px) {
+  .mainContent { padding: 36px; }
+}
 
-/* ── Tabs ── */
-.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+/* ── Header ── */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .header { flex-direction: row; align-items: center; gap: 0; }
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0e2235;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.count {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.sub {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+/* ── Filter tabs ── */
+.tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
 
 .tab {
   padding: 5px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  color: #475569;
-  cursor: pointer;
-  transition: all .15s;
-  font-family: inherit;
-}
-
-.tab:hover { border-color: #6366f1; color: #4338ca; }
-.tabActive { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
-
-/* ── Cards ── */
-.card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.cardInfo { flex: 1; min-width: 0; }
-
-.cardName {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 4px;
-}
-
-.cardMeta { font-size: 12px; color: #64748b; }
-
-.cardRight { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-
-/* ── Type badge ── */
-.typeBadge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 10px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-
-.typeModule  { background: #1e3a5f; color: #7dd3fc; }
-.typeUser    { background: #14532d; color: #86efac; }
-.typeRole    { background: #3b1f6b; color: #c4b5fd; }
-.typeRequest { background: #422006; color: #fdba74; }
-
-/* ── Days pill ── */
-.daysPill {
   font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 12px;
-  background: #fef3c7;
-  color: #92400e;
-  white-space: nowrap;
-}
-
-.daysPillUrgent { background: #fee2e2; color: #991b1b; }
-
-/* ── Action buttons ── */
-.btnSecondary {
-  padding: 7px 14px;
-  border-radius: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid #e2e8f0;
+  font-weight: 700;
   background: #ffffff;
-  color: #475569;
-  cursor: pointer;
-  transition: all .15s;
-  font-family: inherit;
-}
-
-.btnSecondary:hover { border-color: #6366f1; color: #0f172a; }
-
-.btnDanger {
-  padding: 7px 14px;
-  border-radius: 7px;
-  font-size: 12px;
-  font-weight: 600;
   border: 1px solid #e2e8f0;
-  background: #ffffff;
-  color: #f87171;
+  border-radius: 4px;
+  color: #64748b;
   cursor: pointer;
-  transition: all .15s;
+  transition: border-color .15s, color .15s, background .15s;
   font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.btnDanger:hover { border-color: #f87171; background: #fef2f2; }
+.tab:hover   { border-color: #4f46e5; color: #4f46e5; }
+.tabActive   { background: rgba(79,70,229,.06); border-color: #4f46e5; color: #4f46e5; }
 
-/* ── Checkboxes & selection ── */
-.cbWrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  flex-shrink: 0;
-}
-
-.rowCb {
-  width: 15px;
-  height: 15px;
-  accent-color: #6366f1;
-  cursor: pointer;
-}
-
-.cardSelected {
-  background: #f5f3ff;
-  border-color: #c4b5fd;
-}
-
+/* ── Select-all bar ── */
 .selectAllBar {
   display: flex;
   align-items: center;
@@ -148,6 +88,140 @@
   padding: 2px 0;
 }
 
+/* ── Item cards ── */
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  transition: border-color .15s;
+}
+
+.card:hover { border-color: #cbd5e1; }
+
+.cardSelected {
+  background: rgba(79,70,229,.03);
+  border-color: #a5b4fc;
+}
+
+.cardInfo { flex: 1; min-width: 0; }
+
+.cardName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0e2235;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cardMeta {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.cardRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Checkbox ── */
+.cbWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.rowCb {
+  width: 14px;
+  height: 14px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+/* ── Type badge ── */
+.typeBadge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+
+.typeModule  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.typeUser    { background: #f0fdf4; color: #15803d; border-color: #a7f3d0; }
+.typeRole    { background: #faf5ff; color: #7c3aed; border-color: #ddd6fe; }
+.typeRequest { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+
+/* ── Days pill ── */
+.daysPill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  white-space: nowrap;
+  border: 1px solid #fde68a;
+}
+
+.daysPillUrgent {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+/* ── Action buttons ── */
+.btnSecondary {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.btnSecondary:hover:not(:disabled) { border-color: #4f46e5; color: #4f46e5; }
+.btnSecondary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btnDanger {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.btnDanger:hover:not(:disabled) { border-color: #ef4444; background: #fef2f2; }
+.btnDanger:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Re-auth password field ── */
 .reAuthPwdWrap {
   position: relative;
   margin-top: 14px;
@@ -167,7 +241,7 @@
   box-sizing: border-box;
 }
 
-.reAuthPwdInput:focus { border-color: #6366f1; }
+.reAuthPwdInput:focus { border-color: #4f46e5; }
 
 .reAuthEye {
   position: absolute;
@@ -186,5 +260,14 @@
 .reAuthEye:hover { color: #475569; }
 
 /* ── States ── */
-.emptyMsg { color: #64748b; font-size: 13px; padding: 40px; text-align: center; }
+.emptyMsg {
+  color: #64748b;
+  font-size: 13px;
+  padding: 60px 40px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
 .errorMsg { color: #ef4444; font-size: 13px; padding: 20px; }

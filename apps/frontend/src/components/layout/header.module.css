@@ -1,5 +1,5 @@
 .header {
-  grid-column: 2;
+  grid-column: 1 / -1;
   grid-row: 1;
   width: 100%;
   position: sticky;
@@ -26,7 +26,14 @@
   position: relative;
 }
 
-/* ── Brand (left) ── */
+/* ── Left cluster: hamburger + brand ── */
+.left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Brand (inside left) ── */
 .brand {
   display: flex;
   align-items: center;
@@ -76,7 +83,7 @@
 .right {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 24px;
 }
 
 /* ── Notification bell — simple icon, no border box ── */
@@ -293,7 +300,6 @@
 .profileWrap {
   position: relative;
   padding-left: 16px;
-  margin-left: 4px;
   border-left: 1px solid #e2e8f0;
 }
 

@@ -130,25 +130,29 @@ export function TrashClient() {
   }
 
   if (loaded && !canView) return (
-    <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
-      No tienes permiso para ver esta sección.
+    <div className={styles.pageWrap}>
+      <div className={styles.mainContent}>
+        <p className={styles.errorMsg}>No tienes permiso para ver esta sección.</p>
+      </div>
     </div>
   );
 
   const bulkPending = bulkRestoreMut.isPending;
 
   return (
-    <>
+    <div className={styles.pageWrap}>
+      <div className={styles.mainContent}>
+
       <div className={styles.header}>
         <div>
-          <div className={styles.title}>Papelera</div>
-          {data && <div className={styles.count}>{total} en papelera</div>}
+          <h1 className={styles.title}>Papelera</h1>
+          <p className={styles.count}>
+            {data
+              ? `${total} elemento${total !== 1 ? 's' : ''} en papelera · conservados 90 días`
+              : 'Items eliminados. Se conservan 90 días antes del borrado permanente.'}
+          </p>
         </div>
       </div>
-
-      <p className={styles.sub}>
-        Items eliminados. Se conservan 90 días antes del borrado permanente.
-      </p>
 
       <div className={styles.tabs}>
         {TABS.map((tab) => (
@@ -324,6 +328,7 @@ export function TrashClient() {
           </button>
         </div>
       </Modal>
-    </>
+      </div>
+    </div>
   );
 }

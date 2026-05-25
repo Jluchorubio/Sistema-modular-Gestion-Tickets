@@ -16,6 +16,7 @@ export interface UserListItem extends User {
   global_role:    string | null;
   global_role_id: string | null;
   last_login_at:  string | null;
+  last_seen_at:   string | null;
   roles:          UserModuleRoleBrief[];
 }
 

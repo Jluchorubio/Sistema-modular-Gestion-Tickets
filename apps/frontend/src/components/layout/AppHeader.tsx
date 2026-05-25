@@ -38,10 +38,10 @@ export function AppHeader({ noSidebar = false }: Props) {
   const router      = useRouter();
   const pathname    = usePathname();
   const qc          = useQueryClient();
-  const user        = useAuthStore((s) => s.user);
-  const clearAuth   = useAuthStore((s) => s.clearAuth);
-  const theme       = useUIStore((s) => s.theme);
-  const setTheme    = useUIStore((s) => s.setTheme);
+  const user           = useAuthStore((s) => s.user);
+  const clearAuth      = useAuthStore((s) => s.clearAuth);
+  const theme          = useUIStore((s) => s.theme);
+  const setTheme       = useUIStore((s) => s.setTheme);
 
   const THEME_ICON: Record<AppTheme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
   const ThemeIcon = THEME_ICON[theme];
@@ -125,11 +125,11 @@ export function AppHeader({ noSidebar = false }: Props) {
   return (
     <header className={`${styles.header}${noSidebar ? ` ${styles.headerFull}` : ''}`}>
       <div className={styles.inner}>
-        {/* ── Brand ── */}
-        <div className={styles.brand}>
+        {/* ── Left: brand ── */}
+        <div className={styles.left}>
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
-            <div className={styles.brandIcon}>T</div>
-            <span className={styles.brandName}>Tickets System</span>
+            <div className={styles.brandIcon} />
+            <span className={styles.brandName}>LOGOTIPO</span>
           </Link>
         </div>
 

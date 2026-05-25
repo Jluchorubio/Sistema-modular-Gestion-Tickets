@@ -78,6 +78,13 @@
 .actConfirm:hover { opacity: .88; }
 .actConfirm:disabled { opacity: .4; cursor: not-allowed; }
 
+.actSubmit {
+  background: #6366f1;
+  color: #fff;
+}
+.actSubmit:hover { opacity: .88; }
+.actSubmit:disabled { opacity: .4; cursor: not-allowed; }
+
 .actDanger {
   background: #7f1d1d;
   color: #fca5a5;
