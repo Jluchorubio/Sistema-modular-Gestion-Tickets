@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, ChevronRight, Clock, AlertTriangle, CheckCircle2,
   Users, Phone, CalendarDays, X, Paperclip, ScrollText,
-  Upload, FileText, ImageIcon, Trash2, HardDrive, History, Link2, Search, Unlink,
+  Upload, FileText, ImageIcon, Trash2, HardDrive, History, Link2, Search, Unlink, Star,
 } from 'lucide-react';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
@@ -15,7 +15,7 @@ import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
   ticketsService,
   type TicketPriority, type TicketAttachment, type TicketComment,
-  type TicketAsset, type AssetHistoryEntry,
+  type TicketAsset, type AssetHistoryEntry, type TicketRating, type RateTicketDto,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
   ASSET_STATUS_COLORS, ASSET_STATUS_LABELS, ASSET_ACTION_LABELS,
@@ -31,6 +31,7 @@ import {
   STATUS_COLORS,
 } from '@/services/meetings.service';
 import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 import styles from '../tickets.module.css';
 
 interface LocalGuest {
@@ -155,6 +156,25 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const deletAttMut = useMutation({
     mutationFn: (attId: string) => ticketsService.deleteAttachment(ticketId, attId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] }),
+  });
+
+  /* ── Rating ── */
+  const [ratingScore, setRatingScore] = useState(0);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [ratingLabel, setRatingLabel] = useState<RateTicketDto['service_label'] | ''>('');
+  const [ratingComment, setRatingComment] = useState('');
+  const [ratingRecommend, setRatingRecommend] = useState<boolean | null>(null);
+
+  const { data: existingRating } = useQuery<TicketRating | null>({
+    queryKey: ['ticket-rating', ticketId],
+    queryFn:  () => ticketsService.getRating(ticketId),
+    enabled:  !!ticket?.is_final,
+    staleTime: Infinity,
+  });
+
+  const rateMut = useMutation({
+    mutationFn: (dto: RateTicketDto) => ticketsService.rate(ticketId, dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-rating', ticketId] }),
   });
 
   /* ── Comments ── */
@@ -570,6 +590,17 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               </div>
             )}
 
+            {/* Auto-escalation notice */}
+            {ticket.escalated && ticket.escalation_note?.startsWith('Auto-escalado') && (
+              <div style={{ margin: '12px 0 0', padding: '10px 14px', borderRadius: 10, background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <AlertTriangle size={15} style={{ color: '#ea580c', flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#9a3412', margin: 0 }}>Prioridad auto-escalada por recurrencia</p>
+                  <p style={{ fontSize: 11, color: '#7c2d12', margin: '2px 0 0' }}>{ticket.escalation_note}</p>
+                </div>
+              </div>
+            )}
+
             {/* Digital signature validation */}
             {ticket.state_name === 'realizado' && (
               currentUser?.id === ticket.created_by ? (
@@ -612,6 +643,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
             )}
 
             {/* FSM action buttons */}
+            <PermissionGate perm="helpdesk:tickets:edit">
             {!ticket.is_final && ticket.state_name !== 'realizado' && ticket.transitions.length > 0 && (
               <>
                 <div className={styles.hwFsmBtns}>
@@ -643,6 +675,96 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                   </div>
                 )}
               </>
+            )}
+            </PermissionGate>
+
+            {/* ── Rating panel: shown to creator after ticket closed ── */}
+            {ticket.is_final && currentUser?.id === ticket.created_by && (
+              <div style={{ marginTop: 16, padding: '16px', borderRadius: 12, background: existingRating ? '#f0fdf4' : '#fffbf0', border: `1px solid ${existingRating ? '#bbf7d0' : '#fde68a'}` }}>
+                {existingRating ? (
+                  /* Already rated — show summary */
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#15803d', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <CheckCircle2 size={14} /> Tu calificación
+                    </p>
+                    <div style={{ display: 'flex', gap: 3, marginBottom: 6 }}>
+                      {[1,2,3,4,5].map((s) => (
+                        <Star key={s} size={16} fill={s <= existingRating.score_overall ? '#f59e0b' : 'none'} stroke={s <= existingRating.score_overall ? '#f59e0b' : '#d1d5db'} />
+                      ))}
+                    </div>
+                    {existingRating.service_label && (
+                      <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>{existingRating.service_label}</p>
+                    )}
+                    {existingRating.comment && (
+                      <p style={{ fontSize: 12, color: '#374151', margin: '4px 0 0', fontStyle: 'italic' }}>"{existingRating.comment}"</p>
+                    )}
+                  </div>
+                ) : (
+                  /* Rating form */
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Star size={14} /> Califica tu experiencia
+                    </p>
+                    {/* Stars */}
+                    <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+                      {[1,2,3,4,5].map((s) => (
+                        <button key={s} type="button" onClick={() => setRatingScore(s)}
+                          onMouseEnter={() => setRatingHover(s)} onMouseLeave={() => setRatingHover(0)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
+                          <Star size={22}
+                            fill={(ratingHover || ratingScore) >= s ? '#f59e0b' : 'none'}
+                            stroke={(ratingHover || ratingScore) >= s ? '#f59e0b' : '#d1d5db'} />
+                        </button>
+                      ))}
+                      {ratingScore > 0 && (
+                        <span style={{ fontSize: 11, color: '#92400e', alignSelf: 'center', marginLeft: 4, fontWeight: 600 }}>
+                          {['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'][ratingScore]}
+                        </span>
+                      )}
+                    </div>
+                    {/* Service label */}
+                    <select value={ratingLabel} onChange={(e) => setRatingLabel(e.target.value as RateTicketDto['service_label'])}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, marginBottom: 8, fontFamily: 'inherit', background: '#fff' }}>
+                      <option value="">— Calidad del servicio (opcional) —</option>
+                      <option value="excelente">Excelente</option>
+                      <option value="bueno">Bueno</option>
+                      <option value="regular">Regular</option>
+                      <option value="deficiente">Deficiente</option>
+                    </select>
+                    {/* Comment */}
+                    <textarea value={ratingComment} onChange={(e) => setRatingComment(e.target.value)}
+                      placeholder="Comentario adicional (opcional)…" rows={2}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, resize: 'none', fontFamily: 'inherit', marginBottom: 8, boxSizing: 'border-box' }} />
+                    {/* Recommend */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                      {[true, false].map((v) => (
+                        <button key={String(v)} type="button" onClick={() => setRatingRecommend(v)}
+                          style={{ padding: '4px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid',
+                            borderColor: ratingRecommend === v ? '#6366f1' : '#e2e8f0',
+                            background:  ratingRecommend === v ? '#eef2ff' : '#fff',
+                            color:       ratingRecommend === v ? '#6366f1' : '#64748b', fontFamily: 'inherit' }}>
+                          {v ? '👍 Lo recomendaría' : '👎 No lo recomendaría'}
+                        </button>
+                      ))}
+                    </div>
+                    {rateMut.isError && (
+                      <p style={{ fontSize: 11, color: '#dc2626', margin: '0 0 6px' }}>
+                        {(rateMut.error as any)?.response?.data?.message ?? 'Error al enviar calificación.'}
+                      </p>
+                    )}
+                    <button type="button" disabled={ratingScore === 0 || rateMut.isPending}
+                      onClick={() => rateMut.mutate({
+                        score_overall: ratingScore,
+                        service_label: ratingLabel || undefined,
+                        comment:       ratingComment || undefined,
+                        would_recommend: ratingRecommend ?? undefined,
+                      })}
+                      style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: ratingScore === 0 ? '#e2e8f0' : '#f59e0b', color: ratingScore === 0 ? '#94a3b8' : '#fff', fontSize: 12, fontWeight: 700, cursor: ratingScore === 0 ? 'default' : 'pointer', fontFamily: 'inherit', transition: 'background .15s' }}>
+                      {rateMut.isPending ? 'Enviando…' : 'Enviar calificación'}
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -757,11 +879,11 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                             <a href={att.file_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.original_name}</a>
                             <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>{sizeKb} KB · {att.uploader_name}</p>
                           </div>
-                          {currentUser?.id && (
+                          <PermissionGate perm="helpdesk:tickets:edit">
                             <button type="button" title="Eliminar" disabled={deletAttMut.isPending} onClick={() => deletAttMut.mutate(att.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, flexShrink: 0, opacity: deletAttMut.isPending ? .4 : 1 }}>
                               <Trash2 size={13} />
                             </button>
-                          )}
+                          </PermissionGate>
                         </div>
                       );
                     })}
@@ -791,6 +913,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                     ))}
                   </div>
                 )}
+                <PermissionGate perm="helpdesk:comments:add">
                 {!ticket.is_final && (
                   <div className={styles.replyBox} style={{ marginTop: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -818,6 +941,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                     {addCommentMut.isError && <p style={{ fontSize: 11, color: '#dc2626', marginTop: 6 }}>Error al enviar comentario.</p>}
                   </div>
                 )}
+                </PermissionGate>
               </div>
 
               {/* Related tickets */}

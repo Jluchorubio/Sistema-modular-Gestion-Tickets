@@ -5,8 +5,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ReviewRequestDto } from './dto/review-request.dto';
 import { calculatePriority } from './priority.engine';
-import { resolveAssignee, resolveSlaDeadline } from './routing.engine';
+import { resolveAssignee } from './routing.engine';
 import { SystemConfigService } from '../system-config/system-config.service';
+import { SlaEvaluatorService } from '../tickets/sla/sla-evaluator.service';
+
+const PRIORITY_HOURS: Record<string, number> = { critica: 2, alta: 8, media: 24, baja: 72 };
 
 @Injectable()
 export class RequestsService {
@@ -14,15 +17,18 @@ export class RequestsService {
     @InjectDataSource() private readonly db: DataSource,
     private readonly events: EventEmitter2,
     private readonly systemConfig: SystemConfigService,
+    private readonly slaEvaluator: SlaEvaluatorService,
   ) {}
 
   async create(requesterId: string, dto: CreateRequestDto & { task_source?: 'user' | 'system' }) {
     const isActive = await this.systemConfig.isRequestTypeActive(dto.type);
     if (!isActive) throw new BadRequestException(`Tipo de solicitud "${dto.type}" no existe o no está activo`);
 
+    const now        = new Date();
     const taskSource = dto.task_source === 'system' ? 'system' : 'user';
     const meta       = dto.metadata ?? null;
     const metaJson   = meta ? JSON.stringify(meta) : null;
+    const moduleId   = (meta as any)?.module_id as string | undefined;
 
     // Auto-calculate priority from rules
     const { priority, auto } = await calculatePriority(
@@ -32,8 +38,9 @@ export class RequestsService {
     // Auto-route to module admin or superadmin queue
     const { assignedTo, autoEscalated } = await resolveAssignee(this.db, meta);
 
-    // SLA deadline at creation time
-    const slaDeadline = await resolveSlaDeadline(this.db, dto.type, priority);
+    // SLA: resolve hours from config.sla_rules, then compute business-hours-aware deadline
+    const hours = await this.resolveRequestSlaHours(dto.type, priority);
+    const slaDeadline = await this.slaEvaluator.resolveDeadline(hours, now, moduleId ?? '');
 
     const [row] = await this.db.query<any[]>(
       `INSERT INTO requests.admin_requests
@@ -295,9 +302,11 @@ export class RequestsService {
     if (req.status !== 'pending') throw new BadRequestException('Solo se pueden tomar solicitudes pendientes');
 
     // Only recalculate SLA if not already set at creation
-    const slaDeadline = req.sla_due_at
-      ? req.sla_due_at
-      : await resolveSlaDeadline(this.db, req.type, req.priority);
+    let slaDeadline: Date | string = req.sla_due_at ?? '';
+    if (!req.sla_due_at) {
+      const hours = await this.resolveRequestSlaHours(req.type, req.priority);
+      slaDeadline = await this.slaEvaluator.resolveDeadline(hours, new Date(), '');
+    }
 
     const [updated] = await this.db.query<any[]>(
       `UPDATE requests.admin_requests
@@ -384,6 +393,27 @@ export class RequestsService {
       [requestId, userId, req.status],
     );
     return { ok: true };
+  }
+
+  /* ── Private: SLA hours for requests ────────────────────────────────── */
+
+  private async resolveRequestSlaHours(requestType: string, priority: string): Promise<number> {
+    // Type-specific rule first, then global (request_type IS NULL), then hard fallback
+    const [specific] = await this.db.query<{ hours_to_resolve: number }[]>(
+      `SELECT hours_to_resolve FROM config.sla_rules
+       WHERE request_type = $1 AND priority = $2 AND is_active = TRUE LIMIT 1`,
+      [requestType, priority],
+    );
+    if (specific) return specific.hours_to_resolve;
+
+    const [generic] = await this.db.query<{ hours_to_resolve: number }[]>(
+      `SELECT hours_to_resolve FROM config.sla_rules
+       WHERE request_type IS NULL AND priority = $1 AND is_active = TRUE LIMIT 1`,
+      [priority],
+    );
+    if (generic) return generic.hours_to_resolve;
+
+    return PRIORITY_HOURS[priority] ?? 24;
   }
 
   async findByUser(targetUserId: string, limit = 10) {

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building2, MapPin, Layers, Briefcase, Clock, Shield,
   Plus, Trash2, Pencil, Check, X, Upload, AlertCircle, Tags, ToggleLeft, ToggleRight,
-  ChevronRight, ChevronDown,
+  ChevronRight, ChevronDown, CalendarClock, Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import { systemConfigService }  from '@/services/system-config.service';
@@ -15,20 +15,25 @@ import { usePermissionsStore }  from '@/stores/permissions.store';
 import { Spinner }              from '@/components/ui/Spinner';
 import type {
   Headquarter, Department, Position, SlaRule, Company, RequestTypeConfig,
+  DamageType, BusinessHour, Holiday, TicketSlaPolicy, TicketSlaRule, SlaCondition,
 } from '@/services/system-config.service';
+import { modulesService } from '@/services/modules.service';
 import styles from './config.module.css';
 
-type Tab = 'empresa' | 'sedes' | 'departamentos' | 'cargos' | 'sla' | 'tipos' | 'permisos' | 'importar';
+type Tab = 'empresa' | 'sedes' | 'departamentos' | 'cargos' | 'sla' | 'calendario' | 'daños' | 'sla-tickets' | 'tipos' | 'permisos' | 'importar';
 
 const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
-  { key: 'empresa',       label: 'Empresa',        Icon: Building2 },
-  { key: 'sedes',         label: 'Sedes',          Icon: MapPin    },
-  { key: 'departamentos', label: 'Departamentos',  Icon: Layers    },
-  { key: 'cargos',        label: 'Cargos',         Icon: Briefcase },
-  { key: 'sla',           label: 'SLA',            Icon: Clock     },
-  { key: 'tipos',         label: 'Tipos',          Icon: Tags      },
-  { key: 'permisos',      label: 'Roles y Permisos', Icon: Shield  },
-  { key: 'importar',      label: 'Importar',       Icon: Upload    },
+  { key: 'empresa',       label: 'Empresa',        Icon: Building2    },
+  { key: 'sedes',         label: 'Sedes',          Icon: MapPin       },
+  { key: 'departamentos', label: 'Departamentos',  Icon: Layers       },
+  { key: 'cargos',        label: 'Cargos',         Icon: Briefcase    },
+  { key: 'sla',           label: 'SLA Solicitudes',Icon: Clock        },
+  { key: 'calendario',    label: 'Calendario SLA', Icon: CalendarClock},
+  { key: 'daños',         label: 'Tipos de Daño',  Icon: Wrench       },
+  { key: 'sla-tickets',   label: 'SLA Tickets',    Icon: Shield       },
+  { key: 'tipos',         label: 'Tipos Solicitud',Icon: Tags         },
+  { key: 'permisos',      label: 'Roles y Permisos', Icon: Shield     },
+  { key: 'importar',      label: 'Importar',       Icon: Upload       },
 ];
 
 /* ── Company tab ───────────────────────────────────────────────── */
@@ -415,6 +420,338 @@ function RequestTypesTab() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* ── Calendar SLA tab ──────────────────────────────────────────── */
+
+const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+function CalendarioTab() {
+  const qc = useQueryClient();
+
+  const { data: hours = [], isLoading: loadingHours } = useQuery<BusinessHour[]>({
+    queryKey: ['sys-sla-hours'],
+    queryFn:  () => systemConfigService.getBusinessHours(),
+  });
+
+  const { data: holidays = [], isLoading: loadingHolidays } = useQuery<Holiday[]>({
+    queryKey: ['sys-sla-holidays'],
+    queryFn:  () => systemConfigService.getHolidays(),
+  });
+
+  // Build map: day_of_week → BusinessHour | undefined
+  const hourMap = useMemo(() => {
+    const m = new Map<number, BusinessHour>();
+    (hours as BusinessHour[]).forEach(h => m.set(h.day_of_week, h));
+    return m;
+  }, [hours]);
+
+  const [editDay, setEditDay] = useState<number | null>(null);
+  const [dayForm, setDayForm] = useState({ start_time: '07:00', end_time: '17:00', is_active: true });
+
+  const upsertMut = useMutation({
+    mutationFn: (dto: Parameters<typeof systemConfigService.upsertBusinessHour>[0]) =>
+      systemConfigService.upsertBusinessHour(dto),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sys-sla-hours'] }); setEditDay(null); },
+  });
+
+  const [showAddHoliday, setShowAddHoliday] = useState(false);
+  const [holidayForm,    setHolidayForm]    = useState({ holiday_date: '', name: '' });
+
+  const addHolidayMut = useMutation({
+    mutationFn: systemConfigService.createHoliday,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sys-sla-holidays'] });
+      setShowAddHoliday(false);
+      setHolidayForm({ holiday_date: '', name: '' });
+    },
+  });
+
+  const delHolidayMut = useMutation({
+    mutationFn: systemConfigService.deleteHoliday,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sys-sla-holidays'] }),
+  });
+
+  function openEditDay(dow: number) {
+    const existing = hourMap.get(dow);
+    setDayForm({
+      start_time: existing?.start_time ?? '07:00',
+      end_time:   existing?.end_time   ?? '17:00',
+      is_active:  existing?.is_active  ?? true,
+    });
+    setEditDay(dow);
+  }
+
+  if (loadingHours || loadingHolidays) return <Spinner />;
+
+  return (
+    <div>
+      {/* ── Business hours ── */}
+      <div className={styles.sectionHeader}>
+        <div className={styles.sectionTitle}>Horario laboral</div>
+        <span className={styles.listMeta}>Afecta cálculo de deadlines SLA</span>
+      </div>
+      <div className={styles.slaSub} style={{ marginBottom: 16 }}>
+        Los días sin configurar se tratan como no laborales. El sistema salta feriados y horas fuera de rango.
+      </div>
+
+      <div className={styles.list}>
+        {[1, 2, 3, 4, 5, 6, 0].map(dow => {
+          const bh = hourMap.get(dow);
+          const isEditing = editDay === dow;
+          return (
+            <div key={dow} className={styles.listRow}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                <span className={styles.listName} style={{ minWidth: 96, opacity: bh?.is_active === false ? 0.45 : 1 }}>
+                  {DAY_NAMES[dow]}
+                </span>
+                {!isEditing && (
+                  bh
+                    ? <span className={styles.listMeta} style={{ color: bh.is_active ? '#22c55e' : '#94a3b8' }}>
+                        {bh.is_active ? `${bh.start_time.slice(0,5)} – ${bh.end_time.slice(0,5)}` : 'Inactivo'}
+                      </span>
+                    : <span className={styles.listMeta} style={{ color: '#94a3b8' }}>Sin configurar</span>
+                )}
+              </div>
+
+              {isEditing ? (
+                <div className={styles.slaEditRow}>
+                  <label className={styles.fieldLabel}>Inicio</label>
+                  <input type="time" className={styles.slaInput}
+                    value={dayForm.start_time}
+                    onChange={e => setDayForm(f => ({ ...f, start_time: e.target.value }))}
+                  />
+                  <label className={styles.fieldLabel}>Fin</label>
+                  <input type="time" className={styles.slaInput}
+                    value={dayForm.end_time}
+                    onChange={e => setDayForm(f => ({ ...f, end_time: e.target.value }))}
+                  />
+                  <button
+                    className={styles.iconBtn}
+                    title={dayForm.is_active ? 'Activo' : 'Inactivo'}
+                    onClick={() => setDayForm(f => ({ ...f, is_active: !f.is_active }))}
+                    style={{ color: dayForm.is_active ? '#22c55e' : '#94a3b8' }}
+                  >
+                    {dayForm.is_active ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                  </button>
+                  <button className={styles.btnSave} disabled={upsertMut.isPending}
+                    onClick={() => upsertMut.mutate({ day_of_week: dow, ...dayForm })}>
+                    <Check size={13} />
+                  </button>
+                  <button className={styles.btnCancel} onClick={() => setEditDay(null)}>
+                    <X size={13} />
+                  </button>
+                </div>
+              ) : (
+                <button className={styles.btnEdit} onClick={() => openEditDay(dow)}>
+                  <Pencil size={12} /> {bh ? 'Editar' : 'Configurar'}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Holidays ── */}
+      <div className={styles.sectionHeader} style={{ marginTop: 32 }}>
+        <div className={styles.sectionTitle}>Feriados</div>
+        {!showAddHoliday && (
+          <button className={styles.btnPrimary} onClick={() => setShowAddHoliday(true)}>
+            <Plus size={13} /> Agregar
+          </button>
+        )}
+      </div>
+
+      {showAddHoliday && (
+        <div className={styles.inlineForm}>
+          <div className={styles.formRow}>
+            <label className={styles.fieldLabel}>Fecha</label>
+            <input type="date" className={styles.fieldInput}
+              value={holidayForm.holiday_date}
+              onChange={e => setHolidayForm(f => ({ ...f, holiday_date: e.target.value }))}
+            />
+          </div>
+          <div className={styles.formRow}>
+            <label className={styles.fieldLabel}>Nombre</label>
+            <input className={styles.fieldInput} placeholder="ej. Día de la Independencia"
+              value={holidayForm.name}
+              onChange={e => setHolidayForm(f => ({ ...f, name: e.target.value }))}
+            />
+          </div>
+          <div className={styles.inlineActions}>
+            <button className={styles.btnSave}
+              disabled={addHolidayMut.isPending || !holidayForm.holiday_date || !holidayForm.name.trim()}
+              onClick={() => addHolidayMut.mutate(holidayForm)}>
+              <Check size={13} /> {addHolidayMut.isPending ? 'Guardando…' : 'Guardar'}
+            </button>
+            <button className={styles.btnCancel} onClick={() => setShowAddHoliday(false)}>
+              <X size={13} /> Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(holidays as Holiday[]).length === 0 ? (
+        <div className={styles.empty}>Sin feriados configurados.</div>
+      ) : (
+        <div className={styles.list}>
+          {(holidays as Holiday[]).map(h => (
+            <div key={h.id} className={styles.listRow} style={{ opacity: h.is_active ? 1 : 0.45 }}>
+              <div>
+                <span className={styles.listName}>
+                  {new Date(h.holiday_date + 'T12:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+                <span className={styles.listMeta}> · {h.name}</span>
+                {h.module_id && <span className={styles.listMeta} style={{ color: '#6366f1' }}> · módulo</span>}
+              </div>
+              <button className={styles.iconBtnDanger} title="Desactivar"
+                disabled={delHolidayMut.isPending}
+                onClick={() => delHolidayMut.mutate(h.id)}>
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Damage types tab ───────────────────────────────────────────── */
+
+const WEIGHT_COLOR = (w: number) =>
+  w >= 9 ? '#ef4444' : w >= 7 ? '#f97316' : w >= 5 ? '#f59e0b' : '#64748b';
+
+function DañosTab() {
+  const qc = useQueryClient();
+
+  const { data: allTypes = [], isLoading } = useQuery<DamageType[]>({
+    queryKey: ['sys-damage-types'],
+    queryFn:  () => systemConfigService.getDamageTypes(),
+  });
+
+  const [editId,   setEditId]   = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ label: '', weight: 5 });
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: { label?: string; weight?: number; is_active?: boolean } }) =>
+      systemConfigService.updateDamageType(id, dto),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sys-damage-types'] }); setEditId(null); },
+  });
+
+  if (isLoading) return <Spinner />;
+
+  // Group by category
+  const grouped = useMemo(() => {
+    const map = new Map<string, { label: string; color: string | null; icon: string | null; types: DamageType[] }>();
+    (allTypes as DamageType[]).forEach(dt => {
+      if (!map.has(dt.category_slug)) {
+        map.set(dt.category_slug, { label: dt.category_label, color: null, icon: null, types: [] });
+      }
+      map.get(dt.category_slug)!.types.push(dt);
+    });
+    return map;
+  }, [allTypes]);
+
+  return (
+    <div>
+      <div className={styles.sectionHeader}>
+        <div className={styles.sectionTitle}>Tipos de daño</div>
+      </div>
+      <div className={styles.slaSub} style={{ marginBottom: 20 }}>
+        Catálogo estructurado. El <strong>peso</strong> (1–10) alimenta el score de prioridad automática.
+        Desactivar un tipo lo oculta en el formulario de tickets sin borrar historial.
+      </div>
+
+      {Array.from(grouped.entries()).map(([catSlug, cat]) => (
+        <div key={catSlug} style={{ marginBottom: 28 }}>
+          <div className={styles.slaSub} style={{ fontWeight: 700, color: '#0e2235', marginBottom: 6, fontSize: 13 }}>
+            {cat.label}
+          </div>
+          <div className={styles.list}>
+            {cat.types.map(dt => {
+              const isEditing = editId === dt.id;
+              return (
+                <div key={dt.id} className={styles.listRow}
+                  style={{ opacity: dt.is_active ? 1 : 0.45, alignItems: 'flex-start', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 8 }}>
+                    {/* Active toggle */}
+                    <button
+                      className={styles.iconBtn}
+                      title={dt.is_active ? 'Desactivar' : 'Activar'}
+                      disabled={updateMut.isPending}
+                      onClick={() => updateMut.mutate({ id: dt.id, dto: { is_active: !dt.is_active } })}
+                      style={{ color: dt.is_active ? '#22c55e' : '#94a3b8', flexShrink: 0 }}
+                    >
+                      {dt.is_active ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                    </button>
+
+                    <div style={{ flex: 1 }}>
+                      <span className={styles.listName}>{dt.label}</span>
+                      {dt.is_other && (
+                        <span className={styles.listMeta} style={{ color: '#6366f1' }}> · libre</span>
+                      )}
+                    </div>
+
+                    {/* Priority badge */}
+                    <span className={styles.slaPriority} data-priority={dt.default_priority}
+                      style={{ fontSize: 10, padding: '1px 8px' }}>
+                      {dt.default_priority}
+                    </span>
+
+                    {/* Weight badge */}
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, minWidth: 28, textAlign: 'center',
+                      color: WEIGHT_COLOR(dt.weight), background: '#f1f5f9', borderRadius: 6, padding: '2px 6px',
+                    }}>
+                      {dt.weight}
+                    </span>
+
+                    {!isEditing && (
+                      <button className={styles.btnEdit}
+                        onClick={() => { setEditId(dt.id); setEditForm({ label: dt.label, weight: dt.weight }); }}>
+                        <Pencil size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditing && (
+                    <div className={styles.inlineForm} style={{ width: '100%', marginTop: 4 }}>
+                      <div className={styles.formRow}>
+                        <label className={styles.fieldLabel}>Etiqueta</label>
+                        <input className={styles.fieldInput} value={editForm.label}
+                          onChange={e => setEditForm(f => ({ ...f, label: e.target.value }))} />
+                      </div>
+                      <div className={styles.formRow}>
+                        <label className={styles.fieldLabel}>Peso (1–10)</label>
+                        <input type="range" min={1} max={10} style={{ flex: 1 }}
+                          value={editForm.weight}
+                          onChange={e => setEditForm(f => ({ ...f, weight: Number(e.target.value) }))}
+                        />
+                        <span style={{ minWidth: 24, fontWeight: 700, color: WEIGHT_COLOR(editForm.weight) }}>
+                          {editForm.weight}
+                        </span>
+                      </div>
+                      <div className={styles.inlineActions}>
+                        <button className={styles.btnSave}
+                          disabled={updateMut.isPending || !editForm.label.trim()}
+                          onClick={() => updateMut.mutate({ id: dt.id, dto: editForm })}>
+                          <Check size={13} /> Guardar
+                        </button>
+                        <button className={styles.btnCancel} onClick={() => setEditId(null)}>
+                          <X size={13} /> Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -878,6 +1215,331 @@ function RolesPermissionsTab() {
   );
 }
 
+/* ── SLA Tickets tab ────────────────────────────────────────────── */
+
+const SLA_FIELDS = [
+  { value: 'priority',       label: 'Prioridad'       },
+  { value: 'urgency',        label: 'Urgencia'        },
+  { value: 'impact',         label: 'Impacto'         },
+  { value: 'damage_type_id', label: 'Tipo de daño'    },
+  { value: 'category_id',    label: 'Categoría módulo'},
+  { value: 'environment_id', label: 'Ambiente'        },
+];
+
+const SLA_OPERATORS = ['=', '!=', 'IN', '>', '<', '>=', '<='];
+
+const PRIORITY_OPTIONS = ['baja', 'media', 'alta', 'critica'];
+const URGENCY_OPTIONS  = ['baja', 'media', 'alta'];
+const IMPACT_OPTIONS   = ['bajo', 'medio', 'alto'];
+
+function fieldValueHint(field: string) {
+  if (field === 'priority')  return PRIORITY_OPTIONS.join(' | ');
+  if (field === 'urgency')   return URGENCY_OPTIONS.join(' | ');
+  if (field === 'impact')    return IMPACT_OPTIONS.join(' | ');
+  return 'uuid — o lista separada por coma si operator=IN';
+}
+
+const PRIORITY_COLORS: Record<string, string> = {
+  baja: '#94a3b8', media: '#3b82f6', alta: '#f59e0b', critica: '#ef4444',
+};
+
+function ConditionChip({ cond, onDelete }: { cond: SlaCondition; onDelete: () => void }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 99, background: '#f1f5f9', border: '1px solid #e2e8f0', fontSize: 11, fontWeight: 600, color: '#334155' }}>
+      <span style={{ color: '#64748b', fontSize: 10 }}>G{cond.logical_group}</span>
+      <span>{cond.field}</span>
+      <span style={{ color: '#94a3b8' }}>{cond.operator}</span>
+      <span style={{ color: '#0e2235', fontWeight: 700 }}>{cond.value}</span>
+      <button type="button" onClick={onDelete} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '0 2px', lineHeight: 1, fontSize: 13 }}>×</button>
+    </span>
+  );
+}
+
+function AddConditionForm({ ruleId, onDone }: { ruleId: string; onDone: () => void }) {
+  const qc = useQueryClient();
+  const [field,   setField]   = useState('priority');
+  const [op,      setOp]      = useState('=');
+  const [value,   setValue]   = useState('');
+  const [group,   setGroup]   = useState(1);
+
+  const mut = useMutation({
+    mutationFn: () => systemConfigService.createTicketSlaCondition(ruleId, { field, operator: op, value, logical_group: group }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ticket-sla-policies'] }); setValue(''); onDone(); },
+  });
+
+  const inp: React.CSSProperties = { border: '1px solid #e2e8f0', borderRadius: 7, padding: '5px 9px', fontSize: 12, fontFamily: 'inherit', background: '#fff' };
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, padding: '10px 12px', background: '#f8fafc', borderRadius: 10, border: '1px dashed #e2e8f0', marginTop: 8 }}>
+      <select value={field} onChange={(e) => setField(e.target.value)} style={inp}>
+        {SLA_FIELDS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+      </select>
+      <select value={op} onChange={(e) => setOp(e.target.value)} style={{ ...inp, width: 60 }}>
+        {SLA_OPERATORS.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={fieldValueHint(field)}
+        style={{ ...inp, minWidth: 140 }}
+      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ fontSize: 11, color: '#64748b' }}>Grupo</span>
+        <input type="number" min={1} max={10} value={group} onChange={(e) => setGroup(Number(e.target.value))} style={{ ...inp, width: 50 }} />
+      </div>
+      <button type="button" disabled={!value.trim() || mut.isPending} onClick={() => mut.mutate()}
+        style={{ padding: '5px 12px', borderRadius: 7, border: 'none', background: '#0e2235', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: !value.trim() || mut.isPending ? .6 : 1 }}>
+        + Agregar
+      </button>
+      <button type="button" onClick={onDone} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+        Cancelar
+      </button>
+    </div>
+  );
+}
+
+function SlaRuleRow({ rule, policyId }: { rule: TicketSlaRule; policyId: string }) {
+  const qc = useQueryClient();
+  const [expanded,     setExpanded]     = useState(false);
+  const [addingCond,   setAddingCond]   = useState(false);
+  const [editingHours, setEditingHours] = useState(false);
+  const [hours,        setHours]        = useState(rule.hours_to_resolve);
+  const prioColor = PRIORITY_COLORS[rule.priority_result] ?? '#64748b';
+
+  const deleteRuleMut = useMutation({
+    mutationFn: () => systemConfigService.deleteTicketSlaRule(rule.id),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: ['ticket-sla-policies'] }),
+  });
+
+  const updateHoursMut = useMutation({
+    mutationFn: () => systemConfigService.updateTicketSlaRule(rule.id, { hours_to_resolve: hours }),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['ticket-sla-policies'] }); setEditingHours(false); },
+  });
+
+  const deleteCondMut = useMutation({
+    mutationFn: (condId: string) => systemConfigService.deleteTicketSlaCondition(condId),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: ['ticket-sla-policies'] }),
+  });
+
+  return (
+    <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', marginBottom: 10 }}>
+      {/* Rule header */}
+      <div
+        onClick={() => setExpanded((v) => !v)}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: '#fff', cursor: 'pointer', userSelect: 'none' }}
+      >
+        {expanded ? <ChevronDown size={13} style={{ color: '#94a3b8', flexShrink: 0 }} /> : <ChevronRight size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />}
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{rule.name}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: `${prioColor}18`, color: prioColor, border: `1px solid ${prioColor}40` }}>
+          → {rule.priority_result}
+        </span>
+        <span style={{ fontSize: 11, color: '#64748b' }}>{rule.hours_to_resolve}h</span>
+        <span style={{ fontSize: 10, background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: 6 }}>
+          {rule.conditions.length} cond.
+        </span>
+        <button type="button" onClick={(e) => { e.stopPropagation(); if (confirm(`Eliminar regla "${rule.name}"?`)) deleteRuleMut.mutate(); }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px 4px' }}>
+          <Trash2 size={12} />
+        </button>
+      </div>
+
+      {/* Expanded body */}
+      {expanded && (
+        <div style={{ padding: '12px 16px', background: '#f8fafc', borderTop: '1px solid #f1f5f9' }}>
+
+          {/* Hours editor */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 11, color: '#64748b' }}>Horas SLA:</span>
+            {editingHours ? (
+              <>
+                <input type="number" min={1} value={hours} onChange={(e) => setHours(Number(e.target.value))}
+                  style={{ border: '1px solid #e2e8f0', borderRadius: 7, padding: '4px 8px', fontSize: 12, width: 70, fontFamily: 'inherit' }} />
+                <button type="button" onClick={() => updateHoursMut.mutate()} disabled={updateHoursMut.isPending}
+                  style={{ padding: '4px 10px', borderRadius: 7, border: 'none', background: '#0e2235', color: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <Check size={11} />
+                </button>
+                <button type="button" onClick={() => { setHours(rule.hours_to_resolve); setEditingHours(false); }}
+                  style={{ padding: '4px 8px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <X size={11} />
+                </button>
+              </>
+            ) : (
+              <>
+                <strong style={{ fontSize: 12, color: '#0f172a' }}>{rule.hours_to_resolve}h</strong>
+                <button type="button" onClick={() => setEditingHours(true)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px 4px' }}>
+                  <Pencil size={11} />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Conditions */}
+          <div style={{ marginBottom: 8 }}>
+            <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              Condiciones <span style={{ fontWeight: 400, color: '#cbd5e1' }}>(AND dentro del grupo · OR entre grupos)</span>
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {rule.conditions.length === 0 ? (
+                <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>Sin condiciones — regla aplica siempre</span>
+              ) : rule.conditions.map((c) => (
+                <ConditionChip key={c.id} cond={c} onDelete={() => deleteCondMut.mutate(c.id)} />
+              ))}
+            </div>
+          </div>
+
+          {addingCond
+            ? <AddConditionForm ruleId={rule.id} onDone={() => setAddingCond(false)} />
+            : <button type="button" onClick={() => setAddingCond(true)}
+                style={{ padding: '5px 12px', borderRadius: 7, border: '1px dashed #e2e8f0', background: 'transparent', color: '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Plus size={10} /> Agregar condición
+              </button>
+          }
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddRuleForm({ policyId, onDone }: { policyId: string; onDone: () => void }) {
+  const qc = useQueryClient();
+  const [name,    setName]    = useState('');
+  const [prio,    setPrio]    = useState('media');
+  const [hours,   setHours]   = useState(24);
+
+  const mut = useMutation({
+    mutationFn: () => systemConfigService.createTicketSlaRule(policyId, { name, priority_result: prio, hours_to_resolve: hours }),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['ticket-sla-policies'] }); setName(''); onDone(); },
+  });
+
+  const inp: React.CSSProperties = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 10px', fontSize: 12, fontFamily: 'inherit', background: '#fff' };
+
+  return (
+    <div style={{ padding: '14px 16px', background: '#fff', borderRadius: 12, border: '1.5px solid #0e2235', marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+      <div style={{ flex: '2 1 160px' }}>
+        <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#64748b' }}>Nombre *</p>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Daño crítico de hardware" style={{ ...inp, width: '100%', boxSizing: 'border-box' }} />
+      </div>
+      <div style={{ flex: '1 1 100px' }}>
+        <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#64748b' }}>Prioridad resultado</p>
+        <select value={prio} onChange={(e) => setPrio(e.target.value)} style={inp}>
+          {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+      </div>
+      <div style={{ flex: '1 1 80px' }}>
+        <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#64748b' }}>Horas SLA</p>
+        <input type="number" min={1} value={hours} onChange={(e) => setHours(Number(e.target.value))} style={{ ...inp, width: '100%', boxSizing: 'border-box' }} />
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button type="button" disabled={!name.trim() || mut.isPending} onClick={() => mut.mutate()}
+          style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#ff5e3a', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: !name.trim() || mut.isPending ? .6 : 1 }}>
+          {mut.isPending ? '…' : 'Crear regla'}
+        </button>
+        <button type="button" onClick={onDone}
+          style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SlaTicketsTab() {
+  const { data: modules = [], isLoading: modsLoading } = useQuery({
+    queryKey: ['all-modules'],
+    queryFn:  () => modulesService.getModules(),
+    staleTime: 5 * 60_000,
+  });
+
+  const [selectedModuleId, setSelectedModuleId] = useState('');
+  const [addingRule,       setAddingRule]        = useState(false);
+
+  const { data: policies = [], isLoading: polLoading } = useQuery<TicketSlaPolicy[]>({
+    queryKey: ['ticket-sla-policies', selectedModuleId],
+    queryFn:  () => systemConfigService.getTicketSlaPolicies(selectedModuleId),
+    enabled:  !!selectedModuleId,
+    staleTime: 30_000,
+  });
+
+  const activePolicy = policies.find((p) => p.is_active) ?? policies[0] ?? null;
+
+  const selStyle: React.CSSProperties = {
+    border: '1px solid #e2e8f0', borderRadius: 10, padding: '8px 12px',
+    fontSize: 13, fontFamily: 'inherit', background: '#fff', cursor: 'pointer', color: '#0f172a',
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Module selector */}
+      <div>
+        <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: '#64748b' }}>Módulo</p>
+        {modsLoading ? <Spinner /> : (
+          <select value={selectedModuleId} onChange={(e) => { setSelectedModuleId(e.target.value); setAddingRule(false); }} style={{ ...selStyle, minWidth: 280 }}>
+            <option value="">Seleccionar módulo…</option>
+            {modules.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        )}
+      </div>
+
+      {!selectedModuleId && (
+        <p style={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic' }}>Selecciona un módulo para ver sus políticas SLA.</p>
+      )}
+
+      {selectedModuleId && polLoading && <Spinner />}
+
+      {selectedModuleId && !polLoading && (
+        <>
+          {!activePolicy ? (
+            <div style={{ padding: '16px 20px', borderRadius: 12, background: '#fff5f5', border: '1px solid #fecaca', color: '#ef4444', fontSize: 13 }}>
+              Sin política SLA activa. Aplica la migración 007 para crear la política por defecto.
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0e2235' }}>
+                    {activePolicy.name} <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>v{activePolicy.version}</span>
+                  </p>
+                  <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8' }}>
+                    {activePolicy.rules.length} regla(s) · AND dentro del grupo / OR entre grupos
+                  </p>
+                </div>
+                {!addingRule && (
+                  <button type="button" onClick={() => setAddingRule(true)}
+                    style={{ padding: '7px 14px', borderRadius: 9, border: 'none', background: '#ff5e3a', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Plus size={12} /> Nueva regla
+                  </button>
+                )}
+              </div>
+
+              {addingRule && <AddRuleForm policyId={activePolicy.id} onDone={() => setAddingRule(false)} />}
+
+              {activePolicy.rules.length === 0 && !addingRule ? (
+                <div style={{ padding: '20px', borderRadius: 12, background: '#f8fafc', border: '1px dashed #e2e8f0', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                  Sin reglas — todos los tickets usarán las horas por defecto del sistema.
+                </div>
+              ) : (
+                <div>
+                  {activePolicy.rules.map((rule) => (
+                    <SlaRuleRow key={rule.id} rule={rule} policyId={activePolicy.id} />
+                  ))}
+                </div>
+              )}
+
+              {/* Legend */}
+              <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f0f4f8', border: '1px solid #e2e8f0', fontSize: 11, color: '#64748b', lineHeight: 1.7 }}>
+                <strong style={{ color: '#0e2235' }}>Cómo funciona:</strong> Las reglas se evalúan en orden. La primera que coincida define el plazo SLA.<br/>
+                Dentro de una regla, las condiciones del mismo grupo se combinan con AND; grupos distintos se combinan con OR.<br/>
+                El campo <em>Tipo de daño</em>, <em>Categoría</em> y <em>Ambiente</em> aceptan UUID. Para múltiples valores usa operator <code>IN</code> con valores separados por coma.
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ── Main page ──────────────────────────────────────────────────── */
 
 export default function GlobalConfigPage() {
@@ -958,6 +1620,9 @@ export default function GlobalConfigPage() {
             />
           )}
           {tab === 'sla'           && <SlaTab />}
+          {tab === 'calendario'    && <CalendarioTab />}
+          {tab === 'daños'         && <DañosTab />}
+          {tab === 'sla-tickets'   && <SlaTicketsTab />}
           {tab === 'tipos'         && <RequestTypesTab />}
           {tab === 'permisos'      && <RolesPermissionsTab />}
           {tab === 'importar'      && <ImportTab />}

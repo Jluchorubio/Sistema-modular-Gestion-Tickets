@@ -2,12 +2,18 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SlaEvaluatorService } from './sla/sla-evaluator.service';
+import { PriorityEngineService } from './priority/priority-engine.service';
+import { AssignmentService } from './assignment/assignment.service';
 
 @Injectable()
 export class TicketsService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
     private readonly events: EventEmitter2,
+    private readonly slaEvaluator: SlaEvaluatorService,
+    private readonly priorityEngine: PriorityEngineService,
+    private readonly assignment: AssignmentService,
   ) {}
 
   /* ── Module meta ────────────────────────────────────────────────────────── */
@@ -157,9 +163,14 @@ export class TicketsService {
     const [ticket] = await this.db.query<any[]>(
       `SELECT t.id, t.title, t.description, t.priority, t.urgency, t.impact,
               t.sla_deadline, t.created_at, t.updated_at,
-              t.module_id,      m.name  AS module_name,
-              t.category_id,    c.name  AS category_name,
-              t.environment_id, e.name  AS environment_name,
+              t.module_id,        m.name  AS module_name,
+              t.category_id,      c.name  AS category_name,
+              t.environment_id,   e.name  AS environment_name,
+              t.damage_type_id,   dt.label AS damage_type_label,
+              dt.slug             AS damage_type_slug,
+              dtc.slug            AS damage_category_slug,
+              dtc.label           AS damage_category_label,
+              t.custom_damage_description,
               t.workflow_version_id,
               t.current_state_id,
               s.name  AS state_name,
@@ -168,17 +179,20 @@ export class TicketsService {
               t.created_by,
               up.first_name || ' ' || up.last_name AS creator_name,
               t.reprocess_count,
+              t.escalated, t.escalation_note,
               st.status      AS sla_status,
               st.deadline_at AS sla_deadline_tracked,
               st.breached_at,
               appr.status    AS approval_status,
               appr.expires_at AS approval_expires_at
-       FROM   tickets.tickets           t
-       JOIN   modules.modules           m    ON m.id    = t.module_id
-       LEFT JOIN modules.categories     c    ON c.id    = t.category_id
-       LEFT JOIN modules.environments   e    ON e.id    = t.environment_id
-       JOIN   tickets.states            s    ON s.id    = t.current_state_id
-       JOIN   users.profiles            up   ON up.id   = t.created_by
+       FROM   tickets.tickets                t
+       JOIN   modules.modules                m    ON m.id   = t.module_id
+       LEFT JOIN modules.categories          c    ON c.id   = t.category_id
+       LEFT JOIN modules.environments        e    ON e.id   = t.environment_id
+       LEFT JOIN tickets.damage_types        dt   ON dt.id  = t.damage_type_id
+       LEFT JOIN config.ticket_categories    dtc  ON dtc.id = dt.category_id
+       JOIN   tickets.states                 s    ON s.id   = t.current_state_id
+       JOIN   users.profiles                 up   ON up.id  = t.created_by
        LEFT JOIN tickets.ticket_sla_tracking st   ON st.ticket_id   = t.id
        LEFT JOIN tickets.ticket_approvals    appr ON appr.ticket_id = t.id
                                                   AND appr.status = 'pending'
@@ -229,45 +243,116 @@ export class TicketsService {
 
   /* ── Create ─────────────────────────────────────────────────────────────── */
 
+  async searchAssets(q: string) {
+    if (!q || q.length < 2) return [];
+    return this.db.query<any[]>(
+      `SELECT a.id, a.name, a.serial_number, a.qr_code, a.status,
+              c.name AS category_name,
+              e.name AS environment_name,
+              l.name AS location_name,
+              p.first_name || ' ' || p.last_name AS assigned_to_name
+       FROM   inventory.assets a
+       LEFT JOIN modules.categories   c  ON c.id = a.category_id
+       LEFT JOIN modules.environments e  ON e.id = a.environment_id
+       LEFT JOIN modules.locations    l  ON l.id = e.location_id
+       LEFT JOIN inventory.asset_assignments aa ON aa.asset_id = a.id AND aa.status = 'activo'
+       LEFT JOIN users.profiles        p  ON p.id = aa.user_id
+       WHERE  a.deleted_at IS NULL
+         AND  a.status != 'dado_de_baja'
+         AND  (a.name ILIKE $1 OR a.serial_number ILIKE $1 OR a.qr_code ILIKE $1)
+       ORDER  BY a.name
+       LIMIT  10`,
+      [`%${q}%`],
+    );
+  }
+
   async create(userId: string, dto: {
-    module_id:       string;
-    category_id:     string;
-    environment_id:  string;
-    title:           string;
-    description?:    string;
-    priority?:       string;
-    urgency?:        string;
-    impact?:         string;
+    module_id:                 string;
+    category_id:               string;
+    environment_id:            string;
+    title:                     string;
+    description?:              string;
+    damage_type_id?:           string;
+    custom_damage_description?: string;
+    asset_id?:                 string;
+    priority?:                 string;
+    urgency?:                  string;
+    impact?:                   string;
   }) {
-    const [wf] = await this.db.query<any[]>(
-      `SELECT id FROM tickets.workflow_versions WHERE module_id = $1 AND is_active = true LIMIT 1`,
-      [dto.module_id],
-    );
-    if (!wf) throw new BadRequestException('No active workflow for this module. Run bootstrap_module first.');
+    const now = new Date();
 
-    const [initialState] = await this.db.query<any[]>(
-      `SELECT id FROM tickets.states WHERE workflow_version_id = $1 AND is_initial = true AND is_active = true LIMIT 1`,
-      [wf.id],
-    );
+    // Load workflow, initial state, and SLA policy in parallel
+    const [[wf], [initialState], [slaPolicy]] = await Promise.all([
+      this.db.query<any[]>(
+        `SELECT id FROM tickets.workflow_versions WHERE module_id = $1 AND is_active = true LIMIT 1`,
+        [dto.module_id],
+      ),
+      this.db.query<any[]>(
+        `SELECT s.id
+         FROM tickets.states s
+         JOIN tickets.workflow_versions wv ON wv.id = s.workflow_version_id
+         WHERE wv.module_id = $1 AND s.is_initial = true AND s.is_active = true LIMIT 1`,
+        [dto.module_id],
+      ),
+      this.db.query<any[]>(
+        `SELECT id FROM tickets.sla_policies WHERE module_id = $1 AND is_active = true LIMIT 1`,
+        [dto.module_id],
+      ),
+    ]);
+
+    if (!wf)          throw new BadRequestException('No active workflow for this module.');
     if (!initialState) throw new BadRequestException('Workflow has no initial state.');
+    if (!slaPolicy)   throw new BadRequestException('No active SLA policy for this module.');
 
-    const [slaPolicy] = await this.db.query<any[]>(
-      `SELECT id FROM tickets.sla_policies WHERE module_id = $1 AND is_active = true LIMIT 1`,
-      [dto.module_id],
-    );
-    if (!slaPolicy) throw new BadRequestException('No active SLA policy for this module.');
+    // Resolve priority: manual override → scoring engine → default
+    let finalPriority = dto.priority ?? 'media';
+    if (!dto.priority) {
+      const scored = await this.priorityEngine.compute({
+        damage_type_id: dto.damage_type_id,
+        urgency:        dto.urgency,
+        impact:         dto.impact,
+        creator_id:     userId,
+      });
+      finalPriority = scored.priority;
+    }
 
-    // Set session user for triggers
+    // Recurrence detection: same asset + damage_type repeated 3+ times in 30 days → escalate
+    let autoEscalated = false;
+    let recurrenceCount = 0;
+    if (dto.asset_id && dto.damage_type_id) {
+      recurrenceCount = await this.priorityEngine.checkRecurrence(dto.asset_id, dto.damage_type_id);
+      if (recurrenceCount >= 2) {
+        finalPriority = this.priorityEngine.escalatePriority(finalPriority);
+        autoEscalated = true;
+      }
+    }
+
+    // Compute SLA deadline via evaluator
+    const slaResult = await this.slaEvaluator.compute({
+      module_id:       dto.module_id,
+      policy_id:       slaPolicy.id,
+      category_id:     dto.category_id,
+      damage_type_id:  dto.damage_type_id,
+      priority:        finalPriority,
+      urgency:         dto.urgency,
+      impact:          dto.impact,
+      created_at:      now,
+    });
+
+    // Set session user for audit triggers
     await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
 
     const [ticket] = await this.db.query<any[]>(
       `INSERT INTO tickets.tickets (
          module_id, workflow_version_id, current_state_id,
          environment_id, category_id, created_by,
-         priority, urgency, impact, sla_policy_id,
+         priority, urgency, impact,
+         sla_policy_id, sla_deadline,
+         damage_type_id, custom_damage_description,
+         asset_id,
          title, description
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-       RETURNING id, title, priority, urgency, impact, created_at`,
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       RETURNING id, title, priority, urgency, impact, sla_deadline, damage_type_id, asset_id, created_at`,
       [
         dto.module_id,
         wf.id,
@@ -275,23 +360,58 @@ export class TicketsService {
         dto.environment_id,
         dto.category_id,
         userId,
-        dto.priority   ?? 'media',
-        dto.urgency    ?? 'media',
-        dto.impact     ?? 'medio',
+        finalPriority,
+        dto.urgency ?? 'media',
+        dto.impact  ?? 'medio',
         slaPolicy.id,
+        slaResult.deadline,
+        dto.damage_type_id           ?? null,
+        dto.custom_damage_description ?? null,
+        dto.asset_id                  ?? null,
         dto.title.trim(),
         dto.description?.trim() ?? null,
       ],
     );
 
+    // Write SLA tracking record
+    if (slaResult.rule_id) {
+      await this.db.query(
+        `INSERT INTO tickets.ticket_sla_tracking
+           (ticket_id, sla_policy_id, sla_rule_id, started_at, deadline_at, status)
+         VALUES ($1, $2, $3, $4, $5, 'active')
+         ON CONFLICT (ticket_id) DO NOTHING`,
+        [ticket.id, slaPolicy.id, slaResult.rule_id, now, slaResult.deadline],
+      );
+    }
+
+    // Mark auto-escalation from recurrence detection
+    if (autoEscalated) {
+      await this.db.query(
+        `UPDATE tickets.tickets
+         SET escalated = true, escalated_at = now(),
+             escalation_note = $2
+         WHERE id = $1`,
+        [ticket.id, `Auto-escalado: ${recurrenceCount + 1} tickets para el mismo activo y tipo de daño en 30 días.`],
+      );
+    }
+
+    // Auto-assignment: round_robin or hybrid mode assigns a technician immediately
+    const assignedTo = await this.assignment.assign(
+      ticket.id, dto.module_id, dto.category_id, userId,
+    );
+
     this.events.emit('ticket.created', {
-      ticketId:  ticket.id,
-      title:     ticket.title,
-      createdBy: userId,
-      moduleId:  dto.module_id,
+      ticketId:        ticket.id,
+      title:           ticket.title,
+      createdBy:       userId,
+      moduleId:        dto.module_id,
+      slaDeadline:     slaResult.deadline,
+      slaMatchedBy:    slaResult.matched_by,
+      autoEscalated,
+      assignedTo,
     });
 
-    return ticket;
+    return { ...ticket, sla: slaResult, auto_escalated: autoEscalated, assigned_to: assignedTo };
   }
 
   /* ── Transition ─────────────────────────────────────────────────────────── */
@@ -748,5 +868,77 @@ export class TicketsService {
     }
 
     return row ?? { ok: true };
+  }
+
+  /* ── Rating ─────────────────────────────────────────────────────────────── */
+
+  async rateTicket(userId: string, ticketId: string, dto: {
+    score_overall:             number;
+    score_attention?:          number;
+    score_clarity?:            number;
+    score_response_time?:      number;
+    score_quality?:            number;
+    service_label?:            string;
+    comment?:                  string;
+    would_recommend?:          boolean;
+    resolved_on_first_attempt?: boolean;
+  }) {
+    const [ticket] = await this.db.query<any[]>(
+      `SELECT t.id, t.created_by, s.is_final
+       FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
+       WHERE  t.id = $1 AND t.deleted_at IS NULL`,
+      [ticketId],
+    );
+    if (!ticket)          throw new NotFoundException('Ticket not found');
+    if (!ticket.is_final) throw new BadRequestException('Solo se pueden calificar tickets cerrados.');
+    if (ticket.created_by !== userId) throw new ForbiddenException('Solo el solicitante puede calificar este ticket.');
+
+    const [existing] = await this.db.query<any[]>(
+      `SELECT id FROM tickets.ticket_ratings WHERE ticket_id = $1`,
+      [ticketId],
+    );
+    if (existing) throw new BadRequestException('Este ticket ya fue calificado.');
+
+    const [owner] = await this.db.query<{ user_id: string }[]>(
+      `SELECT user_id FROM tickets.ticket_assignments
+       WHERE ticket_id = $1 AND role = 'owner'
+       ORDER BY assigned_at DESC LIMIT 1`,
+      [ticketId],
+    );
+    if (!owner) throw new BadRequestException('El ticket no tiene técnico asignado.');
+
+    const [rating] = await this.db.query<any[]>(
+      `INSERT INTO tickets.ticket_ratings
+         (ticket_id, rated_by, technician_id,
+          score_overall, score_attention, score_clarity, score_response_time, score_quality,
+          service_label, comment, would_recommend, resolved_on_first_attempt,
+          expires_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now() + INTERVAL '7 days')
+       RETURNING *`,
+      [
+        ticketId, userId, owner.user_id,
+        dto.score_overall,
+        dto.score_attention          ?? null,
+        dto.score_clarity            ?? null,
+        dto.score_response_time      ?? null,
+        dto.score_quality            ?? null,
+        dto.service_label            ?? null,
+        dto.comment?.trim()          ?? null,
+        dto.would_recommend          ?? null,
+        dto.resolved_on_first_attempt ?? null,
+      ],
+    );
+    return rating;
+  }
+
+  async getTicketRating(ticketId: string) {
+    const [row] = await this.db.query<any[]>(
+      `SELECT r.*, p.first_name || ' ' || p.last_name AS technician_name
+       FROM tickets.ticket_ratings r
+       JOIN users.profiles p ON p.id = r.technician_id
+       WHERE r.ticket_id = $1`,
+      [ticketId],
+    );
+    return row ?? null;
   }
 }

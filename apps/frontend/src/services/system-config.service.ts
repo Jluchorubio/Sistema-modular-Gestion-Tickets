@@ -94,6 +94,79 @@ export interface RequestTypeConfig {
   sort_order:             number;
 }
 
+export interface TicketCategory {
+  id:          string;
+  slug:        string;
+  label:       string;
+  description: string | null;
+  icon:        string | null;
+  color:       string | null;
+  sort_order:  number;
+}
+
+export interface DamageType {
+  id:                  string;
+  category_id:         string;
+  category_slug:       string;
+  category_label:      string;
+  slug:                string;
+  label:               string;
+  description:         string | null;
+  default_priority:    string;
+  weight:              number;
+  allow_freetext:      boolean;
+  is_other:            boolean;
+  is_active:           boolean;
+  sort_order:          number;
+}
+
+export interface BusinessHour {
+  id:          string;
+  module_id:   string | null;
+  day_of_week: number;
+  start_time:  string;
+  end_time:    string;
+  is_active:   boolean;
+}
+
+export interface Holiday {
+  id:           string;
+  module_id:    string | null;
+  holiday_date: string;
+  name:         string;
+  is_active:    boolean;
+}
+
+export interface SlaCondition {
+  id:            string;
+  rule_id:       string;
+  field:         string;
+  operator:      string;
+  value:         string;
+  logical_group: number;
+  sort_order:    number;
+}
+
+export interface TicketSlaRule {
+  id:               string;
+  policy_id:        string;
+  name:             string;
+  priority_result:  string;
+  hours_to_resolve: number;
+  sort_order:       number;
+  is_active:        boolean;
+  conditions:       SlaCondition[];
+}
+
+export interface TicketSlaPolicy {
+  id:        string;
+  module_id: string;
+  name:      string;
+  version:   number;
+  is_active: boolean;
+  rules:     TicketSlaRule[];
+}
+
 export interface PublicCompanyInfo {
   name:          string;
   slug:          string;
@@ -157,6 +230,44 @@ export const systemConfigService = {
     api.get<RequestTypeConfig[]>(`${BASE}/request-types`, { params: onlyActive ? { active: 'true' } : {} }).then(r => r.data),
   updateRequestType: (id: string, dto: Partial<Pick<RequestTypeConfig, 'label' | 'description' | 'is_active' | 'requires_module' | 'allows_manual_priority' | 'sort_order'>>) =>
     api.patch<RequestTypeConfig>(`${BASE}/request-types/${id}`, dto).then(r => r.data),
+
+  /* ── Ticket categories (public read) ── */
+  getTicketCategories: () =>
+    api.get<TicketCategory[]>(`${BASE}/ticket-categories`).then(r => r.data),
+
+  /* ── Damage types (public read, filterable by category_id) ── */
+  getDamageTypes: (categoryId?: string) =>
+    api.get<DamageType[]>(`${BASE}/damage-types`, { params: categoryId ? { category_id: categoryId } : {} }).then(r => r.data),
+  updateDamageType: (id: string, dto: { is_active?: boolean; weight?: number; label?: string }) =>
+    api.patch<DamageType>(`${BASE}/damage-types/${id}`, dto).then(r => r.data),
+
+  /* ── Business hours ── */
+  getBusinessHours: (moduleId?: string) =>
+    api.get<BusinessHour[]>(`${BASE}/business-hours`, { params: moduleId ? { module_id: moduleId } : {} }).then(r => r.data),
+  upsertBusinessHour: (dto: { module_id?: string; day_of_week: number; start_time: string; end_time: string; is_active?: boolean }) =>
+    api.post<BusinessHour>(`${BASE}/business-hours`, dto).then(r => r.data),
+
+  /* ── Holidays ── */
+  getHolidays: (moduleId?: string) =>
+    api.get<Holiday[]>(`${BASE}/holidays`, { params: moduleId ? { module_id: moduleId } : {} }).then(r => r.data),
+  createHoliday: (dto: { holiday_date: string; name: string; module_id?: string }) =>
+    api.post<Holiday>(`${BASE}/holidays`, dto).then(r => r.data),
+  deleteHoliday: (id: string) =>
+    api.delete(`${BASE}/holidays/${id}`).then(r => r.data),
+
+  /* ── Ticket SLA Policies ── */
+  getTicketSlaPolicies: (moduleId: string) =>
+    api.get<TicketSlaPolicy[]>(`${BASE}/ticket-sla-policies`, { params: { module_id: moduleId } }).then(r => r.data),
+  createTicketSlaRule: (policyId: string, dto: { name: string; priority_result: string; hours_to_resolve: number; sort_order?: number }) =>
+    api.post<TicketSlaRule>(`${BASE}/ticket-sla-policies/${policyId}/rules`, dto).then(r => r.data),
+  updateTicketSlaRule: (ruleId: string, dto: Partial<Pick<TicketSlaRule, 'name' | 'priority_result' | 'hours_to_resolve' | 'sort_order' | 'is_active'>>) =>
+    api.patch<TicketSlaRule>(`${BASE}/ticket-sla-policies/rules/${ruleId}`, dto).then(r => r.data),
+  deleteTicketSlaRule: (ruleId: string) =>
+    api.delete(`${BASE}/ticket-sla-policies/rules/${ruleId}`).then(r => r.data),
+  createTicketSlaCondition: (ruleId: string, dto: { field: string; operator: string; value: string; logical_group?: number }) =>
+    api.post<SlaCondition>(`${BASE}/ticket-sla-policies/rules/${ruleId}/conditions`, dto).then(r => r.data),
+  deleteTicketSlaCondition: (condId: string) =>
+    api.delete(`${BASE}/ticket-sla-policies/conditions/${condId}`).then(r => r.data),
 
   /* ── Public company info (all authenticated users) ── */
   getPublicCompanyInfo: () =>

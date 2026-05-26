@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, UseGuards,
+  Body, Param, Query, UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
@@ -12,7 +12,11 @@ import {
   CreateHeadquarterDto, UpdateHeadquarterDto,
   CreateDepartmentDto, CreateAreaDto, CreatePositionDto,
 } from './dto/org.dto';
-import { UpdateSlaRuleDto, UpdateCompanyDto, UpdateRequestTypeDto } from './dto/config.dto';
+import {
+  UpdateSlaRuleDto, UpdateCompanyDto, UpdateRequestTypeDto,
+  UpdateDamageTypeDto, UpsertBusinessHourDto, CreateHolidayDto,
+  CreateTicketSlaRuleDto, UpdateTicketSlaRuleDto, CreateTicketSlaConditionDto,
+} from './dto/config.dto';
 import { BulkImportUsersDto } from './dto/bulk-import.dto';
 
 @ApiTags('system-config')
@@ -51,6 +55,16 @@ export class SystemConfigController {
   @Get('positions')
   @ApiOperation({ summary: 'Cargos activos.' })
   getPositions() { return this.svc.getPositions(); }
+
+  @Get('ticket-categories')
+  @ApiOperation({ summary: 'Categorías de tickets (Hardware, Software, Red…). Todos los usuarios.' })
+  getTicketCategories() { return this.svc.getTicketCategories(); }
+
+  @Get('damage-types')
+  @ApiOperation({ summary: 'Tipos de daño. Filtro ?category_id=uuid para una categoría.' })
+  getDamageTypes(@Query('category_id') categoryId?: string) {
+    return this.svc.getDamageTypes(categoryId);
+  }
 
   /* ── Superadmin-only endpoints ── */
 
@@ -138,6 +152,54 @@ export class SystemConfigController {
   @RequirePermission('global:config:view')
   getPriorityRules() { return this.svc.getPriorityRules(); }
 
+  @Patch('damage-types/:id')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Editar tipo de daño (is_active, weight, label)' })
+  updateDamageType(@Param('id') id: string, @Body() dto: UpdateDamageTypeDto) {
+    return this.svc.updateDamageType(id, dto);
+  }
+
+  @Get('business-hours')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:view')
+  @ApiOperation({ summary: 'Horarios laborales. ?module_id=uuid para módulo específico, sin param = global.' })
+  getBusinessHours(@Query('module_id') moduleId?: string) {
+    return this.svc.getBusinessHours(moduleId);
+  }
+
+  @Post('business-hours')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Crear o actualizar horario laboral para un día (upsert por module_id + day_of_week).' })
+  upsertBusinessHour(@Body() dto: UpsertBusinessHourDto) {
+    return this.svc.upsertBusinessHour(dto);
+  }
+
+  @Get('holidays')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:view')
+  @ApiOperation({ summary: 'Feriados. ?module_id=uuid incluye globales + los del módulo.' })
+  getHolidays(@Query('module_id') moduleId?: string) {
+    return this.svc.getHolidays(moduleId);
+  }
+
+  @Post('holidays')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Agregar feriado (upsert por module_id + date).' })
+  createHoliday(@Body() dto: CreateHolidayDto) {
+    return this.svc.createHoliday(dto);
+  }
+
+  @Delete('holidays/:id')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Desactivar feriado.' })
+  deleteHoliday(@Param('id') id: string) {
+    return this.svc.deleteHoliday(id);
+  }
+
   @Patch('request-types/:id')
   @UseGuards(RolesGuard) @Roles('superadmin')
   @RequirePermission('global:config:request_types')
@@ -151,4 +213,65 @@ export class SystemConfigController {
   @RequirePermission('global:config:bulk_import')
   @ApiOperation({ summary: 'Importar usuarios en lote (JSON de CSV/Excel parseado)' })
   bulkImport(@Body() dto: BulkImportUsersDto) { return this.svc.bulkImportUsers(dto); }
+
+  /* ── Ticket SLA Policies (per-module) ──────────────────────────── */
+
+  @Get('ticket-sla-policies')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Políticas SLA de tickets por módulo. ?module_id=uuid requerido.' })
+  getTicketSlaPolicies(@Query('module_id') moduleId: string) {
+    return this.svc.getTicketSlaPolicies(moduleId);
+  }
+
+  @Post('ticket-sla-policies/:policyId/rules')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Agregar regla SLA a una política.' })
+  createTicketSlaRule(
+    @Param('policyId') policyId: string,
+    @Body() dto: CreateTicketSlaRuleDto,
+  ) {
+    return this.svc.createTicketSlaRule(policyId, dto);
+  }
+
+  @Patch('ticket-sla-policies/rules/:ruleId')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Actualizar regla SLA (nombre, horas, prioridad, is_active).' })
+  updateTicketSlaRule(
+    @Param('ruleId') ruleId: string,
+    @Body() dto: UpdateTicketSlaRuleDto,
+  ) {
+    return this.svc.updateTicketSlaRule(ruleId, dto);
+  }
+
+  @Delete('ticket-sla-policies/rules/:ruleId')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Desactivar regla SLA.' })
+  deleteTicketSlaRule(@Param('ruleId') ruleId: string) {
+    return this.svc.deleteTicketSlaRule(ruleId);
+  }
+
+  @Post('ticket-sla-policies/rules/:ruleId/conditions')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Agregar condición a una regla SLA.' })
+  createTicketSlaCondition(
+    @Param('ruleId') ruleId: string,
+    @Body() dto: CreateTicketSlaConditionDto,
+  ) {
+    return this.svc.createTicketSlaCondition(ruleId, dto);
+  }
+
+  @Delete('ticket-sla-policies/conditions/:condId')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Eliminar condición de una regla SLA.' })
+  deleteTicketSlaCondition(@Param('condId') condId: string) {
+    return this.svc.deleteTicketSlaCondition(condId);
+  }
 }

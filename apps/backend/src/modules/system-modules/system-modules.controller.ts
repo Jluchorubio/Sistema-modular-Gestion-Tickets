@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { ProfileCompleteGuard } from '../../gateway/guards/profile-complete.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { SkipProfileCheck } from '../../gateway/decorators/skip-profile-check.decorator';
 import { SystemModulesService } from './system-modules.service';
 
@@ -56,6 +57,7 @@ export class SystemModulesController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:config:org')
   @ApiOperation({ summary: 'Crear módulo. Solo superadmin.' })
   create(@Body() dto: Record<string, unknown>) {
     return this.service.create(dto);
@@ -64,6 +66,7 @@ export class SystemModulesController {
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:config:org')
   @ApiOperation({ summary: 'Editar módulo. Solo superadmin.' })
   update(@Param('id') id: string, @Body() dto: Record<string, unknown>) {
     return this.service.updateModule(id, dto);
@@ -72,6 +75,7 @@ export class SystemModulesController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:config:org')
   @ApiOperation({ summary: 'Eliminar módulo (soft-delete + 90 días retención). Solo superadmin.' })
   remove(@Param('id') id: string) {
     return this.service.deleteModule(id);
@@ -80,6 +84,7 @@ export class SystemModulesController {
   @Post(':id/restore')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:config:org')
   @ApiOperation({ summary: 'Restaurar módulo eliminado (dentro del período de 90 días). Solo superadmin.' })
   restore(@Param('id') id: string) {
     return this.service.restoreModule(id);
@@ -88,6 +93,7 @@ export class SystemModulesController {
   @Patch(':id/maintenance')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:config:org')
   @ApiOperation({ summary: 'Activar/desactivar modo mantenimiento. Solo superadmin.' })
   toggleMaintenance(
     @Param('id') id: string,
@@ -102,6 +108,7 @@ export class SystemModulesController {
   @Post(':id/roles')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:config:org')
   @ApiOperation({ summary: 'Crear rol en un módulo. Solo superadmin.' })
   createRole(
     @Param('id') moduleId: string,
@@ -113,6 +120,7 @@ export class SystemModulesController {
   @Patch('roles/:roleId')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:config:org')
   @ApiOperation({ summary: 'Editar un rol. Solo superadmin.' })
   updateRole(
     @Param('roleId') roleId: string,
@@ -124,6 +132,7 @@ export class SystemModulesController {
   @Delete('roles/:roleId')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
+  @RequirePermission('global:config:org')
   @ApiOperation({ summary: 'Desactivar un rol. Solo superadmin.' })
   deleteRole(@Param('roleId') roleId: string) {
     return this.service.deleteRole(roleId);
@@ -134,6 +143,7 @@ export class SystemModulesController {
   @Get(':id/sla')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:view')
   @ApiOperation({ summary: 'Reglas SLA del módulo (overrides + fallback global).' })
   getModuleSlaRules(@Param('id') id: string) {
     return this.service.getModuleSlaRules(id);
@@ -142,6 +152,7 @@ export class SystemModulesController {
   @Put(':id/sla/:priority')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Crear o actualizar override SLA para una prioridad.' })
   upsertModuleSlaRule(
     @Param('id')       moduleId: string,
@@ -155,6 +166,7 @@ export class SystemModulesController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Eliminar override SLA (vuelve a regla global).' })
   deleteModuleSlaRule(
     @Param('id')       moduleId: string,

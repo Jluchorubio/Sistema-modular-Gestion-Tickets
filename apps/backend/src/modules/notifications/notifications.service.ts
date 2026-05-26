@@ -57,7 +57,14 @@ export class NotificationsService {
   /* ── Event handlers ──────────────────────────────────────────────────────── */
 
   @OnEvent('ticket.created')
-  async onTicketCreated(ev: { ticketId: string; title: string; createdBy: string; moduleId: string }) {
+  async onTicketCreated(ev: {
+    ticketId:     string;
+    title:        string;
+    createdBy:    string;
+    moduleId:     string;
+    autoEscalated?: boolean;
+    assignedTo?:    string;
+  }) {
     await this.notifyUser({
       userId:    ev.createdBy,
       eventType: 'ticket.created',
@@ -66,6 +73,28 @@ export class NotificationsService {
       channels:  ['in_app', 'email'],
       meta:      { ticketId: ev.ticketId },
     });
+
+    if (ev.autoEscalated) {
+      const chiefs = await this.db.query<{ user_id: string }[]>(
+        `SELECT umr.user_id
+         FROM   modules.user_module_roles umr
+         JOIN   modules.module_roles      mr  ON mr.id = umr.role_id
+         WHERE  umr.module_id = $1
+           AND  mr.name       = 'jefe_tecnico'
+           AND  umr.is_active = true`,
+        [ev.moduleId],
+      );
+      for (const { user_id } of chiefs) {
+        await this.notifyUser({
+          userId:    user_id,
+          eventType: 'ticket.escalated',
+          subject:   `Ticket auto-escalado: ${ev.title}`,
+          body:      `El ticket "${ev.title}" fue escalado automáticamente por reincidencia. Requiere atención prioritaria.`,
+          channels:  ['in_app', 'email'],
+          meta:      { ticketId: ev.ticketId, moduleId: ev.moduleId },
+        });
+      }
+    }
   }
 
   @OnEvent('ticket.assigned')

@@ -5,7 +5,10 @@ import {
   CreateHeadquarterDto, UpdateHeadquarterDto,
   CreateDepartmentDto, CreateAreaDto, CreatePositionDto,
 } from './dto/org.dto';
-import { UpdateSlaRuleDto, UpdateCompanyDto } from './dto/config.dto';
+import {
+  UpdateSlaRuleDto, UpdateCompanyDto,
+  UpdateDamageTypeDto, UpsertBusinessHourDto, CreateHolidayDto,
+} from './dto/config.dto';
 import { BulkImportUsersDto } from './dto/bulk-import.dto';
 
 @Injectable()
@@ -402,6 +405,240 @@ export class SystemConfigService {
       [typeKey],
     );
     return row?.is_active === true;
+  }
+
+  /* ── Ticket categories (catálogo global, lectura pública) ─────────── */
+
+  async getTicketCategories() {
+    return this.db.query<any[]>(
+      `SELECT id, slug, label, description, icon, color, sort_order
+       FROM config.ticket_categories
+       WHERE is_active = TRUE
+       ORDER BY sort_order`,
+    );
+  }
+
+  /* ── Damage types (lectura pública, filtrable por category_id) ────── */
+
+  async getDamageTypes(categoryId?: string) {
+    const where = categoryId
+      ? `AND dt.category_id = $1`
+      : '';
+    const params = categoryId ? [categoryId] : [];
+    return this.db.query<any[]>(
+      `SELECT dt.id, dt.category_id, tc.slug AS category_slug, tc.label AS category_label,
+              dt.slug, dt.label, dt.description,
+              dt.default_priority, dt.weight, dt.allow_freetext, dt.is_other, dt.sort_order
+       FROM tickets.damage_types dt
+       JOIN config.ticket_categories tc ON tc.id = dt.category_id
+       WHERE dt.is_active = TRUE ${where}
+       ORDER BY tc.sort_order, dt.sort_order`,
+      params,
+    );
+  }
+
+  async updateDamageType(id: string, dto: UpdateDamageTypeDto) {
+    const fields: string[] = [];
+    const values: any[]   = [];
+    let idx = 1;
+    if (dto.is_active !== undefined) { fields.push(`is_active = $${idx++}`); values.push(dto.is_active); }
+    if (dto.weight    !== undefined) { fields.push(`weight = $${idx++}`);    values.push(dto.weight); }
+    if (dto.label     !== undefined) { fields.push(`label = $${idx++}`);     values.push(dto.label); }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    const [row] = await this.db.query<any[]>(
+      `UPDATE tickets.damage_types SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values,
+    );
+    if (!row) throw new NotFoundException(`Tipo de daño ${id} no encontrado`);
+    return row;
+  }
+
+  /* ── Business hours ──────────────────────────────────────────────── */
+
+  async getBusinessHours(moduleId?: string) {
+    const where = moduleId ? `WHERE module_id = $1` : `WHERE module_id IS NULL`;
+    const params = moduleId ? [moduleId] : [];
+    return this.db.query<any[]>(
+      `SELECT id, module_id, day_of_week, start_time, end_time, is_active
+       FROM config.business_hours ${where}
+       ORDER BY day_of_week`,
+      params,
+    );
+  }
+
+  async upsertBusinessHour(dto: UpsertBusinessHourDto) {
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO config.business_hours (module_id, day_of_week, start_time, end_time, is_active)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (module_id, day_of_week) DO UPDATE
+         SET start_time = EXCLUDED.start_time,
+             end_time   = EXCLUDED.end_time,
+             is_active  = EXCLUDED.is_active,
+             updated_at = now()
+       RETURNING *`,
+      [dto.module_id ?? null, dto.day_of_week, dto.start_time, dto.end_time, dto.is_active ?? true],
+    );
+    return row;
+  }
+
+  /* ── Holidays ────────────────────────────────────────────────────── */
+
+  async getHolidays(moduleId?: string) {
+    const where = moduleId ? `WHERE module_id = $1 OR module_id IS NULL` : `WHERE module_id IS NULL`;
+    const params = moduleId ? [moduleId] : [];
+    return this.db.query<any[]>(
+      `SELECT id, module_id, holiday_date, name, is_active
+       FROM config.holidays ${where}
+       ORDER BY holiday_date`,
+      params,
+    );
+  }
+
+  async createHoliday(dto: CreateHolidayDto) {
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO config.holidays (module_id, holiday_date, name)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (module_id, holiday_date) DO UPDATE SET name = EXCLUDED.name, is_active = TRUE, updated_at = now()
+       RETURNING *`,
+      [dto.module_id ?? null, dto.holiday_date, dto.name],
+    );
+    return row;
+  }
+
+  async deleteHoliday(id: string) {
+    await this.db.query(
+      `UPDATE config.holidays SET is_active = FALSE, updated_at = now() WHERE id = $1`,
+      [id],
+    );
+    return { ok: true };
+  }
+
+  /* ── Ticket SLA Policies (per-module) ───────────────────────────── */
+
+  async getTicketSlaPolicies(moduleId: string) {
+    const policies = await this.db.query<any[]>(
+      `SELECT id, module_id, name, version, is_active
+       FROM tickets.sla_policies WHERE module_id = $1 ORDER BY version DESC`,
+      [moduleId],
+    );
+
+    const rules = await this.db.query<any[]>(
+      `SELECT r.id, r.policy_id, r.name, r.priority_result, r.hours_to_resolve,
+              r.sort_order, r.is_active
+       FROM tickets.sla_rules r
+       JOIN tickets.sla_policies p ON p.id = r.policy_id
+       WHERE p.module_id = $1 AND r.is_active = TRUE
+       ORDER BY r.sort_order, r.created_at`,
+      [moduleId],
+    );
+
+    const conditions = rules.length
+      ? await this.db.query<any[]>(
+          `SELECT id, rule_id, field, operator, value, logical_group, sort_order
+           FROM tickets.sla_conditions
+           WHERE rule_id = ANY($1)
+           ORDER BY logical_group, sort_order`,
+          [rules.map((r) => r.id)],
+        )
+      : [];
+
+    return policies.map((p) => ({
+      ...p,
+      rules: rules
+        .filter((r) => r.policy_id === p.id)
+        .map((r) => ({
+          ...r,
+          conditions: conditions.filter((c) => c.rule_id === r.id),
+        })),
+    }));
+  }
+
+  async createTicketSlaRule(policyId: string, dto: {
+    name: string;
+    priority_result: string;
+    hours_to_resolve: number;
+    sort_order?: number;
+  }) {
+    const [policy] = await this.db.query<any[]>(
+      `SELECT id FROM tickets.sla_policies WHERE id = $1`,
+      [policyId],
+    );
+    if (!policy) throw new NotFoundException(`Política SLA ${policyId} no encontrada`);
+
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.sla_rules (policy_id, name, priority_result, hours_to_resolve, sort_order, is_active)
+       VALUES ($1, $2, $3, $4, $5, TRUE)
+       RETURNING *`,
+      [policyId, dto.name, dto.priority_result, dto.hours_to_resolve, dto.sort_order ?? 10],
+    );
+    return { ...row, conditions: [] };
+  }
+
+  async updateTicketSlaRule(ruleId: string, dto: {
+    name?: string;
+    priority_result?: string;
+    hours_to_resolve?: number;
+    is_active?: boolean;
+    sort_order?: number;
+  }) {
+    const fields: string[] = [];
+    const values: any[]   = [];
+    let idx = 1;
+    const map: [string, string][] = [
+      ['name','name'],['priority_result','priority_result'],
+      ['hours_to_resolve','hours_to_resolve'],['is_active','is_active'],['sort_order','sort_order'],
+    ];
+    for (const [k, col] of map) {
+      if ((dto as any)[k] !== undefined) {
+        fields.push(`${col} = $${idx++}`);
+        values.push((dto as any)[k]);
+      }
+    }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(ruleId);
+    const [row] = await this.db.query<any[]>(
+      `UPDATE tickets.sla_rules SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values,
+    );
+    if (!row) throw new NotFoundException(`Regla SLA ${ruleId} no encontrada`);
+    return row;
+  }
+
+  async deleteTicketSlaRule(ruleId: string) {
+    await this.db.query(
+      `UPDATE tickets.sla_rules SET is_active = FALSE, updated_at = now() WHERE id = $1`,
+      [ruleId],
+    );
+    return { ok: true };
+  }
+
+  async createTicketSlaCondition(ruleId: string, dto: {
+    field: string;
+    operator: string;
+    value: string;
+    logical_group?: number;
+  }) {
+    const [rule] = await this.db.query<any[]>(
+      `SELECT id FROM tickets.sla_rules WHERE id = $1 AND is_active = TRUE`,
+      [ruleId],
+    );
+    if (!rule) throw new NotFoundException(`Regla SLA ${ruleId} no encontrada`);
+
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.sla_conditions (rule_id, field, operator, value, logical_group)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [ruleId, dto.field, dto.operator, dto.value, dto.logical_group ?? 1],
+    );
+    return row;
+  }
+
+  async deleteTicketSlaCondition(condId: string) {
+    await this.db.query(`DELETE FROM tickets.sla_conditions WHERE id = $1`, [condId]);
+    return { ok: true };
   }
 
   /* Datos públicos de empresa (accesible a todos los usuarios autenticados) */

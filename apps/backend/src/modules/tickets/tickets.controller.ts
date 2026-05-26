@@ -6,13 +6,23 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { TicketsService } from './tickets.service';
+import { SlaBreachService } from './sla/sla-breach.service';
+import { RolesGuard } from '../../gateway/guards/roles.guard';
+import { Roles } from '../../gateway/decorators/roles.decorator';
 
 @ApiTags('tickets')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly svc: TicketsService) {}
+  constructor(
+    private readonly svc: TicketsService,
+    private readonly slaBreach: SlaBreachService,
+  ) {}
+
+  @Post('sla/breach-check')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  triggerBreachCheck() { return this.slaBreach.triggerManual(); }
 
   /* ── Module meta — must come before :id routes ──────────────────────────── */
 
@@ -41,6 +51,12 @@ export class TicketsController {
     @Query('exclude') exclude: string,
   ) {
     return this.svc.searchTickets(q ?? '', exclude ?? '');
+  }
+
+  @Get('asset-search')
+  @RequirePermission('helpdesk:tickets:view')
+  searchAssets(@Query('q') q: string) {
+    return this.svc.searchAssets(q ?? '');
   }
 
   /* ── CRUD ───────────────────────────────────────────────────────────────── */
@@ -116,6 +132,35 @@ export class TicketsController {
     @Body() body: { reason: string },
   ) {
     return this.svc.rejectTicket(req.user.sub, id, body);
+  }
+
+  /* ── Rating ─────────────────────────────────────────────────────────── */
+
+  @Get(':id/rating')
+  @RequirePermission('helpdesk:tickets:view')
+  getTicketRating(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.getTicketRating(id);
+  }
+
+  @Post(':id/rate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  rateTicket(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: {
+      score_overall:              number;
+      score_attention?:           number;
+      score_clarity?:             number;
+      score_response_time?:       number;
+      score_quality?:             number;
+      service_label?:             string;
+      comment?:                   string;
+      would_recommend?:           boolean;
+      resolved_on_first_attempt?: boolean;
+    },
+  ) {
+    return this.svc.rateTicket(req.user.sub, id, body);
   }
 
   /* ── Attachments ─────────────────────────────────────────────────────── */

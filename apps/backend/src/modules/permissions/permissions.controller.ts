@@ -5,6 +5,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { PermissionsService } from './permissions.service';
 
 @ApiTags('permissions')
@@ -27,6 +28,7 @@ export class PermissionsController {
 
   @Get('tree')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:roles_perms')
   @ApiOperation({ summary: 'Árbol completo de permisos del sistema' })
   getTree() { return this.svc.getPermissionTree(); }
 
@@ -34,16 +36,19 @@ export class PermissionsController {
 
   @Get('modules')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:roles_perms')
   getModulesWithScopes() { return this.svc.getModulesWithScopes(); }
 
   /* ── Roles globales ────────────────────────────────────────────── */
 
   @Get('roles/global')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:roles_perms')
   getGlobalRoles() { return this.svc.getGlobalRoles(); }
 
   @Get('roles/global/:roleId/grants')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:roles_perms')
   getGlobalGrants(@Param('roleId') roleId: string) {
     return this.svc.getGrantsForRole(roleId, 'global');
   }
@@ -52,12 +57,14 @@ export class PermissionsController {
 
   @Get('roles/module/:moduleId')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:roles_perms')
   getModuleRoles(@Param('moduleId') moduleId: string) {
     return this.svc.getModuleRoles(moduleId);
   }
 
   @Get('roles/module-role/:roleId/grants')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:roles_perms')
   getModuleRoleGrants(@Param('roleId') roleId: string) {
     return this.svc.getGrantsForRole(roleId, 'module');
   }
@@ -66,6 +73,7 @@ export class PermissionsController {
 
   @Patch('roles/:roleId/grant')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:roles:assign_perms')
   @ApiOperation({ summary: 'Activar/desactivar un permiso en un rol' })
   toggleGrant(
     @Param('roleId') roleId: string,
@@ -76,6 +84,7 @@ export class PermissionsController {
 
   @Post('roles/:roleId/grant-children')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:roles:assign_perms')
   @ApiOperation({ summary: 'Activar todos los hijos de un permiso padre' })
   grantChildren(
     @Param('roleId') roleId: string,
@@ -86,6 +95,7 @@ export class PermissionsController {
 
   @Post('roles/:roleId/revoke-children')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:roles:assign_perms')
   @ApiOperation({ summary: 'Revocar todos los hijos de un permiso padre' })
   revokeChildren(
     @Param('roleId') roleId: string,

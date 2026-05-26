@@ -111,6 +111,8 @@ export interface TicketDetail extends TicketListItem {
   description:          string | null;
   workflow_version_id:  string;
   reprocess_count:      number;
+  escalated:            boolean;
+  escalation_note:      string | null;
   approval_status:      ApprovalStatus | null;
   approval_expires_at:  string | null;
   assignments:          TicketAssignment[];
@@ -164,15 +166,61 @@ export const ASSET_ACTION_LABELS: Record<string, string> = {
   reparacion:   'Reparación',
 };
 
+export interface TicketRating {
+  id:                        string;
+  ticket_id:                 string;
+  rated_by:                  string;
+  technician_id:             string;
+  technician_name:           string;
+  score_overall:             number;
+  score_attention:           number | null;
+  score_clarity:             number | null;
+  score_response_time:       number | null;
+  score_quality:             number | null;
+  service_label:             string | null;
+  comment:                   string | null;
+  would_recommend:           boolean | null;
+  resolved_on_first_attempt: boolean | null;
+  expires_at:                string;
+  created_at:                string;
+}
+
+export interface RateTicketDto {
+  score_overall:              number;
+  score_attention?:           number;
+  score_clarity?:             number;
+  score_response_time?:       number;
+  score_quality?:             number;
+  service_label?:             'excelente' | 'bueno' | 'regular' | 'deficiente';
+  comment?:                   string;
+  would_recommend?:           boolean;
+  resolved_on_first_attempt?: boolean;
+}
+
+export interface AssetSearchResult {
+  id:               string;
+  name:             string;
+  serial_number:    string | null;
+  qr_code:          string;
+  status:           string;
+  category_name:    string | null;
+  environment_name: string | null;
+  location_name:    string | null;
+  assigned_to_name: string | null;
+}
+
 export interface CreateTicketDto {
-  module_id:      string;
-  category_id:    string;
-  environment_id: string;
-  title:          string;
-  description?:   string;
-  priority?:      TicketPriority;
-  urgency?:       TicketUrgency;
-  impact?:        TicketImpact;
+  module_id:                  string;
+  category_id:                string;
+  environment_id:             string;
+  title:                      string;
+  description?:               string;
+  damage_type_id?:            string;
+  custom_damage_description?: string;
+  asset_id?:                  string;
+  priority?:                  TicketPriority;
+  urgency?:                   TicketUrgency;
+  impact?:                    TicketImpact;
 }
 
 export interface TicketsFilter {
@@ -284,6 +332,16 @@ export const ticketsService = {
     return data;
   },
 
+  async getRating(ticketId: string): Promise<TicketRating | null> {
+    const { data } = await api.get(`/tickets/${ticketId}/rating`);
+    return data;
+  },
+
+  async rate(ticketId: string, dto: RateTicketDto): Promise<TicketRating> {
+    const { data } = await api.post(`/tickets/${ticketId}/rate`, dto);
+    return data;
+  },
+
   async getAttachments(ticketId: string): Promise<TicketAttachment[]> {
     const { data } = await api.get(`/tickets/${ticketId}/attachments`);
     return data;
@@ -334,6 +392,11 @@ export const ticketsService = {
 
   async getAssetHistory(ticketId: string, assetId: string): Promise<AssetHistoryEntry[]> {
     const { data } = await api.get(`/tickets/${ticketId}/assets/${assetId}/history`);
+    return data;
+  },
+
+  async searchAssets(q: string): Promise<AssetSearchResult[]> {
+    const { data } = await api.get('/tickets/asset-search', { params: { q } });
     return data;
   },
 
