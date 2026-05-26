@@ -10,7 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui.store';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { systemConfigService } from '@/services/system-config.service';
-import { GESTION_MODULE_NAME } from '@/app/(app)/requests/_nav';
+import type { ModuleNavItem } from '@/types/nav.types';
 import styles from './sidebar.module.css';
 
 function PanelToggleIcon() {
@@ -25,9 +25,13 @@ function PanelToggleIcon() {
   );
 }
 
+// Known module base paths — used only for brand display before store hydrates
+const MODULE_PREFIXES = ['/requests', '/inventory', '/helpdesk', '/tickets'];
+
 export function AppSidebar() {
   const expanded      = useUIStore((s) => s.sidebarExpanded);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const moduleNav     = useUIStore((s) => s.moduleNav);
   const moduleName    = useUIStore((s) => s.moduleName);
   const pathname      = usePathname();
 
@@ -37,26 +41,45 @@ export function AppSidebar() {
     staleTime: 600_000,
   });
 
-  const isGestionPath  = pathname.startsWith('/requests');
-  const isHelpdeskPath = pathname.startsWith('/helpdesk');
-  const effectiveName  = isGestionPath ? GESTION_MODULE_NAME : (moduleName ?? '');
-  const hasModuleCtx   = !!(isGestionPath || moduleName);
-  const usersHref      = isHelpdeskPath ? '/helpdesk/users' : '/users';
+  // Path-based fallback for brand display before store hydrates
+  const isModulePath = MODULE_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + '/'),
+  );
+  const hasModuleCtx = moduleNav !== null || isModulePath;
 
   const companyName = company?.name ?? '';
   const logoUrl     = company?.logo_url ?? '';
 
-  function isActive(href: string) {
+  // "Inicio" item active only on exact base path; all others active on prefix match
+  function isActive(href: string, key?: string) {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
+    if (key === 'inicio')      return pathname === href;
     return pathname === href || pathname.startsWith(href + '/');
+  }
+
+  function renderModuleItem(item: ModuleNavItem) {
+    const active = isActive(item.href, item.key);
+    const link = (
+      <Link
+        key={item.key}
+        href={item.href}
+        title={item.label}
+        aria-label={item.label}
+        className={`${styles.navItem}${active ? ` ${styles.navItemActive}` : ''}`}
+      >
+        <item.Icon className={styles.navIcon} aria-hidden="true" />
+        <span className={styles.navLabel}>{item.label}</span>
+      </Link>
+    );
+    return item.permKey
+      ? <PermissionGate key={item.key} perm={item.permKey}>{link}</PermissionGate>
+      : link;
   }
 
   return (
     <aside className={`${styles.sidebar}${expanded ? ` ${styles.expanded}` : ''}`}>
 
-      {/* ── Brand ──
-          Collapsed : logo icon only (centered)
-          Expanded  : logo + company name [+ module name] */}
+      {/* ── Brand ── */}
       <div className={styles.brand}>
         {logoUrl ? (
           <div className={styles.logoWrap} aria-label={companyName}>
@@ -85,8 +108,8 @@ export function AppSidebar() {
                 {companyName}
               </span>
             )}
-            {hasModuleCtx && effectiveName && (
-              <span className={styles.brandModuleName}>{effectiveName}</span>
+            {hasModuleCtx && moduleName && (
+              <span className={styles.brandModuleName}>{moduleName}</span>
             )}
           </div>
         )}
@@ -95,95 +118,87 @@ export function AppSidebar() {
       {/* ── Navigation ── */}
       <nav className={styles.nav} aria-label="Panel principal">
 
-        <Link
-          href="/dashboard"
-          title="Módulos Disponibles"
-          aria-label="Módulos Disponibles"
-          className={`${styles.navItem}${isActive('/dashboard') ? ` ${styles.navItemActive}` : ''}`}
-        >
-          <LayoutGrid className={styles.navIcon} aria-hidden="true" />
-          <span className={styles.navLabel}>Módulos Disponibles</span>
-        </Link>
-
-        <PermissionGate perm="global:sidebar:users">
-          <Link
-            href={usersHref}
-            title="Usuarios"
-            aria-label="Usuarios"
-            className={`${styles.navItem}${isActive(usersHref) ? ` ${styles.navItemActive}` : ''}`}
-          >
-            <UserCog className={styles.navIcon} aria-hidden="true" />
-            <span className={styles.navLabel}>Usuarios</span>
-          </Link>
-        </PermissionGate>
-
-        <PermissionGate perm="global:sidebar:roles">
-          <Link
-            href="/roles"
-            title="Roles"
-            aria-label="Roles"
-            className={`${styles.navItem}${isActive('/roles') ? ` ${styles.navItemActive}` : ''}`}
-          >
-            <ShieldCheck className={styles.navIcon} aria-hidden="true" />
-            <span className={styles.navLabel}>Roles</span>
-          </Link>
-        </PermissionGate>
-
-        <PermissionGate perm="global:sidebar:reports">
-          <Link
-            href="/reports"
-            title="Reportes"
-            aria-label="Reportes"
-            className={`${styles.navItem}${isActive('/reports') ? ` ${styles.navItemActive}` : ''}`}
-          >
-            <BarChart2 className={styles.navIcon} aria-hidden="true" />
-            <span className={styles.navLabel}>Reportes</span>
-          </Link>
-        </PermissionGate>
-
-        {!hasModuleCtx && (
-          <PermissionGate perm="global:sidebar:trash">
-            <Link
-              href="/trash"
-              title="Papelera"
-              aria-label="Papelera"
-              className={`${styles.navItem}${isActive('/trash') ? ` ${styles.navItemActive}` : ''}`}
-            >
-              <Trash2 className={styles.navIcon} aria-hidden="true" />
-              <span className={styles.navLabel}>Papelera</span>
-            </Link>
-          </PermissionGate>
-        )}
-
-        {hasModuleCtx ? (
-          <PermissionGate perm="global:sidebar:config">
-            <Link
-              href="/config"
-              title="Configuración"
-              aria-label="Configuración"
-              className={`${styles.navItem}${isActive('/config') ? ` ${styles.navItemActive}` : ''}`}
-            >
-              <Settings2 className={styles.navIcon} aria-hidden="true" />
-              <span className={styles.navLabel}>Configuración</span>
-            </Link>
-          </PermissionGate>
+        {moduleNav !== null ? (
+          /* ── Module context: render module-specific nav items ── */
+          moduleNav.map(renderModuleItem)
         ) : (
-          <PermissionGate perm="global:sidebar:config">
+          /* ── Global context: render system-wide nav items ── */
+          <>
             <Link
-              href="/config"
-              title="Configuración del Sistema"
-              aria-label="Configuración del Sistema"
-              className={`${styles.navItem}${isActive('/config') ? ` ${styles.navItemActive}` : ''}`}
+              href="/dashboard"
+              title="Módulos Disponibles"
+              aria-label="Módulos Disponibles"
+              className={`${styles.navItem}${isActive('/dashboard') ? ` ${styles.navItemActive}` : ''}`}
             >
-              <SlidersHorizontal className={styles.navIcon} aria-hidden="true" />
-              <span className={styles.navLabel}>Configuración del Sistema</span>
+              <LayoutGrid className={styles.navIcon} aria-hidden="true" />
+              <span className={styles.navLabel}>Módulos Disponibles</span>
             </Link>
-          </PermissionGate>
+
+            <PermissionGate perm="global:sidebar:users">
+              <Link
+                href="/users"
+                title="Usuarios"
+                aria-label="Usuarios"
+                className={`${styles.navItem}${isActive('/users') ? ` ${styles.navItemActive}` : ''}`}
+              >
+                <UserCog className={styles.navIcon} aria-hidden="true" />
+                <span className={styles.navLabel}>Usuarios</span>
+              </Link>
+            </PermissionGate>
+
+            <PermissionGate perm="global:sidebar:roles">
+              <Link
+                href="/roles"
+                title="Roles"
+                aria-label="Roles"
+                className={`${styles.navItem}${isActive('/roles') ? ` ${styles.navItemActive}` : ''}`}
+              >
+                <ShieldCheck className={styles.navIcon} aria-hidden="true" />
+                <span className={styles.navLabel}>Roles</span>
+              </Link>
+            </PermissionGate>
+
+            <PermissionGate perm="global:sidebar:reports">
+              <Link
+                href="/reports"
+                title="Reportes"
+                aria-label="Reportes"
+                className={`${styles.navItem}${isActive('/reports') ? ` ${styles.navItemActive}` : ''}`}
+              >
+                <BarChart2 className={styles.navIcon} aria-hidden="true" />
+                <span className={styles.navLabel}>Reportes</span>
+              </Link>
+            </PermissionGate>
+
+            <PermissionGate perm="global:sidebar:trash">
+              <Link
+                href="/trash"
+                title="Papelera"
+                aria-label="Papelera"
+                className={`${styles.navItem}${isActive('/trash') ? ` ${styles.navItemActive}` : ''}`}
+              >
+                <Trash2 className={styles.navIcon} aria-hidden="true" />
+                <span className={styles.navLabel}>Papelera</span>
+              </Link>
+            </PermissionGate>
+
+            <PermissionGate perm="global:sidebar:config">
+              <Link
+                href="/config"
+                title="Configuración del Sistema"
+                aria-label="Configuración del Sistema"
+                className={`${styles.navItem}${isActive('/config') ? ` ${styles.navItemActive}` : ''}`}
+              >
+                <SlidersHorizontal className={styles.navIcon} aria-hidden="true" />
+                <span className={styles.navLabel}>Configuración del Sistema</span>
+              </Link>
+            </PermissionGate>
+          </>
         )}
 
       </nav>
 
-      {/* ── Bottom: toggle button (last) ── */}
+      {/* ── Bottom: toggle button ── */}
       <div className={styles.bottom}>
         <button
           type="button"

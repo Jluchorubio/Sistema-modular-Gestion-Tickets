@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Ticket } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
+import { useUIStore } from '@/stores/ui.store';
 import { ADMIN_ROLES } from '@/constants/roles';
 import { reportingService, type DailyTrend, type SlaByPriority } from '@/services/reporting.service';
 import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
@@ -127,8 +128,9 @@ function SlaPriorityTable({ rows }: { rows: SlaByPriority[] }) {
 
 /* ── Main ── */
 export function ReportsClient() {
-  const user         = useAuthStore((s) => s.user);
-  const isSuperadmin = user?.is_superadmin ?? false;
+  const user           = useAuthStore((s) => s.user);
+  const isSuperadmin   = user?.is_superadmin ?? false;
+  const storeModuleId  = useUIStore((s) => s.moduleId);
 
   const adminModules = useMemo(() => {
     const roles = user?.module_roles?.filter(
@@ -139,6 +141,12 @@ export function ReportsClient() {
   }, [user]);
 
   const [selectedModule, setSelectedModule] = useState<string>('');
+
+  // Sync to module context: auto-filter when entering a module, reset when leaving
+  useEffect(() => {
+    setSelectedModule(storeModuleId ?? '');
+  }, [storeModuleId]);
+
   const moduleId = selectedModule || undefined;
 
   const { data: sla, isLoading: slaLoading } = useQuery({
@@ -176,8 +184,8 @@ export function ReportsClient() {
           </div>
         </div>
 
-        {/* ── Module filter ── */}
-        {(isSuperadmin || adminModules.length > 1) && (
+        {/* ── Module filter — hidden when locked to a module context ── */}
+        {!storeModuleId && (isSuperadmin || adminModules.length > 1) && (
           <div className={styles.filterBar}>
             <button
               type="button"

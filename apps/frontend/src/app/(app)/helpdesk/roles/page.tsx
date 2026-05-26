@@ -3,14 +3,14 @@
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { Spinner } from '@/components/ui/Spinner';
-import { GestionRolesClient } from '@/app/(app)/requests/_components/GestionRolesClient';
+import { ModuleScopedRolesClient } from '@/components/modules/ModuleScopedRolesClient';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 
 export default function HelpdeskRolesPage() {
   const { modules, isLoading } = useModules();
-  const helpdeskId = modules?.find(isHelpdeskModule)?.id;
-  useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
+  const helpdeskRef = modules?.find(isHelpdeskModule);
+  useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskRef?.id);
 
-  if (isLoading || !helpdeskId) return <Spinner />;
-  return <GestionRolesClient moduleId={helpdeskId} />;
+  if (isLoading || !helpdeskRef) return <Spinner />;
+  return <ModuleScopedRolesClient moduleId={helpdeskRef.id} moduleName="Mesa de Ayuda" />;
 }

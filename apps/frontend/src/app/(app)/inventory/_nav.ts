@@ -1,4 +1,4 @@
-import { Package, Users, Tag, Trash2, BarChart2 } from 'lucide-react';
+import { Home, Users, Tag, BarChart2, Settings2 } from 'lucide-react';
 import type { ModuleNavItem } from '@/types/nav.types';
 
 export const INVENTORY_MODULE_NAME = 'Inventario';
@@ -11,9 +11,9 @@ export function isInventoryModule(m: { slug: string; type?: string | null }): bo
 }
 
 export const INVENTORY_NAV: ModuleNavItem[] = [
-  { key: 'inventory', label: 'Inventario', Icon: Package,    href: '/inventory'         },
-  { key: 'users',     label: 'Usuarios',   Icon: Users,      href: '/inventory/users'   },
-  { key: 'roles',     label: 'Roles',      Icon: Tag,        href: '/inventory/roles'   },
-  { key: 'trash',     label: 'Papelera',   Icon: Trash2,     href: '/inventory/trash'   },
-  { key: 'reports',   label: 'Reportes',   Icon: BarChart2,  href: '/inventory/reports' },
+  { key: 'inicio',  label: 'Inicio',       Icon: Home,      href: '/inventory'         },
+  { key: 'users',   label: 'Usuarios',     Icon: Users,     href: '/inventory/users'   },
+  { key: 'roles',   label: 'Roles',        Icon: Tag,       href: '/inventory/roles'   },
+  { key: 'reports', label: 'Reportes',     Icon: BarChart2, href: '/inventory/reports' },
+  { key: 'config',  label: 'Configuración',Icon: Settings2, href: '/inventory/config'  },
 ];
