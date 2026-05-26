@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS config.ticket_categories (
 
 CREATE TRIGGER trg_ticket_categories_updated_at
     BEFORE UPDATE ON config.ticket_categories
-    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ---------------------------------------------------------------------------
 -- 2. tickets.damage_types
@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_damage_types_category ON tickets.damage_types (ca
 
 CREATE TRIGGER trg_damage_types_updated_at
     BEFORE UPDATE ON tickets.damage_types
-    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ---------------------------------------------------------------------------
 -- 3. config.business_hours
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS config.business_hours (
 
 CREATE TRIGGER trg_business_hours_updated_at
     BEFORE UPDATE ON config.business_hours
-    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ---------------------------------------------------------------------------
 -- 4. config.holidays
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS config.holidays (
 
 CREATE TRIGGER trg_holidays_updated_at
     BEFORE UPDATE ON config.holidays
-    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ---------------------------------------------------------------------------
 -- 5. tickets.tickets — add damage_type_id
@@ -119,9 +119,13 @@ ALTER TABLE tickets.tickets
     ADD COLUMN IF NOT EXISTS damage_type_id uuid,
     ADD COLUMN IF NOT EXISTS custom_damage_description text;
 
-ALTER TABLE tickets.tickets
-    ADD CONSTRAINT IF NOT EXISTS fk_tickets_damage_type
-    FOREIGN KEY (damage_type_id) REFERENCES tickets.damage_types(id) ON DELETE SET NULL;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_tickets_damage_type') THEN
+        ALTER TABLE tickets.tickets
+            ADD CONSTRAINT fk_tickets_damage_type
+            FOREIGN KEY (damage_type_id) REFERENCES tickets.damage_types(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_tickets_damage_type ON tickets.tickets (damage_type_id);
 
@@ -148,7 +152,7 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- ---- HARDWARE ----
 INSERT INTO tickets.damage_types (category_id, slug, label, default_priority, weight, allow_freetext, is_other, sort_order)
-SELECT id, slug, label, default_priority::priority_level, weight, true, is_other, sort_order
+SELECT tc.id, dt.slug, dt.label, dt.default_priority::priority_level, dt.weight, true, dt.is_other, dt.sort_order
 FROM config.ticket_categories tc
 CROSS JOIN (VALUES
     ('hardware_no_enciende',      'No enciende',                        'alta',   9, false,  10),
@@ -168,7 +172,7 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- ---- SOFTWARE ----
 INSERT INTO tickets.damage_types (category_id, slug, label, default_priority, weight, allow_freetext, is_other, sort_order)
-SELECT id, slug, label, default_priority::priority_level, weight, true, is_other, sort_order
+SELECT tc.id, dt.slug, dt.label, dt.default_priority::priority_level, dt.weight, true, dt.is_other, dt.sort_order
 FROM config.ticket_categories tc
 CROSS JOIN (VALUES
     ('software_virus',          'Virus / malware / ransomware',       'critica', 10, false,  10),
@@ -185,7 +189,7 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- ---- RED ----
 INSERT INTO tickets.damage_types (category_id, slug, label, default_priority, weight, allow_freetext, is_other, sort_order)
-SELECT id, slug, label, default_priority::priority_level, weight, true, is_other, sort_order
+SELECT tc.id, dt.slug, dt.label, dt.default_priority::priority_level, dt.weight, true, dt.is_other, dt.sort_order
 FROM config.ticket_categories tc
 CROSS JOIN (VALUES
     ('red_sin_internet',  'Sin acceso a internet',            'alta',  9, false, 10),
@@ -202,7 +206,7 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- ---- ACCESOS ----
 INSERT INTO tickets.damage_types (category_id, slug, label, default_priority, weight, allow_freetext, is_other, sort_order)
-SELECT id, slug, label, default_priority::priority_level, weight, true, is_other, sort_order
+SELECT tc.id, dt.slug, dt.label, dt.default_priority::priority_level, dt.weight, true, dt.is_other, dt.sort_order
 FROM config.ticket_categories tc
 CROSS JOIN (VALUES
     ('accesos_cuenta_bloqueada', 'Cuenta bloqueada',                 'media', 6, false, 10),
@@ -217,7 +221,7 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- ---- IMPRESORAS ----
 INSERT INTO tickets.damage_types (category_id, slug, label, default_priority, weight, allow_freetext, is_other, sort_order)
-SELECT id, slug, label, default_priority::priority_level, weight, true, is_other, sort_order
+SELECT tc.id, dt.slug, dt.label, dt.default_priority::priority_level, dt.weight, true, dt.is_other, dt.sort_order
 FROM config.ticket_categories tc
 CROSS JOIN (VALUES
     ('impresora_no_imprime', 'No imprime',                       'media', 5, false, 10),
@@ -232,7 +236,7 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- ---- CORREO ----
 INSERT INTO tickets.damage_types (category_id, slug, label, default_priority, weight, allow_freetext, is_other, sort_order)
-SELECT id, slug, label, default_priority::priority_level, weight, true, is_other, sort_order
+SELECT tc.id, dt.slug, dt.label, dt.default_priority::priority_level, dt.weight, true, dt.is_other, dt.sort_order
 FROM config.ticket_categories tc
 CROSS JOIN (VALUES
     ('correo_no_recibe',    'No recibe correos',                    'media', 7, false, 10),
@@ -247,7 +251,7 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- ---- INFRAESTRUCTURA ----
 INSERT INTO tickets.damage_types (category_id, slug, label, default_priority, weight, allow_freetext, is_other, sort_order)
-SELECT id, slug, label, default_priority::priority_level, weight, true, is_other, sort_order
+SELECT tc.id, dt.slug, dt.label, dt.default_priority::priority_level, dt.weight, true, dt.is_other, dt.sort_order
 FROM config.ticket_categories tc
 CROSS JOIN (VALUES
     ('infra_servidor_caido',  'Servidor caído',                   'critica', 10, false, 10),

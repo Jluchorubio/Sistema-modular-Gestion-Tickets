@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS tickets.ticket_attachments (
     file_url      text         NOT NULL,
     created_at    timestamptz  NOT NULL DEFAULT now(),
     deleted_at    timestamptz,
-    CONSTRAINT fk_ta_ticket FOREIGN KEY (ticket_id)
-        REFERENCES tickets.tickets(id) ON DELETE CASCADE,
+    -- FK to partitioned tickets.tickets omitted (partition key prevents single-col FK)
     CONSTRAINT fk_ta_user FOREIGN KEY (uploaded_by)
         REFERENCES users.profiles(id)
 );
