@@ -42,3 +42,7 @@ coverage/
 
 # TypeScript incremental compilation
 *.tsbuildinfo
+
+node_modules/
+apps/backend/dist/
+.env
