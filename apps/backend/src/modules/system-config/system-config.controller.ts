@@ -1,22 +1,27 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, UseGuards, HttpCode, HttpStatus,
+  Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
-import { RolesGuard } from '../../gateway/guards/roles.guard';
-import { Roles } from '../../gateway/decorators/roles.decorator';
+import { Request } from 'express';
+import { JwtAuthGuard }      from '../../gateway/guards/jwt-auth.guard';
+import { RolesGuard }        from '../../gateway/guards/roles.guard';
+import { CriticalChangeGuard } from '../../gateway/guards/critical-change.guard';
+import { Roles }             from '../../gateway/decorators/roles.decorator';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { SystemConfigService } from './system-config.service';
+import { AuditLogService }     from './audit-log.service';
 import {
-  CreateHeadquarterDto, UpdateHeadquarterDto,
-  CreateDepartmentDto, CreateAreaDto, CreatePositionDto,
+  CreateStructureTypeDto, UpdateStructureTypeDto,
+  CreateOrgNodeDto, UpdateOrgNodeDto,
 } from './dto/org.dto';
 import {
   UpdateSlaRuleDto, UpdateCompanyDto, UpdateRequestTypeDto,
   UpdateDamageTypeDto, UpsertBusinessHourDto, CreateHolidayDto,
   CreateTicketSlaRuleDto, UpdateTicketSlaRuleDto, CreateTicketSlaConditionDto,
+  UpdatePriorityFormulaDto, PreviewPriorityDto,
 } from './dto/config.dto';
+import { PriorityEngineService } from '../tickets/priority/priority-engine.service';
 import { BulkImportUsersDto } from './dto/bulk-import.dto';
 
 @ApiTags('system-config')
@@ -24,7 +29,11 @@ import { BulkImportUsersDto } from './dto/bulk-import.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('system-config')
 export class SystemConfigController {
-  constructor(private readonly svc: SystemConfigService) {}
+  constructor(
+    private readonly svc:            SystemConfigService,
+    private readonly audit:          AuditLogService,
+    private readonly priorityEngine: PriorityEngineService,
+  ) {}
 
   /* ── Public endpoints (all authenticated users) ── */
 
@@ -37,24 +46,6 @@ export class SystemConfigController {
   getRequestTypes(@Query('active') active?: string) {
     return this.svc.getRequestTypes(active === 'true');
   }
-
-  @Get('headquarters')
-  @ApiOperation({ summary: 'Sedes activas. Todos los usuarios autenticados.' })
-  getHeadquarters() { return this.svc.getHeadquarters(); }
-
-  @Get('departments')
-  @ApiOperation({ summary: 'Departamentos activos.' })
-  getDepartments() { return this.svc.getDepartments(); }
-
-  @Get('areas')
-  @ApiOperation({ summary: 'Áreas activas. Filtro opcional por department_id.' })
-  getAreas(@Query('department_id') departmentId?: string) {
-    return this.svc.getAreas(departmentId);
-  }
-
-  @Get('positions')
-  @ApiOperation({ summary: 'Cargos activos.' })
-  getPositions() { return this.svc.getPositions(); }
 
   @Get('ticket-categories')
   @ApiOperation({ summary: 'Categorías de tickets (Hardware, Software, Red…). Todos los usuarios.' })
@@ -88,63 +79,26 @@ export class SystemConfigController {
   @RequirePermission('global:config:view')
   getOrgSummary() { return this.svc.getOrgSummary(); }
 
-  @Post('headquarters')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:org')
-  createHeadquarter(@Body() dto: CreateHeadquarterDto) { return this.svc.createHeadquarter(dto); }
-
-  @Patch('headquarters/:id')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:org')
-  updateHeadquarter(@Param('id') id: string, @Body() dto: UpdateHeadquarterDto) {
-    return this.svc.updateHeadquarter(id, dto);
-  }
-
-  @Delete('headquarters/:id')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:org')
-  deleteHeadquarter(@Param('id') id: string) { return this.svc.deleteHeadquarter(id); }
-
-  @Post('departments')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:org')
-  createDepartment(@Body() dto: CreateDepartmentDto) { return this.svc.createDepartment(dto); }
-
-  @Delete('departments/:id')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:org')
-  deleteDepartment(@Param('id') id: string) { return this.svc.deleteDepartment(id); }
-
-  @Post('areas')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:org')
-  createArea(@Body() dto: CreateAreaDto) { return this.svc.createArea(dto); }
-
-  @Delete('areas/:id')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:org')
-  deleteArea(@Param('id') id: string) { return this.svc.deleteArea(id); }
-
-  @Post('positions')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:org')
-  createPosition(@Body() dto: CreatePositionDto) { return this.svc.createPosition(dto); }
-
-  @Delete('positions/:id')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:org')
-  deletePosition(@Param('id') id: string) { return this.svc.deletePosition(id); }
-
   @Get('sla-rules')
   @UseGuards(RolesGuard) @Roles('superadmin')
   @RequirePermission('global:config:view')
   getSlaRules() { return this.svc.getSlaRules(); }
 
   @Patch('sla-rules/:id')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
-  updateSlaRule(@Param('id') id: string, @Body() dto: UpdateSlaRuleDto) {
-    return this.svc.updateSlaRule(id, dto);
+  async updateSlaRule(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateSlaRuleDto) {
+    const [prev] = await this.svc.getSlaRuleById(id);
+    const result = await this.svc.updateSlaRule(id, dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:        'UPDATE',
+      entityType:    'sla_rule',
+      entityId:       id,
+      previousValue:  prev,
+      newValue:       result,
+    });
+    return result;
   }
 
   @Get('priority-rules')
@@ -153,11 +107,21 @@ export class SystemConfigController {
   getPriorityRules() { return this.svc.getPriorityRules(); }
 
   @Patch('damage-types/:id')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Editar tipo de daño (is_active, weight, label)' })
-  updateDamageType(@Param('id') id: string, @Body() dto: UpdateDamageTypeDto) {
-    return this.svc.updateDamageType(id, dto);
+  async updateDamageType(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateDamageTypeDto) {
+    const prev   = await this.svc.getDamageTypeById(id);
+    const result = await this.svc.updateDamageType(id, dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:        'UPDATE',
+      entityType:    'damage_type',
+      entityId:       id,
+      previousValue:  prev,
+      newValue:       result,
+    });
+    return result;
   }
 
   @Get('business-hours')
@@ -201,11 +165,21 @@ export class SystemConfigController {
   }
 
   @Patch('request-types/:id')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:request_types')
   @ApiOperation({ summary: 'Editar tipo de solicitud (label, descripción, is_active, sort_order)' })
-  updateRequestType(@Param('id') id: string, @Body() dto: UpdateRequestTypeDto) {
-    return this.svc.updateRequestType(id, dto);
+  async updateRequestType(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateRequestTypeDto) {
+    const prev   = await this.svc.getRequestTypeById(id);
+    const result = await this.svc.updateRequestType(id, dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:        'UPDATE',
+      entityType:    'request_type',
+      entityId:       id,
+      previousValue:  prev,
+      newValue:       result,
+    });
+    return result;
   }
 
   @Post('users/bulk-import')
@@ -225,53 +199,219 @@ export class SystemConfigController {
   }
 
   @Post('ticket-sla-policies/:policyId/rules')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Agregar regla SLA a una política.' })
-  createTicketSlaRule(
+  async createTicketSlaRule(
+    @Req() req: Request,
     @Param('policyId') policyId: string,
     @Body() dto: CreateTicketSlaRuleDto,
   ) {
-    return this.svc.createTicketSlaRule(policyId, dto);
+    const result = await this.svc.createTicketSlaRule(policyId, dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:     'CREATE',
+      entityType: 'ticket_sla_rule',
+      entityId:    result.id,
+      newValue:    result,
+    });
+    return result;
   }
 
   @Patch('ticket-sla-policies/rules/:ruleId')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Actualizar regla SLA (nombre, horas, prioridad, is_active).' })
-  updateTicketSlaRule(
+  async updateTicketSlaRule(
+    @Req() req: Request,
     @Param('ruleId') ruleId: string,
     @Body() dto: UpdateTicketSlaRuleDto,
   ) {
-    return this.svc.updateTicketSlaRule(ruleId, dto);
+    const prev   = await this.svc.getTicketSlaRuleById(ruleId);
+    const result = await this.svc.updateTicketSlaRule(ruleId, dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:        'UPDATE',
+      entityType:    'ticket_sla_rule',
+      entityId:       ruleId,
+      previousValue:  prev,
+      newValue:       result,
+    });
+    return result;
   }
 
   @Delete('ticket-sla-policies/rules/:ruleId')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Desactivar regla SLA.' })
-  deleteTicketSlaRule(@Param('ruleId') ruleId: string) {
-    return this.svc.deleteTicketSlaRule(ruleId);
+  async deleteTicketSlaRule(@Req() req: Request, @Param('ruleId') ruleId: string) {
+    const prev   = await this.svc.getTicketSlaRuleById(ruleId);
+    const result = await this.svc.deleteTicketSlaRule(ruleId);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:        'DELETE',
+      entityType:    'ticket_sla_rule',
+      entityId:       ruleId,
+      previousValue:  prev,
+    });
+    return result;
   }
 
   @Post('ticket-sla-policies/rules/:ruleId/conditions')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Agregar condición a una regla SLA.' })
-  createTicketSlaCondition(
+  async createTicketSlaCondition(
+    @Req() req: Request,
     @Param('ruleId') ruleId: string,
     @Body() dto: CreateTicketSlaConditionDto,
   ) {
-    return this.svc.createTicketSlaCondition(ruleId, dto);
+    const result = await this.svc.createTicketSlaCondition(ruleId, dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:     'CREATE',
+      entityType: 'ticket_sla_condition',
+      entityId:    result.id,
+      newValue:    { ...result, ruleId },
+    });
+    return result;
   }
 
   @Delete('ticket-sla-policies/conditions/:condId')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Eliminar condición de una regla SLA.' })
-  deleteTicketSlaCondition(@Param('condId') condId: string) {
-    return this.svc.deleteTicketSlaCondition(condId);
+  async deleteTicketSlaCondition(@Req() req: Request, @Param('condId') condId: string) {
+    const result = await this.svc.deleteTicketSlaCondition(condId);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:     'DELETE',
+      entityType: 'ticket_sla_condition',
+      entityId:    condId,
+    });
+    return result;
+  }
+
+  /* ── Dynamic org: structure types ──────────────────────────────── */
+
+  @Get('org/structure-types')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:view')
+  @ApiOperation({ summary: 'Tipos de estructura org. ?active=true para solo activos.' })
+  getStructureTypes(@Query('active') active?: string) {
+    return this.svc.getStructureTypes(active === 'true');
+  }
+
+  @Post('org/structure-types')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Crear nuevo tipo de nodo org (Sede, Depto, Área, etc.).' })
+  createStructureType(@Body() dto: CreateStructureTypeDto) {
+    return this.svc.createStructureType(dto);
+  }
+
+  @Patch('org/structure-types/:id')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:org')
+  updateStructureType(@Param('id') id: string, @Body() dto: UpdateStructureTypeDto) {
+    return this.svc.updateStructureType(id, dto);
+  }
+
+  /* ── Dynamic org: nodes ─────────────────────────────────────────── */
+
+  @Get('org/nodes')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:view')
+  @ApiOperation({ summary: 'Nodos org. Filtros: ?type_id=uuid &parent_id=uuid &active=true.' })
+  getOrgNodes(
+    @Query('type_id')   typeId?:   string,
+    @Query('parent_id') parentId?: string,
+    @Query('active')    active?:   string,
+  ) {
+    return this.svc.getOrgNodes({ type_id: typeId, parent_id: parentId, active_only: active === 'true' });
+  }
+
+  @Get('org/nodes/tree')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:view')
+  @ApiOperation({ summary: 'Árbol completo de nodos org activos.' })
+  getOrgNodeTree() { return this.svc.getOrgNodeTree(); }
+
+  @Post('org/nodes')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:org')
+  createOrgNode(@Body() dto: CreateOrgNodeDto) { return this.svc.createOrgNode(dto); }
+
+  @Patch('org/nodes/:id')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:org')
+  updateOrgNode(@Param('id') id: string, @Body() dto: UpdateOrgNodeDto) {
+    return this.svc.updateOrgNode(id, dto);
+  }
+
+  @Delete('org/nodes/:id')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:org')
+  deleteOrgNode(@Param('id') id: string) { return this.svc.deleteOrgNode(id); }
+
+  /* ── Priority formula ──────────────────────────────────────────── */
+
+  @Get('priority-formula')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:view')
+  @ApiOperation({ summary: 'Fórmula de prioridad activa (pesos + umbrales).' })
+  getPriorityFormula() { return this.svc.getPriorityFormula(); }
+
+  @Patch('priority-formula')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Actualizar coeficientes de la fórmula de prioridad. Los pesos deben sumar 1.' })
+  async updatePriorityFormula(@Req() req: Request, @Body() dto: UpdatePriorityFormulaDto) {
+    const prev   = await this.svc.getPriorityFormula();
+    const result = await this.svc.updatePriorityFormula(dto);
+    this.priorityEngine.invalidateFormulaCache();
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:        'UPDATE',
+      entityType:    'priority_formula',
+      entityId:       result?.id,
+      previousValue:  prev,
+      newValue:       result,
+    });
+    return result;
+  }
+
+  @Post('priority-formula/preview')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:view')
+  @ApiOperation({ summary: 'Simular score/prioridad dado pesos de cargo, nodo y daño.' })
+  previewPriority(@Body() dto: PreviewPriorityDto) {
+    return this.svc.previewPriority(dto);
+  }
+
+  /* ── Audit log ──────────────────────────────────────────────────── */
+
+  @Get('audit-logs')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:view')
+  @ApiOperation({ summary: 'Historial de cambios críticos en configuración del sistema.' })
+  getAuditLogs(
+    @Query('limit')       limit?:       string,
+    @Query('offset')      offset?:      string,
+    @Query('entity_type') entityType?:  string,
+    @Query('entity_id')   entityId?:    string,
+    @Query('user_id')     userId?:      string,
+  ) {
+    return this.audit.getLogs({
+      limit:       limit  ? Number(limit)  : undefined,
+      offset:      offset ? Number(offset) : undefined,
+      entity_type: entityType,
+      entity_id:   entityId,
+      user_id:     userId,
+    });
   }
 }

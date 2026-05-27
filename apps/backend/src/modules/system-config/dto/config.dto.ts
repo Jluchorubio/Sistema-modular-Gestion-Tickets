@@ -1,4 +1,4 @@
-import { IsString, IsIn, IsOptional, IsInt, IsBoolean, IsEmail, IsUrl, Min, MinLength, MaxLength, IsNumber } from 'class-validator';
+import { IsString, IsIn, IsOptional, IsInt, IsBoolean, IsEmail, Min, MinLength, MaxLength, IsNumber } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 const PRIORITIES = ['baja', 'media', 'alta', 'critica'] as const;
@@ -37,15 +37,6 @@ export class UpdateCompanyDto {
 
   @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(30)
   contact_phone?: string;
-
-  @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(50)
-  fiscal_id?: string;
-
-  @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(100)
-  industry?: string;
-
-  @ApiPropertyOptional() @IsInt() @IsOptional() @Min(1)
-  employee_count?: number;
 }
 
 export class UpdateDamageTypeDto {
@@ -135,6 +126,46 @@ export class CreateTicketSlaConditionDto {
 
   @ApiPropertyOptional({ example: 1 }) @IsInt() @Min(1) @IsOptional()
   logical_group?: number;
+}
+
+export class UpdatePriorityFormulaDto {
+  @ApiPropertyOptional({ minimum: 0, maximum: 1 }) @IsNumber() @IsOptional()
+  w_cargo?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 1 }) @IsNumber() @IsOptional()
+  w_nodo?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 1 }) @IsNumber() @IsOptional()
+  w_daño?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 15 }) @IsNumber() @IsOptional()
+  threshold_critica?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 15 }) @IsNumber() @IsOptional()
+  threshold_alta?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 15 }) @IsNumber() @IsOptional()
+  threshold_media?: number;
+
+  @ApiPropertyOptional() @IsString() @IsOptional()
+  description?: string;
+}
+
+export class PreviewPriorityDto {
+  @ApiProperty({ minimum: 1, maximum: 10 }) @IsNumber()
+  peso_cargo: number;
+
+  @ApiProperty({ minimum: 1, maximum: 10 }) @IsNumber()
+  peso_nodo: number;
+
+  @ApiProperty({ minimum: 1, maximum: 10 }) @IsNumber()
+  peso_daño: number;
+
+  @ApiPropertyOptional({ enum: ['urgente','alta','media','baja'] }) @IsString() @IsOptional()
+  urgency?: string;
+
+  @ApiPropertyOptional({ enum: ['critico','alto','medio','bajo'] }) @IsString() @IsOptional()
+  impact?: string;
 }
 
 export class UpdateRequestTypeDto {

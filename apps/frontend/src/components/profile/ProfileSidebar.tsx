@@ -138,12 +138,14 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
   const isOnline = sessionsData?.is_online ?? false;
 
   /* ── Org dropdowns ── */
-  const { data: positions = [] }    = useQuery({ queryKey: ['positions'],    queryFn: systemConfigService.getPositions,    staleTime: 5 * 60_000 });
-  const { data: areas = [] }        = useQuery({ queryKey: ['areas'],        queryFn: () => systemConfigService.getAreas(), staleTime: 5 * 60_000 });
-  const { data: headquarters = [] } = useQuery({ queryKey: ['headquarters'], queryFn: systemConfigService.getHeadquarters,  staleTime: 5 * 60_000 });
-
-  const activePositions = positions.filter(p => p.is_active);
-  const activeHQ        = headquarters.filter(h => h.is_active);
+  const { data: allOrgNodes = [] } = useQuery({
+    queryKey: ['org-nodes-active'],
+    queryFn:  () => systemConfigService.getOrgNodes({ active: true }),
+    staleTime: 5 * 60_000,
+  });
+  const activePositions = allOrgNodes.filter(n => n.type_slug === 'cargo');
+  const areas           = allOrgNodes.filter(n => n.type_slug === 'area');
+  const activeHQ        = allOrgNodes.filter(n => n.type_slug === 'sede');
 
   const fullName      = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre';
   const initials      = getInitials(user.first_name || '?', user.last_name || '?');
@@ -784,7 +786,7 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
                             <option value="">Sin especificar</option>
                             {areas.map(a => (
                               <option key={a.id} value={a.name}>
-                                {a.department_name ? `${a.name} (${a.department_name})` : a.name}
+                                {a.parent_name ? `${a.name} (${a.parent_name})` : a.name}
                               </option>
                             ))}
                           </select>
