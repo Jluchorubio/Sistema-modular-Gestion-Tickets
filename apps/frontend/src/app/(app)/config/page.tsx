@@ -5,22 +5,17 @@ import {
   Building2, Network, CalendarClock, History, SlidersHorizontal,
   Plus, Trash2, Pencil, Check, X, ToggleLeft, ToggleRight,
   ExternalLink, Shield, Users, ShieldCheck, ShieldAlert,
-  Upload, Zap, AlertTriangle, Tag, CheckCircle2, AlertCircle,
-  ChevronDown, ChevronUp,
+  Upload, Zap, AlertTriangle, CheckCircle2, AlertCircle,
+  ChevronDown, ChevronUp, Lock,
   type LucideIcon,
 } from 'lucide-react';
 import { uploadService } from '@/services/upload.service';
 import { systemConfigService } from '@/services/system-config.service';
-import { modulesService }       from '@/services/modules.service';
 import { usePermission }        from '@/hooks/usePermission';
 import { usePermissionsStore }  from '@/stores/permissions.store';
 import { Spinner }              from '@/components/ui/Spinner';
 import { useCriticalChange }    from '@/hooks/useCriticalChange';
 import { CriticalChangeModal }  from '@/components/config/CriticalChangeModal';
-import { SlaRequestsTab }       from '@/components/config/SlaRequestsTab';
-import { DamageTypesTab }       from '@/components/config/DamageTypesTab';
-import { RequestTypesTab }      from '@/components/config/RequestTypesTab';
-import { SlaTicketsTab }        from '@/components/config/SlaTicketsTab';
 import { OrgFlowTab }           from '@/components/config/OrgFlowTab';
 import type {
   Company, BusinessHour, Holiday, AuditLog,
@@ -28,21 +23,18 @@ import type {
   SlaRule, OrgNode,
 } from '@/services/system-config.service';
 import type { CriticalAuthData } from '@/hooks/useCriticalChange';
-import type { SystemModule } from '@/types/module.types';
 import styles from './config.module.css';
 import Link from 'next/link';
 
-type Tab = 'empresa' | 'organigrama' | 'prioridad' | 'sla-solicitudes' | 'sla-tickets' | 'catalogo' | 'calendario' | 'auditoria';
+type Tab = 'empresa' | 'organigrama' | 'prioridad' | 'calendario' | 'auditoria' | 'seguridad';
 
 const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
-  { key: 'empresa',         label: 'Empresa',          Icon: Building2         },
-  { key: 'organigrama',     label: 'Organigrama',      Icon: Network           },
-  { key: 'prioridad',       label: 'Motor Prioridad',  Icon: SlidersHorizontal },
-  { key: 'sla-solicitudes', label: 'SLA Solicitudes',  Icon: AlertTriangle     },
-  { key: 'sla-tickets',     label: 'SLA Tickets',      Icon: AlertTriangle     },
-  { key: 'catalogo',        label: 'Catálogo',         Icon: Tag               },
-  { key: 'calendario',      label: 'Calendario SLA',   Icon: CalendarClock     },
-  { key: 'auditoria',       label: 'Auditoría',        Icon: History           },
+  { key: 'empresa',     label: 'Empresa',         Icon: Building2         },
+  { key: 'organigrama', label: 'Organigrama',     Icon: Network           },
+  { key: 'prioridad',   label: 'Motor Prioridad', Icon: SlidersHorizontal },
+  { key: 'calendario',  label: 'Calendario SLA',  Icon: CalendarClock     },
+  { key: 'auditoria',   label: 'Auditoría',       Icon: History           },
+  { key: 'seguridad',   label: 'Seguridad',       Icon: Shield            },
 ];
 
 /* ── Quick links ────────────────────────────────────────────────── */
@@ -53,13 +45,25 @@ function QuickLinks() {
       href:  '/roles',
       Icon:  Shield,
       label: 'Roles y Permisos',
-      desc:  'Gestionar roles globales y de módulo, asignar permisos',
+      desc:  'Roles globales y de módulo, asignación de permisos',
     },
     {
       href:  '/users',
       Icon:  Users,
-      label: 'Importar Usuarios',
-      desc:  'Importación masiva de usuarios desde CSV',
+      label: 'Gestión de Usuarios',
+      desc:  'Importación masiva, activación, asignación de roles',
+    },
+    {
+      href:  '/helpdesk/config',
+      Icon:  Zap,
+      label: 'Config Helpdesk',
+      desc:  'SLA tickets, tipos de daño, calendario del módulo',
+    },
+    {
+      href:  '/requests/config',
+      Icon:  AlertTriangle,
+      label: 'Config Solicitudes',
+      desc:  'SLA solicitudes, tipos de solicitud, calendario del módulo',
     },
   ];
 
@@ -95,25 +99,19 @@ function QuickLinks() {
 function SetupChecklist({ setTab }: { setTab: (t: Tab) => void }) {
   const [open, setOpen] = useState(true);
 
-  const { data: tree     = [] } = useQuery<OrgNode[]>({
+  const { data: tree  = [] } = useQuery<OrgNode[]>({
     queryKey: ['org-node-tree'],
     queryFn:  systemConfigService.getOrgNodeTree,
     staleTime: 60_000,
   });
-  const { data: hours    = [] } = useQuery<BusinessHour[]>({
+  const { data: hours = [] } = useQuery<BusinessHour[]>({
     queryKey: ['sys-sla-hours'],
     queryFn:  () => systemConfigService.getBusinessHours(),
     staleTime: 60_000,
   });
-  const { data: slaRules = [] } = useQuery<SlaRule[]>({
-    queryKey: ['sys-sla-rules'],
-    queryFn:  systemConfigService.getSlaRules,
-    staleTime: 60_000,
-  });
 
-  const activeHours = (hours    as BusinessHour[]).filter(h => h.is_active);
-  const activeSla   = (slaRules as SlaRule[]).filter(r => r.is_active);
-  const rootNodes   = (tree     as OrgNode[]).length;
+  const activeHours = (hours as BusinessHour[]).filter(h => h.is_active);
+  const rootNodes   = (tree  as OrgNode[]).length;
   const hasOrg      = rootNodes > 0;
 
   const checks: { key: string; label: string; done: boolean; info: string; tab: Tab }[] = [
@@ -128,21 +126,12 @@ function SetupChecklist({ setTab }: { setTab: (t: Tab) => void }) {
     },
     {
       key:   'hours',
-      label: 'Horario laboral',
+      label: 'Horario laboral global',
       done:  activeHours.length > 0,
       info:  activeHours.length > 0
         ? `${activeHours.length} día${activeHours.length !== 1 ? 's' : ''} configurado${activeHours.length !== 1 ? 's' : ''}`
         : 'Sin horario — SLA calculará como 24/7',
       tab: 'calendario',
-    },
-    {
-      key:   'sla',
-      label: 'Reglas SLA de solicitudes',
-      done:  activeSla.length > 0,
-      info:  activeSla.length > 0
-        ? `${activeSla.length} regla${activeSla.length !== 1 ? 's' : ''} activa${activeSla.length !== 1 ? 's' : ''}`
-        : 'Sin reglas — deadlines de solicitudes no configurados',
-      tab: 'sla-solicitudes',
     },
   ];
 
@@ -374,6 +363,35 @@ const PRIORITY_COLOR: Record<string, string> = {
   baja: '#94a3b8', media: '#f59e0b', alta: '#f97316', critica: '#ef4444',
 };
 
+function deadlineLabel(hours: number): string {
+  const d      = new Date(Date.now() + hours * 3_600_000);
+  const today  = new Date(); today.setHours(0, 0, 0, 0);
+  const diff   = Math.round((new Date(d.toDateString()).getTime() - today.getTime()) / 86_400_000);
+  const time   = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  if (diff === 0) return `hoy ${time}`;
+  if (diff === 1) return `mañana ${time}`;
+  return d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' }) + ` ${time}`;
+}
+
+const PRESETS = [
+  { label: 'Balanceado',    cargo: 33, nodo: 33, daño: 34 },
+  { label: 'Por daño',      cargo: 20, nodo: 20, daño: 60 },
+  { label: 'Por jerarquía', cargo: 55, nodo: 25, daño: 20 },
+  { label: 'Por ubicación', cargo: 20, nodo: 55, daño: 25 },
+] as const;
+
+const WEIGHT_META = [
+  { key: 'cargo' as const, label: 'Jerarquía del cargo', desc: 'Rango jerárquico del solicitante en el organigrama', color: '#6366f1' },
+  { key: 'nodo'  as const, label: 'Criticidad del nodo', desc: 'Importancia del nodo organizacional afectado',       color: '#0ea5e9' },
+  { key: 'daño'  as const, label: 'Severidad del daño',  desc: 'Gravedad del daño o problema reportado',             color: '#f97316' },
+];
+
+const SIM_LABELS: Record<string, string> = {
+  cargo: 'Rango del solicitante',
+  nodo:  'Criticidad del nodo',
+  daño:  'Gravedad del daño',
+};
+
 function PrioridadTab() {
   const qc       = useQueryClient();
   const critical = useCriticalChange();
@@ -383,14 +401,13 @@ function PrioridadTab() {
     queryFn:  systemConfigService.getPriorityFormula,
   });
 
-  // Local edit state (percentages * 100 for display, stored as 0-1)
   const [w, setW] = useState({ cargo: 25, nodo: 35, daño: 40 });
   const [t, setT] = useState({ critica: 9, alta: 7, media: 5 });
   const [desc, setDesc] = useState('');
 
-  // Simulator
-  const [sim, setSim]     = useState({ cargo: 5, nodo: 5, daño: 5, urgency: 'media', impact: 'medio' });
+  const [sim, setSim]         = useState({ cargo: 5, nodo: 5, daño: 5, urgency: 'media', impact: 'medio' });
   const [preview, setPreview] = useState<PriorityPreview | null>(null);
+  const debounceRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!formula) return;
@@ -407,8 +424,9 @@ function PrioridadTab() {
     setDesc(formula.description ?? '');
   }, [formula]);
 
-  const wSum    = w.cargo + w.nodo + w.daño;
-  const wValid  = wSum === 100;
+  const wSum        = w.cargo + w.nodo + w.daño;
+  const wValid      = wSum === 100;
+  const activePreset = PRESETS.find(p => p.cargo === w.cargo && p.nodo === w.nodo && p.daño === w.daño)?.label ?? null;
 
   const saveMut = useMutation({
     mutationFn: (auth: CriticalAuthData) =>
@@ -428,52 +446,117 @@ function PrioridadTab() {
     onSuccess: data => setPreview(data),
   });
 
+  // Live simulator: debounced auto-preview
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => { previewMut.mutate(); }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sim.cargo, sim.nodo, sim.daño, sim.urgency, sim.impact]);
+
+  const { data: slaRules = [] } = useQuery<SlaRule[]>({
+    queryKey: ['sys-sla-rules'],
+    queryFn:  systemConfigService.getSlaRules,
+    staleTime: 60_000,
+  });
+
+  const matchedSla = useMemo(() => {
+    if (!preview) return null;
+    return (slaRules as SlaRule[]).find(
+      r => r.is_active && r.priority === preview.priority && !r.request_type,
+    ) ?? null;
+  }, [preview, slaRules]);
+
   if (isLoading) return <Spinner />;
 
-  const row: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 12,
-    padding: '10px 0', borderBottom: '1px solid #f1f5f9',
-  };
-  const label: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#475569', minWidth: 80 };
-  const num: React.CSSProperties   = {
-    fontSize: 12, fontWeight: 800, minWidth: 38, textAlign: 'center',
-    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 5, padding: '3px 6px',
-  };
   const tInput: React.CSSProperties = {
     width: 64, padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6,
     fontSize: 12, fontFamily: 'inherit', textAlign: 'center',
+  };
+  const num: React.CSSProperties = {
+    fontSize: 12, fontWeight: 800, minWidth: 38, textAlign: 'center',
+    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 5, padding: '3px 6px',
   };
 
   return (
     <div>
       <CriticalChangeModal {...critical} />
 
-      {/* ── Coefficients ── */}
+      {/* ── Formula weights ── */}
       <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-          Pesos de la fórmula
-        </div>
-        <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16 }}>
-          score = peso_cargo × w_cargo + peso_nodo × w_nodo + peso_daño × w_daño + urgency_bonus + impact_bonus
-        </div>
-
-        {(['cargo', 'nodo', 'daño'] as const).map(k => (
-          <div key={k} style={row}>
-            <span style={label}>w_{k}</span>
-            <input type="range" min={0} max={100} step={1} value={w[k]}
-              onChange={e => setW(prev => ({ ...prev, [k]: +e.target.value }))}
-              style={{ flex: 1 }} />
-            <span style={{ ...num, color: w[k] >= 40 ? '#ff5e3a' : '#0e2235' }}>{w[k]}%</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Pesos de la fórmula
+            </div>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+              score = Σ(peso_i × w_i) + urgency_bonus + impact_bonus
+            </div>
           </div>
-        ))}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, padding: '6px 0' }}>
-          <span style={{ fontSize: 12, color: '#64748b' }}>Suma:</span>
-          <span style={{ fontSize: 13, fontWeight: 800, color: wValid ? '#22c55e' : '#ef4444' }}>
-            {wSum}%
-          </span>
-          {!wValid && <span style={{ fontSize: 11, color: '#ef4444' }}>← debe ser exactamente 100%</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, color: '#64748b' }}>Suma:</span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: wValid ? '#22c55e' : '#ef4444' }}>{wSum}%</span>
+          </div>
         </div>
+
+        {/* Presets */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+          {PRESETS.map(p => (
+            <button key={p.label}
+              onClick={() => setW({ cargo: p.cargo, nodo: p.nodo, daño: p.daño })}
+              style={{
+                padding: '4px 14px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s',
+                border: activePreset === p.label ? '1px solid #ff5e3a' : '1px solid #e2e8f0',
+                background: activePreset === p.label ? 'rgba(255,94,58,.08)' : '#f8fafc',
+                color: activePreset === p.label ? '#ff5e3a' : '#64748b',
+              }}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Weight cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+          {WEIGHT_META.map(({ key, label, desc: metaDesc, color }) => (
+            <div key={key} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#0e2235', marginBottom: 2 }}>{label}</div>
+              <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 12, lineHeight: 1.4 }}>{metaDesc}</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color, textAlign: 'center', lineHeight: 1, marginBottom: 10 }}>
+                {w[key]}%
+              </div>
+              <div style={{ height: 6, background: '#e2e8f0', borderRadius: 3, marginBottom: 12, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${w[key]}%`, background: color, borderRadius: 3, transition: 'width .2s' }} />
+              </div>
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                <button
+                  onClick={() => setW(p => ({ ...p, [key]: Math.max(0, p[key] - 5) }))}
+                  style={{ width: 32, height: 28, border: '1px solid #e2e8f0', borderRadius: 5,
+                    background: '#fff', fontSize: 18, lineHeight: 1, fontWeight: 700, cursor: 'pointer',
+                    color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  −
+                </button>
+                <input type="number" min={0} max={100} value={w[key]}
+                  onChange={e => setW(p => ({ ...p, [key]: Math.min(100, Math.max(0, +e.target.value)) }))}
+                  style={{ width: 52, textAlign: 'center', border: `1px solid ${color}60`, borderRadius: 5,
+                    fontSize: 13, fontWeight: 700, fontFamily: 'inherit', padding: '3px 4px', color }} />
+                <button
+                  onClick={() => setW(p => ({ ...p, [key]: Math.min(100, p[key] + 5) }))}
+                  style={{ width: 32, height: 28, border: '1px solid #e2e8f0', borderRadius: 5,
+                    background: '#fff', fontSize: 18, lineHeight: 1, fontWeight: 700, cursor: 'pointer',
+                    color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  +
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {!wValid && (
+          <div style={{ marginTop: 12, fontSize: 11, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <AlertTriangle size={12} /> Los pesos deben sumar 100%. Faltan/sobran {Math.abs(100 - wSum)}%.
+          </div>
+        )}
       </div>
 
       {/* ── Thresholds ── */}
@@ -501,7 +584,7 @@ function PrioridadTab() {
         </div>
       </div>
 
-      {/* ── Save button ── */}
+      {/* ── Save ── */}
       <div style={{ marginBottom: 24 }}>
         <button
           disabled={!wValid || saveMut.isPending}
@@ -522,20 +605,25 @@ function PrioridadTab() {
         )}
       </div>
 
-      {/* ── Simulator ── */}
+      {/* ── Live Simulator ── */}
       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-          Simulador de prioridad
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Simulador de prioridad
+          </div>
+          <span style={{ fontSize: 10, color: previewMut.isPending ? '#ff5e3a' : '#94a3b8' }}>
+            {previewMut.isPending ? 'Calculando…' : 'Actualiza automáticamente'}
+          </span>
         </div>
         <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16 }}>
-          Ingresa pesos de cargo, nodo y daño (1–10) para ver el score resultante con la fórmula actual.
+          Ajusta los parámetros y el resultado se calcula en tiempo real con la fórmula guardada.
         </div>
 
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
           {(['cargo', 'nodo', 'daño'] as const).map(k => (
-            <div key={k} style={{ flex: '1 1 120px' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
-                Peso {k}
+            <div key={k} style={{ flex: '1 1 140px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>
+                {SIM_LABELS[k]}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <input type="range" min={1} max={10} step={1} value={sim[k]}
@@ -547,67 +635,101 @@ function PrioridadTab() {
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: preview ? 16 : 0 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Urgencia</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Urgencia del caso</div>
             <select value={sim.urgency} onChange={e => setSim(p => ({ ...p, urgency: e.target.value }))}
-              style={{ ...tInput, width: 110, textAlign: 'left' }}>
-              <option value="urgente">urgente (+1.5)</option>
-              <option value="alta">alta (+1.0)</option>
-              <option value="media">media (+0.5)</option>
-              <option value="baja">baja (+0)</option>
+              style={{ ...tInput, width: 130, textAlign: 'left' }}>
+              <option value="urgente">Urgente (+1.5)</option>
+              <option value="alta">Alta (+1.0)</option>
+              <option value="media">Media (+0.5)</option>
+              <option value="baja">Baja (+0)</option>
             </select>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Impacto</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Impacto operativo</div>
             <select value={sim.impact} onChange={e => setSim(p => ({ ...p, impact: e.target.value }))}
-              style={{ ...tInput, width: 110, textAlign: 'left' }}>
-              <option value="critico">crítico (+1.5)</option>
-              <option value="alto">alto (+1.0)</option>
-              <option value="medio">medio (+0.5)</option>
-              <option value="bajo">bajo (+0)</option>
+              style={{ ...tInput, width: 130, textAlign: 'left' }}>
+              <option value="critico">Crítico (+1.5)</option>
+              <option value="alto">Alto (+1.0)</option>
+              <option value="medio">Medio (+0.5)</option>
+              <option value="bajo">Bajo (+0)</option>
             </select>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <button onClick={() => previewMut.mutate()} disabled={previewMut.isPending}
-              style={{ padding: '6px 16px', background: '#ff5e3a', color: '#fff', border: 'none',
-                borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Zap size={12} /> {previewMut.isPending ? '…' : 'Simular'}
-            </button>
           </div>
         </div>
 
         {preview && (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 16, padding: '12px 16px',
             background: '#fff', border: `2px solid ${PRIORITY_COLOR[preview.priority]}30`,
-            borderRadius: 8, flexWrap: 'wrap',
+            borderRadius: 8, overflow: 'hidden',
           }}>
-            <div>
-              <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Score</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#0e2235', lineHeight: 1 }}>{preview.score}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Base</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#64748b' }}>{preview.base}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Bonos</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
-                urgency +{preview.urgency_bonus} · impact +{preview.impact_bonus}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 16, padding: '12px 16px',
+              flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9',
+            }}>
+              <div>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Score</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: '#0e2235', lineHeight: 1 }}>{preview.score}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Base</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#64748b' }}>{preview.base}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Bonos</div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>
+                  urgencia +{preview.urgency_bonus} · impacto +{preview.impact_bonus}
+                </div>
+              </div>
+              <div style={{ marginLeft: 'auto' }}>
+                <span style={{
+                  fontSize: 15, fontWeight: 900, padding: '5px 16px', borderRadius: 6,
+                  background: `${PRIORITY_COLOR[preview.priority]}18`,
+                  color: PRIORITY_COLOR[preview.priority],
+                  border: `1.5px solid ${PRIORITY_COLOR[preview.priority]}40`,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                }}>
+                  {preview.priority}
+                </span>
               </div>
             </div>
-            <div style={{ marginLeft: 'auto' }}>
-              <span style={{
-                fontSize: 14, fontWeight: 900, padding: '4px 14px', borderRadius: 6,
-                background: `${PRIORITY_COLOR[preview.priority]}18`,
-                color: PRIORITY_COLOR[preview.priority],
-                border: `1.5px solid ${PRIORITY_COLOR[preview.priority]}40`,
-                textTransform: 'uppercase', letterSpacing: '0.05em',
-              }}>
-                {preview.priority}
-              </span>
+
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                SLA estimado
+              </div>
+              {matchedSla ? (
+                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginBottom: 2 }}>Primera respuesta</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#0e2235' }}>{matchedSla.hours_to_first_response}h</div>
+                    <div style={{ fontSize: 10, color: '#94a3b8' }}>→ {deadlineLabel(matchedSla.hours_to_first_response)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginBottom: 2 }}>Resolución</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#0e2235' }}>{matchedSla.hours_to_resolve}h</div>
+                    <div style={{ fontSize: 10, color: '#94a3b8' }}>→ {deadlineLabel(matchedSla.hours_to_resolve)}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <span style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic' }}>regla global · prioridad {preview.priority}</span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <AlertTriangle size={12} />
+                  Sin regla SLA para prioridad <strong>{preview.priority}</strong>. Configura en /requests/config.
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '10px 16px', background: '#f8fafc' }}>
+              <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                Routing automático
+              </div>
+              <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.5 }}>
+                El ticket se asignaría al <strong>administrador del módulo destino</strong>.
+                Sin admin activo → escalado automático a superadmin.
+              </div>
             </div>
           </div>
         )}
@@ -626,10 +748,12 @@ function CalendarioTab() {
   const { data: hours    = [], isLoading: loadingHours    } = useQuery<BusinessHour[]>({
     queryKey: ['sys-sla-hours'],
     queryFn:  () => systemConfigService.getBusinessHours(),
+    staleTime: 60_000,
   });
   const { data: holidays = [], isLoading: loadingHolidays } = useQuery<Holiday[]>({
     queryKey: ['sys-sla-holidays'],
     queryFn:  () => systemConfigService.getHolidays(),
+    staleTime: 60_000,
   });
 
   const hourMap = useMemo(() => {
@@ -638,8 +762,8 @@ function CalendarioTab() {
     return m;
   }, [hours]);
 
-  const [editDay,  setEditDay]  = useState<number | null>(null);
-  const [dayForm,  setDayForm]  = useState({ start_time: '07:00', end_time: '17:00', is_active: true });
+  const [editDay, setEditDay] = useState<number | null>(null);
+  const [dayForm, setDayForm] = useState({ start_time: '07:00', end_time: '17:00', is_active: true });
 
   const upsertMut = useMutation({
     mutationFn: (dto: Parameters<typeof systemConfigService.upsertBusinessHour>[0]) =>
@@ -679,7 +803,7 @@ function CalendarioTab() {
     <div>
       <div className={styles.sectionHeader}>
         <div className={styles.sectionTitle}>Horario laboral</div>
-        <span className={styles.listMeta}>Afecta cálculo de deadlines SLA globales</span>
+        <span className={styles.listMeta}>Base global — cada módulo puede sobreescribirlo en su propia config</span>
       </div>
       <div className={styles.slaSub} style={{ marginBottom: 16 }}>
         Los días sin configurar se tratan como no laborales. El sistema salta feriados y horas fuera de rango.
@@ -738,7 +862,7 @@ function CalendarioTab() {
 
       {/* Holidays */}
       <div className={styles.sectionHeader} style={{ marginTop: 32 }}>
-        <div className={styles.sectionTitle}>Feriados</div>
+        <div className={styles.sectionTitle}>Feriados globales</div>
         {!showAddHoliday && (
           <button className={styles.btnPrimary} onClick={() => setShowAddHoliday(true)}>
             <Plus size={13} /> Agregar
@@ -772,20 +896,19 @@ function CalendarioTab() {
         </div>
       )}
 
-      {(holidays as Holiday[]).length === 0 ? (
-        <div className={styles.empty}>Sin feriados configurados.</div>
+      {(holidays as Holiday[]).filter(h => !h.module_id).length === 0 ? (
+        <div className={styles.empty}>Sin feriados globales configurados.</div>
       ) : (
         <div className={styles.list}>
-          {(holidays as Holiday[]).map(h => (
+          {(holidays as Holiday[]).filter(h => !h.module_id).map(h => (
             <div key={h.id} className={styles.listRow} style={{ opacity: h.is_active ? 1 : 0.45 }}>
               <div>
                 <span className={styles.listName}>
                   {new Date(h.holiday_date + 'T12:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
                 <span className={styles.listMeta}> · {h.name}</span>
-                {h.module_id && <span className={styles.listMeta} style={{ color: '#6366f1' }}> · módulo</span>}
               </div>
-              <button className={styles.iconBtnDanger} title="Desactivar"
+              <button className={styles.iconBtnDanger} title="Eliminar"
                 disabled={delHolidayMut.isPending} onClick={() => delHolidayMut.mutate(h.id)}>
                 <Trash2 size={13} />
               </button>
@@ -877,78 +1000,212 @@ function AuditoriaTab() {
   );
 }
 
-/* ── SLA Tickets tab (requires module selection) ───────────────── */
+/* ── Security tab ───────────────────────────────────────────────── */
 
-function SlaTicketsModuleTab() {
-  const [moduleId, setModuleId] = useState<string>('');
+const CRITICAL_OPS = [
+  'Fórmula de Prioridad',
+  'Reglas SLA',
+  'Tipos de daño',
+  'Tipos de solicitud',
+  'Nodos organizacionales',
+  'Tipos de estructura',
+] as const;
 
-  const { data: modules = [], isLoading } = useQuery<SystemModule[]>({
-    queryKey: ['modules-list'],
-    queryFn:  modulesService.getModules,
-    staleTime: 2 * 60_000,
+const ACTIVE_PROTECTIONS = [
+  {
+    key:   'totp',
+    label: 'Re-autenticación 2FA para operaciones críticas',
+    desc:  'Contraseña + TOTP requeridos para cambios irreversibles',
+    icon:  'totp',
+    ok:    true,
+  },
+  {
+    key:   'rbac',
+    label: 'Motor RBAC activo',
+    desc:  '60 permisos granulares · roles globales + por módulo',
+    icon:  'rbac',
+    ok:    true,
+  },
+  {
+    key:   'audit',
+    label: 'Auditoría de cambios críticos',
+    desc:  'Cada operación crítica registra IP, usuario y diff',
+    icon:  'audit',
+    ok:    true,
+  },
+  {
+    key:   'bcrypt',
+    label: 'Contraseñas hasheadas con bcrypt',
+    desc:  'Ninguna contraseña se almacena en texto claro',
+    icon:  'bcrypt',
+    ok:    true,
+  },
+  {
+    key:   'jwt',
+    label: 'Tokens JWT firmados por servidor',
+    desc:  'Access token de corta vida + refresh token rotativo',
+    icon:  'jwt',
+    ok:    true,
+  },
+] as const;
+
+function SeguridadTab() {
+  const { data: recentCritical = [], isLoading } = useQuery<AuditLog[]>({
+    queryKey: ['audit-logs', { critical: true }],
+    queryFn:  () => systemConfigService.getAuditLogs({ limit: 8 }),
+    staleTime: 30_000,
   });
 
-  const helpdesk = modules.filter(m => m.is_active && ['helpdesk', 'soporte'].includes(m.type ?? ''));
+  const criticalLogs = (recentCritical as AuditLog[]).filter(l => l.verified_2fa);
 
-  if (isLoading) return <Spinner />;
-
-  if (helpdesk.length === 0) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: 13,
-        background: '#f8fafc', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
-        Sin módulos Helpdesk activos.
-      </div>
-    );
-  }
-
-  const selected = moduleId || helpdesk[0].id;
+  const card: React.CSSProperties = {
+    background: '#fff', border: '1px solid #e2e8f0',
+    borderRadius: 8, padding: 16, marginBottom: 12,
+  };
+  const sectionTitle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 900, color: '#0e2235',
+    textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12,
+  };
 
   return (
     <div>
-      {helpdesk.length > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Módulo:</span>
-          <select
-            value={selected}
-            onChange={e => setModuleId(e.target.value)}
-            style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: 6,
-              fontSize: 12, fontFamily: 'inherit', background: '#fff' }}
-          >
-            {helpdesk.map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
+      {/* ── Active protections ── */}
+      <div style={card}>
+        <div style={sectionTitle}>Protecciones activas</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {ACTIVE_PROTECTIONS.map(p => (
+            <div key={p.key} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+              padding: '10px 12px', background: '#f0fdf4',
+              border: '1px solid #bbf7d0', borderRadius: 6,
+            }}>
+              <ShieldCheck size={16} style={{ color: '#22c55e', flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#0e2235' }}>{p.label}</div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>{p.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-      <SlaTicketsTab moduleId={selected} />
+      </div>
+
+      {/* ── Ops requiring re-auth ── */}
+      <div style={card}>
+        <div style={sectionTitle}>Operaciones que requieren re-autenticación</div>
+        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 10 }}>
+          Estas operaciones exigen contraseña + código TOTP antes de ejecutarse.
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {CRITICAL_OPS.map(op => (
+            <span key={op} style={{
+              padding: '3px 10px', background: 'rgba(99,102,241,.06)',
+              border: '1px solid #e0e7ff', borderRadius: 20,
+              fontSize: 11, fontWeight: 600, color: '#4f46e5',
+            }}>
+              {op}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Recent critical operations ── */}
+      <div style={card}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={sectionTitle}>Operaciones críticas recientes</div>
+          <span style={{ fontSize: 10, color: '#94a3b8' }}>Últimas verificadas con 2FA</span>
+        </div>
+        {isLoading ? (
+          <Spinner />
+        ) : criticalLogs.length === 0 ? (
+          <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: 12,
+            background: '#f8fafc', borderRadius: 6, border: '1px dashed #e2e8f0' }}>
+            Sin operaciones críticas registradas aún.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {criticalLogs.map(log => (
+              <div key={log.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 12px', background: '#f8fafc',
+                border: '1px solid #e2e8f0', borderRadius: 6,
+              }}>
+                <ShieldCheck size={13} style={{ color: '#22c55e', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#0e2235' }}>
+                    {log.entity_type.replace(/_/g, ' ')}
+                  </span>
+                  <span style={{ fontSize: 11, color: '#64748b', marginLeft: 8 }}>
+                    {log.action} · {log.user_name}
+                  </span>
+                </div>
+                <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>
+                  {new Date(log.created_at).toLocaleString('es-CO', {
+                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+                  })}
+                </span>
+                {log.ip_address && (
+                  <span style={{
+                    fontSize: 10, color: '#94a3b8', flexShrink: 0,
+                    fontFamily: 'monospace', background: '#f1f5f9',
+                    padding: '1px 5px', borderRadius: 3,
+                  }}>
+                    {log.ip_address}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Future policies placeholder ── */}
+      <div style={{ ...card, borderStyle: 'dashed', background: '#fafafa' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <ShieldAlert size={14} style={{ color: '#94a3b8' }} />
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Política de contraseñas — Próximamente
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.6 }}>
+          Longitud mínima, complejidad, expiración, 2FA obligatorio para todos los usuarios.
+          En desarrollo para la próxima fase.
+        </div>
+      </div>
     </div>
   );
 }
 
-/* ── Catálogo tab (damage types + request types) ────────────────── */
+/* ── Org-required screen ────────────────────────────────────────── */
 
-function CatalogoTab() {
-  const [section, setSection] = useState<'damage' | 'request'>('damage');
+const GUARDED_TABS: Tab[] = ['prioridad', 'calendario', 'auditoria'];
 
-  const sBtn = (active: boolean): React.CSSProperties => ({
-    padding: '5px 14px', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-    fontFamily: 'inherit', border: active ? '1px solid #ff5e3a' : '1px solid #e2e8f0',
-    background: active ? 'rgba(255,94,58,.07)' : '#fff',
-    color: active ? '#ff5e3a' : '#64748b',
-  });
-
+function OrgRequiredScreen({ onConfigure }: { onConfigure: () => void }) {
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <button style={sBtn(section === 'damage')}  onClick={() => setSection('damage')}>
-          Tipos de daño
-        </button>
-        <button style={sBtn(section === 'request')} onClick={() => setSection('request')}>
-          Tipos de solicitud
-        </button>
+    <div style={{ textAlign: 'center', padding: '64px 20px' }}>
+      <div style={{
+        width: 56, height: 56, borderRadius: '50%', background: '#f1f5f9',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 16px',
+      }}>
+        <Lock size={24} style={{ color: '#94a3b8' }} />
       </div>
-      {section === 'damage'  && <DamageTypesTab />}
-      {section === 'request' && <RequestTypesTab />}
+      <div style={{ fontSize: 16, fontWeight: 800, color: '#0e2235', marginBottom: 8 }}>
+        Requiere estructura organizacional
+      </div>
+      <p style={{ fontSize: 13, color: '#64748b', maxWidth: 380, margin: '0 auto 24px', lineHeight: 1.6 }}>
+        El motor de prioridad, el calendario SLA y la auditoría necesitan al menos un nodo
+        en el organigrama para operar correctamente.
+      </p>
+      <button
+        onClick={onConfigure}
+        style={{
+          padding: '9px 22px', background: '#0e2235', color: '#fff',
+          border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 700,
+          cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex',
+          alignItems: 'center', gap: 6,
+        }}>
+        <Network size={14} /> Configurar organigrama
+      </button>
     </div>
   );
 }
@@ -960,7 +1217,22 @@ export default function GlobalConfigPage() {
   const canView = usePermission('global:sidebar:config');
   const [tab, setTab] = useState<Tab>('empresa');
 
+  const { data: orgTree = [] } = useQuery<OrgNode[]>({
+    queryKey: ['org-node-tree'],
+    queryFn:  systemConfigService.getOrgNodeTree,
+    staleTime: 60_000,
+  });
+  const hasOrg = (orgTree as OrgNode[]).length > 0;
+
+  // Auto-redirect if active tab becomes blocked (e.g. org nodes deleted)
+  useEffect(() => {
+    if (!hasOrg && GUARDED_TABS.includes(tab)) setTab('organigrama');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasOrg]);
+
   if (loaded && !canView) return null;
+
+  const isBlocked = (t: Tab) => !hasOrg && GUARDED_TABS.includes(t);
 
   return (
     <div className={styles.pageWrap}>
@@ -978,28 +1250,31 @@ export default function GlobalConfigPage() {
         <SetupChecklist setTab={setTab} />
 
         <div className={styles.tabBar}>
-          {TABS.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              type="button"
-              className={`${styles.tabBtn}${tab === key ? ` ${styles.tabBtnActive}` : ''}`}
-              onClick={() => setTab(key)}
-            >
-              <Icon size={13} />
-              <span>{label}</span>
-            </button>
-          ))}
+          {TABS.map(({ key, label, Icon }) => {
+            const blocked = isBlocked(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                className={`${styles.tabBtn}${tab === key ? ` ${styles.tabBtnActive}` : ''}`}
+                style={blocked ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                title={blocked ? 'Requiere estructura organizacional configurada' : undefined}
+                onClick={() => blocked ? setTab('organigrama') : setTab(key)}
+              >
+                {blocked ? <Lock size={12} /> : <Icon size={13} />}
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div className={styles.content}>
-          {tab === 'empresa'         && <CompanyTab />}
-          {tab === 'organigrama'     && <OrgFlowTab />}
-          {tab === 'prioridad'       && <PrioridadTab />}
-          {tab === 'sla-solicitudes' && <SlaRequestsTab />}
-          {tab === 'sla-tickets'     && <SlaTicketsModuleTab />}
-          {tab === 'catalogo'        && <CatalogoTab />}
-          {tab === 'calendario'      && <CalendarioTab />}
-          {tab === 'auditoria'       && <AuditoriaTab />}
+          {tab === 'empresa'     && <CompanyTab />}
+          {tab === 'organigrama' && <OrgFlowTab />}
+          {tab === 'prioridad'   && (hasOrg ? <PrioridadTab />   : <OrgRequiredScreen onConfigure={() => setTab('organigrama')} />)}
+          {tab === 'calendario'  && (hasOrg ? <CalendarioTab />  : <OrgRequiredScreen onConfigure={() => setTab('organigrama')} />)}
+          {tab === 'auditoria'   && (hasOrg ? <AuditoriaTab />   : <OrgRequiredScreen onConfigure={() => setTab('organigrama')} />)}
+          {tab === 'seguridad'   && <SeguridadTab />}
         </div>
 
       </div>

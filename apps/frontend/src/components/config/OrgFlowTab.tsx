@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ReactFlow, Background, Controls, MiniMap,
@@ -203,6 +203,12 @@ function findInTree(nodes: OrgNode[], id: string): OrgNode | null {
   return null;
 }
 
+function isDescendant(tree: OrgNode[], ancestorId: string, checkId: string): boolean {
+  const node = findInTree(tree, ancestorId);
+  if (!node?.children?.length) return false;
+  return node.children.some(c => c.id === checkId || isDescendant(tree, c.id, checkId));
+}
+
 const inp: React.CSSProperties = {
   padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6,
   fontSize: 12, fontFamily: 'inherit', background: '#fff', width: '100%',
@@ -224,6 +230,8 @@ export function OrgFlowTab() {
   const [editPanel,  setEditPanel]  = useState<'info' | 'edit'>('info');
   const [showAdd,    setShowAdd]    = useState(false);
   const [addForm,    setAddForm]    = useState({ type_id: '', parent_id: '', name: '', weight: 5 });
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const dropTargetRef  = useRef<string | null>(null);
 
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState<Node>([]);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -232,10 +240,12 @@ export function OrgFlowTab() {
   const { data: tree  = [], isLoading: treeLoading  } = useQuery<OrgNode[]>({
     queryKey: ['org-node-tree'],
     queryFn:  systemConfigService.getOrgNodeTree,
+    staleTime: 60_000,
   });
   const { data: types = [], isLoading: typesLoading } = useQuery<StructureType[]>({
     queryKey: ['org-structure-types'],
     queryFn:  () => systemConfigService.getStructureTypes(),
+    staleTime: 60_000,
   });
   const { data: flatNodes = [] } = useQuery<OrgNode[]>({
     queryKey: ['org-nodes-flat'],
@@ -303,6 +313,53 @@ export function OrgFlowTab() {
       setSelectedId(null);
     },
   });
+
+  const reparentMut = useMutation({
+    mutationFn: ({ nodeId, parentId }: { nodeId: string; parentId: string }) =>
+      systemConfigService.updateOrgNode(nodeId, { parent_id: parentId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['org-node-tree'] });
+      qc.invalidateQueries({ queryKey: ['org-nodes-flat'] });
+    },
+  });
+
+  /* drag callbacks */
+  const CARD_H = 85;
+
+  const onNodeDrag = useCallback(
+    (_: React.MouseEvent, draggedNode: Node) => {
+      const dragCX = draggedNode.position.x + NW / 2;
+      const dragCY = draggedNode.position.y + CARD_H / 2;
+      let found: string | null = null;
+      for (const n of rfNodes) {
+        if (n.id === draggedNode.id) continue;
+        const { x, y } = n.position;
+        if (dragCX >= x && dragCX <= x + NW && dragCY >= y && dragCY <= y + CARD_H) {
+          found = n.id;
+          break;
+        }
+      }
+      dropTargetRef.current = found;
+      setDropTargetId(found);
+    },
+    [rfNodes],
+  );
+
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, draggedNode: Node) => {
+      const targetId = dropTargetRef.current;
+      dropTargetRef.current = null;
+      setDropTargetId(null);
+
+      if (!targetId) return;
+      if (isDescendant(tree as OrgNode[], draggedNode.id, targetId)) return;
+      const current = findInTree(tree as OrgNode[], draggedNode.id);
+      if (current?.parent_id === targetId) return;
+
+      reparentMut.mutate({ nodeId: draggedNode.id, parentId: targetId });
+    },
+    [tree, reparentMut],
+  );
 
   /* callbacks */
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -482,16 +539,23 @@ export function OrgFlowTab() {
               </div>
             ) : (
               <ReactFlow
-                nodes={rfNodes}
+                nodes={rfNodes.map(n => ({
+                  ...n,
+                  style: n.id === dropTargetId
+                    ? { outline: '2.5px solid #ff5e3a', borderRadius: 10, outlineOffset: 2 }
+                    : undefined,
+                }))}
                 edges={rfEdges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeClick={onNodeClick}
+                onNodeDrag={onNodeDrag}
+                onNodeDragStop={onNodeDragStop}
                 onPaneClick={() => setSelectedId(null)}
                 nodeTypes={nodeTypes}
                 fitView
                 fitViewOptions={{ padding: 0.25 }}
-                nodesDraggable
+                nodesDraggable={!reparentMut.isPending}
                 nodesConnectable={false}
                 elementsSelectable
                 style={{ background: '#f8fafc' }}
@@ -757,8 +821,10 @@ export function OrgFlowTab() {
             </div>
           )}
 
-          <div style={{ marginTop: 8, fontSize: 11, color: '#94a3b8' }}>
-            Clic en nodo para ver detalles · Arrastra para reorganizar la vista
+          <div style={{ marginTop: 8, fontSize: 11, color: reparentMut.isPending ? '#f59e0b' : '#94a3b8' }}>
+            {reparentMut.isPending
+              ? 'Aplicando nuevo padre…'
+              : 'Clic para ver detalles · Arrastra un nodo sobre otro para reparentarlo'}
           </div>
         </>
       )}

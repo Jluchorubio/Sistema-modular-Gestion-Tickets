@@ -1,23 +1,25 @@
 'use client';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Settings, Clock, Tags, type LucideIcon } from 'lucide-react';
+import { Settings, Clock, Tags, CalendarClock, type LucideIcon } from 'lucide-react';
 import { useModules }    from '@/hooks/useModules';
 import { useModuleNav }  from '@/hooks/useModuleNav';
 import { useAuthStore }  from '@/stores/auth.store';
 import { modulesService } from '@/services/modules.service';
-import { ModuleConfigClient } from '@/components/modules/ModuleConfigClient';
-import { SlaRequestsTab }     from '@/components/config/SlaRequestsTab';
-import { RequestTypesTab }    from '@/components/config/RequestTypesTab';
-import { Spinner }            from '@/components/ui/Spinner';
+import { ModuleConfigClient }  from '@/components/modules/ModuleConfigClient';
+import { SlaRequestsTab }      from '@/components/config/SlaRequestsTab';
+import { RequestTypesTab }     from '@/components/config/RequestTypesTab';
+import { ModuleCalendarioTab } from '@/components/config/ModuleCalendarioTab';
+import { Spinner }             from '@/components/ui/Spinner';
 import { GESTION_NAV, GESTION_MODULE_NAME, isGestionModule } from '../_nav';
 
-type Tab = 'general' | 'sla' | 'tipos';
+type Tab = 'general' | 'sla' | 'tipos' | 'calendario';
 
 const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
-  { key: 'general', label: 'General',           Icon: Settings },
-  { key: 'sla',     label: 'SLA Solicitudes',   Icon: Clock    },
-  { key: 'tipos',   label: 'Tipos Solicitud',   Icon: Tags     },
+  { key: 'general',    label: 'General',           Icon: Settings     },
+  { key: 'sla',        label: 'SLA Solicitudes',   Icon: Clock        },
+  { key: 'tipos',      label: 'Tipos Solicitud',   Icon: Tags         },
+  { key: 'calendario', label: 'Calendario',        Icon: CalendarClock },
 ];
 
 const tabBar: React.CSSProperties = {
@@ -80,8 +82,9 @@ export default function GestionConfigPage() {
           isAdminModulo={isAdminModulo}
         />
       )}
-      {tab === 'sla'   && <SlaRequestsTab />}
-      {tab === 'tipos' && <RequestTypesTab />}
+      {tab === 'sla'        && <SlaRequestsTab />}
+      {tab === 'tipos'      && <RequestTypesTab />}
+      {tab === 'calendario' && <ModuleCalendarioTab moduleId={gestionRef.id} />}
     </div>
   );
 }
