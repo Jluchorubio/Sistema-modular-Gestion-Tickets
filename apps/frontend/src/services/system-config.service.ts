@@ -143,6 +143,8 @@ export interface StructureType {
   allows_users:   boolean;
   is_active:      boolean;
   sort_order:     number;
+  icon:           string | null;
+  color:          string | null;
 }
 
 export interface OrgNode {
@@ -291,7 +293,7 @@ export const systemConfigService = {
     api.get<StructureType[]>(`${BASE}/org/structure-types`, { params: onlyActive ? { active: 'true' } : {} }).then(r => r.data),
   createStructureType: (dto: Omit<StructureType, 'id' | 'is_active'>) =>
     api.post<StructureType>(`${BASE}/org/structure-types`, dto).then(r => r.data),
-  updateStructureType: (id: string, dto: Partial<Pick<StructureType, 'name' | 'description' | 'weight' | 'parent_type_id' | 'allows_users' | 'is_active' | 'sort_order'>>) =>
+  updateStructureType: (id: string, dto: Partial<Pick<StructureType, 'name' | 'description' | 'weight' | 'parent_type_id' | 'allows_users' | 'is_active' | 'sort_order' | 'icon' | 'color'>>) =>
     api.patch<StructureType>(`${BASE}/org/structure-types/${id}`, dto).then(r => r.data),
 
   /* ── Dynamic org: nodes ── */

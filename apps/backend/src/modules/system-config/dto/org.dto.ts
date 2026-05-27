@@ -116,6 +116,12 @@ export class UpdateStructureTypeDto {
   @ApiPropertyOptional() @IsBoolean() @IsOptional()
   is_active?: boolean;
 
+  @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(50)
+  icon?: string;
+
+  @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(20)
+  color?: string;
+
   @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional()
   sort_order?: number;
 }

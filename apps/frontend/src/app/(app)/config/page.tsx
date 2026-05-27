@@ -1,13 +1,15 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building2, Network, CalendarClock, History, SlidersHorizontal,
   Plus, Trash2, Pencil, Check, X, ToggleLeft, ToggleRight,
   ExternalLink, Shield, Users, ShieldCheck, ShieldAlert,
-  ChevronRight, ChevronDown, Zap, AlertTriangle, Tag,
+  Upload, Zap, AlertTriangle, Tag, CheckCircle2, AlertCircle,
+  ChevronDown, ChevronUp,
   type LucideIcon,
 } from 'lucide-react';
+import { uploadService } from '@/services/upload.service';
 import { systemConfigService } from '@/services/system-config.service';
 import { modulesService }       from '@/services/modules.service';
 import { usePermission }        from '@/hooks/usePermission';
@@ -19,9 +21,11 @@ import { SlaRequestsTab }       from '@/components/config/SlaRequestsTab';
 import { DamageTypesTab }       from '@/components/config/DamageTypesTab';
 import { RequestTypesTab }      from '@/components/config/RequestTypesTab';
 import { SlaTicketsTab }        from '@/components/config/SlaTicketsTab';
+import { OrgFlowTab }           from '@/components/config/OrgFlowTab';
 import type {
   Company, BusinessHour, Holiday, AuditLog,
-  StructureType, OrgNode, PriorityFormula, PriorityPreview,
+  PriorityFormula, PriorityPreview,
+  SlaRule, OrgNode,
 } from '@/services/system-config.service';
 import type { CriticalAuthData } from '@/hooks/useCriticalChange';
 import type { SystemModule } from '@/types/module.types';
@@ -86,6 +90,130 @@ function QuickLinks() {
   );
 }
 
+/* ── Setup checklist ────────────────────────────────────────────── */
+
+function SetupChecklist({ setTab }: { setTab: (t: Tab) => void }) {
+  const [open, setOpen] = useState(true);
+
+  const { data: tree     = [] } = useQuery<OrgNode[]>({
+    queryKey: ['org-node-tree'],
+    queryFn:  systemConfigService.getOrgNodeTree,
+    staleTime: 60_000,
+  });
+  const { data: hours    = [] } = useQuery<BusinessHour[]>({
+    queryKey: ['sys-sla-hours'],
+    queryFn:  () => systemConfigService.getBusinessHours(),
+    staleTime: 60_000,
+  });
+  const { data: slaRules = [] } = useQuery<SlaRule[]>({
+    queryKey: ['sys-sla-rules'],
+    queryFn:  systemConfigService.getSlaRules,
+    staleTime: 60_000,
+  });
+
+  const activeHours = (hours    as BusinessHour[]).filter(h => h.is_active);
+  const activeSla   = (slaRules as SlaRule[]).filter(r => r.is_active);
+  const rootNodes   = (tree     as OrgNode[]).length;
+  const hasOrg      = rootNodes > 0;
+
+  const checks: { key: string; label: string; done: boolean; info: string; tab: Tab }[] = [
+    {
+      key:   'org',
+      label: 'Estructura organizacional',
+      done:  hasOrg,
+      info:  hasOrg
+        ? `${rootNodes} nodo${rootNodes !== 1 ? 's' : ''} raíz configurado${rootNodes !== 1 ? 's' : ''}`
+        : 'Sin nodos — motor de prioridad no puede operar',
+      tab: 'organigrama',
+    },
+    {
+      key:   'hours',
+      label: 'Horario laboral',
+      done:  activeHours.length > 0,
+      info:  activeHours.length > 0
+        ? `${activeHours.length} día${activeHours.length !== 1 ? 's' : ''} configurado${activeHours.length !== 1 ? 's' : ''}`
+        : 'Sin horario — SLA calculará como 24/7',
+      tab: 'calendario',
+    },
+    {
+      key:   'sla',
+      label: 'Reglas SLA de solicitudes',
+      done:  activeSla.length > 0,
+      info:  activeSla.length > 0
+        ? `${activeSla.length} regla${activeSla.length !== 1 ? 's' : ''} activa${activeSla.length !== 1 ? 's' : ''}`
+        : 'Sin reglas — deadlines de solicitudes no configurados',
+      tab: 'sla-solicitudes',
+    },
+  ];
+
+  const pending = checks.filter(c => !c.done).length;
+  const allDone = pending === 0;
+
+  useEffect(() => { if (allDone) setOpen(false); }, [allDone]);
+
+  const borderColor = allDone ? '#bbf7d0' : pending === checks.length ? '#fca5a5' : '#fde68a';
+  const headerBg    = allDone ? '#f0fdf4' : pending === checks.length ? '#fef2f2' : '#fffbeb';
+
+  return (
+    <div style={{ marginBottom: 20, border: `1px solid ${borderColor}`, borderRadius: 8, overflow: 'hidden' }}>
+      {/* Header */}
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 14px', background: headerBg, border: 'none',
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+        }}>
+        {allDone
+          ? <CheckCircle2 size={16} style={{ color: '#22c55e', flexShrink: 0 }} />
+          : <AlertCircle  size={16} style={{ color: pending === checks.length ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />}
+        <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: '#0e2235' }}>
+          {allDone
+            ? 'Sistema configurado correctamente'
+            : `${pending} configuración${pending !== 1 ? 'es' : ''} pendiente${pending !== 1 ? 's' : ''}`}
+        </span>
+        {open
+          ? <ChevronUp   size={14} style={{ color: '#94a3b8', flexShrink: 0 }} />
+          : <ChevronDown size={14} style={{ color: '#94a3b8', flexShrink: 0 }} />}
+      </button>
+
+      {/* Body */}
+      {open && (
+        <div style={{ background: '#fff' }}>
+          {checks.map((c, i) => (
+            <div key={c.key} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 14px',
+              borderTop: i === 0 ? `1px solid ${borderColor}` : '1px solid #f1f5f9',
+            }}>
+              {c.done
+                ? <CheckCircle2 size={14} style={{ color: '#22c55e', flexShrink: 0 }} />
+                : <AlertCircle  size={14} style={{ color: '#f59e0b', flexShrink: 0 }} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#0e2235' }}>{c.label}</span>
+                <span style={{ fontSize: 11, color: c.done ? '#94a3b8' : '#d97706', marginLeft: 8 }}>
+                  {c.info}
+                </span>
+              </div>
+              {!c.done && (
+                <button
+                  onClick={() => setTab(c.tab)}
+                  style={{
+                    padding: '4px 12px', background: '#fff7ed', color: '#d97706',
+                    border: '1px solid #fed7aa', borderRadius: 5, fontSize: 11,
+                    fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                  }}>
+                  Configurar →
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Company tab ────────────────────────────────────────────────── */
 
 function CompanyTab() {
@@ -95,13 +223,44 @@ function CompanyTab() {
     queryFn:  systemConfigService.getCompany,
   });
 
-  const [editing, setEditing] = useState(false);
-  const [form, setForm]       = useState<Partial<Company>>({});
+  const [editing,      setEditing]      = useState(false);
+  const [form,         setForm]         = useState<Partial<Company>>({});
+  const [logoPreview,  setLogoPreview]  = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const updateMut = useMutation({
     mutationFn: (dto: Partial<Company>) => systemConfigService.updateCompany(dto),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sys-config-company'] }); setEditing(false); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sys-config-company'] });
+      qc.invalidateQueries({ queryKey: ['company-public'] });
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+      setLogoPreview(null);
+      setEditing(false);
+    },
   });
+
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setLogoPreview(objectUrl);
+    setLogoUploading(true);
+    try {
+      const url = await uploadService.uploadFile(file);
+      setForm(f => ({ ...f, logo_url: url }));
+    } catch {
+      setLogoPreview(null);
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
+  function handleCancel() {
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoPreview(null);
+    setEditing(false);
+  }
 
   if (isLoading) return <Spinner />;
   if (!company)  return <p className={styles.empty}>No hay datos de empresa.</p>;
@@ -110,15 +269,28 @@ function CompanyTab() {
     return (
       <div>
         <div className={styles.sectionHeader}>
-          <div className={styles.sectionTitle}>Datos de la empresa</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 10, border: '1px solid #e2e8f0',
+              overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#f8fafc', flexShrink: 0,
+            }}>
+              {company.logo_url
+                ? <img src={company.logo_url} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                : <Building2 size={22} style={{ color: '#94a3b8' }} />}
+            </div>
+            <div>
+              <div className={styles.sectionTitle} style={{ margin: 0 }}>{company.name}</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                {company.timezone} · {company.language}
+              </div>
+            </div>
+          </div>
           <button className={styles.btnEdit} onClick={() => { setForm(company); setEditing(true); }}>
             <Pencil size={13} /> Editar
           </button>
         </div>
         <dl className={styles.dl}>
-          <dt>Nombre</dt>        <dd>{company.name}</dd>
-          <dt>Zona horaria</dt>  <dd>{company.timezone}</dd>
-          <dt>Idioma</dt>        <dd>{company.language}</dd>
           <dt>Web</dt>           <dd>{company.website ?? '—'}</dd>
           <dt>Email contacto</dt><dd>{company.contact_email ?? '—'}</dd>
           <dt>Teléfono</dt>      <dd>{company.contact_phone ?? '—'}</dd>
@@ -128,26 +300,62 @@ function CompanyTab() {
   }
 
   const textFields = ['name', 'timezone', 'language', 'website', 'contact_email', 'contact_phone'] as const;
+  const currentLogo = logoPreview ?? form.logo_url ?? null;
 
   return (
     <div>
       <div className={styles.sectionTitle} style={{ marginBottom: 16 }}>Editar empresa</div>
+
+      {/* Logo upload */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20,
+        padding: '14px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+        <div
+          onClick={() => !logoUploading && logoInputRef.current?.click()}
+          style={{
+            width: 72, height: 72, borderRadius: 10, border: '2px dashed #cbd5e1',
+            overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#fff', flexShrink: 0, cursor: logoUploading ? 'wait' : 'pointer',
+            transition: 'border-color .15s',
+          }}>
+          {currentLogo
+            ? <img src={currentLogo} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            : <Building2 size={24} style={{ color: '#cbd5e1' }} />}
+        </div>
+        <div>
+          <button type="button" disabled={logoUploading}
+            onClick={() => logoInputRef.current?.click()}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: 6,
+              background: '#fff', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', color: '#0e2235',
+              fontWeight: 600,
+            }}>
+            <Upload size={13} /> {logoUploading ? 'Subiendo…' : 'Cambiar logo'}
+          </button>
+          <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 5 }}>
+            JPG, PNG, WebP · máx 5 MB
+          </div>
+        </div>
+        <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+          style={{ display: 'none' }} onChange={handleLogoChange} />
+      </div>
+
       {textFields.map(k => (
         <div key={k} className={styles.formRow}>
           <label className={styles.fieldLabel}>{k.replace(/_/g, ' ')}</label>
           <input
             className={styles.fieldInput}
-            value={(form as any)[k] ?? ''}
+            value={(form as Record<string, string | null>)[k] ?? ''}
             onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))}
           />
         </div>
       ))}
       <div className={styles.inlineActions}>
-        <button className={styles.btnSave} disabled={updateMut.isPending}
+        <button className={styles.btnSave} disabled={updateMut.isPending || logoUploading}
           onClick={() => updateMut.mutate(form)}>
           <Check size={13} /> {updateMut.isPending ? 'Guardando…' : 'Guardar'}
         </button>
-        <button className={styles.btnCancel} onClick={() => setEditing(false)}>
+        <button className={styles.btnCancel} onClick={handleCancel}>
           <X size={13} /> Cancelar
         </button>
       </div>
@@ -155,304 +363,10 @@ function CompanyTab() {
   );
 }
 
-/* ── Organigrama tab ────────────────────────────────────────────── */
+/* ── Priority formula helpers (used below) ────────────────────── */
 
 const weightColor = (w: number) =>
   w >= 9 ? '#ef4444' : w >= 7 ? '#f97316' : w >= 5 ? '#f59e0b' : '#94a3b8';
-
-const inp: React.CSSProperties = {
-  padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 6,
-  fontSize: 12, fontFamily: 'inherit', background: '#fff', width: '100%', boxSizing: 'border-box',
-};
-
-function NodeRow({
-  node, types, depth, onDeleted,
-}: {
-  node:      OrgNode;
-  types:     StructureType[];
-  depth:     number;
-  onDeleted: () => void;
-}) {
-  const qc = useQueryClient();
-  const [expanded,  setExpanded]  = useState(depth < 1);
-  const [editing,   setEditing]   = useState(false);
-  const [editForm,  setEditForm]  = useState({ name: node.name, weight: node.weight, description: node.description ?? '' });
-
-  const updateMut = useMutation({
-    mutationFn: (dto: typeof editForm) => systemConfigService.updateOrgNode(node.id, dto),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['org-node-tree'] }); setEditing(false); },
-  });
-  const deleteMut = useMutation({
-    mutationFn: () => systemConfigService.deleteOrgNode(node.id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['org-node-tree'] }); onDeleted(); },
-  });
-
-  const hasChildren = node.children && node.children.length > 0;
-  const typeColor: Record<string, string> = {
-    sede: '#0e2235', departamento: '#4f46e5', area: '#0891b2', cargo: '#059669',
-  };
-  const color = typeColor[node.type_slug] ?? '#64748b';
-
-  return (
-    <div style={{ marginLeft: depth * 16 }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
-        background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6,
-        marginBottom: 4, cursor: hasChildren ? 'pointer' : 'default',
-      }}>
-        {hasChildren ? (
-          <button onClick={() => setExpanded(v => !v)}
-            style={{ background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer', color: '#94a3b8' }}>
-            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          </button>
-        ) : (
-          <span style={{ width: 18 }} />
-        )}
-
-        <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 99,
-          background: `${color}15`, color, border: `1px solid ${color}30` }}>
-          {node.type_slug}
-        </span>
-
-        {editing ? (
-          <div style={{ display: 'flex', gap: 6, flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-              style={{ ...inp, flex: '2 1 120px' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1 1 100px' }}>
-              <span style={{ fontSize: 10, color: '#64748b', whiteSpace: 'nowrap' }}>Peso</span>
-              <input type="range" min={1} max={10} value={editForm.weight}
-                onChange={e => setEditForm(f => ({ ...f, weight: +e.target.value }))}
-                style={{ flex: 1 }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: weightColor(editForm.weight), minWidth: 16 }}>
-                {editForm.weight}
-              </span>
-            </div>
-            <button onClick={() => updateMut.mutate(editForm)} disabled={!editForm.name.trim()}
-              style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: 5,
-                padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-              <Check size={12} />
-            </button>
-            <button onClick={() => setEditing(false)}
-              style={{ background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 5,
-                padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-              <X size={12} />
-            </button>
-          </div>
-        ) : (
-          <>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#0e2235' }}>{node.name}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, minWidth: 24, textAlign: 'center',
-              color: weightColor(node.weight), background: '#f1f5f9', borderRadius: 5, padding: '1px 5px' }}>
-              {node.weight}
-            </span>
-            {node.user_count > 0 && (
-              <span style={{ fontSize: 10, color: '#94a3b8' }}>{node.user_count} usuarios</span>
-            )}
-            <button onClick={() => { setEditForm({ name: node.name, weight: node.weight, description: node.description ?? '' }); setEditing(true); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px 4px' }}>
-              <Pencil size={11} />
-            </button>
-            <button onClick={() => { if (confirm(`Desactivar "${node.name}"?`)) deleteMut.mutate(); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px 4px' }}>
-              <Trash2 size={11} />
-            </button>
-          </>
-        )}
-      </div>
-
-      {expanded && node.children && node.children.map(child => (
-        <NodeRow key={child.id} node={child} types={types} depth={depth + 1} onDeleted={onDeleted} />
-      ))}
-    </div>
-  );
-}
-
-function OrganigramaTab() {
-  const qc = useQueryClient();
-  const [section,  setSection]  = useState<'nodes' | 'types'>('nodes');
-  const [showForm, setShowForm] = useState(false);
-  const [form,     setForm]     = useState<{ type_id: string; parent_id: string; name: string; weight: number }>({
-    type_id: '', parent_id: '', name: '', weight: 5,
-  });
-
-  const { data: tree  = [], isLoading: treeLoading  } = useQuery<OrgNode[]>({
-    queryKey: ['org-node-tree'],
-    queryFn:  systemConfigService.getOrgNodeTree,
-  });
-  const { data: types = [], isLoading: typesLoading } = useQuery<StructureType[]>({
-    queryKey: ['org-structure-types'],
-    queryFn:  () => systemConfigService.getStructureTypes(),
-  });
-  const { data: flatNodes = [] } = useQuery<OrgNode[]>({
-    queryKey: ['org-nodes-flat'],
-    queryFn:  () => systemConfigService.getOrgNodes({ active: true }),
-    enabled:  showForm,
-  });
-
-  const createMut = useMutation({
-    mutationFn: () => systemConfigService.createOrgNode({
-      type_id:   form.type_id,
-      parent_id: form.parent_id || undefined,
-      name:      form.name,
-      weight:    form.weight,
-    }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['org-node-tree'] });
-      qc.invalidateQueries({ queryKey: ['org-nodes-flat'] });
-      setShowForm(false);
-      setForm({ type_id: '', parent_id: '', name: '', weight: 5 });
-    },
-  });
-
-  const updateTypeMut = useMutation({
-    mutationFn: ({ id, weight }: { id: string; weight: number }) =>
-      systemConfigService.updateStructureType(id, { weight }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['org-structure-types'] }),
-  });
-
-  if (treeLoading || typesLoading) return <Spinner />;
-
-  const sBtn = (active: boolean): React.CSSProperties => ({
-    padding: '5px 14px', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-    fontFamily: 'inherit', border: active ? '1px solid #ff5e3a' : '1px solid #e2e8f0',
-    background: active ? 'rgba(255,94,58,.07)' : '#fff',
-    color: active ? '#ff5e3a' : '#64748b',
-  });
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <button style={sBtn(section === 'nodes')} onClick={() => setSection('nodes')}>Árbol de nodos</button>
-        <button style={sBtn(section === 'types')} onClick={() => setSection('types')}>Tipos de estructura</button>
-      </div>
-
-      {section === 'types' && (
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-            Tipos de estructura org
-          </div>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16 }}>
-            El <strong>peso</strong> (1–10) de cada tipo se usa en el cálculo de prioridad automática.
-          </div>
-          {(types as StructureType[]).map(t => (
-            <div key={t.id} style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-              background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 8,
-            }}>
-              <div style={{ flex: 1 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>{t.name}</span>
-                <code style={{ fontSize: 10, color: '#94a3b8', marginLeft: 8 }}>{t.slug}</code>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 160 }}>
-                <span style={{ fontSize: 10, color: '#64748b' }}>Peso</span>
-                <input type="range" min={1} max={10} value={t.weight}
-                  onChange={e => updateTypeMut.mutate({ id: t.id, weight: +e.target.value })}
-                  style={{ flex: 1 }} />
-                <span style={{ fontSize: 12, fontWeight: 700, minWidth: 18, color: weightColor(t.weight) }}>
-                  {t.weight}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {section === 'nodes' && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div>
-              <span style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Árbol de nodos
-              </span>
-              <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>
-                {(tree as OrgNode[]).reduce((acc, n) => acc + 1 + (n.children?.length ?? 0), 0)} nodos activos
-              </span>
-            </div>
-            {!showForm && (
-              <button onClick={() => setShowForm(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px',
-                  background: '#ff5e3a', color: '#fff', border: 'none', borderRadius: 6,
-                  fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                <Plus size={12} /> Nuevo nodo
-              </button>
-            )}
-          </div>
-
-          {showForm && (
-            <div style={{ padding: '16px', background: '#fff', border: '1.5px solid #0e2235',
-              borderRadius: 8, marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ flex: '1 1 150px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#64748b' }}>Tipo *</p>
-                <select value={form.type_id} onChange={e => setForm(f => ({ ...f, type_id: e.target.value }))}
-                  style={inp}>
-                  <option value="">— seleccionar —</option>
-                  {(types as StructureType[]).map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ flex: '2 1 150px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#64748b' }}>Nombre *</p>
-                <input style={inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-              </div>
-              <div style={{ flex: '1 1 160px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#64748b' }}>Nodo padre</p>
-                <select value={form.parent_id} onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))}
-                  style={inp}>
-                  <option value="">— raíz —</option>
-                  {(flatNodes as OrgNode[]).map(n => (
-                    <option key={n.id} value={n.id}>[{n.type_slug}] {n.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ flex: '1 1 120px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#64748b' }}>Peso (1–10)</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input type="range" min={1} max={10} value={form.weight}
-                    onChange={e => setForm(f => ({ ...f, weight: +e.target.value }))} style={{ flex: 1 }} />
-                  <span style={{ fontWeight: 700, color: weightColor(form.weight), minWidth: 16 }}>{form.weight}</span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
-                <button disabled={!form.type_id || !form.name.trim() || createMut.isPending}
-                  onClick={() => createMut.mutate()}
-                  style={{ padding: '7px 14px', background: '#ff5e3a', color: '#fff', border: 'none',
-                    borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                    opacity: !form.type_id || !form.name.trim() ? 0.5 : 1 }}>
-                  {createMut.isPending ? '…' : 'Crear'}
-                </button>
-                <button onClick={() => setShowForm(false)}
-                  style={{ padding: '7px 10px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0',
-                    borderRadius: 6, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          )}
-
-          {(tree as OrgNode[]).length === 0 ? (
-            <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 13,
-              background: '#f8fafc', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
-              Sin nodos en el árbol. Usa el botón "Nuevo nodo" para crear la estructura organizacional.
-            </div>
-          ) : (
-            <div>
-              {(tree as OrgNode[]).map(node => (
-                <NodeRow
-                  key={node.id}
-                  node={node}
-                  types={types as StructureType[]}
-                  depth={0}
-                  onDeleted={() => {}}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── Priority formula tab ───────────────────────────────────────── */
 
@@ -1061,6 +975,8 @@ export default function GlobalConfigPage() {
 
         <QuickLinks />
 
+        <SetupChecklist setTab={setTab} />
+
         <div className={styles.tabBar}>
           {TABS.map(({ key, label, Icon }) => (
             <button
@@ -1077,7 +993,7 @@ export default function GlobalConfigPage() {
 
         <div className={styles.content}>
           {tab === 'empresa'         && <CompanyTab />}
-          {tab === 'organigrama'     && <OrganigramaTab />}
+          {tab === 'organigrama'     && <OrgFlowTab />}
           {tab === 'prioridad'       && <PrioridadTab />}
           {tab === 'sla-solicitudes' && <SlaRequestsTab />}
           {tab === 'sla-tickets'     && <SlaTicketsModuleTab />}

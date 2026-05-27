@@ -542,7 +542,7 @@ export class SystemConfigService {
     return this.cache.wrap(key, TTL.ORG_TYPES, () => {
       const where = onlyActive ? `WHERE is_active = TRUE` : '';
       return this.db.query<any[]>(
-        `SELECT id, name, slug, description, weight, parent_type_id, allows_users, is_active, sort_order
+        `SELECT id, name, slug, description, weight, parent_type_id, allows_users, is_active, sort_order, icon, color
          FROM org.structure_types ${where}
          ORDER BY sort_order, name`,
       );
@@ -573,6 +573,7 @@ export class SystemConfigService {
       ['name','name'],['description','description'],['weight','weight'],
       ['parent_type_id','parent_type_id'],['allows_users','allows_users'],
       ['is_active','is_active'],['sort_order','sort_order'],
+      ['icon','icon'],['color','color'],
     ];
     for (const [k, col] of map) {
       if (dto[k] !== undefined) { fields.push(`${col} = $${idx++}`); values.push(dto[k]); }
