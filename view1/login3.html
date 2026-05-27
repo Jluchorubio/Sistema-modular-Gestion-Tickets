@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma IT - Inicio de Sesión</title>
+    <!-- Tailwind CSS para maquetación y tipografía -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter para un acabado de tipografía premium -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome para los iconos técnicos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#0e2235',      // Windsor Blue principal
+                            darker: '#061320',    // Azul marino profundo
+                            coral: '#ff5e3a',     // Coral corporativo oficial
+                            green: '#20c933',     // Verde brillante de éxito/online
+                            bg: '#f8fafc',        // Fondo gris de operaciones
+                            border: '#cbd5e1',    // Gris de borde fino
+                            textMuted: '#64748b'  // Texto secundario
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Curva diagonal asimétrica premium para el panel izquierdo en escritorio */
+        @media (min-width: 768px) {
+            .asymmetric-panel {
+                clip-path: polygon(0 0, 100% 0, 92% 100%, 0% 100%);
+            }
+        }
+
+        /* Sutil halo de luz para inputs corporativos activos */
+        .glow-input:focus-within {
+            box-shadow: 0 0 12px rgba(255, 94, 58, 0.15);
+            border-color: #ff5e3a;
+        }
+
+        .btn-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col md:flex-row select-none overflow-hidden bg-white">
+
+    <!-- COLUMNA IZQUIERDA: SHOWCASE DE SISTEMAS (45% de ancho, Windsor Blue oscuro y asimétrico directo al body) -->
+    <div
+        class="w-full md:w-[45%] bg-gradient-to-b from-brand-dark to-brand-darker text-white p-8 md:p-12 flex flex-col justify-between relative asymmetric-panel shrink-0 min-h-[320px] md:min-h-screen">
+        <!-- Marca de agua técnica -->
+        <div
+            class="absolute -left-10 -bottom-10 w-48 h-48 border border-white/5 transform rotate-45 pointer-events-none">
+        </div>
+
+        <!-- Cabecera del Panel: Métricas Seleccionadas -->
+        <div class="flex items-center justify-between relative z-10 font-sans">
+            <span class="text-[9px] font-extrabold uppercase tracking-widest text-[#8fa0af]">Telemetría de Red</span>
+            <!-- Acciones secundarias simuladas -->
+            <div class="flex space-x-3 text-[10px] font-bold text-slate-400">
+                <button onclick="alertModal('Servidor', 'Consola central de nodos IBM activa y respondiendo.')"
+                    class="hover:text-white transition-colors">IBM_04</button>
+                <span class="text-white/20">|</span>
+                <button onclick="alertModal('SLA', 'Tasa de cumplimiento de SLA en rango óptimo: 96.3%.')"
+                    class="hover:text-white transition-colors text-brand-green">SLA OK</button>
+            </div>
+        </div>
+
+        <!-- Gráfico Abstracto Vectorial del Sistema (Nodos interconectados y servidores) -->
+        <div class="my-auto py-8 flex flex-col items-center justify-center relative z-10">
+            <!-- Aura de luz coral interna con la nueva paleta -->
+            <div class="absolute w-40 h-40 bg-brand-coral/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <svg class="w-48 h-48 text-slate-300" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Órbitas de datos -->
+                <circle cx="100" cy="100" r="70" stroke="#1a2e3f" stroke-width="1.5" stroke-dasharray="4 6" />
+                <circle cx="100" cy="100" r="45" stroke="#1a2e3f" stroke-width="1.5" />
+
+                <!-- Líneas conectoras de nodos -->
+                <line x1="100" y1="55" x2="60" y2="100" stroke="#1a2e3f" stroke-width="1.5" />
+                <line x1="100" y1="55" x2="140" y2="100" stroke="#1a2e3f" stroke-width="1.5" />
+                <line x1="60" y1="100" x2="100" y2="145" stroke="#1a2e3f" stroke-width="1.5" />
+                <line x1="140" y1="100" x2="100" y2="145" stroke="#1a2e3f" stroke-width="1.5" />
+                <line x1="100" y1="55" x2="100" y2="145" stroke="#ff5e3a" stroke-width="1" stroke-dasharray="2 2"
+                    opacity="0.6" />
+
+                <!-- Nodos de Servidores -->
+                <!-- Central -->
+                <circle cx="100" cy="100" r="14" fill="#0e2235" stroke="#ff5e3a" stroke-width="2.5" />
+                <circle cx="100" cy="100" r="4" fill="#20c933" />
+
+                <!-- Periféricos -->
+                <circle cx="100" cy="55" r="7" fill="#061320" stroke="#1a2e3f" stroke-width="2" />
+                <circle cx="60" cy="100" r="7" fill="#061320" stroke="#1a2e3f" stroke-width="2" />
+                <circle cx="140" cy="100" r="7" fill="#061320" stroke="#1a2e3f" stroke-width="2" />
+                <circle cx="100" cy="145" r="7" fill="#061320" stroke="#1a2e3f" stroke-width="2" />
+            </svg>
+            <p class="text-[10px] font-mono text-slate-400 mt-2 uppercase tracking-widest">Ecosistema ITSM Conectado</p>
+        </div>
+
+        <!-- Ficha Técnica de Guardia -->
+        <div class="flex items-center justify-between border-t border-white/5 pt-4 relative z-10 font-sans">
+            <div class="flex items-center space-x-3">
+                <div class="relative">
+                    <div
+                        class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs border border-brand-coral font-sans">
+                        DH</div>
+                    <span
+                        class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-brand-dark bg-brand-green animate-pulse"></span>
+                </div>
+                <div class="text-left">
+                    <p class="text-[11px] font-extrabold text-white leading-tight">Diego Herrera</p>
+                    <p class="text-[9px] text-[#8fa0af] mt-0.5 uppercase tracking-wider font-bold">Jefe de
+                        Infraestructura</p>
+                </div>
+            </div>
+
+            <!-- Botones de paginación interactivos -->
+            <div class="flex items-center space-x-1.5">
+                <button onclick="alertModal('Anterior', 'Mostrando la ficha técnica del operador del turno anterior.')"
+                    class="w-7 h-7 border border-white/10 hover:border-white/30 rounded flex items-center justify-center text-white/50 hover:text-white transition-all">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                </button>
+                <button
+                    onclick="alertModal('Siguiente', 'Mostrando la ficha técnica del operador de relevo del próximo turno.')"
+                    class="w-7 h-7 border border-white/10 hover:border-white/30 rounded flex items-center justify-center text-white/50 hover:text-white transition-all">
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: FORMULARIO DE ACCESO (55% de ancho, Blanco puro e impecable directo al body) -->
+    <div
+        class="w-full md:w-[55%] p-8 md:p-16 flex flex-col justify-between bg-white font-sans min-h-[480px] md:min-h-screen">
+
+        <!-- Header superior del formulario: Logotipo + Selector de Idioma -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+            <div class="flex items-center space-x-2">
+                <div class="flex space-x-[3px] items-center">
+                    <span class="w-[6px] h-5 bg-brand-dark rounded-xs transform -rotate-12"></span>
+                    <span class="w-[6px] h-5 bg-brand-dark rounded-xs transform -rotate-12 translate-y-[2px]"></span>
+                </div>
+                <span class="text-xs font-black text-brand-dark uppercase tracking-widest">LOGOTIPO</span>
+            </div>
+
+            <!-- Selector de Idioma minimalista -->
+            <button onclick="alertModal('Idioma', 'Soporte multilenguaje activo. Idioma actual: Español (ES).')"
+                class="border border-slate-200 hover:border-slate-300 rounded-sm px-2.5 py-1 text-[10px] font-bold text-slate-600 flex items-center space-x-1 shadow-xs bg-slate-50 transition-colors">
+                <i class="fa-solid fa-globe text-[9px] text-brand-coral"></i>
+                <span>ES</span>
+                <i class="fa-solid fa-chevron-down text-[8px] text-slate-400"></i>
+            </button>
+        </div>
+
+        <!-- Cuerpo del Formulario "Hi Operator" -->
+        <div class="my-auto py-8 max-w-md w-full mx-auto space-y-6">
+            <div class="space-y-1.5">
+                <h2 class="text-3xl font-extrabold text-brand-dark tracking-tight leading-none">Hi Operator</h2>
+                <p class="text-xs text-brand-textMuted font-medium">Bienvenido al Portal Integrado de Operaciones.</p>
+            </div>
+
+            <!-- Alerta de Fallo de Autenticación -->
+            <div id="error-alert-box"
+                class="hidden bg-red-50 border-l-4 border-brand-coral p-3 rounded-sm transition-all duration-300">
+                <div class="flex items-start space-x-2.5">
+                    <i class="fa-solid fa-circle-exclamation text-brand-coral text-xs mt-0.5 animate-pulse"></i>
+                    <div>
+                        <p class="text-[10px] font-black text-brand-dark uppercase tracking-wide">Fallo de Autenticación
+                        </p>
+                        <p class="text-[9px] text-slate-500 mt-0.5" id="error-alert-message">Credenciales incorrectas o
+                            usuario no registrado en el dominio.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario de Entrada de Credenciales -->
+            <form onsubmit="handleFormLoginSubmit(event)" class="space-y-4">
+
+                <!-- Entrada de Email / ID -->
+                <div class="space-y-1.5 text-left">
+                    <label class="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">ID de Operador /
+                        Correo</label>
+                    <input type="text" id="login-email" placeholder="example@gmail.com"
+                        class="w-full text-xs bg-slate-50 border border-slate-200 rounded-sm p-3 focus:outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand-dark font-medium shadow-inner transition-all sharp-input">
+                </div>
+
+                <!-- Entrada de Contraseña -->
+                <div class="space-y-1.5 text-left">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Contraseña de
+                            Dominio</label>
+                        <a href="#"
+                            onclick="alertModal('Recuperar Acceso', 'Para reestablecer tu clave de dominio, comunícate con la extensión de soporte #4000.')"
+                            class="text-[10px] text-slate-400 hover:text-brand-coral transition-colors">¿Olvidaste tu
+                            contraseña?</a>
+                    </div>
+                    <div
+                        class="relative flex items-center bg-slate-50 border border-slate-200 rounded-sm p-3 focus-within:border-brand-dark focus-within:ring-1 focus-within:ring-brand-dark shadow-inner transition-all sharp-input">
+                        <input type="password" id="login-password" placeholder="••••••••"
+                            class="w-full text-xs text-slate-800 bg-transparent focus:outline-none placeholder-slate-400 font-medium">
+                        <button type="button" onclick="togglePasswordVisibility()"
+                            class="text-slate-400 hover:text-brand-dark transition-colors">
+                            <i id="password-toggle-icon" class="fa-regular fa-eye-slash text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botón Principal "Login" adaptado a la Paleta Coral Oficial (#ff5e3a) -->
+                <button type="submit"
+                    class="w-full bg-brand-coral hover:bg-opacity-90 text-white text-xs font-black py-3.5 rounded-sm uppercase tracking-wider transition-all shadow-md hover:shadow-lg sharp-btn font-bold">
+                    Login
+                </button>
+            </form>
+
+            <!-- Separador de Métodos -->
+            <div class="relative flex py-1 items-center">
+                <div class="flex-grow border-t border-slate-100"></div>
+                <span class="flex-shrink mx-4 text-[8px] font-extrabold text-slate-400 uppercase tracking-widest">O
+                    ingresar con</span>
+                <div class="flex-grow border-t border-slate-100"></div>
+            </div>
+
+            <!-- Botón SSO Único de Microsoft Azure AD de la Referencia -->
+            <button onclick="handleSSOLogin('Microsoft')"
+                class="w-full border border-slate-200 hover:border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold py-2.5 rounded-sm transition-all flex items-center justify-center space-x-2 shadow-xs sharp-btn">
+                <i class="fa-brands fa-microsoft text-sky-500 text-sm"></i>
+                <span>Login con Microsoft Azure AD</span>
+            </button>
+        </div>
+
+        <!-- Footer inferior de la columna derecha: Registro y Redes sociales directas -->
+        <div
+            class="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-150 pt-4 shrink-0 w-full">
+            <span class="text-[10px] text-slate-400 font-semibold">¿No tienes cuenta? <a href="#"
+                    onclick="alertModal('Registro', 'Por favor solicita la creación de tu cuenta enviando un ticket firmado por tu supervisor directo.')"
+                    class="text-brand-coral hover:underline font-bold">Solicitar acceso</a></span>
+
+            <!-- Redes sociales corporativas minimalistas -->
+            <div class="flex items-center space-x-3 text-slate-400">
+                <button
+                    onclick="alertModal('Canal Oficial', 'Redireccionando a nuestra cuenta oficial de actualizaciones en X.')"
+                    class="hover:text-brand-dark transition-colors text-xs" title="X Corporativo"><i
+                        class="fa-brands fa-x-twitter"></i></button>
+                <button
+                    onclick="alertModal('Comunidad Discord', 'Conectando al servidor oficial de soporte técnico en Discord.')"
+                    class="hover:text-brand-dark transition-colors text-xs" title="Canal Discord"><i
+                        class="fa-brands fa-discord"></i></button>
+                <button onclick="alertModal('Instagram', 'Abriendo nuestra galería corporativa en Instagram.')"
+                    class="hover:text-brand-dark transition-colors text-xs" title="Instagram"><i
+                        class="fa-brands fa-instagram"></i></button>
+                <button
+                    onclick="alertModal('Repositorio GitHub', 'Abriendo el repositorio de código abierto en GitHub.')"
+                    class="hover:text-brand-dark transition-colors text-xs" title="GitHub"><i
+                        class="fa-brands fa-github"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE OPERACIONES -->
+    <div id="modal-success"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300"
+        onclick="closeModal()">
+        <div class="bg-white rounded-sm border border-slate-200 p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-all duration-300 text-center text-slate-800 font-sans"
+            id="modal-content" onclick="event.stopPropagation()">
+            <div
+                class="w-12 h-12 bg-slate-100 text-brand-dark rounded flex items-center justify-center mx-auto mb-4 text-xl border border-slate-200">
+                <i class="fa-solid fa-circle-info text-brand-coral"></i>
+            </div>
+            <h3 class="text-sm font-black uppercase tracking-wider mb-2" id="modal-title-text">Notificación</h3>
+            <p class="text-xs text-brand-textMuted leading-relaxed mb-6" id="modal-details-text">
+                Tu acción ha sido auditada y registrada de forma segura en la consola ITSM.
+            </p>
+            <button onclick="closeModal()"
+                class="sharp-btn w-full bg-brand-dark hover:bg-brand-darker text-white text-xs font-bold py-2.5 rounded transition-colors uppercase tracking-wider border border-brand-dark">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE SIMULACIÓN DE LOGOUT/LOGIN DE ALTA FIDELIDAD -->
+    <script>
+        let isPasswordVisible = false;
+
+        // Simular intento de envío de login
+        function handleFormLoginSubmit(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+            const alertBox = document.getElementById('error-alert-box');
+            const alertMsg = document.getElementById('error-alert-message');
+
+            // Validación de campos obligatorios
+            if (!email || !pass) {
+                if (alertBox && alertMsg) {
+                    alertBox.classList.remove('hidden');
+                    alertMsg.innerText = "Por favor ingresa tanto tu correo como tu contraseña de dominio corporativo.";
+                }
+                return;
+            }
+
+            // Simular validación de dominio ficticia (Acepta cualquier acceso para demostración)
+            if (email.includes('@') && pass.length >= 4) {
+                if (alertBox) alertBox.classList.add('hidden');
+
+                // Mostrar modal de acceso concedido con redirección
+                alertModal('Acceso Concedido', 'Credenciales autenticadas exitosamente contra el Active Directory. Conectando con los módulos autorizados de la suite...');
+
+                // Simular retardo de red para cargar la interfaz principal
+                setTimeout(() => {
+                    closeModal();
+                    // Al ser una simulación local en Canvas, refrescamos con un ping de auditoría en consola
+                    console.log(`[AUTH] Usuario ${email} ingresó correctamente desde la IP 192.168.1.104`);
+                }, 2500);
+
+            } else {
+                // Credenciales no válidas
+                if (alertBox && alertMsg) {
+                    alertBox.classList.remove('hidden');
+                    alertMsg.innerText = "ID de operador o contraseña errónea. Verifica mayúsculas y reintenta.";
+                }
+            }
+        }
+
+        // Mostrar / Ocultar Contraseña
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('login-password');
+            const toggleIcon = document.getElementById('password-toggle-icon');
+            if (!passInput || !toggleIcon) return;
+
+            isPasswordVisible = !isPasswordVisible;
+            if (isPasswordVisible) {
+                passInput.type = 'text';
+                toggleIcon.className = 'fa-regular fa-eye text-xs';
+            } else {
+                passInput.type = 'password';
+                toggleIcon.className = 'fa-regular fa-eye-slash text-xs';
+            }
+        }
+
+        // Simular inicio único mediante Google o Microsoft Azure Active Directory
+        function handleSSOLogin(provider) {
+            alertModal(`SSO ${provider}`, `Negociando tokens SAML 2.0 seguros con el proveedor de identidad de ${provider}... Acceso autorizado.`);
+        }
+
+        // Controladores de modal corporativo
+        function alertModal(title, text) {
+            const modal = document.getElementById('modal-success');
+            const content = document.getElementById('modal-content');
+            const titleEl = document.getElementById('modal-title-text');
+            const descEl = document.getElementById('modal-details-text');
+
+            if (titleEl) titleEl.innerText = title.toUpperCase();
+            if (descEl) descEl.innerText = text;
+
+            if (modal && content) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal-success');
+            const content = document.getElementById('modal-content');
+
+            if (modal && content) {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+        }
+
+        function addAuditLog(action, msg) {
+            console.log(`[AUDIT] Action: ${action} | Msg: ${msg}`);
+        }
+    </script>
+</body>
+
+</html>

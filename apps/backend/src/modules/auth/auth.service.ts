@@ -87,6 +87,7 @@ export class AuthService {
            WHERE id = $1`,
           [cred.cred_id],
         );
+        this.auditAuthEvent('auth.login_locked', cred.user_id, ip, userAgent);
         throw new HttpException(
           {
             message: `Demasiados intentos fallidos. Cuenta bloqueada ${LOCKOUT_MINUTES} minutos.`,
@@ -99,6 +100,7 @@ export class AuthService {
         `UPDATE auth.credentials SET failed_login_attempts = $1 WHERE id = $2`,
         [newAttempts, cred.cred_id],
       );
+      this.auditAuthEvent('auth.login_failed', cred.user_id, ip, userAgent);
       throw new HttpException(
         {
           message: 'Contraseña incorrecta.',
@@ -137,7 +139,9 @@ export class AuthService {
       };
     }
 
-    return this.buildSession(cred.user_id, cred.email, cred.first_name, cred.last_name, cred.is_superadmin, ip, userAgent);
+    const session = await this.buildSession(cred.user_id, cred.email, cred.first_name, cred.last_name, cred.is_superadmin, ip, userAgent);
+    this.auditAuthEvent('auth.login', cred.user_id, ip, userAgent);
+    return session;
   }
 
   // ─── Google OAuth ────────────────────────────────────────────────────────────
@@ -156,7 +160,9 @@ export class AuthService {
     }
 
     const user = rows[0];
-    return this.buildSession(user.user_id, user.email, user.first_name, user.last_name, user.is_superadmin, ip, userAgent);
+    const session = await this.buildSession(user.user_id, user.email, user.first_name, user.last_name, user.is_superadmin, ip, userAgent);
+    this.auditAuthEvent('auth.login_oauth', user.user_id, ip, userAgent);
+    return session;
   }
 
   // ─── Email OTP: verificar ────────────────────────────────────────────────────
@@ -341,6 +347,7 @@ export class AuthService {
       [rows[0].user_id],
     );
 
+    this.auditAuthEvent('auth.password_reset', rows[0].user_id);
     return { ok: true, message: 'Contraseña actualizada' };
   }
 
@@ -376,7 +383,7 @@ export class AuthService {
     return { access_token, refresh_token };
   }
 
-  async logout(userId: string, refreshToken?: string) {
+  async logout(userId: string, refreshToken?: string, ip?: string, userAgent?: string) {
     if (refreshToken) {
       await this.db.query(
         `UPDATE auth.refresh_tokens SET revoked_at = now() WHERE token_hash = $1`,
@@ -388,6 +395,7 @@ export class AuthService {
        WHERE user_id = $1 AND ended_at IS NULL`,
       [userId],
     );
+    this.auditAuthEvent('auth.logout', userId, ip, userAgent);
     return { ok: true };
   }
 
@@ -704,6 +712,14 @@ export class AuthService {
 
   private hash(value: string): string {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  private auditAuthEvent(action: string, userId: string | null, ip?: string, userAgent?: string): void {
+    this.db.query(
+      `INSERT INTO audit.event_log (actor_id, actor_type, action, entity_type, entity_id, ip_address, user_agent)
+       VALUES ($1, 'user', $2, 'user', $1, $3::inet, $4)`,
+      [userId, action, ip ?? null, userAgent ?? null],
+    ).catch(() => { /* non-critical — never break auth flow */ });
   }
 
   private async sendOtpEmail(to: string, code: string) {

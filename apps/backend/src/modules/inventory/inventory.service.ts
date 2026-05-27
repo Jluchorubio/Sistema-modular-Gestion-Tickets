@@ -29,12 +29,17 @@ export class InventoryService {
     private readonly qr: QrService,
   ) {}
 
-  async findAll(moduleId?: string, status?: string) {
+  async findAll(moduleId?: string, status?: string, q?: string) {
     const conditions: string[] = ['a.deleted_at IS NULL'];
     const params: any[] = [];
     let i = 1;
     if (moduleId) { conditions.push(`a.module_id = $${i++}`); params.push(moduleId); }
     if (status)   { conditions.push(`a.status = $${i++}`);    params.push(status); }
+    if (q) {
+      conditions.push(`(a.name ILIKE $${i} OR a.serial_number ILIKE $${i} OR a.qr_code ILIKE $${i})`);
+      params.push(`%${q.trim()}%`);
+      i++;
+    }
 
     return this.db.query<any[]>(
       `SELECT a.id, a.name, a.description, a.qr_code, a.serial_number,
@@ -275,6 +280,79 @@ export class InventoryService {
        ORDER  BY h.created_at DESC`,
       [assetId],
     );
+  }
+
+  async updateAsset(id: string, dto: {
+    name?:            string;
+    description?:     string;
+    serial_number?:   string;
+    specifications?:  Record<string, unknown>;
+    environment_id?:  string;
+    category_id?:     string;
+  }) {
+    const fields: string[] = [];
+    const values: any[]    = [];
+    let idx = 1;
+    const allowed = ['name','description','serial_number','specifications','environment_id','category_id'] as const;
+    for (const k of allowed) {
+      if (dto[k] !== undefined) {
+        fields.push(`${k} = $${idx++}`);
+        values.push(k === 'specifications' ? JSON.stringify(dto[k]) : dto[k]);
+      }
+    }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    const [row] = await this.db.query<any[]>(
+      `UPDATE inventory.assets SET ${fields.join(', ')}
+       WHERE id = $${idx} AND deleted_at IS NULL RETURNING id, name, serial_number, status`,
+      values,
+    );
+    if (!row) throw new NotFoundException(`Asset ${id} no encontrado`);
+    return row;
+  }
+
+  async deleteAsset(id: string, actorId: string) {
+    const [asset] = await this.db.query<{ status: AssetStatus }[]>(
+      `SELECT status FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    if (!asset) throw new NotFoundException(`Asset ${id} no encontrado`);
+    if (asset.status === 'asignado')
+      throw new BadRequestException('No se puede eliminar un activo asignado. Devuélvelo primero.');
+
+    await this.db.query(
+      `UPDATE inventory.assets SET deleted_at = now(), updated_at = now() WHERE id = $1`,
+      [id],
+    );
+    await this.db.query(
+      `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+       VALUES ($1, $1, $2, 'dado_de_baja', 'Eliminado del sistema')`,
+      [id, actorId],
+    );
+    return { ok: true };
+  }
+
+  async bulkImport(
+    moduleId: string,
+    rows: Array<Omit<CreateAssetDto, 'module_id'>>,
+  ): Promise<{ created: number; errors: { row: number; message: string }[] }> {
+    if (rows.length > 100) throw new BadRequestException('Máximo 100 activos por importación');
+    const errors: { row: number; message: string }[] = [];
+    let created = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r.name?.trim())      { errors.push({ row: i + 1, message: 'Nombre requerido'     }); continue; }
+      if (!r.environment_id)    { errors.push({ row: i + 1, message: 'environment_id requerido' }); continue; }
+      if (!r.category_id)       { errors.push({ row: i + 1, message: 'category_id requerido' }); continue; }
+      try {
+        await this.create({ ...r, module_id: moduleId });
+        created++;
+      } catch (e: any) {
+        errors.push({ row: i + 1, message: e.message ?? 'Error desconocido' });
+      }
+    }
+    return { created, errors };
   }
 
   async getQr(id: string) {

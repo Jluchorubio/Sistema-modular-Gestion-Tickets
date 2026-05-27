@@ -1,4 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
@@ -28,5 +29,39 @@ export class ReportingController {
   @ApiQuery({ name: 'moduleId', required: false })
   ticketsSummary(@Query('moduleId') moduleId?: string) {
     return this.service.ticketsSummary(moduleId);
+  }
+
+  @Get('inventory')
+  @RequirePermission('global:reports:view')
+  @ApiOperation({ summary: 'Métricas de inventario: totales por estado y categoría.' })
+  @ApiQuery({ name: 'moduleId', required: false })
+  inventorySummary(@Query('moduleId') moduleId?: string) {
+    return this.service.inventorySummary(moduleId);
+  }
+
+  @Get('audit')
+  @RequirePermission('global:reports:view')
+  @ApiOperation({ summary: 'Log de auditoría: últimas N entradas del event_log.' })
+  @ApiQuery({ name: 'limit',       required: false })
+  @ApiQuery({ name: 'entity_type', required: false })
+  auditLog(
+    @Query('limit')       limit?: string,
+    @Query('entity_type') entityType?: string,
+  ) {
+    return this.service.auditLog(limit ? Math.min(parseInt(limit, 10), 200) : 50, entityType);
+  }
+
+  @Get('export/tickets')
+  @RequirePermission('global:reports:view')
+  @ApiOperation({ summary: 'Exportar tickets a CSV (máx 5000 filas).' })
+  @ApiQuery({ name: 'moduleId', required: false })
+  async exportTicketsCsv(
+    @Query('moduleId') moduleId: string | undefined,
+    @Res() res: Response,
+  ) {
+    const csv = await this.service.exportTicketsCsv(moduleId);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="tickets-${Date.now()}.csv"`);
+    res.send('﻿' + csv); // BOM for Excel UTF-8
   }
 }

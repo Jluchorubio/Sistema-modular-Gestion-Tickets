@@ -265,6 +265,10 @@ export const systemConfigService = {
     api.post<Holiday>(`${BASE}/holidays`, dto).then(r => r.data),
   deleteHoliday: (id: string) =>
     api.delete(`${BASE}/holidays/${id}`).then(r => r.data),
+  syncColombiaHolidays: (year?: number) =>
+    api.post<{ synced: number; skipped: number }>(`${BASE}/holidays/sync-colombia`, null, {
+      params: year ? { year } : {},
+    }).then(r => r.data),
 
   /* ── Ticket SLA Policies ── */
   getTicketSlaPolicies: (moduleId: string) =>

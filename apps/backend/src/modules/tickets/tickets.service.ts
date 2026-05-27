@@ -442,17 +442,44 @@ export class TicketsService {
       [trans.to_state_id, ticketId],
     );
 
-    // Mark SLA as met/breached when reaching a final state
     const [toState] = await this.db.query<any[]>(
       `SELECT is_final, name, label FROM tickets.states WHERE id = $1`,
       [trans.to_state_id],
     );
+
+    // ── SLA clock management ──────────────────────────────────────────────────
+    // 1. If tracking was paused (leaving EN_ESPERA), resume it first by extending
+    //    deadline_at by the elapsed pause duration, whatever the destination state.
+    await this.db.query(
+      `UPDATE tickets.ticket_sla_tracking
+       SET deadline_at           = deadline_at + (now() - paused_at),
+           total_paused_seconds  = total_paused_seconds
+                                   + EXTRACT(EPOCH FROM (now() - paused_at))::int,
+           paused_at             = NULL,
+           status                = 'active',
+           updated_at            = now()
+       WHERE ticket_id = $1 AND status = 'paused'`,
+      [ticketId],
+    );
+
+    // 2. Final state → mark met or breached (after any resume above)
     if (toState?.is_final) {
       await this.db.query(
         `UPDATE tickets.ticket_sla_tracking
-         SET status     = CASE WHEN deadline_at < now() THEN 'breached' ELSE 'met' END,
+         SET status      = CASE WHEN deadline_at < now() THEN 'breached' ELSE 'met' END,
              breached_at = CASE WHEN deadline_at < now() THEN now() ELSE NULL END,
              updated_at  = now()
+         WHERE ticket_id = $1 AND status = 'active'`,
+        [ticketId],
+      );
+    }
+    // 3. Entering EN_ESPERA → pause the SLA clock
+    else if (toState?.name === 'en_espera') {
+      await this.db.query(
+        `UPDATE tickets.ticket_sla_tracking
+         SET status     = 'paused',
+             paused_at  = now(),
+             updated_at = now()
          WHERE ticket_id = $1 AND status = 'active'`,
         [ticketId],
       );

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
@@ -13,11 +13,16 @@ export class InventoryController {
 
   @Get()
   @RequirePermission('inventario:items:view')
-  @ApiOperation({ summary: 'Listar activos. Filtrar con ?module_id= y ?status=.' })
+  @ApiOperation({ summary: 'Listar activos. Filtrar con ?module_id= ?status= ?q=' })
   @ApiQuery({ name: 'module_id', required: false })
   @ApiQuery({ name: 'status',    required: false })
-  findAll(@Query('module_id') moduleId?: string, @Query('status') status?: string) {
-    return this.service.findAll(moduleId, status);
+  @ApiQuery({ name: 'q',         required: false, description: 'Búsqueda por nombre, serie o QR' })
+  findAll(
+    @Query('module_id') moduleId?: string,
+    @Query('status')    status?: string,
+    @Query('q')         q?: string,
+  ) {
+    return this.service.findAll(moduleId, status, q);
   }
 
   @Get(':id')
@@ -96,5 +101,34 @@ export class InventoryController {
   @ApiOperation({ summary: 'Actualizar estado del activo (legacy — usa /transition).' })
   updateStatus(@Param('id') id: string, @Body() body: { status: string }) {
     return this.service.updateStatus(id, body.status);
+  }
+
+  @Patch(':id')
+  @RequirePermission('inventario:items:edit')
+  @ApiOperation({ summary: 'Editar datos del activo (nombre, descripción, serie, specs).' })
+  updateAsset(
+    @Param('id') id: string,
+    @Body() dto: {
+      name?: string; description?: string; serial_number?: string;
+      specifications?: Record<string, unknown>;
+      environment_id?: string; category_id?: string;
+    },
+  ) {
+    return this.service.updateAsset(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('inventario:items:delete')
+  @ApiOperation({ summary: 'Soft-delete del activo. No se puede eliminar si está asignado.' })
+  deleteAsset(@Req() req: any, @Param('id') id: string) {
+    return this.service.deleteAsset(id, req.user.sub);
+  }
+
+  @Post('bulk')
+  @RequirePermission('inventario:items:create')
+  @ApiOperation({ summary: 'Importación masiva de activos. Máx 100 por petición.' })
+  bulkImport(@Body() dto: { module_id: string; rows: any[] }) {
+    return this.service.bulkImport(dto.module_id, dto.rows);
   }
 }

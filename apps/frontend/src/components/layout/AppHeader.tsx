@@ -70,6 +70,7 @@ export function AppHeader({ noSidebar = false }: Props) {
     queryFn:  () => notificationsService.getMyNotifications(),
     refetchInterval: 60_000,
     staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const markReadMut = useMutation({
@@ -79,6 +80,16 @@ export function AppHeader({ noSidebar = false }: Props) {
 
   const markAllMut = useMutation({
     mutationFn: () => notificationsService.markAllAsRead(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications-me'] }),
+  });
+
+  const dismissMut = useMutation({
+    mutationFn: (id: string) => notificationsService.dismiss(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications-me'] }),
+  });
+
+  const dismissAllReadMut = useMutation({
+    mutationFn: () => notificationsService.dismissAllRead(),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications-me'] }),
   });
 
@@ -247,16 +258,28 @@ export function AppHeader({ noSidebar = false }: Props) {
                 <span className={styles.notifTitle}>
                   Notificaciones{unread > 0 ? ` (${unread})` : ''}
                 </span>
-                {unread > 0 && (
-                  <button
-                    className={styles.notifMarkAll}
-                    type="button"
-                    onClick={() => markAllMut.mutate()}
-                    disabled={markAllMut.isPending}
-                  >
-                    Marcar todo leído
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {unread > 0 && (
+                    <button
+                      className={styles.notifMarkAll}
+                      type="button"
+                      onClick={() => markAllMut.mutate()}
+                      disabled={markAllMut.isPending}
+                    >
+                      Marcar leído
+                    </button>
+                  )}
+                  {notifications.some((n) => n.status === 'sent') && (
+                    <button
+                      className={styles.notifMarkAll}
+                      type="button"
+                      onClick={() => dismissAllReadMut.mutate()}
+                      disabled={dismissAllReadMut.isPending}
+                    >
+                      Limpiar leídas
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className={styles.notifList}>
@@ -287,7 +310,17 @@ export function AppHeader({ noSidebar = false }: Props) {
                         <p className={styles.notifEvt}>{subject}</p>
                         <p className={styles.notifMsg}>{getNotifMessage(n)}</p>
                       </div>
-                      <span className={styles.notifTime}>{fmtRelative(n.created_at)}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                        <span className={styles.notifTime}>{fmtRelative(n.created_at)}</span>
+                        <button
+                          type="button"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.4, fontSize: 14, lineHeight: 1 }}
+                          title="Descartar"
+                          onClick={(e) => { e.stopPropagation(); dismissMut.mutate(n.id); }}
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

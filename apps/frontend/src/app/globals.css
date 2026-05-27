@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 :root {
+  /* ── Brand (overridden at runtime by SystemConfigProvider via JS) ── */
+  --brand-primary:      #0e2235;
+  --brand-primary-rgb:  14,34,53;
+  --brand-primary-10:   rgba(14,34,53,0.10);
+  --brand-primary-20:   rgba(14,34,53,0.20);
+  --brand-primary-hover:rgba(14,34,53,0.85);
+
   /* Dark surfaces (auth pages) */
   --color-bg: #0f172a;
   --color-surface: #1e293b;

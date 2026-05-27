@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CacheService } from '../../shared/redis/cache.service';
 import {
   CreateStructureTypeDto, UpdateStructureTypeDto,
@@ -26,6 +27,7 @@ export class SystemConfigService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
     private readonly cache: CacheService,
+    private readonly events: EventEmitter2,
   ) {}
 
   /* ── Company info ──────────────────────────────────────────────── */
@@ -67,6 +69,16 @@ export class SystemConfigService {
        RETURNING *`,
       values,
     );
+
+    this.events.emit('config.company.updated', {
+      name:          org.name,
+      slug:          org.slug,
+      logo_url:      org.logo_url,
+      primary_color: org.primary_color,
+      timezone:      org.timezone,
+      language:      org.language,
+    });
+
     return org;
   }
 
@@ -400,6 +412,30 @@ export class SystemConfigService {
     return { ok: true };
   }
 
+  async syncColombiaHolidays(year: number): Promise<{ synced: number; skipped: number }> {
+    const url  = `https://date.nager.at/api/v3/PublicHolidays/${year}/CO`;
+    const res  = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+    if (!res.ok) throw new Error(`Nager.Date responded ${res.status}`);
+
+    const holidays: { date: string; localName: string }[] = await res.json();
+    if (!Array.isArray(holidays) || !holidays.length) return { synced: 0, skipped: 0 };
+
+    let synced = 0;
+    let skipped = 0;
+    for (const h of holidays) {
+      if (!h.date || !h.localName) { skipped++; continue; }
+      await this.db.query(
+        `INSERT INTO config.holidays (module_id, holiday_date, name)
+         VALUES (NULL, $1, $2)
+         ON CONFLICT (module_id, holiday_date)
+           DO UPDATE SET name = EXCLUDED.name, is_active = TRUE, updated_at = now()`,
+        [h.date, h.localName],
+      );
+      synced++;
+    }
+    return { synced, skipped };
+  }
+
   /* ── Ticket SLA Policies (per-module) ───────────────────────────── */
 
   async getTicketSlaPolicies(moduleId: string) {
@@ -621,11 +657,14 @@ export class SystemConfigService {
     return this.cache.wrap('org:tree', TTL.ORG_TREE, async () => {
       const nodes = await this.db.query<any[]>(
         `SELECT n.id, n.type_id, t.name AS type_name, t.slug AS type_slug,
-                n.parent_id, n.name, n.code, n.description, n.weight,
+                n.parent_id, p.name AS parent_name,
+                n.name, n.code, n.description, n.weight,
                 n.is_active, n.sort_order,
-                (SELECT count(*) FROM users.profiles u WHERE u.org_node_id = n.id)::int AS user_count
+                (SELECT count(*) FROM users.profiles u WHERE u.org_node_id = n.id)::int AS user_count,
+                (SELECT count(*) FROM org.nodes c WHERE c.parent_id = n.id AND c.is_active = TRUE)::int AS child_count
          FROM org.nodes n
          JOIN org.structure_types t ON t.id = n.type_id
+         LEFT JOIN org.nodes p ON p.id = n.parent_id
          WHERE n.is_active = TRUE
          ORDER BY t.sort_order, n.sort_order, n.name`,
       );
@@ -658,6 +697,22 @@ export class SystemConfigService {
   }
 
   async updateOrgNode(id: string, dto: UpdateOrgNodeDto) {
+    if (dto.parent_id !== undefined && dto.parent_id !== null) {
+      if (dto.parent_id === id)
+        throw new BadRequestException('Un nodo no puede ser su propio padre');
+      const [{ is_circular }] = await this.db.query<{ is_circular: boolean }[]>(
+        `WITH RECURSIVE descendants AS (
+           SELECT id FROM org.nodes WHERE parent_id = $1
+           UNION ALL
+           SELECT n.id FROM org.nodes n JOIN descendants d ON n.parent_id = d.id
+         )
+         SELECT EXISTS(SELECT 1 FROM descendants WHERE id = $2) AS is_circular`,
+        [id, dto.parent_id],
+      );
+      if (is_circular)
+        throw new BadRequestException('Referencia circular: el nuevo padre es descendiente del nodo');
+    }
+
     const fields: string[] = [];
     const values: any[]   = [];
     let idx = 1;

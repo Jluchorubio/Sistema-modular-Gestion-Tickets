@@ -43,6 +43,96 @@ export class ReportingService {
     return { summary, by_priority: byPriority };
   }
 
+  async auditLog(limit = 50, entityType?: string) {
+    const cond   = entityType ? `AND el.entity_type = $2` : '';
+    const params = entityType ? [limit, entityType] : [limit];
+    return this.db.query<any[]>(
+      `SELECT el.id, el.action, el.entity_type, el.entity_id,
+              el.ip_address, el.created_at,
+              p.first_name || ' ' || p.last_name AS actor_name,
+              p.email AS actor_email
+       FROM   audit.event_log el
+       LEFT JOIN users.profiles p ON p.id = el.actor_id
+       WHERE  1=1 ${cond}
+       ORDER  BY el.created_at DESC
+       LIMIT  $1`,
+      params,
+    );
+  }
+
+  async inventorySummary(moduleId?: string) {
+    const cond   = moduleId ? `AND a.module_id = $1` : '';
+    const params = moduleId ? [moduleId] : [];
+    let i = params.length + 1;
+
+    const [totals] = await this.db.query<any[]>(
+      `SELECT
+         COUNT(*) FILTER (WHERE a.deleted_at IS NULL)                                     AS total,
+         COUNT(*) FILTER (WHERE a.deleted_at IS NULL AND a.status = 'disponible')         AS disponible,
+         COUNT(*) FILTER (WHERE a.deleted_at IS NULL AND a.status = 'asignado')           AS asignado,
+         COUNT(*) FILTER (WHERE a.deleted_at IS NULL AND a.status = 'en_reparacion')      AS en_reparacion,
+         COUNT(*) FILTER (WHERE a.deleted_at IS NULL AND a.status = 'dado_de_baja')       AS dado_de_baja,
+         COUNT(*) FILTER (WHERE a.deleted_at IS NULL AND a.created_at >= now() - INTERVAL '30 days') AS added_last_30
+       FROM inventory.assets a
+       WHERE 1=1 ${cond}`,
+      params,
+    );
+
+    const byCategory = await this.db.query<any[]>(
+      `SELECT c.name AS category_name, COUNT(*) AS total,
+              COUNT(*) FILTER (WHERE a.status = 'disponible')    AS disponible,
+              COUNT(*) FILTER (WHERE a.status = 'asignado')      AS asignado
+       FROM   inventory.assets a
+       JOIN   modules.categories c ON c.id = a.category_id
+       WHERE  a.deleted_at IS NULL ${cond}
+       GROUP  BY c.name ORDER BY total DESC LIMIT 10`,
+      params,
+    );
+
+    return { totals, by_category: byCategory };
+  }
+
+  async exportTicketsCsv(moduleId?: string): Promise<string> {
+    const cond   = moduleId ? `AND t.module_id = $1` : '';
+    const params = moduleId ? [moduleId] : [];
+
+    const rows = await this.db.query<any[]>(
+      `SELECT t.id, t.title, t.priority, t.created_at, t.updated_at, t.sla_deadline,
+              s.label  AS state,
+              m.name   AS module_name,
+              e.name   AS environment_name,
+              c.name   AS category_name,
+              p.first_name || ' ' || p.last_name AS created_by_name
+       FROM   tickets.tickets t
+       JOIN   tickets.states        s ON s.id  = t.current_state_id
+       JOIN   modules.modules       m ON m.id  = t.module_id
+       JOIN   modules.environments  e ON e.id  = t.environment_id
+       JOIN   modules.categories    c ON c.id  = t.category_id
+       LEFT JOIN users.profiles     p ON p.id  = t.created_by
+       WHERE  1=1 ${cond}
+       ORDER  BY t.created_at DESC
+       LIMIT  5000`,
+      params,
+    );
+
+    const escape = (v: unknown) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v).replace(/"/g, '""');
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
+    };
+
+    const headers = ['id','title','priority','state','module','environment','category','created_by','created_at','updated_at','sla_deadline'];
+    const lines   = [
+      headers.join(','),
+      ...rows.map((r) => [
+        r.id, r.title, r.priority, r.state, r.module_name,
+        r.environment_name, r.category_name, r.created_by_name,
+        r.created_at, r.updated_at, r.sla_deadline ?? '',
+      ].map(escape).join(',')),
+    ];
+    return lines.join('\r\n');
+  }
+
   async ticketsSummary(moduleId?: string) {
     const cond  = moduleId ? `AND t.module_id = $1` : '';
     const params = moduleId ? [moduleId] : [];

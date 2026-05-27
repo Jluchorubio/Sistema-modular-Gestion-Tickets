@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Delete, Param, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
@@ -28,8 +28,9 @@ export class NotificationsController {
        FROM notifications.notification_logs
        WHERE user_id = $1
          AND channel = 'in_app'
+         AND dismissed_at IS NULL
        ORDER BY created_at DESC
-       LIMIT 30`,
+       LIMIT 50`,
       [req.user.sub],
     );
     const unread = rows.filter((r) => r.status === 'pending').length;
@@ -54,7 +55,31 @@ export class NotificationsController {
     await this.db.query(
       `UPDATE notifications.notification_logs
        SET status = 'sent', sent_at = now()
-       WHERE user_id = $1 AND channel = 'in_app' AND status = 'pending'`,
+       WHERE user_id = $1 AND channel = 'in_app' AND status = 'pending' AND dismissed_at IS NULL`,
+      [req.user.sub],
+    );
+    return { ok: true };
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Descartar notificación (ocultar de la bandeja).' })
+  async dismissOne(@Req() req: any, @Param('id') id: string) {
+    await this.db.query(
+      `UPDATE notifications.notification_logs
+       SET dismissed_at = now()
+       WHERE id = $1 AND user_id = $2 AND channel = 'in_app'`,
+      [id, req.user.sub],
+    );
+    return { ok: true };
+  }
+
+  @Delete('me/read')
+  @ApiOperation({ summary: 'Descartar todas las notificaciones leídas del usuario.' })
+  async dismissAllRead(@Req() req: any) {
+    await this.db.query(
+      `UPDATE notifications.notification_logs
+       SET dismissed_at = now()
+       WHERE user_id = $1 AND channel = 'in_app' AND status = 'sent' AND dismissed_at IS NULL`,
       [req.user.sub],
     );
     return { ok: true };

@@ -1,4 +1,4 @@
-import { IsString, IsIn, IsOptional, IsInt, IsBoolean, IsEmail, Min, MinLength, MaxLength, IsNumber } from 'class-validator';
+import { IsString, IsIn, IsOptional, IsInt, IsBoolean, IsEmail, Min, MinLength, MaxLength, IsNumber, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 const PRIORITIES = ['baja', 'media', 'alta', 'critica'] as const;
@@ -26,7 +26,9 @@ export class UpdateCompanyDto {
   @ApiPropertyOptional() @IsString() @IsOptional()
   logo_url?: string;
 
-  @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(20)
+  @ApiPropertyOptional({ description: 'Hex color #RRGGBB' })
+  @IsOptional()
+  @Matches(/^#([A-Fa-f0-9]{6})$/, { message: 'primary_color debe ser hex válido (#RRGGBB)' })
   primary_color?: string;
 
   @ApiPropertyOptional() @IsString() @IsOptional()

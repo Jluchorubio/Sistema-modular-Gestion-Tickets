@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ReactFlow, Background, Controls, MiniMap,
-  useNodesState, useEdgesState,
+  useNodesState, useEdgesState, useReactFlow,
   Handle, Position,
   type Node, type Edge,
 } from '@xyflow/react';
@@ -134,20 +134,24 @@ function OrgNodeCard({ data, selected }: { data: OrgNodeData; selected: boolean 
         )}
 
         {/* Footer: user count + child count */}
-        {(node.user_count > 0 || node.child_count > 0) && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-            {node.user_count > 0 && (
-              <span style={{ fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Users size={9} /> {node.user_count}
-              </span>
-            )}
-            {node.child_count > 0 && (
-              <span style={{ fontSize: 10, color: '#94a3b8' }}>
-                {node.child_count} sub
-              </span>
-            )}
-          </div>
-        )}
+        {(() => {
+          const childCount = node.child_count ?? node.children?.length ?? 0;
+          if (node.user_count <= 0 && childCount <= 0) return null;
+          return (
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              {node.user_count > 0 && (
+                <span style={{ fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Users size={9} /> {node.user_count}
+                </span>
+              )}
+              {childCount > 0 && (
+                <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                  {childCount} sub
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
       <Handle type="source" position={Position.Bottom}
         style={{ background: typeColor, border: 'none', width: 8, height: 8 }} />
@@ -157,6 +161,18 @@ function OrgNodeCard({ data, selected }: { data: OrgNodeData; selected: boolean 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const nodeTypes = { orgNode: OrgNodeCard as any };
+
+/* ── Auto-fit helper (must be inside ReactFlow context) ─────────────────── */
+
+function FlowAutoFit({ nodeCount }: { nodeCount: number }) {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    const t = setTimeout(() => fitView({ padding: 0.25, duration: 300 }), 50);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeCount]);
+  return null;
+}
 
 /* ── Edit form type ──────────────────────────────────────────────────────── */
 
@@ -566,6 +582,7 @@ export function OrgFlowTab() {
                   nodeColor={n => (n.data as OrgNodeData).typeColor ?? '#64748b'}
                   style={{ background: '#fff', border: '1px solid #e2e8f0' }}
                 />
+                <FlowAutoFit nodeCount={rfNodes.length} />
               </ReactFlow>
             )}
           </div>

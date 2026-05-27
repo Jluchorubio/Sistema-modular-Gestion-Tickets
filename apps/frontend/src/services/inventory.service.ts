@@ -85,9 +85,10 @@ export const ASSET_ACTION_COLORS: Record<string, string> = {
 };
 
 export const inventoryService = {
-  async getAll(moduleId?: string, status?: AssetStatus | ''): Promise<AssetListItem[]> {
+  async getAll(moduleId?: string, status?: AssetStatus | '', q?: string): Promise<AssetListItem[]> {
     const params: Record<string, string> = {};
     if (moduleId) params.module_id = moduleId;
+    if (q)        params.q         = q;
     if (status)   params.status    = status;
     const { data } = await api.get('/inventory', { params });
     return data;
@@ -135,6 +136,28 @@ export const inventoryService = {
 
   async getQr(id: string): Promise<{ id: string; qr_code: string; qr_image: string }> {
     const { data } = await api.get(`/inventory/${id}/qr`);
+    return data;
+  },
+
+  async update(id: string, dto: {
+    name?: string; description?: string; serial_number?: string;
+    specifications?: Record<string, unknown>;
+    environment_id?: string; category_id?: string;
+  }): Promise<{ id: string; name: string; serial_number: string; status: AssetStatus }> {
+    const { data } = await api.patch(`/inventory/${id}`, dto);
+    return data;
+  },
+
+  async remove(id: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/inventory/${id}`);
+    return data;
+  },
+
+  async bulkImport(
+    moduleId: string,
+    rows: Array<Omit<CreateAssetDto, 'module_id'>>,
+  ): Promise<{ created: number; errors: { row: number; message: string }[] }> {
+    const { data } = await api.post('/inventory/bulk', { module_id: moduleId, rows });
     return data;
   },
 };

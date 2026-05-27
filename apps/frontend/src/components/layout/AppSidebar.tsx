@@ -94,9 +94,10 @@ export function AppSidebar() {
           <div className={styles.brandMark} aria-hidden="true">
             <span
               className={styles.brandDot}
-              style={company?.primary_color
-                ? { background: company.primary_color, boxShadow: `0 0 0 3px ${company.primary_color}26` }
-                : undefined}
+              style={{
+                background:  'var(--brand-primary)',
+                boxShadow:   '0 0 0 3px var(--brand-primary-20)',
+              }}
             />
           </div>
         )}

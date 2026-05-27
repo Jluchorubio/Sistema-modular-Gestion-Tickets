@@ -51,6 +51,38 @@ export interface TicketsSummary {
   daily_trend:  DailyTrend[];
 }
 
+export interface AuditEntry {
+  id:           string;
+  action:       string;
+  entity_type:  string;
+  entity_id:    string;
+  ip_address:   string | null;
+  created_at:   string;
+  actor_name:   string | null;
+  actor_email:  string | null;
+}
+
+export interface InventoryTotals {
+  total:          string;
+  disponible:     string;
+  asignado:       string;
+  en_reparacion:  string;
+  dado_de_baja:   string;
+  added_last_30:  string;
+}
+
+export interface InventoryByCategory {
+  category_name: string;
+  total:         string;
+  disponible:    string;
+  asignado:      string;
+}
+
+export interface InventorySummary {
+  totals:      InventoryTotals;
+  by_category: InventoryByCategory[];
+}
+
 export const reportingService = {
   async getSlaMetrics(moduleId?: string): Promise<SlaMetrics> {
     const params: Record<string, string> = {};
@@ -64,5 +96,24 @@ export const reportingService = {
     if (moduleId) params.moduleId = moduleId;
     const { data } = await api.get('/reporting/tickets', { params });
     return data;
+  },
+
+  async getInventorySummary(moduleId?: string): Promise<InventorySummary> {
+    const params: Record<string, string> = {};
+    if (moduleId) params.moduleId = moduleId;
+    const { data } = await api.get('/reporting/inventory', { params });
+    return data;
+  },
+
+  async getAuditLog(limit = 50, entityType?: string): Promise<AuditEntry[]> {
+    const params: Record<string, string | number> = { limit };
+    if (entityType) params.entity_type = entityType;
+    const { data } = await api.get('/reporting/audit', { params });
+    return data;
+  },
+
+  exportTicketsCsvUrl(moduleId?: string): string {
+    const base = (api.defaults.baseURL ?? '') + '/reporting/export/tickets';
+    return moduleId ? `${base}?moduleId=${moduleId}` : base;
   },
 };

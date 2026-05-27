@@ -2,11 +2,11 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Ticket } from 'lucide-react';
+import { Ticket, Download, Package } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUIStore } from '@/stores/ui.store';
 import { ADMIN_ROLES } from '@/constants/roles';
-import { reportingService, type DailyTrend, type SlaByPriority } from '@/services/reporting.service';
+import { reportingService, type DailyTrend, type SlaByPriority, type AuditEntry } from '@/services/reporting.service';
 import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
 import { fmtDay } from '@/lib/formatters';
 import styles from '../reports.module.css';
@@ -161,6 +161,18 @@ export function ReportsClient() {
     staleTime: 2 * 60_000,
   });
 
+  const { data: inventory } = useQuery({
+    queryKey:  ['reports-inventory', moduleId],
+    queryFn:   () => reportingService.getInventorySummary(moduleId),
+    staleTime: 2 * 60_000,
+  });
+
+  const { data: auditLog } = useQuery({
+    queryKey:  ['reports-audit'],
+    queryFn:   () => reportingService.getAuditLog(50),
+    staleTime: 60_000,
+  });
+
   const isLoading = slaLoading || ticketsLoading;
 
   const totals     = tickets?.totals;
@@ -182,6 +194,15 @@ export function ReportsClient() {
             <h1 className={styles.title}>Centro de Reportes y Auditoría</h1>
             <p className={styles.sub}>Estadísticas avanzadas, nivel de servicio de acuerdos de SLA y registro de auditoría de seguridad global.</p>
           </div>
+          <a
+            href={reportingService.exportTicketsCsvUrl(moduleId)}
+            className={styles.filterBtn}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+            download
+          >
+            <Download size={13} />
+            Exportar tickets CSV
+          </a>
         </div>
 
         {/* ── Module filter — hidden when locked to a module context ── */}
@@ -367,6 +388,49 @@ export function ReportsClient() {
           </>
         )}
 
+        {/* ── Inventory summary ── */}
+        {inventory && (
+          <div className={styles.auditWrap}>
+            <div className={styles.auditHead}>
+              <span className={styles.auditHeadTitle} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Package size={15} /> Inventario
+              </span>
+            </div>
+            <div style={{ padding: '12px 16px', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              {([
+                ['Total',         inventory.totals.total,         '#0e2235'],
+                ['Disponible',    inventory.totals.disponible,    '#22c55e'],
+                ['Asignado',      inventory.totals.asignado,      '#3b82f6'],
+                ['En reparación', inventory.totals.en_reparacion, '#f59e0b'],
+                ['Dado de baja',  inventory.totals.dado_de_baja,  '#94a3b8'],
+                ['Nuevos 30d',    inventory.totals.added_last_30, '#8b5cf6'],
+              ] as [string, string, string][]).map(([label, val, color]) => (
+                <div key={label} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color }}>{val ?? 0}</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            {inventory.by_category.length > 0 && (
+              <div className={styles.auditScroll}>
+                <table className={styles.auditTable}>
+                  <thead><tr><th>Categoría</th><th>Total</th><th>Disponible</th><th>Asignado</th></tr></thead>
+                  <tbody>
+                    {inventory.by_category.map((r) => (
+                      <tr key={r.category_name}>
+                        <td>{r.category_name}</td>
+                        <td>{r.total}</td>
+                        <td style={{ color: '#22c55e' }}>{r.disponible}</td>
+                        <td style={{ color: '#3b82f6' }}>{r.asignado}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Audit log table ── */}
         <div className={styles.auditWrap}>
           <div className={styles.auditHead}>
@@ -378,18 +442,29 @@ export function ReportsClient() {
               <thead>
                 <tr>
                   <th>Timestamp</th>
-                  <th>Actor / Operador</th>
-                  <th>Acción / Subsistema</th>
-                  <th>Descripción del Evento de Auditoría</th>
+                  <th>Actor</th>
+                  <th>Acción</th>
+                  <th>Entidad</th>
                   <th>IP Origen</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td colSpan={5} className={styles.auditEmpty}>
-                    Módulo de auditoría en configuración. Los registros aparecerán aquí cuando el sistema empiece a capturar eventos.
-                  </td>
-                </tr>
+                {(!auditLog || auditLog.length === 0) && (
+                  <tr>
+                    <td colSpan={5} className={styles.auditEmpty}>
+                      Sin registros de auditoría disponibles.
+                    </td>
+                  </tr>
+                )}
+                {(auditLog ?? []).map((e: AuditEntry) => (
+                  <tr key={e.id}>
+                    <td style={{ whiteSpace: 'nowrap' }}>{new Date(e.created_at).toLocaleString('es-CO')}</td>
+                    <td>{e.actor_name ?? e.actor_email ?? '—'}</td>
+                    <td><code style={{ fontSize: 11 }}>{e.action}</code></td>
+                    <td style={{ fontSize: 11, color: '#64748b' }}>{e.entity_type}{e.entity_id ? ` · ${e.entity_id.slice(0, 8)}…` : ''}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{e.ip_address ?? '—'}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

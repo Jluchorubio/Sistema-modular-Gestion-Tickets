@@ -164,6 +164,15 @@ export class SystemConfigController {
     return this.svc.deleteHoliday(id);
   }
 
+  @Post('holidays/sync-colombia')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Sincroniza feriados de Colombia desde Nager.Date API. ?year=2026' })
+  syncColombiaHolidays(@Query('year') year?: string) {
+    const y = year ? parseInt(year, 10) : new Date().getFullYear();
+    return this.svc.syncColombiaHolidays(y);
+  }
+
   @Patch('request-types/:id')
   @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:request_types')

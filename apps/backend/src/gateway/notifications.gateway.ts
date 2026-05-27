@@ -5,6 +5,7 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import type { Server, Socket } from 'socket.io';
@@ -56,7 +57,16 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     this.server?.to(`user:${userId}`).emit(event, data);
   }
 
+  broadcastAll(event: string, data: unknown): void {
+    this.server?.emit(event, data);
+  }
+
   isConnected(userId: string): boolean {
     return this.connectedUsers.has(userId);
+  }
+
+  @OnEvent('config.company.updated')
+  handleCompanyUpdated(payload: Record<string, unknown>): void {
+    this.broadcastAll('config:branding:updated', payload);
   }
 }
