@@ -4,8 +4,6 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* cancel .main's 32px padding — card fills edge-to-edge */
-  margin: -32px;
 }
 
 /* ── Info section ─────────────────────────────────────────────── */
@@ -135,8 +133,7 @@
 
 /* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 720px) {
-  /* match layout.module.css .main mobile padding of 22px */
-  .card { margin: -22px; }
+  .info { padding: 16px 18px; }
 }
 
 @media (max-width: 640px) {

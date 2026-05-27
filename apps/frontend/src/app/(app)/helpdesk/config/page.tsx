@@ -58,7 +58,7 @@ export default function HelpdeskConfigPage() {
   ) ?? false;
 
   return (
-    <div style={{ padding: '20px 0' }}>
+    <div style={{ padding: '20px 28px' }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: '#0e2235', marginBottom: 4 }}>
         Configuración — Helpdesk
       </div>
