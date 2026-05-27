@@ -17,7 +17,7 @@
   width: 45%;
   min-height: 100vh;
   flex-shrink: 0;
-  padding: 48px;
+  padding: 0;
   color: #ffffff;
   background: linear-gradient(180deg, var(--brand-dark) 0%, var(--brand-darker) 100%);
   clip-path: polygon(0 0, 100% 0, 92% 100%, 0% 100%);
@@ -40,18 +40,22 @@
 }
 
 .visualCarousel {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 1;
-  width: min(100%, 420px);
+  width: 100%;
+  height: 100%;
 }
 
 .visualStage {
   position: relative;
-  min-height: 520px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  border: 0;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 42%),
-    radial-gradient(circle at 50% 34%, rgba(255, 94, 58, 0.11), transparent 42%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), transparent 38%),
+    radial-gradient(circle at 50% 35%, rgba(255, 94, 58, 0.12), transparent 46%),
     rgba(255, 255, 255, 0.018);
   overflow: hidden;
 }
@@ -70,10 +74,8 @@
 .visualSlide {
   position: absolute;
   inset: 0;
-  padding: 42px 38px 36px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  padding: 0;
+  display: block;
   opacity: 0;
   transform: translateX(18px);
   transition: opacity 0.55s ease, transform 0.55s ease;
@@ -87,27 +89,30 @@
 }
 
 .visualMockup {
-  position: relative;
-  height: 285px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(6, 19, 32, 0.54);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: absolute;
+  inset: 0;
+  height: auto;
+  border: 0;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(255, 94, 58, 0.08), transparent 38%),
+    rgba(6, 19, 32, 0.24);
+  box-shadow: none;
   overflow: hidden;
 }
 
 .visualMockup::before {
   content: '';
   position: absolute;
-  inset: 18px;
-  border: 1px solid rgba(143, 160, 175, 0.13);
+  inset: 48px 70px 164px 48px;
+  border: 1px solid rgba(143, 160, 175, 0.12);
 }
 
 .mockTopbar {
   position: absolute;
-  left: 18px;
-  right: 18px;
-  top: 18px;
-  height: 26px;
+  left: 78px;
+  right: 110px;
+  top: 82px;
+  height: 34px;
   border-bottom: 1px solid rgba(143, 160, 175, 0.15);
 }
 
@@ -123,26 +128,26 @@
 
 .mockTopbar::before {
   left: 0;
-  width: 74px;
+  width: 96px;
 }
 
 .mockTopbar::after {
   right: 0;
-  width: 48px;
+  width: 64px;
   background: rgba(255, 94, 58, 0.58);
 }
 
 .ticketStack {
   position: absolute;
-  left: 34px;
-  right: 34px;
-  top: 72px;
+  left: 78px;
+  right: 124px;
+  top: 150px;
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .ticketStack span {
-  height: 46px;
+  height: 58px;
   border-left: 3px solid var(--brand-coral);
   background: rgba(255, 255, 255, 0.055);
 }
@@ -159,7 +164,7 @@
 
 .ticketStack span::before {
   width: 46%;
-  margin-top: 12px;
+  margin-top: 15px;
 }
 
 .ticketStack span::after {
@@ -172,27 +177,27 @@
 
 .slaRing {
   position: absolute;
-  right: 28px;
-  bottom: 24px;
-  width: 62px;
-  height: 62px;
+  right: 82px;
+  top: 318px;
+  width: 78px;
+  height: 78px;
   border-radius: 999px;
   border: 2px solid var(--brand-coral);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 21px;
   font-weight: 900;
   box-shadow: 0 0 24px rgba(255, 94, 58, 0.18);
 }
 
 .moduleGrid {
   position: absolute;
-  inset: 48px 38px 62px;
+  inset: 92px 92px 210px 72px;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 22px;
 }
 
 .moduleGrid span {
@@ -210,7 +215,7 @@
   display: block;
   width: 34px;
   height: 6px;
-  margin: 18px;
+  margin: 22px;
   border-radius: 99px;
   background: rgba(203, 213, 225, 0.22);
 }
@@ -218,8 +223,8 @@
 .modulePath {
   position: absolute;
   left: 50%;
-  top: 36px;
-  bottom: 42px;
+  top: 72px;
+  bottom: 178px;
   width: 1px;
   background: linear-gradient(to bottom, transparent, rgba(255, 94, 58, 0.78), transparent);
 }
@@ -227,9 +232,9 @@
 .securityShield {
   position: absolute;
   left: 50%;
-  top: 44px;
-  width: 116px;
-  height: 136px;
+  top: 104px;
+  width: 168px;
+  height: 196px;
   transform: translateX(-50%);
   background:
     radial-gradient(circle at center, rgba(32, 201, 51, 0.18), transparent 46%),
@@ -241,7 +246,7 @@
 .securityShield::after {
   content: '';
   position: absolute;
-  inset: 44px 36px;
+  inset: 64px 52px;
   border: 2px solid var(--brand-green);
   border-top-color: transparent;
   border-left-color: transparent;
@@ -250,11 +255,12 @@
 
 .securityRows {
   position: absolute;
-  left: 44px;
-  right: 44px;
-  bottom: 42px;
+  left: 96px;
+  right: 116px;
+  top: 348px;
+  bottom: auto;
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .securityRows span {
@@ -267,7 +273,12 @@
 .securityRows span:nth-child(3) { width: 52%; }
 
 .visualCopy {
-  padding-top: 28px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 128px 92px 86px 54px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(6, 19, 32, 0.74) 54%, rgba(6, 19, 32, 0.94) 100%);
 }
 
 .visualCopy span {
@@ -289,6 +300,7 @@
 }
 
 .visualCopy p {
+  max-width: 360px;
   margin: 0;
   color: #cbd5e1;
   font-size: 13px;
@@ -310,10 +322,14 @@
 }
 
 .carouselDots {
+  position: absolute;
+  left: 54px;
+  bottom: 42px;
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 18px;
+  margin-top: 0;
 }
 
 .carouselDots button {
@@ -794,6 +810,79 @@
     clip-path: none;
   }
 
+  .visualStage {
+    min-height: 320px;
+  }
+
+  .visualMockup::before {
+    inset: 28px 38px 112px;
+  }
+
+  .mockTopbar {
+    left: 46px;
+    right: 46px;
+    top: 46px;
+  }
+
+  .ticketStack {
+    left: 46px;
+    right: 72px;
+    top: 112px;
+    gap: 10px;
+  }
+
+  .ticketStack span {
+    height: 38px;
+  }
+
+  .slaRing {
+    right: 46px;
+    top: 184px;
+    width: 58px;
+    height: 58px;
+    font-size: 16px;
+  }
+
+  .moduleGrid {
+    inset: 54px 54px 130px;
+    gap: 12px;
+  }
+
+  .modulePath {
+    top: 46px;
+    bottom: 108px;
+  }
+
+  .securityShield {
+    top: 60px;
+    width: 108px;
+    height: 126px;
+  }
+
+  .securityShield::after {
+    inset: 40px 34px;
+  }
+
+  .securityRows {
+    left: 56px;
+    right: 56px;
+    top: 214px;
+    gap: 8px;
+  }
+
+  .visualCopy {
+    padding: 90px 38px 54px;
+  }
+
+  .visualCopy h2 {
+    font-size: 25px;
+  }
+
+  .carouselDots {
+    left: 38px;
+    bottom: 26px;
+  }
+
   .formCol {
     min-height: 520px;
     padding: 32px;
@@ -814,19 +903,19 @@
   }
 
   .visualStage {
-    min-height: 440px;
+    min-height: 360px;
   }
 
   .visualSlide {
-    padding: 28px 22px 24px;
+    padding: 0;
   }
 
   .visualMockup {
-    height: 220px;
+    height: auto;
   }
 
   .visualCopy h2 {
-    font-size: 25px;
+    font-size: 23px;
   }
 
   .formWrap {
