@@ -79,6 +79,13 @@
         .sharp-btn {
             border-radius: 2px;
         }
+
+        /* Cuadrícula de ingeniería interactiva estilo Miro / Whimsical */
+        .grid-canvas {
+            background-color: #ffffff;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
     </style>
 </head>
 
@@ -224,7 +231,7 @@
                                     asignar permisos</p>
                             </div>
                         </div>
-                        <i class="fa-solid fa-arrow-up-right-from-square text-slate-400 text-xs"></i>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-slate-400 text-xs cursor-pointer"></i>
                     </div>
 
                     <div
@@ -240,7 +247,7 @@
                                 <p class="text-[10px] text-brand-textMuted">Importación masiva de usuarios desde CSV</p>
                             </div>
                         </div>
-                        <i class="fa-solid fa-arrow-up-right-from-square text-slate-400 text-xs"></i>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-slate-400 text-xs cursor-pointer"></i>
                     </div>
                 </div>
 
@@ -368,7 +375,7 @@
                     </div>
                 </section>
 
-                <!-- ================= TAB: NODOS ORGANIZACIONALES (image_f9f362.png) ================= -->
+                <!-- ================= TAB: NODOS ORGANIZACIONALES (ORGANIGRAMA INTERACTIVO PROFESIONAL) ================= -->
                 <section id="tab-estructura" class="tab-pane hidden space-y-6">
                     <div class="border-b border-brand-border pb-4 flex justify-between items-end">
                         <div>
@@ -376,8 +383,8 @@
                                 <i class="fa-solid fa-sitemap text-brand-coral"></i>
                                 Estructura de la Organización
                             </h2>
-                            <p class="text-xs text-brand-textMuted mt-1">Nodos jerárquicos de la empresa representados
-                                visualmente en un diagrama de flujo interactivo.</p>
+                            <p class="text-xs text-brand-textMuted mt-1">Diseña la arquitectura viva de la empresa.
+                                Crea, edita y conecta nodos directamente en el canvas jerárquico.</p>
                         </div>
                         <button
                             onclick="gatillarGuardadoCritico('ORGANIZATIONAL_STRUCTURE', 'Modificación de niveles y estructura de nodos organizativos')"
@@ -388,176 +395,120 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                        <!-- VISOR DE DIAGRAMA / FLOWCHART (Lado Izquierdo del Diagrama - Estilo Miro) -->
+                        <!-- VISOR DE DIAGRAMA / FLOWCHART INTERACTIVO REAL (Miro / Whimsical Style) -->
                         <div
-                            class="lg:col-span-7 bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-4">
+                            class="lg:col-span-8 bg-white border border-brand-border rounded-sm p-4 shadow-xs space-y-4">
                             <div class="flex items-center justify-between border-b border-brand-border pb-2.5">
                                 <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-brand-coral animate-ping"></span>
-                                    <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">
-                                        Visualización del Organigrama</h3>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-brand-coral"></span>
+                                    <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Editor
+                                        Jerárquico Interactivo</h3>
                                 </div>
-                                <span
-                                    class="text-[9px] bg-slate-100 text-brand-textMuted font-mono px-2 py-0.5 border rounded-sm font-bold">ORGANIZATION
-                                    TREE</span>
+                                <div class="flex items-center space-x-2">
+                                    <!-- Controles de Navegación del Canvas (Zoom) -->
+                                    <button onclick="zoomCanvas(0.1)"
+                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark"
+                                        title="Acercar">
+                                        <i class="fa-solid fa-magnifying-glass-plus"></i>
+                                    </button>
+                                    <button onclick="zoomCanvas(-0.1)"
+                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark"
+                                        title="Alejar">
+                                        <i class="fa-solid fa-magnifying-glass-minus"></i>
+                                    </button>
+                                    <button onclick="resetZoom()"
+                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark"
+                                        title="Restablecer Zoom">
+                                        <i class="fa-solid fa-expand"></i>
+                                    </button>
+                                </div>
                             </div>
 
-                            <!-- Flowchart interactivo emulado con diagramación técnica limpia de tu empresa -->
-                            <div
-                                class="bg-brand-bg border border-brand-border rounded-sm p-4 relative overflow-hidden flex flex-col items-center justify-center min-h-[380px] font-mono text-[10px]">
+                            <!-- CONTENEDOR DEL CANVAS DE DIAGRAMACIÓN -->
+                            <div class="relative bg-slate-50 border border-brand-border rounded-sm h-[480px] overflow-auto grid-canvas"
+                                id="canvas-workspace">
 
-                                <!-- Canvas de Líneas Conectoras Estilo Miro -->
-                                <div class="absolute inset-0 pointer-events-none opacity-40">
-                                    <svg class="w-full h-full">
-                                        <!-- Líneas conectoras -->
-                                        <line x1="50%" y1="60px" x2="50%" y2="100px" stroke="#ff5e3a" stroke-width="1.5"
-                                            stroke-dasharray="2 2" />
-                                        <line x1="50%" y1="130px" x2="50%" y2="170px" stroke="#0e2235"
-                                            stroke-width="1.5" />
+                                <!-- Canvas de Líneas Conectoras Dinámicas SVG -->
+                                <svg id="svg-connections"
+                                    class="absolute top-0 left-0 w-[1200px] h-[800px] pointer-events-none z-0"></svg>
 
-                                        <!-- Derivación Izquierda -->
-                                        <path d="M 50% 170 L 25% 170 L 25% 210" fill="none" stroke="#0e2235"
-                                            stroke-width="1.5" />
-                                        <!-- Derivación Derecha -->
-                                        <path d="M 50% 170 L 75% 170 L 75% 210" fill="none" stroke="#0e2235"
-                                            stroke-width="1.5" />
-                                    </svg>
+                                <!-- Espacio de renderizado de nodos organizacionales en árbol -->
+                                <div id="canvas-nodes-container"
+                                    class="absolute top-0 left-0 w-[1200px] h-[800px] z-10 transition-transform origin-top-left"
+                                    style="transform: scale(1);">
+                                    <!-- Los nodos se inyectan y calculan dinámicamente con JS de acuerdo a la relación Padre-Hijo -->
                                 </div>
 
-                                <!-- Nodo 1: Raíz de Sede Central -->
+                                <!-- MINIMAP EN ESQUINA INFERIOR DERECHA (Miro Style) -->
                                 <div
-                                    class="relative z-10 bg-white border-2 border-brand-coral p-3 rounded-sm shadow-sm text-center w-52 mb-8">
+                                    class="absolute bottom-4 right-4 w-28 h-20 bg-white border border-brand-border rounded-sm shadow-md p-1 pointer-events-none z-20 flex flex-col justify-between">
                                     <span
-                                        class="text-[8px] uppercase tracking-wider font-extrabold text-brand-coral block mb-0.5">Sede
-                                        Única</span>
-                                    <span class="font-extrabold text-brand-dark text-xs block">SENA Bogotá
-                                        Central</span>
-                                    <div class="mt-1 flex items-center justify-center gap-1">
-                                        <span
-                                            class="text-[9px] bg-slate-100 px-1.5 py-0.2 rounded-sm border font-bold">Peso:
-                                            10</span>
-                                    </div>
-                                </div>
-
-                                <!-- Nodo 2: Departamento TI (Hijo) -->
-                                <div
-                                    class="relative z-10 bg-white border border-brand-dark p-3 rounded-sm shadow-sm text-center w-48 mb-8">
-                                    <span
-                                        class="text-[8px] uppercase tracking-wider font-extrabold text-brand-textMuted block mb-0.5">Departamento</span>
-                                    <span class="font-extrabold text-brand-dark text-[11px] block">Área de Tecnología
-                                        (TI)</span>
-                                    <div class="mt-1 flex items-center justify-center gap-1">
-                                        <span
-                                            class="text-[9px] bg-slate-100 px-1.5 py-0.2 rounded-sm border font-bold">Peso:
-                                            8</span>
-                                    </div>
-                                </div>
-
-                                <!-- Dos Nodos Hijos de Área/Sección -->
-                                <div class="flex gap-4 w-full justify-around relative z-10">
-                                    <div
-                                        class="bg-white border border-brand-border p-2.5 rounded-sm shadow-xs text-center w-36">
-                                        <span
-                                            class="text-[8px] uppercase tracking-wider font-extrabold text-slate-400 block mb-0.5">Área
-                                            / Sección</span>
-                                        <span class="font-bold text-slate-700 text-[10px] block">Soporte Técnico</span>
-                                        <span
-                                            class="text-[8px] bg-slate-50 text-brand-textMuted border px-1 mt-1 inline-block rounded-sm">Peso:
-                                            6</span>
-                                    </div>
-                                    <div
-                                        class="bg-white border border-brand-border p-2.5 rounded-sm shadow-xs text-center w-36">
-                                        <span
-                                            class="text-[8px] uppercase tracking-wider font-extrabold text-slate-400 block mb-0.5">Área
-                                            / Sección</span>
-                                        <span class="font-bold text-slate-700 text-[10px] block">Infraestructura
-                                            Core</span>
-                                        <span
-                                            class="text-[8px] bg-slate-50 text-brand-textMuted border px-1 mt-1 inline-block rounded-sm">Peso:
-                                            6</span>
+                                        class="text-[8px] font-black uppercase text-brand-textMuted tracking-wider">Minimap</span>
+                                    <div class="flex-1 bg-slate-50 border border-slate-200 relative overflow-hidden">
+                                        <!-- Miniaturas de nodos simuladas -->
+                                        <div
+                                            class="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-2 bg-brand-coral opacity-50">
+                                        </div>
+                                        <div
+                                            class="absolute top-5 left-1/2 -translate-x-1/2 w-6 h-2 bg-brand-dark opacity-50">
+                                        </div>
+                                        <div class="absolute top-9 left-2 w-5 h-2 bg-slate-400 opacity-50"></div>
+                                        <div class="absolute top-9 right-2 w-5 h-2 bg-slate-400 opacity-50"></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- PANEL DERECHO: TIPOS DE ESTRUCTURA ORG (image_f9f362.png) -->
+                        <!-- PANEL DERECHO: CONTEXTUAL DE CREACIÓN Y EDICIÓN DE NODOS -->
                         <div
-                            class="lg:col-span-5 bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-5">
+                            class="lg:col-span-4 bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-5">
                             <div>
                                 <h3
                                     class="text-xs font-black uppercase tracking-wider text-brand-dark border-b border-brand-border pb-2">
-                                    Tipos de Estructura Org</h3>
-                                <p class="text-[10px] text-brand-textMuted mt-1 leading-normal">El peso (1–10) de cada
-                                    tipo se usa en el cálculo de prioridad automática.</p>
+                                    Creación y Edición de Nodos</h3>
+                                <p class="text-[10px] text-brand-textMuted mt-1 leading-normal">Agrega nodos de forma
+                                    interactiva en la estructura de tu organización asignando pesos y relaciones
+                                    directas.</p>
                             </div>
 
-                            <div class="space-y-4">
-                                <!-- Elemento: Sede (Single Tenant) -->
-                                <div class="bg-brand-bg p-3 border border-brand-border rounded-sm shadow-xs space-y-1">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-slate-900"></span> Sede <span
-                                                class="text-[10px] text-brand-textMuted font-mono">sede</span>
-                                        </span>
-                                        <span id="peso-lbl-sede"
-                                            class="text-xs font-black text-brand-coral font-mono">10</span>
-                                    </div>
-                                    <p class="text-[10px] text-brand-textMuted mb-2">Sede única de operación corporativa
-                                        asignada por defecto.</p>
-                                    <input type="range" id="peso-slider-sede" min="1" max="10" value="10"
-                                        oninput="document.getElementById('peso-lbl-sede').innerText = this.value; actualizarPesosEstructura()"
-                                        class="w-full accent-brand-coral cursor-pointer h-1 bg-slate-200 rounded-sm">
+                            <div class="space-y-3 text-xs">
+                                <div>
+                                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Nombre del Nodo
+                                        *</label>
+                                    <input type="text" id="input-node-name"
+                                        placeholder="E.g., Mesa de Ayuda, Soporte L2"
+                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark font-sans focus:outline-none focus:border-brand-coral sharp-input">
+                                </div>
+                                <div>
+                                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Tipo de
+                                        Estructura *</label>
+                                    <select id="select-node-type"
+                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark focus:outline-none focus:border-brand-coral sharp-input cursor-pointer font-semibold">
+                                        <option value="departamento">Departamento / Área</option>
+                                        <option value="area">Área / Sección</option>
+                                        <option value="cargo">Cargo Específico</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Asociar Nodo
+                                        Padre *</label>
+                                    <select id="select-node-parent"
+                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark focus:outline-none focus:border-brand-coral sharp-input cursor-pointer font-semibold">
+                                        <!-- Se llena dinámicamente con los nodos creados -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Peso Operativo (1
+                                        - 10)</label>
+                                    <input type="number" id="input-node-weight" min="1" max="10" value="5"
+                                        class="w-full bg-slate-50 border border-brand-border p-2 text-xs text-brand-dark font-bold font-mono focus:outline-none focus:border-brand-coral sharp-input">
                                 </div>
 
-                                <!-- Elemento: Departamento -->
-                                <div class="bg-brand-bg p-3 border border-brand-border rounded-sm shadow-xs space-y-1">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-[#1e293b]"></span> Departamento
-                                            <span class="text-[10px] text-brand-textMuted font-mono">departamento</span>
-                                        </span>
-                                        <span id="peso-lbl-dep"
-                                            class="text-xs font-black text-brand-coral font-mono">8</span>
-                                    </div>
-                                    <p class="text-[10px] text-brand-textMuted mb-2">Ubicación jerárquica del
-                                        departamento o área de negocio.</p>
-                                    <input type="range" id="peso-slider-dep" min="1" max="10" value="8"
-                                        oninput="document.getElementById('peso-lbl-dep').innerText = this.value; actualizarPesosEstructura()"
-                                        class="w-full accent-brand-coral cursor-pointer h-1 bg-slate-200 rounded-sm">
-                                </div>
-
-                                <!-- Elemento: Área -->
-                                <div class="bg-brand-bg p-3 border border-brand-border rounded-sm shadow-xs space-y-1">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-brand-coral"></span> Área <span
-                                                class="text-[10px] text-brand-textMuted font-mono">area</span>
-                                        </span>
-                                        <span id="peso-lbl-area"
-                                            class="text-xs font-black text-brand-coral font-mono">6</span>
-                                    </div>
-                                    <p class="text-[10px] text-brand-textMuted mb-2">Micro-área o sección específica
-                                        dentro del organigrama.</p>
-                                    <input type="range" id="peso-slider-area" min="1" max="10" value="6"
-                                        oninput="document.getElementById('peso-lbl-area').innerText = this.value; actualizarPesosEstructura()"
-                                        class="w-full accent-brand-coral cursor-pointer h-1 bg-slate-200 rounded-sm">
-                                </div>
-
-                                <!-- Elemento: Cargo -->
-                                <div class="bg-brand-bg p-3 border border-brand-border rounded-sm shadow-xs space-y-1">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Cargo <span
-                                                class="text-[10px] text-brand-textMuted font-mono">cargo</span>
-                                        </span>
-                                        <span id="peso-lbl-cargo"
-                                            class="text-xs font-black text-brand-coral font-mono">5</span>
-                                    </div>
-                                    <p class="text-[10px] text-brand-textMuted mb-2">Puesto o responsabilidad directa de
-                                        la persona.</p>
-                                    <input type="range" id="peso-slider-cargo" min="1" max="10" value="5"
-                                        oninput="document.getElementById('peso-lbl-cargo').innerText = this.value; actualizarPesosEstructura()"
-                                        class="w-full accent-brand-coral cursor-pointer h-1 bg-slate-200 rounded-sm">
+                                <div class="pt-2">
+                                    <button onclick="crearNuevoNodoDesdePanel()"
+                                        class="w-full bg-brand-coral hover:bg-brand-coral/95 text-white text-xs font-black py-2.5 rounded-sm transition-colors uppercase tracking-wider sharp-btn flex items-center justify-center gap-1.5 shadow-sm">
+                                        <i class="fa-solid fa-plus"></i> Añadir Nodo al Organigrama
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -977,53 +928,6 @@
         </main>
     </div>
 
-    <!-- ================= MODAL DE INYECCIÓN DE NUEVO NODO ORGANIZACIONAL (Tema Claro sharp) ================= -->
-    <div id="modal-nuevo-nodo"
-        class="fixed inset-0 bg-brand-darker/60 backdrop-blur-xs flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 z-50 px-4">
-        <div
-            class="bg-white border border-brand-border p-6 rounded-sm w-full max-w-md space-y-4 transform scale-95 transition-transform shadow-2xl sharp-card">
-            <h3
-                class="text-sm font-black uppercase text-brand-dark tracking-wider border-b border-brand-border pb-2 flex items-center gap-2">
-                <i class="fa-solid fa-sitemap text-brand-coral"></i> Inyectar Nodo Estructural
-            </h3>
-
-            <div class="space-y-3 text-xs">
-                <div>
-                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Nombre del Nodo</label>
-                    <input type="text" id="nodo-nuevo-nombre"
-                        placeholder="E.g., Dirección General, Área Desarrollo, Soporte L2"
-                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-brand-dark focus:outline-none focus:border-brand-coral sharp-input">
-                </div>
-                <div>
-                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Tipo de Estructura</label>
-                    <select id="nodo-nuevo-tipo"
-                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-brand-dark focus:outline-none focus:border-brand-coral sharp-input cursor-pointer">
-                        <option>Departamento / Área</option>
-                        <option>Ambiente / Sala Operativa</option>
-                        <option>Rack de Datacenter</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Peso Operativo (Criticidad
-                        1-10)</label>
-                    <input type="number" id="nodo-nuevo-peso" value="5" min="1" max="10"
-                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-brand-dark text-center focus:outline-none focus:border-brand-coral font-bold sharp-input">
-                </div>
-            </div>
-
-            <div class="flex gap-2 justify-end pt-2 border-t border-brand-border">
-                <button onclick="cerrarModalNuevoNodo()"
-                    class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold px-4 py-2 rounded-sm transition-colors border border-brand-border sharp-btn">
-                    Cancelar
-                </button>
-                <button onclick="guardarNodoSimulado()"
-                    class="bg-brand-coral hover:bg-brand-coral/95 text-white text-xs font-bold px-4 py-2 rounded-sm transition-colors sharp-btn shadow-sm uppercase tracking-wider">
-                    Crear Nodo
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- ================= MODAL CRÍTICO DE DOBLE FACTOR (2FA) Y CONFIRMACIÓN ================= -->
     <div id="modal-confirmacion-critica"
         class="fixed inset-0 bg-brand-darker/60 backdrop-blur-xs flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 z-50 px-4">
@@ -1121,6 +1025,16 @@
         let entidadCriticaActual = '';
         let descripcionCriticaActual = '';
         let sidebarExpanded = true;
+        let scaleFactor = 1.0;
+
+        // Estructura de Datos Base en Memoria para Nodos Organizacionales
+        let nodesDatabase = [
+            { id: "root-1", name: "SENA Bogotá Central", type: "root", weight: 10, parentId: null, x: 500, y: 40 },
+            { id: "node-2", name: "Área de Tecnología (TI)", type: "departamento", weight: 8, parentId: "root-1", x: 500, y: 140 },
+            { id: "node-3", name: "Soporte Técnico L1", type: "area", weight: 6, parentId: "node-2", x: 280, y: 240 },
+            { id: "node-4", name: "Infraestructura Core", type: "area", weight: 6, parentId: "node-2", x: 720, y: 240 },
+            { id: "node-5", name: "Ingeniero de Sistemas", type: "cargo", weight: 5, parentId: "node-4", x: 720, y: 340 }
+        ];
 
         // Función para cambiar de Tabs
         function activeTab(tabId, el) {
@@ -1133,81 +1047,220 @@
 
             document.getElementById(tabId).classList.remove('hidden');
             el.className = "sidebar-tab w-full flex items-center justify-between px-3 py-2.5 rounded-sm text-xs font-bold transition bg-slate-50 border border-brand-border text-brand-dark border-l-2 border-l-brand-coral shadow-sm";
+
+            // Si se activa la pestaña de estructura, forzar el renderizado del organigrama
+            if (tabId === 'tab-estructura') {
+                setTimeout(renderOrganigrama, 50);
+            }
         }
 
-        // ================= SISTEMA DE NODOS SIMULADOS =================
-        function abrirModalNuevoNodo() {
-            const modal = document.getElementById('modal-nuevo-nodo');
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            modal.firstElementChild.classList.remove('scale-95');
-            modal.firstElementChild.classList.add('scale-100');
+        // ================= SISTEMA DEL ORGANIGRAMA INTERACTIVO (Miro / Whimsical Style) =================
+
+        function zoomCanvas(amount) {
+            scaleFactor = Math.max(0.5, Math.min(1.5, scaleFactor + amount));
+            const container = document.getElementById('canvas-nodes-container');
+            container.style.transform = `scale(${scaleFactor})`;
+            lanzarToast('Zoom Ajustado', `Nivel de zoom actual: ${(scaleFactor * 100).toFixed(0)}%`);
         }
 
-        function cerrarModalNuevoNodo() {
-            const modal = document.getElementById('modal-nuevo-nodo');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            modal.firstElementChild.classList.remove('scale-100');
-            modal.firstElementChild.classList.add('scale-95');
+        function resetZoom() {
+            scaleFactor = 1.0;
+            const container = document.getElementById('canvas-nodes-container');
+            container.style.transform = `scale(1)`;
+            lanzarToast('Zoom Restablecido', 'Zoom del canvas ajustado al 100%');
         }
 
-        function guardarNodoSimulado() {
-            const nombre = document.getElementById('nodo-nuevo-nombre').value.trim();
-            const tipo = document.getElementById('nodo-nuevo-tipo').value;
-            const peso = document.getElementById('nodo-nuevo-peso').value;
+        // Renderizado del árbol de dependencias y conexiones vectoriales
+        function renderOrganigrama() {
+            const container = document.getElementById('canvas-nodes-container');
+            const svg = document.getElementById('svg-connections');
+            if (!container || !svg) return;
+
+            // Limpiar canvas
+            container.innerHTML = '';
+            svg.innerHTML = '';
+
+            // 1. Recalcular las posiciones de los nodos dinámicamente en base a su jerarquía (Auto-Layout)
+            recalcularCoordenadasJerarquia();
+
+            // 2. Renderizar las líneas conectoras SVG en background
+            nodesDatabase.forEach(node => {
+                if (node.parentId) {
+                    const parent = nodesDatabase.find(n => n.id === node.parentId);
+                    if (parent) {
+                        renderLineSVG(parent.x + 100, parent.y + 50, node.x + 100, node.y);
+                    }
+                }
+            });
+
+            // 3. Renderizar los nodos HTML interactivos
+            nodesDatabase.forEach(node => {
+                const card = document.createElement('div');
+                card.className = `absolute bg-white border-2 p-3 rounded-sm shadow-sm w-[200px] z-10 hover:shadow-md transition-all font-mono text-[10px] select-none`;
+                card.style.left = `${node.x}px`;
+                card.style.top = `${node.y}px`;
+
+                // Aplicar estilo de borde según el tipo de nodo
+                if (node.type === 'root') {
+                    card.classList.add('border-brand-coral');
+                } else if (node.type === 'departamento') {
+                    card.classList.add('border-brand-dark');
+                } else {
+                    card.classList.add('border-brand-border');
+                }
+
+                // Generar contenido interno del Nodo con menú contextual
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1.5">
+                        <span class="text-[8px] font-black uppercase tracking-wider text-brand-coral">${node.type}</span>
+                        <button onclick="eliminarNodoJerarquico('${node.id}')" class="text-brand-textMuted hover:text-brand-coral transition-colors" title="Eliminar nodo">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
+                    <span class="font-extrabold text-brand-dark text-xs block truncate" title="${node.name}">${node.name}</span>
+                    <div class="mt-2 flex items-center justify-between border-t border-brand-border/40 pt-1.5">
+                        <span class="text-[8px] text-brand-textMuted uppercase font-bold">Peso Operativo</span>
+                        <span class="text-[9px] bg-brand-coral/10 text-brand-coral px-1 py-0.2 rounded-sm font-bold">${node.weight}</span>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            // 4. Actualizar el selector de nodos padres para que la base de datos se mantenga coherente
+            refrescarSelectorPadres();
+        }
+
+        // Calcula automáticamente la disposición limpia de los nodos para que no se superpongan
+        function recalcularCoordenadasJerarquia() {
+            const root = nodesDatabase.find(n => n.parentId === null);
+            if (!root) return;
+
+            // Asignar raíz en el centro del canvas de forma absoluta
+            root.x = 500;
+            root.y = 40;
+
+            const niveles = {};
+
+            // Agrupar nodos por nivel de profundidad
+            function agruparNivel(nodeId, depth) {
+                if (!niveles[depth]) niveles[depth] = [];
+                const node = nodesDatabase.find(n => n.id === nodeId);
+                if (node && !niveles[depth].includes(node)) {
+                    niveles[depth].push(node);
+                }
+                const hijos = nodesDatabase.filter(n => n.parentId === nodeId);
+                hijos.forEach(h => agruparNivel(h.id, depth + 1));
+            }
+
+            agruparNivel(root.id, 0);
+
+            // Calcular X de forma equidistante en cada nivel para evitar superposición
+            Object.keys(niveles).forEach(depth => {
+                const depthInt = parseInt(depth);
+                if (depthInt === 0) return; // Omitir raíz
+
+                const nodosNivel = niveles[depthInt];
+                const totalNodos = nodosNivel.length;
+                const widthCanvas = 1100;
+                const gap = widthCanvas / (totalNodos + 1);
+
+                nodosNivel.forEach((node, index) => {
+                    node.x = gap * (index + 1) - 100;
+                    node.y = 40 + (depthInt * 100);
+                });
+            });
+        }
+
+        // Renderiza conexiones vectoriales estilizadas con marcadores direccionales
+        function renderLineSVG(x1, y1, x2, y2) {
+            const svg = document.getElementById('svg-connections');
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+            // Generar ruta de curva suavizada Whimsical-style
+            const midY = (y1 + y2) / 2;
+            const d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+
+            path.setAttribute('d', d);
+            path.setAttribute('stroke', '#ff5e3a');
+            path.setAttribute('stroke-width', '1.5');
+            path.setAttribute('fill', 'none');
+            svg.appendChild(path);
+        }
+
+        // Lógica de inyección dinámica de nuevos nodos desde el formulario
+        function crearNuevoNodoDesdePanel() {
+            const nombre = document.getElementById('input-node-name').value.trim();
+            const tipo = document.getElementById('select-node-type').value;
+            const parentId = document.getElementById('select-node-parent').value;
+            const weight = parseInt(document.getElementById('input-node-weight').value) || 5;
 
             if (!nombre) {
-                lanzarToast('Campos Incompletos', 'Por favor ingresa un nombre para el nodo', true);
+                lanzarToast('Campos Incompletos', 'Por favor ingresa un nombre para el nodo organizacional.', true);
                 return;
             }
 
-            const contenedor = document.getElementById('nodos-dinamicos-contenedor');
+            const nuevoId = 'node-' + (nodesDatabase.length + 1);
 
-            const div = document.createElement('div');
-            div.className = "p-3 bg-brand-bg rounded-sm border border-brand-border flex items-center justify-between font-mono text-xs shadow-xs";
-            div.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-turn-up rotate-90 text-brand-textMuted mr-1"></i>
-                    <i class="fa-solid fa-folder-tree text-brand-coral"></i>
-                    <span class="font-bold text-brand-dark">${nombre} (${tipo})</span>
-                    <span class="text-[9px] bg-brand-coral/10 text-brand-coral px-1.5 py-0.5 rounded-sm font-bold">Peso: ${peso}</span>
-                </div>
-                <button onclick="eliminarNodoSimulado(this)" class="text-brand-textMuted hover:text-brand-coral transition-colors"><i class="fa-regular fa-trash-can"></i></button>
-            `;
+            // Añadir al árbol en memoria
+            nodesDatabase.push({
+                id: nuevoId,
+                name: nombre,
+                type: tipo,
+                weight: weight,
+                parentId: parentId,
+                x: 500, // Se recalculará en el render
+                y: 200
+            });
 
-            contenedor.appendChild(div);
-            cerrarModalNuevoNodo();
-            lanzarToast('Nodo Creado', `Nodo "${nombre}" agregado al árbol local`);
+            // Actualizar interfaz del canvas y lanzar confirmación
+            renderOrganigrama();
+            lanzarToast('Organigrama Actualizado', `Nodo "${nombre}" inyectado de forma jerárquica.`);
 
-            document.getElementById('nodo-nuevo-nombre').value = '';
+            // Resetear inputs del formulario
+            document.getElementById('input-node-name').value = '';
         }
 
-        function eliminarNodoSimulado(el) {
-            el.parentElement.remove();
-            lanzarToast('Nodo Eliminado', 'Se ha removido el nodo de la estructura organizativa local.');
-        }
+        function eliminarNodoJerarquico(nodeId) {
+            const nodo = nodesDatabase.find(n => n.id === nodeId);
+            if (!nodo) return;
 
-        function agregarTipoEstructura() {
-            const tipoNombre = prompt("Ingresa el nuevo tipo de nivel estructural para organization_structure_types:");
-            if (tipoNombre && tipoNombre.trim() !== "") {
-                const contenedor = document.getElementById('lista-estructura-tipos');
-                const nivel = contenedor.children.length + 1;
+            if (nodo.type === 'root') {
+                lanzarToast('Acción Inadmisible', 'No puedes eliminar el nodo raíz (Sede Central) en arquitectura Single-Tenant.', true);
+                return;
+            }
 
-                const div = document.createElement('div');
-                div.className = "bg-brand-bg p-2.5 rounded-sm border border-brand-border flex items-center justify-between text-xs font-semibold text-brand-dark shadow-xs";
-                div.innerHTML = `
-                    <span>${tipoNombre.trim()}</span>
-                    <span class="text-[9px] font-mono text-brand-coral bg-brand-coral/10 px-1.5 py-0.5 rounded-sm font-bold">Nivel ${nivel}</span>
-                `;
-                contenedor.appendChild(div);
+            if (confirm(`¿Estás seguro de que deseas eliminar el nodo "${nodo.name}"? Los sub-nodos y cargos dependientes se reasociarán de forma jerárquica.`)) {
+                // Reasociar hijos de este nodo al abuelo
+                const hijos = nodesDatabase.filter(n => n.parentId === nodeId);
+                hijos.forEach(h => {
+                    h.parentId = nodo.parentId;
+                });
 
-                const selector = document.getElementById('nodo-nuevo-tipo');
-                const opt = document.createElement('option');
-                opt.innerText = tipoNombre.trim();
-                selector.appendChild(opt);
+                // Remover el nodo de la base de datos
+                nodesDatabase = nodesDatabase.filter(n => n.id !== nodeId);
 
-                lanzarToast('Estructura Añadida', `Nivel "${tipoNombre}" agregado correctamente.`);
+                renderOrganigrama();
+                lanzarToast('Organigrama Sincronizado', `El nodo "${nodo.name}" ha sido removido de la jerarquía.`);
             }
         }
+
+        function refrescarSelectorPadres() {
+            const selector = document.getElementById('select-node-parent');
+            if (!selector) return;
+
+            selector.innerHTML = '';
+            nodesDatabase.forEach(node => {
+                // Solo pueden ser padres los nodos que no sean de tipo 'cargo'
+                if (node.type !== 'cargo') {
+                    const opt = document.createElement('option');
+                    opt.value = node.id;
+                    opt.innerText = `${node.name} (${node.type.toUpperCase()})`;
+                    selector.appendChild(opt);
+                }
+            });
+        }
+
 
         // ================= MOTOR DE PESOS Y SIMULADOR SLA (image_f9f362.png) =================
         function actualizarPesosEstructura() {
