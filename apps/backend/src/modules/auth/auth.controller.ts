@@ -35,6 +35,12 @@ export class AuthController {
     private readonly config: ConfigService,
   ) {}
 
+  @Get('access-contact')
+  @ApiOperation({ summary: 'Correo de contacto para solicitudes de acceso.' })
+  getAccessContact() {
+    return this.authService.getAccessContact();
+  }
+
   // ─── Email/password ──────────────────────────────────────────────────────────
 
   @Post('login')

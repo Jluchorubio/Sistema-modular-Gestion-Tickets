@@ -6,6 +6,7 @@ import { ChevronRight, Globe2, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/tokens';
 import { ROUTES } from '@/constants/routes';
+import { authService } from '@/services/auth.service';
 import type { LoginResponse } from '@/types/auth.types';
 import { LoginForm } from './_components/LoginForm';
 import { OtpForm } from './_components/OtpForm';
@@ -82,6 +83,7 @@ export function LoginClient() {
   const [resetToken, setResetToken] = useState('');
   const [errorData,  setErrorData]  = useState('');
   const [slideIndex, setSlideIndex] = useState(0);
+  const [accessEmail, setAccessEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const rt    = searchParams.get('reset_token');
@@ -109,10 +111,37 @@ export function LoginClient() {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    authService.getAccessContact()
+      .then((data) => setAccessEmail(data.email))
+      .catch(() => setAccessEmail(null));
+  }, []);
+
   const redirect = (data: LoginResponse) =>
     handleAuthRedirect(data, (href) => router.push(href));
 
   const activeSlide = VISUAL_SLIDES[slideIndex];
+
+  function openAccessRequestEmail() {
+    const to = accessEmail ?? '';
+    const subject = 'Solicitud de acceso a plataforma ITSM';
+    const body = [
+      'Hola,',
+      '',
+      'Solicito la activación/creación de acceso a la plataforma ITSM.',
+      '',
+      'Correo a activar:',
+      'Nombre completo:',
+      'Área o dependencia:',
+      'Módulo requerido:',
+      'Justificación:',
+      '',
+      'Gracias.',
+    ].join('\n');
+
+    const href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(href, '_blank', 'noopener,noreferrer');
+  }
 
   return (
     <main className={styles.root}>
@@ -262,15 +291,33 @@ export function LoginClient() {
         <footer className={styles.formFooter}>
           <span>
             ¿No tienes cuenta?{' '}
-            <button type="button" onClick={() => setView('forgot')}>
+            <button type="button" onClick={openAccessRequestEmail}>
               Solicitar acceso
             </button>
           </span>
           <div className={styles.socialLinks} aria-label="Canales corporativos">
-            <button type="button" title="X Corporativo">X</button>
-            <button type="button" title="Canal Discord">D</button>
-            <button type="button" title="Instagram">I</button>
-            <button type="button" title="GitHub">G</button>
+            <button type="button" title="X Corporativo" aria-label="X Corporativo">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.66l-5.21-6.82-5.97 6.82H1.68l7.73-8.84L1.25 2.25h6.83l4.71 6.23 5.45-6.23Zm-1.16 17.52h1.83L7.08 4.13H5.12l11.96 15.64Z" />
+              </svg>
+            </button>
+            <button type="button" title="Canal Discord" aria-label="Canal Discord">
+              <svg viewBox="0 0 127.14 96.36" aria-hidden="true">
+                <path d="M107.7 8.07A105.15 105.15 0 0 0 77.26 0a77.19 77.19 0 0 0-3.3 6.83 96.67 96.67 0 0 0-20.74 0A77.19 77.19 0 0 0 49.88 0 105.15 105.15 0 0 0 19.44 8.07C3.66 31.58-1.86 54.65 1 77.53a105.73 105.73 0 0 0 31 18.83 77.7 77.7 0 0 0 6.63-10.85 68.43 68.43 0 0 1-10.5-5c.9-.65 1.76-1.34 2.58-2a75.58 75.58 0 0 0 73 0c.83.68 1.69 1.37 2.58 2a68.12 68.12 0 0 1-10.5 5 77.11 77.11 0 0 0 6.63 10.85 105.73 105.73 0 0 0 31-18.83c2.86-22.88-2.66-45.95-18.44-69.46ZM42.45 65.69C36.18 65.69 31 60 31 53s5.18-12.64 11.45-12.64S53.83 46 53.83 53s-5.11 12.69-11.38 12.69Zm42.24 0C78.41 65.69 73.24 60 73.24 53s5.17-12.64 11.45-12.64S96.07 46 96.07 53s-5.07 12.69-11.38 12.69Z" />
+              </svg>
+            </button>
+            <button type="button" title="Instagram" aria-label="Instagram">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="2.75" y="2.75" width="18.5" height="18.5" rx="5" />
+                <circle cx="12" cy="12" r="4.1" />
+                <circle cx="17.35" cy="6.65" r="1.05" />
+              </svg>
+            </button>
+            <button type="button" title="GitHub" aria-label="GitHub">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2.14c-3.2.69-3.87-1.36-3.87-1.36-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.75 1.18 1.75 1.18 1.02 1.74 2.67 1.24 3.32.95.1-.74.4-1.24.72-1.53-2.55-.29-5.23-1.28-5.23-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.16 1.17.92-.25 1.9-.38 2.88-.38.98 0 1.96.13 2.88.38 2.2-1.48 3.16-1.17 3.16-1.17.62 1.58.23 2.75.11 3.04.73.8 1.18 1.83 1.18 3.08 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.04.77 2.1v3.18c0 .31.21.67.79.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
+              </svg>
+            </button>
           </div>
         </footer>
       </section>

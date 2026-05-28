@@ -34,6 +34,30 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
+  async getAccessContact(): Promise<{ email: string | null }> {
+    const [superadmin] = await this.db.query<{ email: string }[]>(
+      `SELECT c.email
+       FROM   users.profiles p
+       JOIN   auth.credentials c ON c.user_id = p.id
+       WHERE  p.is_superadmin = TRUE
+         AND  p.is_active = TRUE
+         AND  p.deleted_at IS NULL
+         AND  c.is_active = TRUE
+       ORDER BY c.last_login_at DESC NULLS LAST, p.created_at ASC
+       LIMIT 1`,
+    );
+
+    if (superadmin?.email) return { email: superadmin.email };
+
+    const [org] = await this.db.query<{ contact_email: string | null }[]>(
+      `SELECT contact_email
+       FROM users.organizations
+       WHERE id = '00000000-0000-0000-0000-000000000001'`,
+    );
+
+    return { email: org?.contact_email ?? null };
+  }
+
   // ─── Login email/password ────────────────────────────────────────────────────
 
   async login(email: string, password: string, ip?: string, userAgent?: string) {

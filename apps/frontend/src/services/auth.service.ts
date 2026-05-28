@@ -7,6 +7,11 @@ import type {
 } from '@/types/auth.types';
 
 export const authService = {
+  async getAccessContact(): Promise<{ email: string | null }> {
+    const { data } = await api.get('/auth/access-contact');
+    return data;
+  },
+
   async login(credentials: LoginRequest): Promise<LoginResponse | MfaChallenge> {
     const { data } = await api.post('/auth/login', credentials);
     return data;

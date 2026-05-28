@@ -9,7 +9,7 @@
     <!-- Tailwind CSS para maquetación -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Google Fonts: Inter para tipografía premium -->
+    <!-- Google Fonts: Inter para una tipografía premium -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
@@ -84,14 +84,19 @@
         .grid-canvas {
             background-color: #ffffff;
             background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-            background-size: 16px 16px;
+            background-size: 20px 20px;
+            cursor: grab;
+        }
+
+        .grid-canvas:active {
+            cursor: grabbing;
         }
     </style>
 </head>
 
 <body class="h-screen flex flex-col overflow-hidden select-none">
 
-    <!-- BARRA SUPERIOR (HEADER GLOBAL - IDÉNTICO A TU ESTRUCTURA) -->
+    <!-- BARRA SUPERIOR (HEADER GLOBAL) -->
     <header class="h-16 border-b border-brand-border bg-white flex items-center justify-between px-6 z-10 shrink-0">
         <div class="flex items-center space-x-4">
             <div class="bg-brand-dark/5 border border-brand-border text-brand-dark p-2 rounded-sm">
@@ -118,7 +123,7 @@
     <!-- CUERPO PRINCIPAL (Navegación Claude en Tema Claro Industrial) -->
     <div class="flex flex-1 overflow-hidden">
 
-        <!-- SIDEBAR DE NAVEGACIÓN (Estilo Claude pero Claro y Estructural) -->
+        <!-- SIDEBAR DE NAVEGACIÓN (Estilo Claude Claro y Estructural) -->
         <aside class="w-64 border-r border-brand-border bg-white flex flex-col justify-between shrink-0">
             <div class="py-6 px-4 space-y-6 overflow-y-auto">
                 <!-- SECCIÓN 1 -->
@@ -203,9 +208,9 @@
         <main class="flex-1 bg-brand-bg overflow-y-auto p-8 relative">
             <div id="content-container" class="max-w-5xl mx-auto space-y-8">
 
-                <!-- BANNER DE ESTADO EXCLUSIVO (image_f9f362.png) -->
+                <!-- BANNER DE ESTADO EXCLUSIVO -->
                 <div
-                    class="bg-emerald-50 border border-brand-green/30 px-4 py-3 rounded-sm flex items-center justify-between shadow-xs text-brand-dark">
+                    class="bg-emerald-50 border border-brand-green/30 px-4 py-3 rounded-sm flex items-center justify-between shadow-xs text-brand-dark animate-fade-in">
                     <div class="flex items-center space-x-3">
                         <i class="fa-regular fa-circle-check text-brand-green text-base"></i>
                         <span class="text-xs font-bold text-slate-800">Sistema configurado correctamente</span>
@@ -215,10 +220,10 @@
                     </button>
                 </div>
 
-                <!-- QUICK ACCESS LINKS (image_f9f362.png) -->
+                <!-- QUICK ACCESS LINKS -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div
-                        class="bg-white border border-brand-border rounded-sm p-4 flex items-center justify-between shadow-xs">
+                        class="bg-white border border-brand-border rounded-sm p-4 flex items-center justify-between shadow-xs hover:border-brand-coral/30 transition-all">
                         <div class="flex items-center space-x-3">
                             <div
                                 class="w-10 h-10 bg-slate-50 border border-brand-border rounded-sm flex items-center justify-center text-brand-dark">
@@ -235,7 +240,7 @@
                     </div>
 
                     <div
-                        class="bg-white border border-brand-border rounded-sm p-4 flex items-center justify-between shadow-xs">
+                        class="bg-white border border-brand-border rounded-sm p-4 flex items-center justify-between shadow-xs hover:border-brand-coral/30 transition-all">
                         <div class="flex items-center space-x-3">
                             <div
                                 class="w-10 h-10 bg-slate-50 border border-brand-border rounded-sm flex items-center justify-center text-brand-dark">
@@ -276,7 +281,7 @@
                                 <h3 class="text-xs font-black text-brand-dark uppercase tracking-wide">Configuración de
                                     Empresa</h3>
                                 <p class="text-[11px] text-brand-textMuted leading-relaxed">Configura los parámetros
-                                    globales de tu tenant único como huso horario, dominio autorizado y logotipo
+                                    globales de tu tenant único como huso horario, dominio de correo y logotipo
                                     corporativo.</p>
                             </div>
                             <button onclick="document.querySelector('[onclick*=\'tab-empresa\']').click()"
@@ -298,7 +303,7 @@
                                 <h3 class="text-xs font-black text-brand-dark uppercase tracking-wide">Árbol y Nodos Org
                                 </h3>
                                 <p class="text-[11px] text-brand-textMuted leading-relaxed">Crea libremente tus niveles
-                                    internos e inyecta nodos en el árbol de dependencias.</p>
+                                    internos e inyecta nodos en el árbol de dependencias con el diseñador visual.</p>
                             </div>
                             <button onclick="document.querySelector('[onclick*=\'tab-estructura\']').click()"
                                 class="mt-4 w-full bg-brand-dark/10 hover:bg-brand-dark/20 text-brand-dark text-xs font-extrabold py-2 rounded-sm transition-colors border border-brand-dark/20 uppercase tracking-wider sharp-btn">
@@ -375,7 +380,7 @@
                     </div>
                 </section>
 
-                <!-- ================= TAB: NODOS ORGANIZACIONALES (ORGANIGRAMA INTERACTIVO PROFESIONAL) ================= -->
+                <!-- ================= TAB: NODOS ORGANIZACIONALES (CON ORGANIGRAMA INTERACTIVO ESTILO MIRO) ================= -->
                 <section id="tab-estructura" class="tab-pane hidden space-y-6">
                     <div class="border-b border-brand-border pb-4 flex justify-between items-end">
                         <div>
@@ -395,48 +400,54 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                        <!-- VISOR DE DIAGRAMA / FLOWCHART INTERACTIVO REAL (Miro / Whimsical Style) -->
+                        <!-- VISOR DE DIAGRAMA INTERACTIVO (Miro / Whimsical Style con Panning) -->
                         <div
                             class="lg:col-span-8 bg-white border border-brand-border rounded-sm p-4 shadow-xs space-y-4">
                             <div class="flex items-center justify-between border-b border-brand-border pb-2.5">
                                 <div class="flex items-center gap-2">
                                     <span class="w-2.5 h-2.5 rounded-full bg-brand-coral"></span>
-                                    <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Editor
-                                        Jerárquico Interactivo</h3>
+                                    <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Lienzo
+                                        Jerárquico Vivo</h3>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <!-- Controles de Navegación del Canvas (Zoom) -->
                                     <button onclick="zoomCanvas(0.1)"
-                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark"
+                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark font-bold"
                                         title="Acercar">
                                         <i class="fa-solid fa-magnifying-glass-plus"></i>
                                     </button>
                                     <button onclick="zoomCanvas(-0.1)"
-                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark"
+                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark font-bold"
                                         title="Alejar">
                                         <i class="fa-solid fa-magnifying-glass-minus"></i>
                                     </button>
                                     <button onclick="resetZoom()"
-                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark"
+                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark font-bold"
                                         title="Restablecer Zoom">
                                         <i class="fa-solid fa-expand"></i>
                                     </button>
+                                    <span
+                                        class="text-[10px] text-brand-textMuted font-mono font-bold bg-slate-50 border px-2 py-1 rounded-sm">Arrastra
+                                        para mover</span>
                                 </div>
                             </div>
 
                             <!-- CONTENEDOR DEL CANVAS DE DIAGRAMACIÓN -->
-                            <div class="relative bg-slate-50 border border-brand-border rounded-sm h-[480px] overflow-auto grid-canvas"
+                            <div class="relative bg-slate-50 border border-brand-border rounded-sm h-[480px] overflow-hidden grid-canvas"
                                 id="canvas-workspace">
 
-                                <!-- Canvas de Líneas Conectoras Dinámicas SVG -->
-                                <svg id="svg-connections"
-                                    class="absolute top-0 left-0 w-[1200px] h-[800px] pointer-events-none z-0"></svg>
+                                <!-- Capa de transformación que sufre zoom y panning -->
+                                <div id="canvas-transform-wrapper"
+                                    class="absolute top-0 left-0 w-[1500px] h-[1000px] origin-top-left transition-transform duration-100 ease-out"
+                                    style="transform: translate(0px, 0px) scale(1);">
+                                    <!-- Canvas de Líneas Conectoras Dinámicas SVG -->
+                                    <svg id="svg-connections"
+                                        class="absolute top-0 left-0 w-full h-full pointer-events-none z-0"></svg>
 
-                                <!-- Espacio de renderizado de nodos organizacionales en árbol -->
-                                <div id="canvas-nodes-container"
-                                    class="absolute top-0 left-0 w-[1200px] h-[800px] z-10 transition-transform origin-top-left"
-                                    style="transform: scale(1);">
-                                    <!-- Los nodos se inyectan y calculan dinámicamente con JS de acuerdo a la relación Padre-Hijo -->
+                                    <!-- Espacio de renderizado de nodos organizacionales en árbol -->
+                                    <div id="canvas-nodes-container" class="absolute top-0 left-0 w-full h-full z-10">
+                                        <!-- Los nodos se inyectan y calculan dinámicamente con JS de acuerdo a la relación Padre-Hijo -->
+                                    </div>
                                 </div>
 
                                 <!-- MINIMAP EN ESQUINA INFERIOR DERECHA (Miro Style) -->
@@ -444,14 +455,14 @@
                                     class="absolute bottom-4 right-4 w-28 h-20 bg-white border border-brand-border rounded-sm shadow-md p-1 pointer-events-none z-20 flex flex-col justify-between">
                                     <span
                                         class="text-[8px] font-black uppercase text-brand-textMuted tracking-wider">Minimap</span>
-                                    <div class="flex-1 bg-slate-50 border border-slate-200 relative overflow-hidden">
+                                    <div class="flex-1 bg-slate-50 border border-slate-200 relative overflow-hidden"
+                                        id="minimap-preview-container">
                                         <!-- Miniaturas de nodos simuladas -->
                                         <div
                                             class="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-2 bg-brand-coral opacity-50">
                                         </div>
-                                        <div
-                                            class="absolute top-5 left-1/2 -translate-x-1/2 w-6 h-2 bg-brand-dark opacity-50">
-                                        </div>
+                                        <div class="absolute top-5 left-1/3 w-6 h-2 bg-brand-dark opacity-50"></div>
+                                        <div class="absolute top-5 right-1/4 w-6 h-2 bg-brand-dark opacity-50"></div>
                                         <div class="absolute top-9 left-2 w-5 h-2 bg-slate-400 opacity-50"></div>
                                         <div class="absolute top-9 right-2 w-5 h-2 bg-slate-400 opacity-50"></div>
                                     </div>
@@ -471,19 +482,19 @@
                                     directas.</p>
                             </div>
 
-                            <div class="space-y-3 text-xs">
+                            <div class="space-y-3 text-xs font-medium">
                                 <div>
                                     <label class="block text-brand-textMuted uppercase mb-1 font-bold">Nombre del Nodo
                                         *</label>
                                     <input type="text" id="input-node-name"
-                                        placeholder="E.g., Mesa de Ayuda, Soporte L2"
-                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark font-sans focus:outline-none focus:border-brand-coral sharp-input">
+                                        placeholder="E.g., Dirección Operativa, Mesa de Ayuda"
+                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark font-sans focus:outline-none focus:border-brand-coral sharp-input font-semibold">
                                 </div>
                                 <div>
                                     <label class="block text-brand-textMuted uppercase mb-1 font-bold">Tipo de
                                         Estructura *</label>
                                     <select id="select-node-type"
-                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark focus:outline-none focus:border-brand-coral sharp-input cursor-pointer font-semibold">
+                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark focus:outline-none focus:border-brand-coral sharp-input cursor-pointer font-bold">
                                         <option value="departamento">Departamento / Área</option>
                                         <option value="area">Área / Sección</option>
                                         <option value="cargo">Cargo Específico</option>
@@ -493,7 +504,7 @@
                                     <label class="block text-brand-textMuted uppercase mb-1 font-bold">Asociar Nodo
                                         Padre *</label>
                                     <select id="select-node-parent"
-                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark focus:outline-none focus:border-brand-coral sharp-input cursor-pointer font-semibold">
+                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark focus:outline-none focus:border-brand-coral sharp-input cursor-pointer font-bold">
                                         <!-- Se llena dinámicamente con los nodos creados -->
                                     </select>
                                 </div>
@@ -515,7 +526,7 @@
                     </div>
                 </section>
 
-                <!-- ================= TAB: PESOS E IA SLA (MOTOR DE PRIORIDAD - image_f9f362.png) ================= -->
+                <!-- ================= TAB: PESOS E IA SLA (MOTOR DE PRIORIDAD) ================= -->
                 <section id="tab-pesos" class="tab-pane hidden space-y-6">
                     <div class="border-b border-brand-border pb-4 flex justify-between items-end">
                         <div>
@@ -528,7 +539,7 @@
                         </div>
                     </div>
 
-                    <!-- FÓRMULA DE PESOS (image_f9f362.png) -->
+                    <!-- FÓRMULA DE PESOS -->
                     <div class="bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-6">
                         <div>
                             <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Pesos de la Fórmula
@@ -543,7 +554,7 @@
                             <div class="space-y-1.5">
                                 <div class="flex justify-between text-xs font-bold text-brand-dark">
                                     <span>w_cargo</span>
-                                    <span id="pct-lbl-cargo" class="text-brand-coral font-mono">25%</span>
+                                    <span id="pct-lbl-cargo" class="text-brand-coral font-mono font-bold">25%</span>
                                 </div>
                                 <input type="range" id="pct-slider-cargo" min="0" max="100" value="25"
                                     oninput="ajustarPorcentajeFórmula('cargo')"
@@ -554,7 +565,7 @@
                             <div class="space-y-1.5">
                                 <div class="flex justify-between text-xs font-bold text-brand-dark">
                                     <span>w_nodo</span>
-                                    <span id="pct-lbl-nodo" class="text-brand-coral font-mono">35%</span>
+                                    <span id="pct-lbl-nodo" class="text-brand-coral font-mono font-bold">35%</span>
                                 </div>
                                 <input type="range" id="pct-slider-nodo" min="0" max="100" value="35"
                                     oninput="ajustarPorcentajeFórmula('nodo')"
@@ -565,7 +576,7 @@
                             <div class="space-y-1.5">
                                 <div class="flex justify-between text-xs font-bold text-brand-dark">
                                     <span>w_daño</span>
-                                    <span id="pct-lbl-dano" class="text-brand-coral font-mono">40%</span>
+                                    <span id="pct-lbl-dano" class="text-brand-coral font-mono font-bold">40%</span>
                                 </div>
                                 <input type="range" id="pct-slider-dano" min="0" max="100" value="40"
                                     oninput="ajustarPorcentajeFórmula('dano')"
@@ -583,7 +594,7 @@
                         </div>
                     </div>
 
-                    <!-- UMBRALES DE PRIORIDAD (image_f9f362.png) -->
+                    <!-- UMBRALES DE PRIORIDAD -->
                     <div class="bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-4">
                         <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Umbrales de Prioridad
                         </h3>
@@ -591,7 +602,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label
-                                    class="block text-[9px] font-black text-brand-coral uppercase tracking-wider mb-1.5">Crítica
+                                    class="block text-[9px] font-black text-brand-coral uppercase tracking-wider mb-1.5 font-bold">Crítica
                                     &ge;</label>
                                 <input type="number" id="umb-critica" value="9" min="1" max="20" step="0.5"
                                     oninput="calcularSimulacionPrioridad()"
@@ -599,7 +610,7 @@
                             </div>
                             <div>
                                 <label
-                                    class="block text-[9px] font-black text-amber-500 uppercase tracking-wider mb-1.5">Alta
+                                    class="block text-[9px] font-black text-amber-500 uppercase tracking-wider mb-1.5 font-bold">Alta
                                     &ge;</label>
                                 <input type="number" id="umb-alta" value="7" min="1" max="20" step="0.5"
                                     oninput="calcularSimulacionPrioridad()"
@@ -617,11 +628,11 @@
 
                         <div class="pt-2">
                             <label
-                                class="block text-[9px] font-black text-brand-textMuted uppercase tracking-wider mb-1.5">Descripción
+                                class="block text-[9px] font-black text-brand-textMuted uppercase tracking-wider mb-1.5 font-bold">Descripción
                                 de la Fórmula</label>
                             <input type="text" id="desc-formula"
                                 value="Fórmula por defecto: cargo 25% · nodo org 35% · daño 40%"
-                                class="w-full bg-brand-bg border border-brand-border p-2.5 text-xs text-slate-700 font-sans focus:outline-none focus:border-brand-coral sharp-input">
+                                class="w-full bg-brand-bg border border-brand-border p-2.5 text-xs text-slate-700 font-sans focus:outline-none focus:border-brand-coral sharp-input font-semibold">
                         </div>
 
                         <div class="pt-2">
@@ -632,7 +643,7 @@
                         </div>
                     </div>
 
-                    <!-- SIMULADOR DE PRIORIDAD EN TIEMPO REAL (image_f9f362.png) -->
+                    <!-- SIMULADOR DE PRIORIDAD EN TIEMPO REAL -->
                     <div class="bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-6">
                         <div>
                             <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Simulador de
@@ -646,7 +657,7 @@
                             <div class="space-y-1">
                                 <div class="flex justify-between text-xs font-bold text-slate-700">
                                     <span>Peso Cargo</span>
-                                    <span id="val-lbl-cargo" class="text-brand-coral font-mono">5</span>
+                                    <span id="val-lbl-cargo" class="text-brand-coral font-mono font-bold">5</span>
                                 </div>
                                 <input type="range" id="val-slider-cargo" min="1" max="10" value="5"
                                     oninput="document.getElementById('val-lbl-cargo').innerText = this.value; calcularSimulacionPrioridad()"
@@ -657,7 +668,7 @@
                             <div class="space-y-1">
                                 <div class="flex justify-between text-xs font-bold text-slate-700">
                                     <span>Peso Nodo</span>
-                                    <span id="val-lbl-nodo" class="text-brand-coral font-mono">5</span>
+                                    <span id="val-lbl-nodo" class="text-brand-coral font-mono font-bold">5</span>
                                 </div>
                                 <input type="range" id="val-slider-nodo" min="1" max="10" value="5"
                                     oninput="document.getElementById('val-lbl-nodo').innerText = this.value; calcularSimulacionPrioridad()"
@@ -668,7 +679,7 @@
                             <div class="space-y-1">
                                 <div class="flex justify-between text-xs font-bold text-slate-700">
                                     <span>Peso Daño</span>
-                                    <span id="val-lbl-dano" class="text-brand-coral font-mono">5</span>
+                                    <span id="val-lbl-dano" class="text-brand-coral font-mono font-bold">5</span>
                                 </div>
                                 <input type="range" id="val-slider-dano" min="1" max="10" value="5"
                                     oninput="document.getElementById('val-lbl-dano').innerText = this.value; calcularSimulacionPrioridad()"
@@ -683,7 +694,7 @@
                                     class="block text-[9px] font-black text-brand-textMuted uppercase tracking-wider mb-1.5 font-bold">Urgencia
                                     (urgency_bonus)</label>
                                 <select id="sel-urgencia" onchange="calcularSimulacionPrioridad()"
-                                    class="w-full bg-brand-bg border border-brand-border p-2 text-xs text-brand-dark focus:outline-none focus:border-brand-coral font-medium sharp-input cursor-pointer">
+                                    class="w-full bg-brand-bg border border-brand-border p-2 text-xs text-brand-dark focus:outline-none focus:border-brand-coral font-bold sharp-input cursor-pointer">
                                     <option value="0">baja (+0)</option>
                                     <option value="0.5" selected>media (+0.5)</option>
                                     <option value="1">alta (+1.0)</option>
@@ -696,7 +707,7 @@
                                     class="block text-[9px] font-black text-brand-textMuted uppercase tracking-wider mb-1.5 font-bold">Impacto
                                     (impact_bonus)</label>
                                 <select id="sel-impacto" onchange="calcularSimulacionPrioridad()"
-                                    class="w-full bg-brand-bg border border-brand-border p-2 text-xs text-brand-dark focus:outline-none focus:border-brand-coral font-medium sharp-input cursor-pointer">
+                                    class="w-full bg-brand-bg border border-brand-border p-2 text-xs text-brand-dark focus:outline-none focus:border-brand-coral font-bold sharp-input cursor-pointer">
                                     <option value="0">bajo (+0)</option>
                                     <option value="0.5" selected>medio (+0.5)</option>
                                     <option value="1">alto (+1.0)</option>
@@ -755,7 +766,7 @@
                                         class="block text-[10px] text-brand-textMuted font-bold uppercase mb-1 font-sans">Catálogo
                                         de Daño Híbrido</label>
                                     <textarea
-                                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-[11px] font-mono text-slate-700 h-16 resize-none focus:outline-none focus:border-brand-coral sharp-input">Hardware: No enciende&#10;Software: Falta Licencia&#10;Red: Sin conexión</textarea>
+                                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-[11px] font-mono text-slate-700 h-16 resize-none focus:outline-none focus:border-brand-coral sharp-input font-semibold">Hardware: No enciende&#10;Software: Falta Licencia&#10;Red: Sin conexión</textarea>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-brand-textMuted font-semibold font-sans">Campo libre adicional en
@@ -782,7 +793,7 @@
                                         class="block text-[10px] text-brand-textMuted font-bold uppercase mb-1 font-sans">Estructura
                                         Base del Código QR</label>
                                     <input type="text" value="https://techglobal.com/inv/asset-{ID}"
-                                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-brand-coral sharp-input">
+                                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-brand-coral sharp-input font-semibold">
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-brand-textMuted font-semibold font-sans">Préstamos entre
@@ -809,7 +820,7 @@
                                         class="block text-[10px] text-brand-textMuted font-bold uppercase mb-1 font-sans">Tipos
                                         de Solicitud Permitidas</label>
                                     <textarea
-                                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-[11px] font-mono text-slate-700 h-16 resize-none focus:outline-none focus:border-brand-coral sharp-input">Cambio de Rol&#10;Acceso Temporal a Red&#10;Traslado de Dispositivos</textarea>
+                                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-[11px] font-mono text-slate-700 h-16 resize-none focus:outline-none focus:border-brand-coral sharp-input font-semibold">Cambio de Rol&#10;Acceso Temporal a Red&#10;Traslado de Dispositivos</textarea>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-brand-textMuted font-semibold font-sans">Aprobación obligatoria
@@ -875,8 +886,8 @@
                             <div
                                 class="flex items-center gap-3 bg-brand-bg border border-brand-border p-3 rounded-sm mt-3 shadow-xs">
                                 <i class="fa-solid fa-key text-brand-coral text-base"></i>
-                                <span class="text-xs font-bold text-slate-700">Clave Token vinculada de forma segura con
-                                    Google Authenticator</span>
+                                <span class="text-xs font-bold text-slate-700">Clave Token vinculada con Google
+                                    Authenticator</span>
                             </div>
                         </div>
                     </div>
@@ -944,8 +955,8 @@
                     <h3 class="text-sm font-black uppercase tracking-wider text-brand-dark">Firma Digital y Confirmación
                         de Cambio</h3>
                     <p class="text-xs text-brand-textMuted mt-1 leading-relaxed">Estás realizando modificaciones en los
-                        coeficientes del motor de prioridad. Esta acción modificará en tiempo real la cola automática de
-                        soporte técnico.</p>
+                        coeficientes del motor de prioridad o estructura. Esta acción modificará en tiempo real la cola
+                        de SLAs.</p>
                 </div>
             </div>
 
@@ -1027,12 +1038,18 @@
         let sidebarExpanded = true;
         let scaleFactor = 1.0;
 
+        // Variables de Panning (Miro Style)
+        let isPanning = false;
+        let startX, startY;
+        let panX = 0;
+        let panY = 0;
+
         // Estructura de Datos Base en Memoria para Nodos Organizacionales
         let nodesDatabase = [
             { id: "root-1", name: "SENA Bogotá Central", type: "root", weight: 10, parentId: null, x: 500, y: 40 },
             { id: "node-2", name: "Área de Tecnología (TI)", type: "departamento", weight: 8, parentId: "root-1", x: 500, y: 140 },
             { id: "node-3", name: "Soporte Técnico L1", type: "area", weight: 6, parentId: "node-2", x: 280, y: 240 },
-            { id: "node-4", name: "Infraestructura Core", type: "area", weight: 6, parentId: "node-2", x: 720, y: 240 },
+            { id: "node-4", name: "Infraestructura Core", type: "area", weight: 7, parentId: "node-2", x: 720, y: 240 },
             { id: "node-5", name: "Ingeniero de Sistemas", type: "cargo", weight: 5, parentId: "node-4", x: 720, y: 340 }
         ];
 
@@ -1050,27 +1067,63 @@
 
             // Si se activa la pestaña de estructura, forzar el renderizado del organigrama
             if (tabId === 'tab-estructura') {
-                setTimeout(renderOrganigrama, 50);
+                setTimeout(() => {
+                    renderOrganigrama();
+                    inicializarSoporteMiroPanning();
+                }, 50);
             }
         }
 
-        // ================= SISTEMA DEL ORGANIGRAMA INTERACTIVO (Miro / Whimsical Style) =================
+        // ================= SOPORTE MIRO PANNING & DRAG =================
+        function inicializarSoporteMiroPanning() {
+            const workspace = document.getElementById('canvas-workspace');
+            const wrapper = document.getElementById('canvas-transform-wrapper');
+            if (!workspace || !wrapper) return;
+
+            workspace.addEventListener('mousedown', (e) => {
+                // Prevenir drag sobre botones de nodos o sliders
+                if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+                isPanning = true;
+                startX = e.clientX - panX;
+                startY = e.clientY - panY;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isPanning) return;
+                panX = e.clientX - startX;
+                panY = e.clientY - startY;
+                actualizarTransformacionCanvas();
+            });
+
+            window.addEventListener('mouseup', () => {
+                isPanning = false;
+            });
+        }
+
+        function actualizarTransformacionCanvas() {
+            const wrapper = document.getElementById('canvas-transform-wrapper');
+            if (wrapper) {
+                wrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${scaleFactor})`;
+            }
+        }
 
         function zoomCanvas(amount) {
-            scaleFactor = Math.max(0.5, Math.min(1.5, scaleFactor + amount));
-            const container = document.getElementById('canvas-nodes-container');
-            container.style.transform = `scale(${scaleFactor})`;
+            scaleFactor = Math.max(0.4, Math.min(1.6, scaleFactor + amount));
+            actualizarTransformacionCanvas();
             lanzarToast('Zoom Ajustado', `Nivel de zoom actual: ${(scaleFactor * 100).toFixed(0)}%`);
         }
 
         function resetZoom() {
             scaleFactor = 1.0;
-            const container = document.getElementById('canvas-nodes-container');
-            container.style.transform = `scale(1)`;
+            panX = 0;
+            panY = 0;
+            actualizarTransformacionCanvas();
             lanzarToast('Zoom Restablecido', 'Zoom del canvas ajustado al 100%');
         }
 
-        // Renderizado del árbol de dependencias y conexiones vectoriales
+        // ================= SISTEMA DEL ORGANIGRAMA INTERACTIVO =================
+
+        // Renderizado del árbol de dependencias y conexiones vectoriales SVG
         function renderOrganigrama() {
             const container = document.getElementById('canvas-nodes-container');
             const svg = document.getElementById('svg-connections');
@@ -1080,7 +1133,7 @@
             container.innerHTML = '';
             svg.innerHTML = '';
 
-            // 1. Recalcular las posiciones de los nodos dinámicamente en base a su jerarquía (Auto-Layout)
+            // 1. Recalcular las posiciones de los nodos en base a su jerarquía
             recalcularCoordenadasJerarquia();
 
             // 2. Renderizar las líneas conectoras SVG en background
@@ -1114,13 +1167,13 @@
                     <div class="flex justify-between items-start mb-1.5">
                         <span class="text-[8px] font-black uppercase tracking-wider text-brand-coral">${node.type}</span>
                         <button onclick="eliminarNodoJerarquico('${node.id}')" class="text-brand-textMuted hover:text-brand-coral transition-colors" title="Eliminar nodo">
-                            <i class="fa-regular fa-trash-can"></i>
+                            <i class="fa-regular fa-trash-can text-[11px]"></i>
                         </button>
                     </div>
                     <span class="font-extrabold text-brand-dark text-xs block truncate" title="${node.name}">${node.name}</span>
                     <div class="mt-2 flex items-center justify-between border-t border-brand-border/40 pt-1.5">
                         <span class="text-[8px] text-brand-textMuted uppercase font-bold">Peso Operativo</span>
-                        <span class="text-[9px] bg-brand-coral/10 text-brand-coral px-1 py-0.2 rounded-sm font-bold">${node.weight}</span>
+                        <span class="text-[9px] bg-brand-coral/10 text-brand-coral px-1.5 py-0.2 rounded-sm font-bold">${node.weight}</span>
                     </div>
                 `;
 
@@ -1129,6 +1182,7 @@
 
             // 4. Actualizar el selector de nodos padres para que la base de datos se mantenga coherente
             refrescarSelectorPadres();
+            actualizarMinimapPreview();
         }
 
         // Calcula automáticamente la disposición limpia de los nodos para que no se superpongan
@@ -1136,13 +1190,13 @@
             const root = nodesDatabase.find(n => n.parentId === null);
             if (!root) return;
 
-            // Asignar raíz en el centro del canvas de forma absoluta
-            root.x = 500;
+            // Asignar raíz en el centro superior del canvas de forma absoluta
+            root.x = 650;
             root.y = 40;
 
             const niveles = {};
 
-            // Agrupar nodos por nivel de profundidad
+            // Agrupar nodos por nivel de profundidad de forma recursiva
             function agruparNivel(nodeId, depth) {
                 if (!niveles[depth]) niveles[depth] = [];
                 const node = nodesDatabase.find(n => n.id === nodeId);
@@ -1162,7 +1216,7 @@
 
                 const nodosNivel = niveles[depthInt];
                 const totalNodos = nodosNivel.length;
-                const widthCanvas = 1100;
+                const widthCanvas = 1500;
                 const gap = widthCanvas / (totalNodos + 1);
 
                 nodosNivel.forEach((node, index) => {
@@ -1172,7 +1226,7 @@
             });
         }
 
-        // Renderiza conexiones vectoriales estilizadas con marcadores direccionales
+        // Renderiza conexiones vectoriales estilizadas con curvas suavizadas Bezier
         function renderLineSVG(x1, y1, x2, y2) {
             const svg = document.getElementById('svg-connections');
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -1261,12 +1315,39 @@
             });
         }
 
+        // Actualización dinámica del Minimapa Miro Style
+        function actualizarMinimapPreview() {
+            const mapContainer = document.getElementById('minimap-preview-container');
+            if (!mapContainer) return;
+            mapContainer.innerHTML = '';
 
-        // ================= MOTOR DE PESOS Y SIMULADOR SLA (image_f9f362.png) =================
-        function actualizarPesosEstructura() {
-            calcularSimulacionPrioridad();
+            nodesDatabase.forEach(node => {
+                const mini = document.createElement('div');
+                mini.className = 'absolute rounded-sm opacity-60';
+
+                // Reducir la escala de X e Y para que quepan en la caja de 112x80
+                const miniX = (node.x / 1500) * 100;
+                const miniY = (node.y / 1000) * 60;
+
+                mini.style.left = `${miniX}px`;
+                mini.style.top = `${miniY}px`;
+                mini.style.width = '10px';
+                mini.style.height = '4px';
+
+                if (node.type === 'root') {
+                    mini.classList.add('bg-brand-coral');
+                } else if (node.type === 'departamento') {
+                    mini.classList.add('bg-brand-dark');
+                } else {
+                    mini.classList.add('bg-slate-400');
+                }
+
+                mapContainer.appendChild(mini);
+            });
         }
 
+
+        // ================= MOTOR DE PESOS Y SIMULADOR SLA =================
         function ajustarPorcentajeFórmula(sliderCambiado) {
             let sCargo = document.getElementById('pct-slider-cargo');
             let sNodo = document.getElementById('pct-slider-nodo');
@@ -1326,7 +1407,7 @@
             labelScore.innerText = scoreFinal.toFixed(2);
 
             if (scoreFinal >= uCritica) {
-                labelScore.className = "text-3xl font-black text-brand-coral";
+                labelScore.className = "text-3xl font-black text-brand-coral animate-pulse";
                 badgePrioridad.innerText = "CRÍTICO";
                 badgePrioridad.className = "text-[10px] font-mono font-bold bg-brand-coral/10 text-brand-coral border border-brand-coral/20 px-2 py-0.5 rounded-sm uppercase tracking-wider";
             } else if (scoreFinal >= uAlta) {
