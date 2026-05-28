@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useModules } from '@/hooks/useModules';
@@ -91,7 +91,18 @@ export function DashboardClient() {
 
   /* ── Search ── */
   const [search, setSearch] = useState('');
+  const [moduleView, setModuleView] = useState<'card' | 'list' | 'summary'>('card');
   const q = search.toLowerCase().trim();
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem('dashboard:modules:view');
+    if (stored === 'card' || stored === 'list' || stored === 'summary') setModuleView(stored);
+  }, []);
+
+  function changeModuleView(view: 'card' | 'list' | 'summary') {
+    setModuleView(view);
+    window.localStorage.setItem('dashboard:modules:view', view);
+  }
 
   function matchesQuery(m: SystemModule) {
     return m.name.toLowerCase().includes(q) || (m.type ?? '').toLowerCase().includes(q);
@@ -157,6 +168,8 @@ export function DashboardClient() {
           builtins={{ helpdesk: filteredHelpdesk, inventory: filteredInventory, gestion: filteredGestion }}
           active={filteredActive}
           inactive={filteredInactive}
+          viewMode={moduleView}
+          onViewModeChange={changeModuleView}
           hasModules={!!modules}
           isSuperadmin={isSuperadmin}
           isLoading={isLoading}

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, QrCode, Package, User, Clock, Pencil, Trash2, Search } from 'lucide-react';
+import { Check, ChevronDown, Plus, X, QrCode, Package, User, Clock, Pencil, Trash2, Search } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModuleNav } from '@/hooks/useModuleNav';
@@ -72,6 +72,7 @@ function QrModal({ assetId, assetName, onClose }: { assetId: string; assetName: 
 /* ── Asset detail modal ──────────────────────────────────────────────────── */
 
 type DetailTab = 'info' | 'asignacion' | 'historial';
+type ViewMode = 'card' | 'list' | 'summary';
 
 interface DetailModalProps {
   assetId:    string;
@@ -639,6 +640,65 @@ function CreateModal({ moduleId, onClose }: { moduleId: string; onClose: () => v
 
 /* ── Asset card ──────────────────────────────────────────────────────────── */
 
+function ViewModeDropdown({ value, onChange }: { value: ViewMode; onChange: (mode: ViewMode) => void }) {
+  const label = value === 'card' ? 'Tarjeta' : value === 'list' ? 'Lista' : 'Resumen';
+  const options: [ViewMode, string][] = [['card', 'Tarjeta'], ['list', 'Lista'], ['summary', 'Resumen']];
+
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        type="button"
+        style={{
+          height: 34, minWidth: 116, padding: '0 12px', borderRadius: 4, border: '1px solid #FF5E3A',
+          background: '#FF5E3A', color: '#fff', display: 'inline-flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: 10, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+        }}
+      >
+        {label}
+        <ChevronDown size={13} />
+      </button>
+      <div
+        className="inventory-view-menu"
+        style={{
+          position: 'absolute', right: 0, top: 38, width: 152, padding: '6px 0', background: '#fff',
+          border: '1px solid #E2E8F0', borderRadius: 8, boxShadow: '0 14px 32px rgba(15,34,53,.12)',
+          zIndex: 20,
+        }}
+      >
+        {options.map(([mode, optionLabel]) => (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => onChange(mode)}
+            style={{
+              width: '100%', padding: '9px 12px', border: 0, background: 'transparent', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 600,
+              color: value === mode ? '#0e2235' : '#475569', fontFamily: 'inherit', textAlign: 'left',
+            }}
+          >
+            <Check size={13} style={{ color: value === mode ? '#0e2235' : 'transparent' }} />
+            {optionLabel}
+          </button>
+        ))}
+      </div>
+      <style jsx>{`
+        .inventory-view-menu {
+          opacity: 0;
+          pointer-events: none;
+          transform: translateY(-4px);
+          transition: opacity .14s, transform .14s;
+        }
+        div:hover > .inventory-view-menu,
+        div:focus-within > .inventory-view-menu {
+          opacity: 1;
+          pointer-events: auto;
+          transform: translateY(0);
+        }
+      `}</style>
+    </div>
+  );
+}
+
 function AssetCard({ asset, onClick }: { asset: AssetListItem; onClick: () => void }) {
   const color = ASSET_STATUS_COLORS[asset.status];
   return (
@@ -678,6 +738,60 @@ function AssetCard({ asset, onClick }: { asset: AssetListItem; onClick: () => vo
   );
 }
 
+function AssetListRow({ asset, onClick }: { asset: AssetListItem; onClick: () => void }) {
+  return (
+    <div
+      style={{
+        display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 150px 150px 120px auto',
+        gap: 12, alignItems: 'center', padding: '12px 14px', background: '#fff',
+        border: '1px solid #E8EDF3', borderRadius: 8,
+      }}
+    >
+      <button type="button" onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 10, border: 0, background: 'transparent', cursor: 'pointer', minWidth: 0, textAlign: 'left', fontFamily: 'inherit' }}>
+        <span style={{
+          width: 74, height: 56, borderRadius: 8, background: `${ASSET_STATUS_COLORS[asset.status]}18`,
+          display: 'grid', placeItems: 'center', flexShrink: 0, overflow: 'hidden',
+          backgroundImage: 'linear-gradient(30deg, rgba(255,255,255,.35) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.35) 87.5%), linear-gradient(150deg, rgba(255,255,255,.28) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.28) 87.5%)',
+          backgroundSize: '26px 26px',
+        }}>
+          <Package size={14} style={{ color: ASSET_STATUS_COLORS[asset.status] }} />
+        </span>
+        <span style={{ minWidth: 0 }}>
+          <strong style={{ display: 'block', fontSize: 13, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.name}</strong>
+          <small style={{ display: 'block', fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{asset.category_name}</small>
+        </span>
+      </button>
+      <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.environment_name}</span>
+      <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.location_name}</span>
+      <StatusBadge status={asset.status} />
+      <button type="button" onClick={onClick} style={{ border: 0, borderRadius: 8, background: '#0D1B2A', color: '#fff', padding: '7px 12px', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+        Abrir
+      </button>
+    </div>
+  );
+}
+
+function AssetSummaryItem({ asset, onClick }: { asset: AssetListItem; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        minHeight: 74, padding: 14, borderRadius: 8, border: '1px solid #E8EDF3',
+        background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', gap: 12, textAlign: 'left', fontFamily: 'inherit',
+      }}
+    >
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 9, fontWeight: 800, color: '#6366F1', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 5 }}>{asset.category_name}</span>
+        <strong style={{ display: 'block', fontSize: 13, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.name}</strong>
+        <small style={{ display: 'block', fontSize: 10, color: '#94A3B8', marginTop: 4 }}>{asset.location_name}</small>
+      </span>
+      <StatusBadge status={asset.status} />
+    </button>
+  );
+}
+
 /* ── Main ────────────────────────────────────────────────────────────────── */
 
 export function InventoryClient() {
@@ -708,9 +822,20 @@ export function InventoryClient() {
   const [statusFilter,   setStatusFilter]   = useState<AssetStatus | ''>('');
   const [search,         setSearch]         = useState('');
   const [debouncedQ,     setDebouncedQ]     = useState('');
+  const [viewMode,       setViewMode]       = useState<ViewMode>('card');
   const [showCreate,     setShowCreate]     = useState(false);
   const [detailId,       setDetailId]       = useState<string | null>(null);
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem('inventory:assets:view');
+    if (stored === 'card' || stored === 'list' || stored === 'summary') setViewMode(stored);
+  }, []);
+
+  function changeViewMode(view: ViewMode) {
+    setViewMode(view);
+    window.localStorage.setItem('inventory:assets:view', view);
+  }
 
   function handleSearch(v: string) {
     setSearch(v);
@@ -750,6 +875,7 @@ export function InventoryClient() {
             style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 8, border: '1px solid #E2E8F0', fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' }}
           />
         </div>
+        <ViewModeDropdown value={viewMode} onChange={changeViewMode} />
         {canEdit && selectedModule && (
           <button
             type="button"
@@ -821,11 +947,29 @@ export function InventoryClient() {
       )}
 
       {assets.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
-          {assets.map((a) => (
-            <AssetCard key={a.id} asset={a} onClick={() => setDetailId(a.id)} />
-          ))}
-        </div>
+        <>
+          {viewMode === 'card' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+              {assets.map((a) => (
+                <AssetCard key={a.id} asset={a} onClick={() => setDetailId(a.id)} />
+              ))}
+            </div>
+          )}
+          {viewMode === 'list' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {assets.map((a) => (
+                <AssetListRow key={a.id} asset={a} onClick={() => setDetailId(a.id)} />
+              ))}
+            </div>
+          )}
+          {viewMode === 'summary' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
+              {assets.map((a) => (
+                <AssetSummaryItem key={a.id} asset={a} onClick={() => setDetailId(a.id)} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Modals ── */}
