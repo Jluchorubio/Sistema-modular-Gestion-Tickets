@@ -2,512 +2,881 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ReactFlow, Background, Controls, MiniMap,
-  useNodesState, useEdgesState, useReactFlow,
-  Handle, Position,
-  type Node, type Edge,
+  ReactFlow, Background, Controls, MiniMap, Panel,
+  useNodesState, useEdgesState, useReactFlow, ReactFlowProvider,
+  Handle, Position, MarkerType,
+  type Node, type Edge, type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import dagre from '@dagrejs/dagre';
 import {
-  Plus, Check, X, Trash2, MapPin, Phone, Mail,
-  ToggleLeft, ToggleRight, Users, Info, ChevronDown, ChevronRight,
+  Plus, Check, X, Trash2, MapPin, Users, GitBranch,
+  ChevronDown, ChevronRight, ToggleLeft, ToggleRight,
+  ZoomIn, ZoomOut, Maximize2, Pencil, AlertCircle,
 } from 'lucide-react';
 import { systemConfigService } from '@/services/system-config.service';
 import type { OrgNode, StructureType } from '@/services/system-config.service';
 import { Spinner } from '@/components/ui/Spinner';
 
-/* ── Layout constants ─────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   CONSTANTS
+   ───────────────────────────────────────────────────────────────────────────── */
 
-const NW  = 196;
-const NH  = 90;
-const VG  = 80;
-const HG  = 36;
+const NODE_W  = 220;
+const NODE_H  = 86;
+const NSEP    = 40;   // horizontal gap between nodes at same level
+const RSEP    = 80;   // vertical gap between levels
 
-const weightColor = (w: number) =>
-  w >= 9 ? '#ef4444' : w >= 7 ? '#f97316' : w >= 5 ? '#f59e0b' : '#94a3b8';
+/* ─────────────────────────────────────────────────────────────────────────────
+   WEIGHT HELPERS
+   ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Tree layout (respects collapsed set) ─────────────────────────────────── */
+const wColor = (w: number) =>
+  w >= 9 ? '#ef4444' : w >= 7 ? '#f97316' : w >= 5 ? '#eab308' : '#64748b';
 
-function leafCount(node: OrgNode, collapsed: Set<string>): number {
-  if (collapsed.has(node.id) || !node.children?.length) return 1;
-  return node.children.reduce((s, c) => s + leafCount(c, collapsed), 0);
+const wLabel = (w: number) =>
+  w >= 9 ? 'Crítico' : w >= 7 ? 'Alto' : w >= 5 ? 'Medio' : 'Bajo';
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DAGRE LAYOUT
+   dagre gives CENTER position → we store {x,y} = top-left + declare width/height
+   so ReactFlow fitView works immediately without node measurement.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function flatList(nodes: OrgNode[], collapsed: Set<string>): OrgNode[] {
+  const out: OrgNode[] = [];
+  function walk(arr: OrgNode[]) {
+    for (const n of arr) {
+      out.push(n);
+      if (n.children?.length && !collapsed.has(n.id)) walk(n.children);
+    }
+  }
+  walk(nodes);
+  return out;
+}
+
+function edgeList(nodes: OrgNode[], collapsed: Set<string>): { src: string; tgt: string }[] {
+  const out: { src: string; tgt: string }[] = [];
+  function walk(arr: OrgNode[]) {
+    for (const n of arr) {
+      if (n.parent_id) out.push({ src: n.parent_id, tgt: n.id });
+      if (n.children?.length && !collapsed.has(n.id)) walk(n.children);
+    }
+  }
+  walk(nodes);
+  return out;
+}
+
+interface BuildCallbacks {
+  onAdd:      (parentId: string, parentName: string) => void;
+  onCollapse: (id: string) => void;
+  onSelect:   (node: OrgNode) => void;
 }
 
 function buildLayout(
-  roots: OrgNode[],
-  colorMap: Map<string, string>,
+  tree:      OrgNode[],
+  typeMap:   Map<string, StructureType>,
   collapsed: Set<string>,
-  callbacks: {
-    onAddChild:       (parentId: string, parentName: string) => void;
-    onToggleCollapse: (id: string)                           => void;
-  },
-  depth = 0,
-  xStart = 0,
+  cbs:       BuildCallbacks,
 ): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = [];
-  const edges: Edge[] = [];
-  let x = xStart;
+  const flat  = flatList(tree, collapsed);
+  const eList = edgeList(tree, collapsed);
+  if (!flat.length) return { nodes: [], edges: [] };
 
-  for (const node of roots) {
-    const lc       = leafCount(node, collapsed);
-    const subtreeW = lc * (NW + HG);
-    const nodeX    = x + (subtreeW - NW) / 2;
-    const hasChildren = !!node.children?.length;
-    const isCollapsed = collapsed.has(node.id);
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir: 'TB', nodesep: NSEP, ranksep: RSEP, marginx: 32, marginy: 32 });
+  g.setDefaultEdgeLabel(() => ({}));
+  flat.forEach(n  => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
+  eList.forEach(e => g.setEdge(e.src, e.tgt));
+  dagre.layout(g);
 
-    nodes.push({
-      id:       node.id,
-      type:     'orgNode',
-      position: { x: nodeX, y: depth * (NH + VG) },
+  const nodes: Node[] = flat.map(n => {
+    const pos  = g.node(n.id);
+    const type = typeMap.get(n.type_id);
+    const color = type?.color ?? '#64748b';
+    return {
+      id:       n.id,
+      type:     'orgCard',
+      position: { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2 },
+      width:    NODE_W,   // ← key: RF uses this for immediate fitView
+      height:   NODE_H,
       data: {
-        node,
-        typeColor:       colorMap.get(node.type_id) ?? '#64748b',
-        hasChildren,
-        isCollapsed,
-        onAddChild:       callbacks.onAddChild,
-        onToggleCollapse: callbacks.onToggleCollapse,
+        node:        n,
+        color,
+        typeName:    type?.name ?? n.type_slug,
+        hasChildren: !!n.children?.length,
+        isCollapsed: collapsed.has(n.id),
+        onAdd:       cbs.onAdd,
+        onCollapse:  cbs.onCollapse,
+        onSelect:    cbs.onSelect,
       },
-    });
+    };
+  });
 
-    if (node.parent_id) {
-      edges.push({
-        id:     `e-${node.parent_id}-${node.id}`,
-        source: node.parent_id,
-        target: node.id,
-        type:   'smoothstep',
-        style:  { stroke: '#cbd5e1', strokeWidth: 1.5 },
-      });
-    }
-
-    if (hasChildren && !isCollapsed) {
-      const child = buildLayout(node.children!, colorMap, collapsed, callbacks, depth + 1, x);
-      nodes.push(...child.nodes);
-      edges.push(...child.edges);
-    }
-
-    x += subtreeW;
-  }
+  const edges: Edge[] = eList.map(e => ({
+    id:        `e-${e.src}-${e.tgt}`,
+    source:    e.src,
+    target:    e.tgt,
+    type:      'step',
+    style:     { stroke: '#94a3b8', strokeWidth: 1.5 },
+    markerEnd: { type: MarkerType.ArrowClosed, width: 9, height: 9, color: '#94a3b8' },
+  }));
 
   return { nodes, edges };
 }
 
-/* ── Custom node card ────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   ORG CARD NODE
+   ───────────────────────────────────────────────────────────────────────────── */
 
-type OrgNodeData = {
-  node:             OrgNode;
-  typeColor:        string;
-  hasChildren:      boolean;
-  isCollapsed:      boolean;
-  onAddChild:       (parentId: string, parentName: string) => void;
-  onToggleCollapse: (id: string) => void;
+type CardData = {
+  node:        OrgNode;
+  color:       string;
+  typeName:    string;
+  hasChildren: boolean;
+  isCollapsed: boolean;
+  onAdd:       (id: string, name: string) => void;
+  onCollapse:  (id: string) => void;
+  onSelect:    (n: OrgNode) => void;
 };
 
-function OrgNodeCard({ data, selected }: { data: OrgNodeData; selected: boolean }) {
-  const { node, typeColor, hasChildren, isCollapsed, onAddChild, onToggleCollapse } = data;
-  const subtitle = node.city ?? node.code ?? null;
+function OrgCard({ data, selected }: NodeProps) {
+  const d = data as CardData;
+  const { node, color, typeName, hasChildren, isCollapsed } = d;
+  const childCount = node.child_count ?? node.children?.length ?? 0;
 
   return (
     <>
       <Handle type="target" position={Position.Top}
-        style={{ background: typeColor, border: 'none', width: 8, height: 8 }} />
-      <div style={{
-        width: NW, background: '#fff', fontFamily: 'inherit',
-        border: `2px solid ${selected ? typeColor : '#e2e8f0'}`,
-        borderRadius: 10, padding: '8px 10px 6px',
-        boxShadow: selected
-          ? `0 0 0 3px ${typeColor}22, 0 4px 12px rgba(0,0,0,.12)`
-          : '0 1px 4px rgba(0,0,0,.07)',
-        cursor: 'pointer',
-        opacity: node.is_active === false ? 0.5 : 1,
-        position: 'relative',
-      }}>
-        {/* Top row: type badge + weight */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+        style={{ background: color, border: '2px solid #fff', width: 8, height: 8, top: -4 }} />
+
+      <div
+        onClick={e => { e.stopPropagation(); d.onSelect(node); }}
+        style={{
+          width:    NODE_W,
+          height:   NODE_H,
+          background: '#fff',
+          borderRadius: 10,
+          borderLeft:   `4px solid ${color}`,
+          borderTop:    `1px solid ${selected ? color : '#e2e8f0'}`,
+          borderRight:  `1px solid ${selected ? color : '#e2e8f0'}`,
+          borderBottom: `1px solid ${selected ? color : '#e2e8f0'}`,
+          boxShadow: selected
+            ? `0 0 0 2px ${color}30, 0 4px 14px rgba(0,0,0,.1)`
+            : '0 1px 6px rgba(0,0,0,.06)',
+          display: 'flex', flexDirection: 'column',
+          cursor: 'pointer',
+          opacity: node.is_active === false ? 0.5 : 1,
+          fontFamily: 'inherit',
+          overflow: 'hidden',
+          userSelect: 'none',
+          transition: 'box-shadow .15s',
+          boxSizing: 'border-box',
+        }}
+      >
+        {/* Type badge */}
+        <div style={{
+          padding: '6px 10px 2px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
           <span style={{
-            fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 99,
-            background: `${typeColor}15`, color: typeColor, border: `1px solid ${typeColor}28`,
-            textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', flexShrink: 0,
+            fontSize: 9, fontWeight: 800, letterSpacing: '0.07em',
+            textTransform: 'uppercase', color: color,
+            background: `${color}12`, padding: '1px 6px', borderRadius: 99,
+            border: `1px solid ${color}25`,
           }}>
-            {node.type_slug}
+            {typeName}
           </span>
-          {node.is_active === false && (
-            <span style={{ fontSize: 9, color: '#94a3b8', fontStyle: 'italic' }}>inactivo</span>
-          )}
-          <div style={{ flex: 1 }} />
-          <span style={{ fontSize: 10, fontWeight: 800, color: weightColor(node.weight) }}>
+          <span style={{
+            fontSize: 9, fontWeight: 700, color: wColor(node.weight),
+            background: `${wColor(node.weight)}12`, padding: '1px 5px', borderRadius: 4,
+          }}>
             {node.weight}
           </span>
         </div>
 
-        {/* Name */}
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', lineHeight: 1.3, wordBreak: 'break-word', marginBottom: 2 }}>
-          {node.name}
+        {/* Node name */}
+        <div style={{
+          flex: 1,
+          padding: '0 10px 4px',
+          display: 'flex', alignItems: 'center',
+        }}>
+          <span style={{
+            fontSize: 13, fontWeight: 700, color: '#0f172a', lineHeight: 1.3,
+            overflow: 'hidden', display: '-webkit-box',
+            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          }}>
+            {node.name}
+          </span>
         </div>
 
-        {/* Subtitle */}
-        {subtitle && (
-          <div style={{ fontSize: 10, color: '#64748b', display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
-            {node.city ? <MapPin size={9} style={{ flexShrink: 0 }} /> : null}
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</span>
-          </div>
-        )}
-
-        {/* Footer: user count + action buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-          {node.user_count > 0 && (
-            <span style={{ fontSize: 9, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2, marginRight: 2 }}>
-              <Users size={9} />{node.user_count}
+        {/* Footer */}
+        <div style={{
+          padding: '0 8px 6px',
+          display: 'flex', alignItems: 'center', gap: 4,
+          borderTop: '1px solid #f1f5f9',
+          paddingTop: 4,
+        }}>
+          {node.city && (
+            <span style={{ fontSize: 9, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2, flex: 1, overflow: 'hidden' }}>
+              <MapPin size={8} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.city}</span>
             </span>
           )}
-          <div style={{ flex: 1 }} />
+          {!node.city && node.user_count > 0 && (
+            <span style={{ fontSize: 9, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+              <Users size={8} />{node.user_count}
+            </span>
+          )}
+          {!node.city && node.user_count <= 0 && <div style={{ flex: 1 }} />}
 
-          {/* Add child button */}
-          <button
-            type="button"
-            title="Agregar hijo"
-            onClick={(e) => { e.stopPropagation(); onAddChild(node.id, node.name); }}
+          {/* Add child */}
+          <button type="button" title="Agregar hijo"
+            onClick={e => { e.stopPropagation(); d.onAdd(node.id, node.name); }}
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 20, height: 20, borderRadius: 5,
-              background: 'rgba(255,94,58,.08)', color: '#ff5e3a',
-              border: '1px solid rgba(255,94,58,.25)',
-              cursor: 'pointer', flexShrink: 0,
+              width: 18, height: 18, borderRadius: 4, cursor: 'pointer',
+              background: `${color}12`, color, border: `1px solid ${color}30`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
-            <Plus size={10} />
+            <Plus size={9} />
           </button>
 
-          {/* Collapse/expand button */}
+          {/* Collapse/expand */}
           {hasChildren && (
-            <button
-              type="button"
-              title={isCollapsed ? 'Expandir hijos' : 'Colapsar hijos'}
-              onClick={(e) => { e.stopPropagation(); onToggleCollapse(node.id); }}
+            <button type="button" title={isCollapsed ? 'Expandir' : 'Colapsar'}
+              onClick={e => { e.stopPropagation(); d.onCollapse(node.id); }}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 20, height: 20, borderRadius: 5,
-                background: '#f1f5f9', color: '#64748b',
-                border: '1px solid #e2e8f0',
-                cursor: 'pointer', flexShrink: 0,
+                width: 18, height: 18, borderRadius: 4, cursor: 'pointer',
+                background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                fontSize: 9, fontWeight: 700,
               }}>
               {isCollapsed
-                ? <ChevronRight size={10} />
-                : <ChevronDown size={10} />}
+                ? <span style={{ display: 'flex', alignItems: 'center' }}><ChevronRight size={8} /><span style={{ fontSize: 8 }}>{childCount}</span></span>
+                : <ChevronDown size={9} />}
             </button>
           )}
         </div>
 
-        {/* Collapsed badge */}
-        {isCollapsed && hasChildren && (
+        {/* Collapsed hint bubble */}
+        {isCollapsed && childCount > 0 && (
           <div style={{
-            position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%)',
-            fontSize: 9, fontWeight: 700, color: '#94a3b8',
+            position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)',
+            fontSize: 8, fontWeight: 700, color: '#64748b',
             background: '#f8fafc', border: '1px solid #e2e8f0',
-            padding: '1px 6px', borderRadius: 99, whiteSpace: 'nowrap',
+            padding: '1px 6px', borderRadius: 99, whiteSpace: 'nowrap', pointerEvents: 'none',
           }}>
-            {node.child_count ?? node.children?.length ?? 0} ocultos
+            +{childCount}
           </div>
         )}
       </div>
+
       <Handle type="source" position={Position.Bottom}
-        style={{ background: typeColor, border: 'none', width: 8, height: 8 }} />
+        style={{ background: color, border: '2px solid #fff', width: 8, height: 8, bottom: -4 }} />
     </>
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const nodeTypes = { orgNode: OrgNodeCard as any };
+const nodeTypes = { orgCard: OrgCard };
 
-/* ── Auto-fit helper ─────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   INNER TOOLBAR (inside ReactFlow — gets correct RF context)
+   ───────────────────────────────────────────────────────────────────────────── */
 
-function FlowAutoFit({ nodeCount }: { nodeCount: number }) {
-  const { fitView } = useReactFlow();
-  useEffect(() => {
-    const t = setTimeout(() => fitView({ padding: 0.2, duration: 350 }), 60);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeCount]);
-  return null;
-}
-
-/* ── Context menu ─────────────────────────────────────────────────────────── */
-
-interface ContextMenuState {
-  nodeId:   string;
-  nodeName: string;
-  x: number;
-  y: number;
-}
-
-function ContextMenu({
-  menu, onEdit, onAddChild, onToggleActive, onClose,
-}: {
-  menu:            ContextMenuState;
-  onEdit:          () => void;
-  onAddChild:      (parentId: string, parentName: string) => void;
-  onToggleActive:  () => void;
-  onClose:         () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as EventTarget & HTMLElement)) onClose();
-    }
-    document.addEventListener('mousedown', handle);
-    return () => document.removeEventListener('mousedown', handle);
-  }, [onClose]);
-
-  const item: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px',
-    fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
-    background: 'transparent', fontFamily: 'inherit', width: '100%',
-    textAlign: 'left', color: '#0e2235',
+function InnerToolbar() {
+  const { fitView, zoomIn, zoomOut } = useReactFlow();
+  const b: React.CSSProperties = {
+    width: 26, height: 26, borderRadius: 6, border: 'none', background: '#f8fafc',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: '#475569',
   };
-
   return (
-    <div ref={ref} style={{
-      position: 'fixed', zIndex: 9999,
-      top: menu.y, left: menu.x,
-      background: '#fff', border: '1px solid #e2e8f0',
-      borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.14)',
-      overflow: 'hidden', minWidth: 180,
-    }}>
-      <div style={{ padding: '6px 14px 4px', fontSize: 11, fontWeight: 700, color: '#94a3b8', borderBottom: '1px solid #f1f5f9' }}>
-        {menu.nodeName}
+    <Panel position="top-right">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 4, boxShadow: '0 2px 8px rgba(0,0,0,.08)' }}>
+        <button style={b} title="Zoom +" type="button" onClick={() => zoomIn({ duration: 180 })}><ZoomIn size={12} /></button>
+        <button style={b} title="Zoom -" type="button" onClick={() => zoomOut({ duration: 180 })}><ZoomOut size={12} /></button>
+        <div style={{ height: 1, background: '#f1f5f9', margin: '1px 0' }} />
+        <button style={b} title="Ajustar" type="button" onClick={() => fitView({ padding: 0.15, duration: 350 })}><Maximize2 size={12} /></button>
       </div>
-      <button style={item} onClick={() => { onEdit(); onClose(); }}
-        onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-        <Info size={13} /> Ver / Editar nodo
-      </button>
-      <button style={item} onClick={() => { onAddChild(menu.nodeId, menu.nodeName); onClose(); }}
-        onMouseEnter={e => (e.currentTarget.style.background = '#fff7ed')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-        <Plus size={13} style={{ color: '#ff5e3a' }} />
-        <span style={{ color: '#ff5e3a' }}>Agregar hijo</span>
-      </button>
-      <button style={{ ...item, color: '#64748b' }}
-        onClick={() => { onToggleActive(); onClose(); }}
-        onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-        <ToggleLeft size={13} /> Activar / Desactivar
-      </button>
-    </div>
+    </Panel>
   );
 }
 
-/* ── Edit form type ──────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   FIT ON LAYOUT CHANGE
+   Because we declare width/height on nodes, fitView works immediately.
+   We still do a deferred call so layout animation looks smooth.
+   ───────────────────────────────────────────────────────────────────────────── */
 
-type EditForm = {
-  name: string; code: string; weight: number; description: string;
-  address: string; city: string; country: string; phone: string; email: string;
-  is_active: boolean;
-};
-const EDIT_EMPTY: EditForm = {
-  name: '', code: '', weight: 5, description: '',
-  address: '', city: '', country: '', phone: '', email: '', is_active: true,
-};
-function nodeToForm(n: OrgNode): EditForm {
-  return {
-    name: n.name, code: n.code ?? '', weight: n.weight,
-    description: n.description ?? '', address: n.address ?? '',
-    city: n.city ?? '', country: n.country ?? '',
-    phone: n.phone ?? '', email: n.email ?? '', is_active: n.is_active,
-  };
+function FitOnChange({ layoutKey }: { layoutKey: string }) {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    // Immediate: works because nodes declare width/height
+    fitView({ padding: 0.15, duration: 0 });
+    // Smooth follow-up after React renders
+    const t = setTimeout(() => fitView({ padding: 0.15, duration: 300 }), 60);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutKey]);
+  return null;
 }
 
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   HELPERS
+   ───────────────────────────────────────────────────────────────────────────── */
 
-function findInTree(nodes: OrgNode[], id: string): OrgNode | null {
-  for (const n of nodes) {
+function findNode(tree: OrgNode[], id: string): OrgNode | null {
+  for (const n of tree) {
     if (n.id === id) return n;
-    if (n.children) { const f = findInTree(n.children, id); if (f) return f; }
+    if (n.children) { const f = findNode(n.children, id); if (f) return f; }
   }
   return null;
 }
 
-function isDescendant(tree: OrgNode[], ancestorId: string, checkId: string): boolean {
-  const node = findInTree(tree, ancestorId);
-  if (!node?.children?.length) return false;
-  return node.children.some(c => c.id === checkId || isDescendant(tree, c.id, checkId));
+function isDescendant(tree: OrgNode[], ancestorId: string, targetId: string): boolean {
+  const n = findNode(tree, ancestorId);
+  if (!n?.children?.length) return false;
+  return n.children.some(c => c.id === targetId || isDescendant(tree, c.id, targetId));
 }
 
-const inp: React.CSSProperties = {
-  padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6,
-  fontSize: 12, fontFamily: 'inherit', background: '#fff', width: '100%',
-  boxSizing: 'border-box',
-};
-const fLabel: React.CSSProperties = { margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#64748b' };
+/* ─────────────────────────────────────────────────────────────────────────────
+   SHARED STYLE TOKENS
+   ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Quick add child panel ───────────────────────────────────────────────── */
+const inp: React.CSSProperties = {
+  padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7,
+  fontSize: 12, fontFamily: 'inherit', background: '#fff',
+  width: '100%', boxSizing: 'border-box', outline: 'none', color: '#0e2235',
+};
+const lbl: React.CSSProperties = {
+  display: 'block', fontSize: 10, fontWeight: 700, color: '#64748b',
+  textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4,
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   QUICK ADD PANEL  (floating form above canvas)
+   ───────────────────────────────────────────────────────────────────────────── */
 
 function QuickAddPanel({
-  types, flatNodes, preParentId, preParentName,
+  types, flatNodes, parentId, parentName,
   onSave, onCancel, isPending,
 }: {
-  types: StructureType[];
+  types:     StructureType[];
   flatNodes: OrgNode[];
-  preParentId: string;
-  preParentName: string;
-  onSave: (dto: { type_id: string; parent_id?: string; name: string; weight: number }) => void;
-  onCancel: () => void;
+  parentId:  string;
+  parentName: string;
+  onSave:    (dto: { type_id: string; parent_id?: string; name: string; weight: number }) => void;
+  onCancel:  () => void;
   isPending: boolean;
 }) {
-  const [typeId,   setTypeId]   = useState('');
-  const [parentId, setParentId] = useState(preParentId);
-  const [name,     setName]     = useState('');
-  const [weight,   setWeight]   = useState(5);
+  const [typeId,  setTypeId]  = useState('');
+  const [pid,     setPid]     = useState(parentId);
+  const [name,    setName]    = useState('');
+  const [weight,  setWeight]  = useState(5);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // update parent if prop changes
-  useEffect(() => setParentId(preParentId), [preParentId]);
+  useEffect(() => { setPid(parentId); }, [parentId]);
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
 
-  const canSave = typeId && name.trim();
+  const ok = typeId && name.trim();
 
   return (
     <div style={{
-      border: '1.5px solid #ff5e3a', borderRadius: 10, padding: '14px 16px',
-      marginBottom: 14, background: '#fff', boxShadow: '0 4px 16px rgba(255,94,58,.08)',
+      background: '#fff', border: '2px solid #ff5e3a', borderRadius: 12,
+      padding: '16px 18px', marginBottom: 14,
+      boxShadow: '0 8px 28px rgba(255,94,58,.1)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff5e3a', flexShrink: 0 }} />
-        <span style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          {preParentId ? `Nuevo hijo de "${preParentName}"` : 'Nuevo nodo raíz'}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 7, background: '#fff5f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <GitBranch size={13} style={{ color: '#ff5e3a' }} />
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 800, color: '#0e2235' }}>
+          {parentId ? `Nuevo hijo de "${parentName}"` : 'Nuevo nodo raíz'}
         </span>
         <button type="button" onClick={onCancel}
-          style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+          style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 2 }}>
           <X size={14} />
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-        {/* Type */}
-        <div style={{ flex: '1 1 140px' }}>
-          <p style={fLabel}>Tipo *</p>
-          <select value={typeId} onChange={e => setTypeId(e.target.value)} style={inp}>
-            <option value="">— seleccionar —</option>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: 10, marginBottom: 12 }}>
+        <div>
+          <label style={lbl}>Tipo *</label>
+          <select style={inp} value={typeId} onChange={e => setTypeId(e.target.value)}>
+            <option value="">— tipo —</option>
             {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
-
-        {/* Name */}
-        <div style={{ flex: '2 1 160px' }}>
-          <p style={fLabel}>Nombre *</p>
-          <input style={inp} value={name} autoFocus
+        <div>
+          <label style={lbl}>Nombre *</label>
+          <input ref={inputRef} style={inp} value={name}
+            placeholder="Ej: Mesa de Ayuda, Laboratorio A..."
             onChange={e => setName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && canSave) onSave({ type_id: typeId, parent_id: parentId || undefined, name, weight }); }}
-            placeholder="Ej. Sede Bogotá" />
+            onKeyDown={e => { if (e.key === 'Enter' && ok) onSave({ type_id: typeId, parent_id: pid || undefined, name, weight }); }} />
         </div>
-
-        {/* Parent */}
-        <div style={{ flex: '1 1 150px' }}>
-          <p style={fLabel}>Nodo padre</p>
-          <select value={parentId} onChange={e => setParentId(e.target.value)} style={inp}>
+        <div>
+          <label style={lbl}>Nodo padre</label>
+          <select style={inp} value={pid} onChange={e => setPid(e.target.value)}>
             <option value="">— raíz —</option>
             {flatNodes.map(n => <option key={n.id} value={n.id}>[{n.type_slug}] {n.name}</option>)}
           </select>
         </div>
+      </div>
 
-        {/* Weight */}
-        <div style={{ flex: '1 1 120px' }}>
-          <p style={fLabel}>Peso (1–10)</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="range" min={1} max={10} value={weight}
-              onChange={e => setWeight(+e.target.value)} style={{ flex: 1 }} />
-            <span style={{ fontWeight: 700, color: weightColor(weight), minWidth: 18 }}>{weight}</span>
-          </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <label style={{ ...lbl, margin: 0, flexShrink: 0 }}>Peso operacional</label>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {[1,2,3,4,5,6,7,8,9,10].map(v => (
+            <button key={v} type="button" onClick={() => setWeight(v)}
+              style={{
+                width: 26, height: 26, borderRadius: 5, fontSize: 10, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+                border: weight === v ? `1.5px solid ${wColor(v)}` : '1px solid #e2e8f0',
+                background: weight === v ? `${wColor(v)}14` : '#f8fafc',
+                color: weight === v ? wColor(v) : '#94a3b8',
+              }}>
+              {v}
+            </button>
+          ))}
         </div>
+        <span style={{ fontSize: 11, fontWeight: 700, color: wColor(weight), flexShrink: 0 }}>
+          {wLabel(weight)}
+        </span>
+      </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
-          <button type="button"
-            disabled={!canSave || isPending}
-            onClick={() => onSave({ type_id: typeId, parent_id: parentId || undefined, name, weight })}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 16px',
-              background: canSave ? '#ff5e3a' : '#e2e8f0', color: canSave ? '#fff' : '#94a3b8',
-              border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700,
-              cursor: canSave && !isPending ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
-            }}>
-            {isPending ? '…' : <><Check size={12} /> Crear</>}
-          </button>
-        </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" disabled={!ok || isPending} onClick={() => onSave({ type_id: typeId, parent_id: pid || undefined, name, weight })}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px',
+            borderRadius: 8, background: ok ? '#ff5e3a' : '#e2e8f0',
+            color: ok ? '#fff' : '#94a3b8', border: 'none',
+            fontSize: 12, fontWeight: 700, cursor: ok && !isPending ? 'pointer' : 'not-allowed',
+            fontFamily: 'inherit',
+          }}>
+          {isPending ? '…' : <><Check size={13} /> Crear nodo</>}
+        </button>
+        <button type="button" onClick={onCancel}
+          style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', cursor: 'pointer', fontFamily: 'inherit' }}>
+          Cancelar
+        </button>
       </div>
     </div>
   );
 }
 
-/* ── OrgFlowTab ──────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   NODE DETAIL SIDEBAR
+   ───────────────────────────────────────────────────────────────────────────── */
+
+type EditForm = {
+  name: string; code: string; weight: number; description: string;
+  address: string; city: string; country: string; phone: string; email: string;
+  is_active: boolean; parent_id: string;
+};
+
+function toForm(n: OrgNode): EditForm {
+  return {
+    name: n.name, code: n.code ?? '', weight: n.weight,
+    description: n.description ?? '', address: n.address ?? '',
+    city: n.city ?? '', country: n.country ?? '',
+    phone: n.phone ?? '', email: n.email ?? '',
+    is_active: n.is_active, parent_id: n.parent_id ?? '',
+  };
+}
+
+function NodeSidebar({
+  node, typeColor, typeName, flatNodes,
+  onClose, onAddChild,
+  saveMut, deleteMut, toggleMut,
+}: {
+  node:      OrgNode;
+  typeColor: string;
+  typeName:  string;
+  flatNodes: OrgNode[];
+  onClose:   () => void;
+  onAddChild: (id: string, name: string) => void;
+  saveMut:   ReturnType<typeof useMutation<any, any, EditForm>>;
+  deleteMut: ReturnType<typeof useMutation<any, any, void>>;
+  toggleMut: ReturnType<typeof useMutation<any, any, { id: string; is_active: boolean }>>;
+}) {
+  const [tab,   setTab]   = useState<'info' | 'edit'>('info');
+  const [form,  setForm]  = useState<EditForm>(toForm(node));
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => { setForm(toForm(node)); setDirty(false); setTab('info'); }, [node.id]);
+
+  function upd<K extends keyof EditForm>(k: K, v: EditForm[K]) {
+    setForm(f => ({ ...f, [k]: v }));
+    setDirty(true);
+  }
+
+  const tabB = (a: boolean): React.CSSProperties => ({
+    flex: 1, padding: '5px 0', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+    fontFamily: 'inherit', border: 'none', borderRadius: 5,
+    background: a ? '#fff' : 'transparent',
+    color: a ? '#0e2235' : '#94a3b8', transition: 'all .1s',
+  });
+
+  const childCount = node.child_count ?? node.children?.length ?? 0;
+
+  return (
+    <div style={{ background: '#fff', border: `1.5px solid ${typeColor}40`, borderRadius: 12, overflow: 'hidden', marginTop: 12 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: `${typeColor}08`, borderBottom: `1px solid ${typeColor}20` }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: typeColor, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.name}</div>
+          <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
+            {typeName}
+            {node.parent_name && <> · hijo de <strong style={{ color: '#64748b' }}>{node.parent_name}</strong></>}
+            {childCount > 0 && <> · {childCount} hijo{childCount !== 1 ? 's' : ''}</>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 7, padding: 3, gap: 2 }}>
+          <button style={tabB(tab === 'info')} onClick={() => setTab('info')}>Info</button>
+          <button style={tabB(tab === 'edit')} onClick={() => setTab('edit')}>Editar</button>
+        </div>
+        <button title="Agregar hijo" onClick={() => onAddChild(node.id, node.name)}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: `${typeColor}10`, color: typeColor, border: `1px solid ${typeColor}30`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <Plus size={11} /> Hijo
+        </button>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 2 }}>
+          <X size={13} />
+        </button>
+      </div>
+
+      {/* INFO TAB */}
+      {tab === 'info' && (
+        <div style={{ padding: '14px 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px 20px', marginBottom: 14 }}>
+            <InfoField label="Tipo"   v={<span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: typeColor, flexShrink: 0, display: 'inline-block' }} />{typeName}</span>} />
+            <InfoField label="Peso"   v={<span style={{ fontWeight: 900, color: wColor(node.weight) }}>{node.weight} — {wLabel(node.weight)}</span>} />
+            <InfoField label="Estado" v={<span style={{ color: node.is_active ? '#22c55e' : '#94a3b8', fontWeight: 700 }}>{node.is_active ? 'Activo' : 'Inactivo'}</span>} />
+            {node.code    && <InfoField label="Código"   v={node.code} />}
+            {node.city    && <InfoField label="Ciudad"   v={node.city} />}
+            {node.phone   && <InfoField label="Teléfono" v={node.phone} />}
+            {node.email   && <InfoField label="Email"    v={node.email} />}
+            {node.address && <InfoField label="Dirección" v={node.address} />}
+          </div>
+          {node.description && (
+            <div style={{ fontSize: 11, color: '#64748b', background: '#f8fafc', padding: '8px 12px', borderRadius: 7, borderLeft: `3px solid ${typeColor}50`, marginBottom: 14, lineHeight: 1.6 }}>
+              {node.description}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={() => setTab('edit')}
+              style={{ padding: '6px 14px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Pencil size={10} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle' }} />Editar
+            </button>
+            <button
+              onClick={() => toggleMut.mutate({ id: node.id, is_active: !node.is_active })}
+              disabled={toggleMut.isPending}
+              style={{ padding: '6px 12px', background: '#fff', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4, color: node.is_active ? '#ef4444' : '#22c55e', border: `1px solid ${node.is_active ? '#fecaca' : '#bbf7d0'}` }}>
+              {node.is_active ? <><ToggleRight size={12} />Desactivar</> : <><ToggleLeft size={12} />Activar</>}
+            </button>
+            <button
+              onClick={() => { if (confirm(`¿Eliminar "${node.name}"?`)) deleteMut.mutate(); }}
+              disabled={deleteMut.isPending}
+              style={{ padding: '6px 10px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Trash2 size={11} />{deleteMut.isPending ? '…' : 'Eliminar'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT TAB */}
+      {tab === 'edit' && (
+        <div style={{ padding: '14px 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div><label style={lbl}>Nombre *</label><input style={inp} value={form.name} onChange={e => upd('name', e.target.value)} /></div>
+            <div><label style={lbl}>Código</label><input style={inp} value={form.code} placeholder="ej. BOG-01" onChange={e => upd('code', e.target.value)} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div>
+              <label style={lbl}>Nodo padre</label>
+              <select style={inp} value={form.parent_id} onChange={e => upd('parent_id', e.target.value)}>
+                <option value="">— raíz (sin padre) —</option>
+                {flatNodes.filter(n => n.id !== node.id).map(n => <option key={n.id} value={n.id}>[{n.type_slug}] {n.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Estado</label>
+              <button onClick={() => upd('is_active', !form.is_active)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 7, background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, width: '100%', color: form.is_active ? '#22c55e' : '#94a3b8', fontWeight: 700 }}>
+                {form.is_active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                {form.is_active ? 'Activo' : 'Inactivo'}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <label style={lbl}>Peso operacional</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+              {[1,2,3,4,5,6,7,8,9,10].map(v => (
+                <button key={v} type="button" onClick={() => upd('weight', v)}
+                  style={{ width: 26, height: 26, borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: form.weight === v ? `1.5px solid ${wColor(v)}` : '1px solid #e2e8f0', background: form.weight === v ? `${wColor(v)}14` : '#f8fafc', color: form.weight === v ? wColor(v) : '#94a3b8' }}>
+                  {v}
+                </button>
+              ))}
+              <span style={{ fontSize: 10, fontWeight: 700, color: wColor(form.weight), marginLeft: 4 }}>{wLabel(form.weight)}</span>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <label style={lbl}>Descripción</label>
+            <textarea style={{ ...inp, minHeight: 50, resize: 'vertical' }} value={form.description} placeholder="Opcional..." onChange={e => upd('description', e.target.value)} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+            <div><label style={lbl}>Dirección</label><input style={inp} value={form.address} placeholder="Calle..." onChange={e => upd('address', e.target.value)} /></div>
+            <div><label style={lbl}>Ciudad</label><input style={inp} value={form.city} placeholder="Bogotá" onChange={e => upd('city', e.target.value)} /></div>
+            <div><label style={lbl}>País</label><input style={inp} value={form.country} placeholder="CO" onChange={e => upd('country', e.target.value)} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8, marginBottom: 14 }}>
+            <div><label style={lbl}>Teléfono</label><input style={inp} value={form.phone} onChange={e => upd('phone', e.target.value)} /></div>
+            <div><label style={lbl}>Email</label><input type="email" style={inp} value={form.email} onChange={e => upd('email', e.target.value)} /></div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => saveMut.mutate(form)} disabled={!form.name.trim() || saveMut.isPending}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 18px', borderRadius: 8, background: form.name.trim() ? (dirty ? '#ff5e3a' : '#0e2235') : '#e2e8f0', color: form.name.trim() ? '#fff' : '#94a3b8', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Check size={12} />{saveMut.isPending ? 'Guardando…' : dirty ? 'Guardar cambios' : 'Sin cambios'}
+            </button>
+            <button onClick={() => { setForm(toForm(node)); setDirty(false); }}
+              style={{ padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', cursor: 'pointer', fontFamily: 'inherit' }}>
+              Restablecer
+            </button>
+          </div>
+          {saveMut.isSuccess && (
+            <div style={{ marginTop: 8, fontSize: 11, color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Check size={10} /> Guardado correctamente.
+            </div>
+          )}
+          {saveMut.isError && (
+            <div style={{ marginTop: 8, fontSize: 11, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <AlertCircle size={10} /> Error al guardar.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoField({ label, v }: { label: string; v: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 12, color: '#0f172a', fontWeight: 600, lineHeight: 1.4 }}>{v ?? '—'}</div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TYPES TAB
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function TypesTab({ types, onUpdate }: {
+  types:    StructureType[];
+  onUpdate: (id: string, weight: number) => void;
+}) {
+  return (
+    <div>
+      <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16, marginTop: 0 }}>
+        El peso (1–10) alimenta directamente el motor de prioridad automática.
+      </p>
+      {types.map(t => (
+        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 14px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 8, borderLeft: `4px solid ${t.color ?? '#64748b'}` }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>{t.name}</div>
+            <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2, display: 'flex', gap: 8 }}>
+              <code>{t.slug}</code>
+              {t.allows_users && <span style={{ color: '#059669', fontWeight: 600 }}>acepta usuarios</span>}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 180 }}>
+            <span style={{ fontSize: 10, color: '#64748b' }}>Peso</span>
+            <input type="range" min={1} max={10} value={t.weight}
+              onChange={e => onUpdate(t.id, +e.target.value)}
+              style={{ flex: 1, accentColor: t.color ?? '#64748b' }} />
+            <span style={{ fontSize: 12, fontWeight: 800, minWidth: 18, color: wColor(t.weight) }}>{t.weight}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CANVAS COMPONENT  (inside ReactFlowProvider)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function OrgCanvas({
+  tree, typeMap, selectedId, setSelectedId,
+  collapsed, setCollapsed, onAddChild, reparentMut,
+}: {
+  tree:          OrgNode[];
+  typeMap:       Map<string, StructureType>;
+  selectedId:    string | null;
+  setSelectedId: (id: string | null) => void;
+  collapsed:     Set<string>;
+  setCollapsed:  React.Dispatch<React.SetStateAction<Set<string>>>;
+  onAddChild:    (parentId: string, parentName: string) => void;
+  reparentMut:   ReturnType<typeof useMutation<any, any, { nodeId: string; parentId: string }>>;
+}) {
+  const [rfNodes, setRfNodes, onNodesChange] = useNodesState<Node>([]);
+  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [dropId,  setDropId]                 = useState<string | null>(null);
+  const [layoutSeq, setLayoutSeq]            = useState(0);
+  const dropRef                              = useRef<string | null>(null);
+  const layoutRef                            = useRef<Node[]>([]);
+
+  const onCollapse = useCallback((id: string) => {
+    setCollapsed(p => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }, [setCollapsed]);
+
+  const onSelect = useCallback((n: OrgNode) => setSelectedId(n.id), [setSelectedId]);
+
+  // Rebuild layout — store snapshot in ref for drag reset
+  useEffect(() => {
+    if (!tree.length) { setRfNodes([]); setRfEdges([]); layoutRef.current = []; return; }
+    const { nodes, edges } = buildLayout(tree, typeMap, collapsed, { onAdd: onAddChild, onCollapse, onSelect });
+    layoutRef.current = nodes;
+    setRfNodes(nodes);
+    setRfEdges(edges);
+    setLayoutSeq(v => v + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tree, typeMap, collapsed]);
+
+  // Drag reparent
+  const onNodeDrag = useCallback((_: React.MouseEvent, dragged: Node) => {
+    const cx = dragged.position.x + NODE_W / 2;
+    const cy = dragged.position.y + NODE_H / 2;
+    let hit: string | null = null;
+    for (const n of rfNodes) {
+      if (n.id === dragged.id) continue;
+      if (cx >= n.position.x && cx <= n.position.x + NODE_W && cy >= n.position.y && cy <= n.position.y + NODE_H) { hit = n.id; break; }
+    }
+    dropRef.current = hit;
+    setDropId(hit);
+  }, [rfNodes]);
+
+  const onNodeDragStop = useCallback((_: React.MouseEvent, dragged: Node) => {
+    const tgt = dropRef.current;
+    dropRef.current = null;
+    setDropId(null);
+    if (!tgt) {
+      // No valid drop target — snap back to dagre positions
+      setRfNodes(layoutRef.current);
+      return;
+    }
+    if (isDescendant(tree, dragged.id, tgt)) return;
+    if (findNode(tree, dragged.id)?.parent_id === tgt) return;
+    reparentMut.mutate({ nodeId: dragged.id, parentId: tgt });
+  }, [tree, reparentMut]);
+
+  const onNodeClick = useCallback((_: React.MouseEvent, n: Node) => setSelectedId(n.id), [setSelectedId]);
+
+  const layoutKey = String(layoutSeq);
+
+  if (rfNodes.length === 0) {
+    return (
+      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafbfc' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <GitBranch size={22} style={{ color: '#94a3b8' }} />
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#475569', marginBottom: 4 }}>Sin estructura organizacional</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>Usa "+ Nuevo nodo" para construir la jerarquía.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ReactFlow
+      nodes={rfNodes.map(n => ({
+        ...n,
+        selected: n.id === selectedId,
+        style: n.id === dropId ? { outline: '2px solid #ff5e3a', borderRadius: 12, outlineOffset: 3 } : undefined,
+      }))}
+      edges={rfEdges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onNodeClick={onNodeClick}
+      onNodeDrag={onNodeDrag}
+      onNodeDragStop={onNodeDragStop}
+      onPaneClick={() => setSelectedId(null)}
+      onInit={inst => { inst.fitView({ padding: 0.15, duration: 0 }); }}
+      nodeTypes={nodeTypes}
+      fitView
+      fitViewOptions={{ padding: 0.15 }}
+      minZoom={0.06}
+      maxZoom={1.5}
+      nodesDraggable={!reparentMut.isPending}
+      nodesConnectable={false}
+      elementsSelectable
+      style={{ background: '#fafbfc' }}
+    >
+      <Background variant={'dots' as any} color="#d1d5db" gap={24} size={1} />
+      <MiniMap
+        nodeColor={n => (n.data as CardData).color ?? '#64748b'}
+        style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8 }}
+        maskColor="rgba(241,245,249,.85)"
+      />
+      <InnerToolbar />
+      <FitOnChange layoutKey={layoutKey} />
+
+      {/* Status bar */}
+      <Panel position="bottom-left">
+        <div style={{ fontSize: 10, color: '#94a3b8', background: 'rgba(250,251,252,.9)', padding: '3px 10px', borderRadius: 6, border: '1px solid #f1f5f9', backdropFilter: 'blur(4px)' }}>
+          {reparentMut.isPending
+            ? '⟳ Cambiando padre…'
+            : `${rfNodes.length} nodo${rfNodes.length !== 1 ? 's' : ''} · Arrastra sobre otro → reparentar`}
+          {collapsed.size > 0 && <span style={{ marginLeft: 8, fontWeight: 600, color: '#64748b' }}>· {collapsed.size} colapsada{collapsed.size !== 1 ? 's' : ''}</span>}
+        </div>
+      </Panel>
+    </ReactFlow>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MAIN EXPORT
+   ───────────────────────────────────────────────────────────────────────────── */
 
 export function OrgFlowTab() {
   const qc = useQueryClient();
 
   const [section,    setSection]    = useState<'flow' | 'types'>('flow');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editForm,   setEditForm]   = useState<EditForm>(EDIT_EMPTY);
-  const [editPanel,  setEditPanel]  = useState<'info' | 'edit'>('info');
   const [showAdd,    setShowAdd]    = useState(false);
-  const [addParentId,   setAddParentId]   = useState('');
-  const [addParentName, setAddParentName] = useState('');
+  const [addPid,     setAddPid]     = useState('');
+  const [addPname,   setAddPname]   = useState('');
   const [collapsed,  setCollapsed]  = useState<Set<string>>(new Set());
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const [contextMenu,  setContextMenu]  = useState<ContextMenuState | null>(null);
-  const dropTargetRef = useRef<string | null>(null);
 
-  const [rfNodes, setRfNodes, onNodesChange] = useNodesState<Node>([]);
-  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
-
-  /* ── Queries ── */
-  const { data: tree  = [], isLoading: treeLoading  } = useQuery<OrgNode[]>({
+  const { data: tree  = [], isLoading: treeLoad  } = useQuery<OrgNode[]>({
     queryKey: ['org-node-tree'],
     queryFn:  systemConfigService.getOrgNodeTree,
     staleTime: 60_000,
   });
-  const { data: types = [], isLoading: typesLoading } = useQuery<StructureType[]>({
+  const { data: types = [], isLoading: typesLoad } = useQuery<StructureType[]>({
     queryKey: ['org-structure-types'],
     queryFn:  () => systemConfigService.getStructureTypes(),
     staleTime: 60_000,
   });
-  const { data: flatNodes = [] } = useQuery<OrgNode[]>({
+  const { data: flat  = [] } = useQuery<OrgNode[]>({
     queryKey: ['org-nodes-flat'],
     queryFn:  () => systemConfigService.getOrgNodes({ active: true }),
-    enabled:  showAdd,
+    enabled:  showAdd || !!selectedId,
     staleTime: 30_000,
   });
 
-  /* ── Callbacks for node cards ── */
-  const handleAddChild = useCallback((parentId: string, parentName: string) => {
-    setAddParentId(parentId);
-    setAddParentName(parentName);
-    setShowAdd(true);
-    setSelectedId(null);
-  }, []);
+  const typeMap = useMemo(() => new Map((types as StructureType[]).map(t => [t.id, t])), [types]);
 
-  const handleToggleCollapse = useCallback((id: string) => {
-    setCollapsed(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }, []);
+  const selectedNode = useMemo(() => selectedId ? findNode(tree as OrgNode[], selectedId) : null, [selectedId, tree]);
+  const selectedType = useMemo(() => selectedNode ? typeMap.get(selectedNode.type_id) : null, [selectedNode, typeMap]);
 
-  /* ── Sync layout ── */
-  useEffect(() => {
-    if (!tree.length) { setRfNodes([]); setRfEdges([]); return; }
-    const colorMap = new Map((types as StructureType[]).map(t => [t.id, t.color ?? '#64748b']));
-    const { nodes, edges } = buildLayout(
-      tree as OrgNode[], colorMap, collapsed,
-      { onAddChild: handleAddChild, onToggleCollapse: handleToggleCollapse },
-    );
-    setRfNodes(nodes);
-    setRfEdges(edges);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tree, types, collapsed]);
-
-  /* ── Mutations ── */
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ['org-node-tree'] });
-    qc.invalidateQueries({ queryKey: ['org-nodes-flat'] });
-  };
+  const inv = () => { qc.invalidateQueries({ queryKey: ['org-node-tree'] }); qc.invalidateQueries({ queryKey: ['org-nodes-flat'] }); };
 
   const updateTypeMut = useMutation({
     mutationFn: ({ id, weight }: { id: string; weight: number }) =>
@@ -518,494 +887,137 @@ export function OrgFlowTab() {
   const createMut = useMutation({
     mutationFn: (dto: { type_id: string; parent_id?: string; name: string; weight: number }) =>
       systemConfigService.createOrgNode(dto),
-    onSuccess: () => { invalidate(); setShowAdd(false); setAddParentId(''); setAddParentName(''); },
+    onSuccess: () => { inv(); setShowAdd(false); setAddPid(''); setAddPname(''); },
   });
 
-  const updateMut = useMutation({
-    mutationFn: (dto: EditForm) => systemConfigService.updateOrgNode(selectedId!, {
-      name: dto.name, code: dto.code || undefined, weight: dto.weight,
-      description: dto.description || undefined, address: dto.address || undefined,
-      city: dto.city || undefined, country: dto.country || undefined,
-      phone: dto.phone || undefined, email: dto.email || undefined,
-      is_active: dto.is_active,
+  const saveMut = useMutation<any, any, EditForm>({
+    mutationFn: (form: EditForm) => systemConfigService.updateOrgNode(selectedId!, {
+      name: form.name, code: form.code || undefined, weight: form.weight,
+      description: form.description || undefined, address: form.address || undefined,
+      city: form.city || undefined, country: form.country || undefined,
+      phone: form.phone || undefined, email: form.email || undefined,
+      is_active: form.is_active, parent_id: form.parent_id || undefined,
     }),
-    onSuccess: () => { invalidate(); setEditPanel('info'); },
+    onSuccess: inv,
   });
 
-  const deleteMut = useMutation({
+  const deleteMut = useMutation<any, any, void>({
     mutationFn: () => systemConfigService.deleteOrgNode(selectedId!),
-    onSuccess: () => { invalidate(); setSelectedId(null); },
+    onSuccess: () => { inv(); setSelectedId(null); },
+  });
+
+  const toggleMut = useMutation<any, any, { id: string; is_active: boolean }>({
+    mutationFn: ({ id, is_active }) => systemConfigService.updateOrgNode(id, { is_active }),
+    onSuccess: inv,
   });
 
   const reparentMut = useMutation({
     mutationFn: ({ nodeId, parentId }: { nodeId: string; parentId: string }) =>
       systemConfigService.updateOrgNode(nodeId, { parent_id: parentId }),
-    onSuccess: invalidate,
+    onSuccess: inv,
   });
 
-  const toggleActiveMut = useMutation({
-    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
-      systemConfigService.updateOrgNode(id, { is_active }),
-    onSuccess: invalidate,
-  });
-
-  /* ── Drag reparent ── */
-  const CARD_H = 90;
-  const onNodeDrag = useCallback((_: React.MouseEvent, draggedNode: Node) => {
-    const cx = draggedNode.position.x + NW / 2;
-    const cy = draggedNode.position.y + CARD_H / 2;
-    let found: string | null = null;
-    for (const n of rfNodes) {
-      if (n.id === draggedNode.id) continue;
-      const { x, y } = n.position;
-      if (cx >= x && cx <= x + NW && cy >= y && cy <= y + CARD_H) { found = n.id; break; }
-    }
-    dropTargetRef.current = found;
-    setDropTargetId(found);
-  }, [rfNodes]);
-
-  const onNodeDragStop = useCallback((_: React.MouseEvent, draggedNode: Node) => {
-    const targetId = dropTargetRef.current;
-    dropTargetRef.current = null;
-    setDropTargetId(null);
-    if (!targetId) return;
-    if (isDescendant(tree as OrgNode[], draggedNode.id, targetId)) return;
-    const current = findInTree(tree as OrgNode[], draggedNode.id);
-    if (current?.parent_id === targetId) return;
-    reparentMut.mutate({ nodeId: draggedNode.id, parentId: targetId });
-  }, [tree, reparentMut]);
-
-  /* ── Node click / context menu ── */
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    const orgNode = (node.data as OrgNodeData).node;
-    setSelectedId(node.id);
-    setEditForm(nodeToForm(orgNode));
-    setEditPanel('info');
-    setShowAdd(false);
-    setContextMenu(null);
+  const handleAddChild = useCallback((pid: string, pname: string) => {
+    setAddPid(pid); setAddPname(pname); setShowAdd(true); setSelectedId(null);
   }, []);
 
-  const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
-    e.preventDefault();
-    const orgNode = (node.data as OrgNodeData).node;
-    setContextMenu({ nodeId: node.id, nodeName: orgNode.name, x: e.clientX, y: e.clientY });
-    setSelectedId(node.id);
-    setEditForm(nodeToForm(orgNode));
-    setEditPanel('info');
-  }, []);
+  const hasTree = (tree as OrgNode[]).length > 0;
 
-  const selectedNode = useMemo(
-    () => selectedId ? findInTree(tree as OrgNode[], selectedId) : null,
-    [selectedId, tree],
-  );
-  const selectedTypeColor = useMemo(() => {
-    if (!selectedNode) return '#64748b';
-    return (types as StructureType[]).find(t => t.id === selectedNode.type_id)?.color ?? '#64748b';
-  }, [selectedNode, types]);
-
-  const collapseAll = useCallback(() => {
-    const ids = new Set<string>();
-    const visit = (nodes: OrgNode[]) => nodes.forEach(n => { if (n.children?.length) { ids.add(n.id); visit(n.children); } });
-    visit(tree as OrgNode[]);
-    setCollapsed(ids);
-  }, [tree]);
-
-  const expandAll = useCallback(() => setCollapsed(new Set()), []);
-
-  if (treeLoading || typesLoading) return <Spinner />;
-
-  const sBtn = (active: boolean): React.CSSProperties => ({
-    padding: '5px 14px', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-    fontFamily: 'inherit', border: active ? '1px solid #ff5e3a' : '1px solid #e2e8f0',
-    background: active ? 'rgba(255,94,58,.07)' : '#fff',
-    color: active ? '#ff5e3a' : '#64748b',
+  const sBtn = (a: boolean): React.CSSProperties => ({
+    padding: '5px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+    cursor: 'pointer', fontFamily: 'inherit',
+    border: a ? '1px solid #ff5e3a' : '1px solid #e2e8f0',
+    background: a ? 'rgba(255,94,58,.07)' : '#fff',
+    color: a ? '#ff5e3a' : '#64748b', transition: 'all .1s',
   });
 
-  const tabBtn = (active: boolean): React.CSSProperties => ({
-    flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-    fontFamily: 'inherit', border: 'none',
-    background: active ? '#fff' : 'transparent',
-    color: active ? '#0e2235' : '#94a3b8',
-    borderRadius: 5, transition: 'all .12s',
-  });
+  if (treeLoad || typesLoad) return <Spinner />;
 
-  /* ── Render ── */
   return (
     <div>
-      {/* Section toggle + actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <button style={sBtn(section === 'flow')}  onClick={() => setSection('flow')}>Árbol visual</button>
-        <button style={sBtn(section === 'types')} onClick={() => setSection('types')}>Tipos de estructura</button>
+      {/* ── Toolbar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+        <button style={sBtn(section === 'flow')}  onClick={() => setSection('flow')}>
+          <GitBranch size={11} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle' }} />Árbol visual
+        </button>
+        <button style={sBtn(section === 'types')} onClick={() => setSection('types')}>
+          Tipos de estructura
+        </button>
 
-        {section === 'flow' && (
+        {section === 'flow' && hasTree && (
           <>
-            {/* Expand/collapse all */}
-            {(tree as OrgNode[]).some(n => n.children?.length) && (
-              <>
-                <button onClick={collapseAll}
-                  style={{ padding: '5px 10px', borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <ChevronRight size={11} /> Colapsar todo
-                </button>
-                <button onClick={expandAll}
-                  style={{ padding: '5px 10px', borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <ChevronDown size={11} /> Expandir todo
-                </button>
-              </>
-            )}
-
-            {/* Add root node */}
-            <button
-              onClick={() => { setAddParentId(''); setAddParentName(''); setShowAdd(v => !v); setSelectedId(null); setContextMenu(null); }}
-              style={{
-                marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
-                padding: '6px 14px',
-                background: showAdd ? '#fff' : '#ff5e3a',
-                color: showAdd ? '#64748b' : '#fff',
-                border: showAdd ? '1px solid #e2e8f0' : 'none',
-                borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              }}>
-              {showAdd ? <><X size={12} /> Cancelar</> : <><Plus size={12} /> Nuevo nodo</>}
+            <div style={{ width: 1, height: 16, background: '#e2e8f0' }} />
+            <button onClick={() => { const s = new Set<string>(); const v = (ns: OrgNode[]) => ns.forEach(n => { if (n.children?.length) { s.add(n.id); v(n.children); } }); v(tree as OrgNode[]); setCollapsed(s); }}
+              style={{ ...sBtn(false), display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}>
+              <ChevronRight size={10} /> Colapsar todo
+            </button>
+            <button onClick={() => setCollapsed(new Set())}
+              style={{ ...sBtn(false), display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}>
+              <ChevronDown size={10} /> Expandir todo
             </button>
           </>
         )}
+
+        {section === 'flow' && (
+          <button onClick={() => { setAddPid(''); setAddPname(''); setShowAdd(v => !v); setSelectedId(null); }}
+            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, background: showAdd ? '#f8fafc' : '#ff5e3a', color: showAdd ? '#64748b' : '#fff', border: showAdd ? '1px solid #e2e8f0' : 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            {showAdd ? <><X size={12} /> Cancelar</> : <><Plus size={12} /> Nuevo nodo</>}
+          </button>
+        )}
       </div>
 
-      {/* ── Tipos de estructura ── */}
+      {/* ── Types tab ── */}
       {section === 'types' && (
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-            Tipos de estructura org
-          </div>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16 }}>
-            El peso (1–10) de cada tipo se usa en el cálculo de prioridad automática.
-          </div>
-          {(types as StructureType[]).map(t => (
-            <div key={t.id} style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-              background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 8,
-            }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: t.color ?? '#64748b', flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>{t.name}</span>
-                <code style={{ fontSize: 10, color: '#94a3b8', marginLeft: 8 }}>{t.slug}</code>
-                {t.allows_users && (
-                  <span style={{ fontSize: 9, color: '#059669', marginLeft: 8, fontWeight: 700 }}>· tiene usuarios</span>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 160 }}>
-                <span style={{ fontSize: 10, color: '#64748b' }}>Peso</span>
-                <input type="range" min={1} max={10} value={t.weight}
-                  onChange={e => updateTypeMut.mutate({ id: t.id, weight: +e.target.value })}
-                  style={{ flex: 1 }} />
-                <span style={{ fontSize: 12, fontWeight: 700, minWidth: 18, color: weightColor(t.weight) }}>{t.weight}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <TypesTab types={types as StructureType[]} onUpdate={(id, w) => updateTypeMut.mutate({ id, weight: w })} />
       )}
 
-      {/* ── Árbol visual ── */}
+      {/* ── Flow tab ── */}
       {section === 'flow' && (
         <>
-          {/* Quick add panel */}
           {showAdd && (
             <QuickAddPanel
               types={types as StructureType[]}
-              flatNodes={flatNodes as OrgNode[]}
-              preParentId={addParentId}
-              preParentName={addParentName}
+              flatNodes={flat as OrgNode[]}
+              parentId={addPid}
+              parentName={addPname}
               isPending={createMut.isPending}
               onSave={dto => createMut.mutate(dto)}
-              onCancel={() => { setShowAdd(false); setAddParentId(''); setAddParentName(''); }}
+              onCancel={() => { setShowAdd(false); setAddPid(''); setAddPname(''); }}
             />
           )}
 
-          {/* React Flow canvas */}
-          <div style={{ height: 560, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
-            {rfNodes.length === 0 ? (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafbfc' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                    <Plus size={20} style={{ color: '#94a3b8' }} />
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Sin estructura organizacional</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16 }}>Usa "+ Nuevo nodo" para construir la jerarquía.</div>
-                  <button
-                    onClick={() => { setAddParentId(''); setAddParentName(''); setShowAdd(true); }}
-                    style={{ padding: '8px 18px', background: '#ff5e3a', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    <Plus size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                    Crear primer nodo
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <ReactFlow
-                nodes={rfNodes.map(n => ({
-                  ...n,
-                  style: n.id === dropTargetId
-                    ? { outline: '2.5px solid #ff5e3a', borderRadius: 12, outlineOffset: 3 }
-                    : undefined,
-                }))}
-                edges={rfEdges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onNodeClick={onNodeClick}
-                onNodeContextMenu={onNodeContextMenu}
-                onNodeDrag={onNodeDrag}
-                onNodeDragStop={onNodeDragStop}
-                onPaneClick={() => { setSelectedId(null); setContextMenu(null); }}
-                nodeTypes={nodeTypes}
-                fitView
-                fitViewOptions={{ padding: 0.2 }}
-                nodesDraggable={!reparentMut.isPending}
-                nodesConnectable={false}
-                elementsSelectable
-                style={{ background: '#fafbfc' }}
-              >
-                <Background color="#e2e8f0" gap={24} />
-                <Controls showInteractive={false} />
-                <MiniMap
-                  nodeColor={n => (n.data as OrgNodeData).typeColor ?? '#64748b'}
-                  style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6 }}
-                />
-                <FlowAutoFit nodeCount={rfNodes.length} />
-              </ReactFlow>
-            )}
+          {/* Canvas */}
+          <div style={{ height: 600, border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,.04)' }}>
+            <ReactFlowProvider>
+              <OrgCanvas
+                tree={tree as OrgNode[]}
+                typeMap={typeMap}
+                selectedId={selectedId}
+                setSelectedId={setSelectedId}
+                collapsed={collapsed}
+                setCollapsed={setCollapsed}
+                onAddChild={handleAddChild}
+                reparentMut={reparentMut}
+              />
+            </ReactFlowProvider>
           </div>
 
-          {/* Status bar */}
-          <div style={{ marginTop: 6, fontSize: 11, display: 'flex', gap: 16, alignItems: 'center' }}>
-            <span style={{ color: reparentMut.isPending ? '#f59e0b' : '#94a3b8' }}>
-              {reparentMut.isPending
-                ? 'Cambiando padre…'
-                : 'Clic → detalles · Arrastra → reparentar · Clic derecho → menú · [+] en nodo → hijo'}
-            </span>
-            {collapsed.size > 0 && (
-              <span style={{ color: '#64748b', fontWeight: 600 }}>
-                {collapsed.size} rama{collapsed.size !== 1 ? 's' : ''} colapsada{collapsed.size !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-
-          {/* ── Node detail / edit panel ── */}
+          {/* Node sidebar */}
           {selectedNode && (
-            <div style={{
-              marginTop: 10, background: '#fff',
-              border: `1.5px solid ${selectedTypeColor}`,
-              borderRadius: 10, overflow: 'hidden',
-            }}>
-              {/* Panel header */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
-                background: `${selectedTypeColor}08`, borderBottom: '1px solid #e2e8f0',
-              }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: selectedTypeColor, flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: '#0e2235' }}>{selectedNode.name}</span>
-                  <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 8 }}>
-                    {selectedNode.type_slug}
-                    {selectedNode.parent_name && <> · hijo de {selectedNode.parent_name}</>}
-                    {selectedNode.code && <> · <code>{selectedNode.code}</code></>}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 6, padding: 3, gap: 2 }}>
-                  <button style={tabBtn(editPanel === 'info')} onClick={() => setEditPanel('info')}>
-                    <Info size={10} style={{ display: 'inline', marginRight: 3 }} />Info
-                  </button>
-                  <button style={tabBtn(editPanel === 'edit')} onClick={() => setEditPanel('edit')}>
-                    Editar
-                  </button>
-                </div>
-                {/* Add child from panel */}
-                <button
-                  title="Agregar hijo"
-                  onClick={() => handleAddChild(selectedNode.id, selectedNode.name)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px',
-                    background: 'rgba(255,94,58,.08)', color: '#ff5e3a',
-                    border: '1px solid rgba(255,94,58,.25)', borderRadius: 5,
-                    fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                  }}>
-                  <Plus size={11} /> Hijo
-                </button>
-                <button onClick={() => setSelectedId(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: '2px 4px' }}>
-                  <X size={14} />
-                </button>
-              </div>
-
-              {/* ── Info view ── */}
-              {editPanel === 'info' && (
-                <div style={{ padding: '14px 16px', display: 'flex', flexWrap: 'wrap', gap: 20 }}>
-                  <div style={{ flex: '1 1 200px' }}>
-                    <InfoRow label="Tipo"   value={selectedNode.type_slug} />
-                    <InfoRow label="Padre"  value={selectedNode.parent_name ?? 'Raíz'} />
-                    {selectedNode.code && <InfoRow label="Código" value={selectedNode.code} />}
-                    <InfoRow label="Peso"   value={<span style={{ fontWeight: 800, color: weightColor(selectedNode.weight) }}>{selectedNode.weight}</span>} />
-                    <InfoRow label="Estado" value={<span style={{ fontWeight: 700, color: selectedNode.is_active ? '#22c55e' : '#94a3b8' }}>{selectedNode.is_active ? 'Activo' : 'Inactivo'}</span>} />
-                    {(selectedNode.user_count > 0 || selectedNode.child_count > 0) && (
-                      <InfoRow label="Conteos" value={`${selectedNode.user_count} usuarios · ${selectedNode.child_count} sub-nodos`} />
-                    )}
-                  </div>
-                  {(selectedNode.address || selectedNode.city || selectedNode.country || selectedNode.phone || selectedNode.email) && (
-                    <div style={{ flex: '1 1 200px' }}>
-                      {selectedNode.address  && <InfoRow label="Dirección" value={selectedNode.address}  icon={<MapPin size={11} />} />}
-                      {(selectedNode.city || selectedNode.country) && (
-                        <InfoRow label="Ciudad" value={[selectedNode.city, selectedNode.country].filter(Boolean).join(', ')} icon={<MapPin size={11} />} />
-                      )}
-                      {selectedNode.phone && <InfoRow label="Teléfono" value={selectedNode.phone} icon={<Phone size={11} />} />}
-                      {selectedNode.email && <InfoRow label="Email"    value={selectedNode.email} icon={<Mail size={11} />} />}
-                    </div>
-                  )}
-                  {selectedNode.description && (
-                    <div style={{ width: '100%', fontSize: 11, color: '#64748b', background: '#f8fafc', padding: '8px 12px', borderRadius: 6, borderLeft: `3px solid ${selectedTypeColor}40` }}>
-                      {selectedNode.description}
-                    </div>
-                  )}
-                  <div style={{ width: '100%', display: 'flex', gap: 8 }}>
-                    <button onClick={() => setEditPanel('edit')}
-                      style={{ padding: '6px 16px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Editar nodo
-                    </button>
-                    <button
-                      onClick={() => toggleActiveMut.mutate({ id: selectedNode.id, is_active: !selectedNode.is_active })}
-                      disabled={toggleActiveMut.isPending}
-                      style={{ padding: '6px 12px', background: '#fff', color: selectedNode.is_active ? '#ef4444' : '#22c55e', border: `1px solid ${selectedNode.is_active ? '#fecaca' : '#bbf7d0'}`, borderRadius: 6, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      {selectedNode.is_active ? <><ToggleRight size={12} /> Desactivar</> : <><ToggleLeft size={12} /> Activar</>}
-                    </button>
-                    <button
-                      onClick={() => { if (confirm(`¿Eliminar "${selectedNode.name}"?`)) deleteMut.mutate(); }}
-                      disabled={deleteMut.isPending}
-                      style={{ padding: '6px 12px', background: '#fff', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <Trash2 size={12} /> {deleteMut.isPending ? '…' : 'Eliminar'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Edit view ── */}
-              {editPanel === 'edit' && (
-                <div style={{ padding: '16px' }}>
-                  <SectionTitle>Básico</SectionTitle>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-                    <div style={{ flex: '3 1 180px' }}>
-                      <p style={fLabel}>Nombre *</p>
-                      <input style={inp} value={editForm.name}
-                        onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
-                    </div>
-                    <div style={{ flex: '1 1 120px' }}>
-                      <p style={fLabel}>Código</p>
-                      <input style={inp} value={editForm.code} placeholder="ej. BOG-01"
-                        onChange={e => setEditForm(f => ({ ...f, code: e.target.value }))} />
-                    </div>
-                    <div style={{ flex: '1 1 140px' }}>
-                      <p style={fLabel}>Peso (1–10)</p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input type="range" min={1} max={10} value={editForm.weight}
-                          onChange={e => setEditForm(f => ({ ...f, weight: +e.target.value }))} style={{ flex: 1 }} />
-                        <span style={{ fontWeight: 700, color: weightColor(editForm.weight), minWidth: 18 }}>{editForm.weight}</span>
-                      </div>
-                    </div>
-                    <div style={{ flex: '1 1 120px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                      <p style={fLabel}>Estado</p>
-                      <button onClick={() => setEditForm(f => ({ ...f, is_active: !f.is_active }))}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, color: editForm.is_active ? '#22c55e' : '#94a3b8', fontWeight: 700 }}>
-                        {editForm.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                        {editForm.is_active ? 'Activo' : 'Inactivo'}
-                      </button>
-                    </div>
-                  </div>
-                  <SectionTitle>Descripción</SectionTitle>
-                  <textarea style={{ ...inp, minHeight: 52, resize: 'vertical', marginBottom: 12 }}
-                    value={editForm.description} placeholder="Descripción opcional..."
-                    onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} />
-                  <SectionTitle>Localización y contacto</SectionTitle>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
-                    <div style={{ flex: '2 1 200px' }}>
-                      <p style={fLabel}>Dirección</p>
-                      <input style={inp} value={editForm.address} placeholder="Calle, número..."
-                        onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} />
-                    </div>
-                    <div style={{ flex: '1 1 130px' }}>
-                      <p style={fLabel}>Ciudad</p>
-                      <input style={inp} value={editForm.city} placeholder="Bogotá"
-                        onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} />
-                    </div>
-                    <div style={{ flex: '1 1 130px' }}>
-                      <p style={fLabel}>País</p>
-                      <input style={inp} value={editForm.country} placeholder="Colombia"
-                        onChange={e => setEditForm(f => ({ ...f, country: e.target.value }))} />
-                    </div>
-                    <div style={{ flex: '1 1 140px' }}>
-                      <p style={fLabel}>Teléfono</p>
-                      <input style={inp} value={editForm.phone} placeholder="+57 1 234 5678"
-                        onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
-                    </div>
-                    <div style={{ flex: '2 1 180px' }}>
-                      <p style={fLabel}>Email</p>
-                      <input type="email" style={inp} value={editForm.email} placeholder="sede@empresa.com"
-                        onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => updateMut.mutate(editForm)}
-                      disabled={!editForm.name.trim() || updateMut.isPending}
-                      style={{ padding: '7px 18px', background: '#059669', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, opacity: !editForm.name.trim() ? 0.5 : 1 }}>
-                      <Check size={13} /> {updateMut.isPending ? 'Guardando…' : 'Guardar cambios'}
-                    </button>
-                    <button onClick={() => setEditPanel('info')}
-                      style={{ padding: '7px 14px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Cancelar
-                    </button>
-                  </div>
-                  {updateMut.isSuccess && (
-                    <div style={{ marginTop: 8, fontSize: 11, color: '#22c55e' }}>Nodo actualizado.</div>
-                  )}
-                </div>
-              )}
-            </div>
+            <NodeSidebar
+              node={selectedNode}
+              typeColor={selectedType?.color ?? '#64748b'}
+              typeName={selectedType?.name ?? selectedNode.type_slug}
+              flatNodes={flat as OrgNode[]}
+              onClose={() => setSelectedId(null)}
+              onAddChild={handleAddChild}
+              saveMut={saveMut}
+              deleteMut={deleteMut}
+              toggleMut={toggleMut}
+            />
           )}
         </>
       )}
-
-      {/* Context menu */}
-      {contextMenu && (
-        <ContextMenu
-          menu={contextMenu}
-          onEdit={() => setEditPanel('info')}
-          onAddChild={handleAddChild}
-          onToggleActive={() => {
-            if (!selectedNode) return;
-            toggleActiveMut.mutate({ id: selectedNode.id, is_active: !selectedNode.is_active });
-          }}
-          onClose={() => setContextMenu(null)}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ── Small helpers ────────────────────────────────────────────────────────── */
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase',
-      letterSpacing: '0.06em', marginBottom: 8, paddingBottom: 4, borderBottom: '1px solid #f1f5f9',
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function InfoRow({ label, value, icon }: { label: string; value: React.ReactNode; icon?: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', minWidth: 70, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 12, color: '#0e2235', display: 'flex', alignItems: 'center', gap: 4 }}>
-        {icon && <span style={{ color: '#94a3b8' }}>{icon}</span>}
-        {value}
-      </span>
     </div>
   );
 }

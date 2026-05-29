@@ -1,0 +1,71 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - complementary "Estado de plataforma ITSM" [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - article [ref=e6]:
+            - generic [ref=e13]: "96"
+            - generic [ref=e14]:
+              - generic [ref=e15]: Mesa de ayuda
+              - heading "Tickets priorizados" [level=2] [ref=e16]
+              - paragraph [ref=e17]: Seguimiento de incidentes, responsables y tiempos de atención desde un solo entorno operativo.
+              - strong [ref=e18]: SLA 96.3%
+          - article:
+            - generic:
+              - generic: Operación modular
+              - heading [level=2]: Módulos conectados
+              - paragraph: Acceso directo a soporte, inventario, gestión administrativa y reportes según permisos.
+              - strong: 3 entornos
+          - article:
+            - generic:
+              - generic: Acceso corporativo
+              - heading [level=2]: Identidad protegida
+              - paragraph: Inicio con credenciales internas, MFA y proveedores externos autorizados por el backend.
+              - strong: SSO + MFA
+        - generic "Diapositivas del panel visual" [ref=e19]:
+          - button "Ver Tickets priorizados" [ref=e20] [cursor=pointer]
+          - button "Ver Módulos conectados" [ref=e21] [cursor=pointer]
+          - button "Ver Identidad protegida" [ref=e22] [cursor=pointer]
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e29]: LOGOTIPO
+        - 'button "Idioma actual: español" [ref=e30]':
+          - img [ref=e31]
+          - generic [ref=e36]: ES
+          - img [ref=e37]
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - heading "Hi Operator" [level=1] [ref=e41]
+          - paragraph [ref=e42]: Bienvenido al Portal Integrado de Operaciones.
+        - generic [ref=e43]:
+          - generic [ref=e44]: ID de Operador / Correo
+          - textbox "example@gmail.com" [ref=e45]
+          - generic [ref=e46]:
+            - generic [ref=e47]: Contraseña de Dominio
+            - button "¿Olvidaste tu contraseña?" [ref=e48] [cursor=pointer]
+          - generic [ref=e49]:
+            - textbox "••••••••" [ref=e50]
+            - button "Mostrar/ocultar contraseña" [ref=e51] [cursor=pointer]:
+              - img [ref=e52]
+          - button "Login" [ref=e55] [cursor=pointer]
+          - generic [ref=e56]: O ingresar con
+          - button "Login con Google" [ref=e57] [cursor=pointer]:
+            - img [ref=e58]
+            - text: Login con Google
+          - button "Login con Microsoft Azure AD" [ref=e63] [cursor=pointer]:
+            - img [ref=e64]
+            - text: Login con Microsoft Azure AD
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - text: ¿No tienes cuenta?
+          - button "Solicitar acceso" [ref=e71] [cursor=pointer]
+        - generic "Canales corporativos" [ref=e72]:
+          - button "X Corporativo" [ref=e73] [cursor=pointer]:
+            - img [ref=e74]
+          - button "Canal Discord" [ref=e76] [cursor=pointer]:
+            - img [ref=e77]
+          - button "Instagram" [ref=e79] [cursor=pointer]:
+            - img [ref=e80]
+          - button "GitHub" [ref=e84] [cursor=pointer]:
+            - img [ref=e85]
+  - alert [ref=e87]
