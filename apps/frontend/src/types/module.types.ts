@@ -1,7 +1,8 @@
-export type AccessMode      = 'open' | 'request';
-export type AssignmentMode  = 'manual' | 'round_robin' | 'hybrid';
-export type PriorityMode    = 'auto' | 'manual';
-export type PriorityEditors = 'jefe_tecnico' | 'any_tech';
+export type AccessMode           = 'open' | 'request';
+export type AssignmentMode       = 'manual' | 'round_robin' | 'hybrid';
+export type PriorityMode         = 'auto' | 'manual';
+export type PriorityEditors      = 'jefe_tecnico' | 'any_tech';
+export type SpecializationMode   = 'general' | 'specialist' | 'hybrid';
 
 export interface SystemModule {
   id: string;
@@ -23,6 +24,9 @@ export interface SystemModule {
   priority_editors?:        PriorityEditors;
   priority_period_start?:   string | null;
   priority_period_end?:     string | null;
+  /* ── Extended behavior config (migration 019) ── */
+  specialization_mode?:     SpecializationMode;
+  auto_close_hours?:        number;
   created_at: string;
   deleted_at: string | null;
 }

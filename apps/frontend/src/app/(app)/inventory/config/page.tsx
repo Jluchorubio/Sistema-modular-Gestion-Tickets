@@ -1,25 +1,27 @@
 'use client';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Settings, Shield, Wrench, CalendarClock, type LucideIcon } from 'lucide-react';
+import { Settings, Shield, CalendarClock, FolderOpen, MapPin, type LucideIcon } from 'lucide-react';
 import { useModules }    from '@/hooks/useModules';
 import { useModuleNav }  from '@/hooks/useModuleNav';
 import { useAuthStore }  from '@/stores/auth.store';
 import { modulesService } from '@/services/modules.service';
 import { ModuleConfigClient }  from '@/components/modules/ModuleConfigClient';
 import { SlaTicketsTab }       from '@/components/config/SlaTicketsTab';
-import { DamageTypesTab }      from '@/components/config/DamageTypesTab';
 import { ModuleCalendarioTab } from '@/components/config/ModuleCalendarioTab';
+import { CategoriesTab }       from '@/components/config/CategoriesTab';
+import { LocationsTab }        from '@/components/config/LocationsTab';
 import { Spinner }             from '@/components/ui/Spinner';
 import { INVENTORY_NAV, INVENTORY_MODULE_NAME, isInventoryModule } from '../_nav';
 
-type Tab = 'general' | 'sla-tickets' | 'daños' | 'calendario';
+type Tab = 'general' | 'categorias' | 'sedes' | 'sla' | 'calendario';
 
 const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
-  { key: 'general',     label: 'General',       Icon: Settings     },
-  { key: 'sla-tickets', label: 'SLA Tickets',   Icon: Shield       },
-  { key: 'daños',       label: 'Tipos de Daño', Icon: Wrench       },
-  { key: 'calendario',  label: 'Calendario',    Icon: CalendarClock },
+  { key: 'general',    label: 'General',      Icon: Settings     },
+  { key: 'categorias', label: 'Categorías',   Icon: FolderOpen   },
+  { key: 'sedes',      label: 'Sedes',        Icon: MapPin       },
+  { key: 'sla',        label: 'SLA',          Icon: Shield       },
+  { key: 'calendario', label: 'Calendario',   Icon: CalendarClock },
 ];
 
 const tabBar: React.CSSProperties = {
@@ -63,7 +65,7 @@ export default function InventoryConfigPage() {
         Configuración — Inventario
       </div>
       <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 24px' }}>
-        Comportamiento operativo, SLA y tipos de daño del módulo Inventario.
+        Categorías de activos, sedes y ambientes, SLA de mantenimiento y comportamiento operativo del módulo.
       </p>
 
       <div style={tabBar}>
@@ -74,7 +76,7 @@ export default function InventoryConfigPage() {
         ))}
       </div>
 
-      {tab === 'general'     && (
+      {tab === 'general'    && (
         <ModuleConfigClient
           module={mod}
           moduleId={inventoryRef.id}
@@ -82,9 +84,10 @@ export default function InventoryConfigPage() {
           isAdminModulo={isAdminModulo}
         />
       )}
-      {tab === 'sla-tickets' && <SlaTicketsTab moduleId={inventoryRef.id} />}
-      {tab === 'daños'       && <DamageTypesTab />}
-      {tab === 'calendario'  && <ModuleCalendarioTab moduleId={inventoryRef.id} />}
+      {tab === 'categorias' && <CategoriesTab moduleId={inventoryRef.id} />}
+      {tab === 'sedes'      && <LocationsTab  moduleId={inventoryRef.id} />}
+      {tab === 'sla'        && <SlaTicketsTab moduleId={inventoryRef.id} />}
+      {tab === 'calendario' && <ModuleCalendarioTab moduleId={inventoryRef.id} />}
     </div>
   );
 }

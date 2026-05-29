@@ -175,4 +175,129 @@ export class SystemModulesController {
     return this.service.deleteModuleSlaRule(moduleId, priority);
   }
 
+  /* ── Categories ─────────────────────────────────────────────────── */
+
+  @Get(':id/categories')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Listar categorías de un módulo.' })
+  getCategories(@Param('id') moduleId: string) {
+    return this.service.findCategoriesByModule(moduleId);
+  }
+
+  @Post(':id/categories')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Crear categoría en un módulo.' })
+  createCategory(
+    @Param('id') moduleId: string,
+    @Body() body: { name: string; description?: string; parent_id?: string },
+  ) {
+    return this.service.createCategory(moduleId, body);
+  }
+
+  @Patch('categories/:catId')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Editar categoría.' })
+  updateCategory(
+    @Param('catId') catId: string,
+    @Body() body: { name?: string; description?: string; is_active?: boolean },
+  ) {
+    return this.service.updateCategory(catId, body);
+  }
+
+  @Delete('categories/:catId')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Eliminar categoría (soft-delete). Falla si tiene activos asociados.' })
+  deleteCategory(@Param('catId') catId: string) {
+    return this.service.deleteCategory(catId);
+  }
+
+  /* ── Module-scoped Locations ─────────────────────────────────────── */
+
+  @Get(':id/locations')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @ApiOperation({ summary: 'Listar sedes de un módulo con sus ambientes.' })
+  getModuleLocations(@Param('id') moduleId: string) {
+    return this.service.findLocationsByModule(moduleId);
+  }
+
+  @Post(':id/locations')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Crear sede para un módulo.' })
+  createLocation(
+    @Param('id') moduleId: string,
+    @Body() body: { name: string; address?: string },
+  ) {
+    return this.service.createLocation(moduleId, body);
+  }
+
+  @Patch('locations/:locId')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Editar sede.' })
+  updateLocation(
+    @Param('locId') locId: string,
+    @Body() body: { name?: string; address?: string; is_active?: boolean },
+  ) {
+    return this.service.updateLocation(locId, body);
+  }
+
+  @Delete('locations/:locId')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Eliminar sede. Falla si tiene ambientes activos.' })
+  deleteLocation(@Param('locId') locId: string) {
+    return this.service.deleteLocation(locId);
+  }
+
+  /* ── Environments ───────────────────────────────────────────────── */
+
+  @Post(':id/locations/:locId/environments')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Crear ambiente en una sede.' })
+  createEnvironment(
+    @Param('id')    moduleId: string,
+    @Param('locId') locId: string,
+    @Body() body: { name: string; description?: string },
+  ) {
+    return this.service.createEnvironment(locId, { ...body, module_id: moduleId });
+  }
+
+  @Patch('environments/:envId')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Editar ambiente.' })
+  updateEnvironment(
+    @Param('envId') envId: string,
+    @Body() body: { name?: string; description?: string; is_active?: boolean },
+  ) {
+    return this.service.updateEnvironment(envId, body);
+  }
+
+  @Delete('environments/:envId')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Eliminar ambiente. Falla si tiene activos.' })
+  deleteEnvironment(@Param('envId') envId: string) {
+    return this.service.deleteEnvironment(envId);
+  }
+
 }

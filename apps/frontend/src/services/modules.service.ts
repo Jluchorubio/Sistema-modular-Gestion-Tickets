@@ -38,6 +38,37 @@ export interface UpdateModuleDto {
   priority_editors?:       'jefe_tecnico' | 'any_tech';
   priority_period_start?:  string | null;
   priority_period_end?:    string | null;
+  specialization_mode?:    'general' | 'specialist' | 'hybrid';
+  auto_close_hours?:       number;
+}
+
+export interface ModuleCategory {
+  id:          string;
+  module_id:   string;
+  parent_id:   string | null;
+  parent_name: string | null;
+  name:        string;
+  description: string | null;
+  is_active:   boolean;
+  created_at:  string;
+  updated_at:  string;
+}
+
+export interface ModuleLocation {
+  id:           string;
+  module_id:    string;
+  name:         string;
+  address:      string | null;
+  is_active:    boolean;
+  created_at:   string;
+  environments: ModuleEnvironment[];
+}
+
+export interface ModuleEnvironment {
+  id:          string;
+  name:        string;
+  description: string | null;
+  is_active:   boolean;
 }
 
 export const modulesService = {
@@ -153,6 +184,63 @@ export const modulesService = {
 
   async getModuleTechnicians(moduleId: string): Promise<ModuleTechnician[]> {
     const { data } = await api.get(`/system-modules/${moduleId}/technicians`);
+    return data;
+  },
+
+  /* ── Categories ── */
+  async getCategories(moduleId: string): Promise<ModuleCategory[]> {
+    const { data } = await api.get(`/system-modules/${moduleId}/categories`);
+    return data;
+  },
+
+  async createCategory(moduleId: string, dto: { name: string; description?: string; parent_id?: string | null }): Promise<ModuleCategory> {
+    const { data } = await api.post(`/system-modules/${moduleId}/categories`, dto);
+    return data;
+  },
+
+  async updateCategory(catId: string, dto: { name?: string; description?: string; is_active?: boolean }): Promise<ModuleCategory> {
+    const { data } = await api.patch(`/system-modules/categories/${catId}`, dto);
+    return data;
+  },
+
+  async deleteCategory(catId: string): Promise<{ ok: boolean; message: string }> {
+    const { data } = await api.delete(`/system-modules/categories/${catId}`);
+    return data;
+  },
+
+  /* ── Locations + Environments ── */
+  async getModuleLocations(moduleId: string): Promise<ModuleLocation[]> {
+    const { data } = await api.get(`/system-modules/${moduleId}/locations`);
+    return data;
+  },
+
+  async createLocation(moduleId: string, dto: { name: string; address?: string }): Promise<ModuleLocation> {
+    const { data } = await api.post(`/system-modules/${moduleId}/locations`, dto);
+    return data;
+  },
+
+  async updateLocation(locId: string, dto: { name?: string; address?: string; is_active?: boolean }): Promise<ModuleLocation> {
+    const { data } = await api.patch(`/system-modules/locations/${locId}`, dto);
+    return data;
+  },
+
+  async deleteLocation(locId: string): Promise<{ ok: boolean; message: string }> {
+    const { data } = await api.delete(`/system-modules/locations/${locId}`);
+    return data;
+  },
+
+  async createEnvironment(moduleId: string, locId: string, dto: { name: string; description?: string }): Promise<ModuleEnvironment> {
+    const { data } = await api.post(`/system-modules/${moduleId}/locations/${locId}/environments`, dto);
+    return data;
+  },
+
+  async updateEnvironment(envId: string, dto: { name?: string; description?: string; is_active?: boolean }): Promise<ModuleEnvironment> {
+    const { data } = await api.patch(`/system-modules/environments/${envId}`, dto);
+    return data;
+  },
+
+  async deleteEnvironment(envId: string): Promise<{ ok: boolean; message: string }> {
+    const { data } = await api.delete(`/system-modules/environments/${envId}`);
     return data;
   },
 };

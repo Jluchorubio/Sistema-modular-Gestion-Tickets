@@ -46,6 +46,7 @@ export class SystemModulesService {
               m.is_active, m.maintenance_mode, m.maintenance_message,
               m.access_mode, m.assignment_mode, m.priority_mode, m.priority_editors,
               m.priority_period_start, m.priority_period_end,
+              m.specialization_mode, m.auto_close_hours,
               COUNT(DISTINCT umr.user_id) AS members_count,
               COUNT(DISTINCT CASE WHEN mr.name IN ('tecnico','jefe_tecnico') THEN umr.user_id END) AS techs_count,
               COUNT(DISTINCT CASE WHEN mr.name = 'admin_modulo' THEN umr.user_id END) AS admins_count
@@ -107,6 +108,7 @@ export class SystemModulesService {
       name, description, type, image_url, color, is_active,
       access_mode, assignment_mode, priority_mode, priority_editors,
       priority_period_start, priority_period_end,
+      specialization_mode, auto_close_hours,
     } = dto as any;
     const fields: string[] = [];
     const values: any[] = [];
@@ -145,6 +147,10 @@ export class SystemModulesService {
     if (priority_editors !== undefined)     { fields.push(`priority_editors = $${idx++}`);     values.push(priority_editors); }
     if ('priority_period_start' in dto)     { fields.push(`priority_period_start = $${idx++}`); values.push(priority_period_start ?? null); }
     if ('priority_period_end' in dto)       { fields.push(`priority_period_end = $${idx++}`);   values.push(priority_period_end ?? null); }
+
+    /* ── Extended behavior config (migration 019) ── */
+    if (specialization_mode !== undefined)  { fields.push(`specialization_mode = $${idx++}`);  values.push(specialization_mode); }
+    if (auto_close_hours !== undefined)     { fields.push(`auto_close_hours = $${idx++}`);      values.push(auto_close_hours); }
 
     if (!fields.length) throw new BadRequestException('Nada que actualizar');
 
@@ -417,5 +423,216 @@ export class SystemModulesService {
       [moduleId, priority],
     );
     return { ok: true };
+  }
+
+  /* ── Categories (per module) ────────────────────────────────────── */
+
+  async findCategoriesByModule(moduleId: string) {
+    return this.db.query<any[]>(
+      `SELECT c.id, c.module_id, c.parent_id, c.name, c.description, c.is_active,
+              c.created_at, c.updated_at,
+              p.name AS parent_name
+       FROM   modules.categories c
+       LEFT JOIN modules.categories p ON p.id = c.parent_id
+       WHERE  c.module_id = $1 AND c.deleted_at IS NULL
+       ORDER  BY COALESCE(c.parent_id::text, c.id::text), c.parent_id NULLS FIRST, c.name`,
+      [moduleId],
+    );
+  }
+
+  async createCategory(moduleId: string, dto: { name: string; description?: string; parent_id?: string }) {
+    const [mod] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM modules.modules WHERE id = $1 AND deleted_at IS NULL`,
+      [moduleId],
+    );
+    if (!mod) throw new NotFoundException(`Módulo ${moduleId} no encontrado`);
+
+    if (dto.parent_id) {
+      const [parent] = await this.db.query<{ id: string }[]>(
+        `SELECT id FROM modules.categories WHERE id = $1 AND module_id = $2 AND deleted_at IS NULL`,
+        [dto.parent_id, moduleId],
+      );
+      if (!parent) throw new BadRequestException('Categoría padre no encontrada o no pertenece a este módulo');
+    }
+
+    const [cat] = await this.db.query<any[]>(
+      `INSERT INTO modules.categories (module_id, parent_id, name, description)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [moduleId, dto.parent_id ?? null, dto.name.trim(), dto.description?.trim() ?? null],
+    );
+    return cat;
+  }
+
+  async updateCategory(id: string, dto: { name?: string; description?: string; is_active?: boolean }) {
+    const fields: string[] = [];
+    const values: any[]   = [];
+    let idx = 1;
+    if (dto.name        !== undefined) { fields.push(`name = $${idx++}`);        values.push(dto.name.trim()); }
+    if (dto.description !== undefined) { fields.push(`description = $${idx++}`); values.push(dto.description?.trim() ?? null); }
+    if (dto.is_active   !== undefined) { fields.push(`is_active = $${idx++}`);   values.push(dto.is_active); }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    const [cat] = await this.db.query<any[]>(
+      `UPDATE modules.categories SET ${fields.join(', ')} WHERE id = $${idx} AND deleted_at IS NULL RETURNING *`,
+      values,
+    );
+    if (!cat) throw new NotFoundException(`Categoría ${id} no encontrada`);
+    return cat;
+  }
+
+  async deleteCategory(id: string) {
+    const [cat] = await this.db.query<{ id: string; name: string }[]>(
+      `SELECT id, name FROM modules.categories WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    if (!cat) throw new NotFoundException(`Categoría ${id} no encontrada`);
+
+    const [hasAssets] = await this.db.query<{ cnt: string }[]>(
+      `SELECT COUNT(*)::text AS cnt FROM inventory.assets WHERE category_id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    if (parseInt(hasAssets?.cnt ?? '0') > 0) {
+      throw new BadRequestException('No se puede eliminar: existen activos con esta categoría. Desactívala en su lugar.');
+    }
+
+    await this.db.query(
+      `UPDATE modules.categories SET deleted_at = now(), is_active = false WHERE id = $1`,
+      [id],
+    );
+    return { ok: true, message: `Categoría "${cat.name}" eliminada` };
+  }
+
+  /* ── Locations (per module) ─────────────────────────────────────── */
+
+  async findLocationsByModule(moduleId: string) {
+    const locs = await this.db.query<any[]>(
+      `SELECT l.id, l.module_id, l.name, l.address, l.is_active, l.created_at,
+              COALESCE(json_agg(
+                json_build_object(
+                  'id', e.id, 'name', e.name, 'description', e.description,
+                  'is_active', e.is_active
+                ) ORDER BY e.name
+              ) FILTER (WHERE e.id IS NOT NULL), '[]') AS environments
+       FROM   modules.locations l
+       LEFT JOIN modules.environments e ON e.location_id = l.id AND e.deleted_at IS NULL
+       WHERE  l.module_id = $1 AND l.deleted_at IS NULL
+       GROUP  BY l.id
+       ORDER  BY l.name`,
+      [moduleId],
+    );
+    return locs;
+  }
+
+  async createLocation(moduleId: string, dto: { name: string; address?: string }) {
+    const [mod] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM modules.modules WHERE id = $1 AND deleted_at IS NULL`,
+      [moduleId],
+    );
+    if (!mod) throw new NotFoundException(`Módulo ${moduleId} no encontrado`);
+
+    const [loc] = await this.db.query<any[]>(
+      `INSERT INTO modules.locations (module_id, name, address)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [moduleId, dto.name.trim(), dto.address?.trim() ?? null],
+    );
+    return loc;
+  }
+
+  async updateLocation(id: string, dto: { name?: string; address?: string; is_active?: boolean }) {
+    const fields: string[] = [];
+    const values: any[]   = [];
+    let idx = 1;
+    if (dto.name      !== undefined) { fields.push(`name = $${idx++}`);      values.push(dto.name.trim()); }
+    if (dto.address   !== undefined) { fields.push(`address = $${idx++}`);   values.push(dto.address?.trim() ?? null); }
+    if (dto.is_active !== undefined) { fields.push(`is_active = $${idx++}`); values.push(dto.is_active); }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    const [loc] = await this.db.query<any[]>(
+      `UPDATE modules.locations SET ${fields.join(', ')} WHERE id = $${idx} AND deleted_at IS NULL RETURNING *`,
+      values,
+    );
+    if (!loc) throw new NotFoundException(`Sede ${id} no encontrada`);
+    return loc;
+  }
+
+  async deleteLocation(id: string) {
+    const [loc] = await this.db.query<{ id: string; name: string }[]>(
+      `SELECT id, name FROM modules.locations WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    if (!loc) throw new NotFoundException(`Sede ${id} no encontrada`);
+
+    const [hasEnvs] = await this.db.query<{ cnt: string }[]>(
+      `SELECT COUNT(*)::text AS cnt FROM modules.environments WHERE location_id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    if (parseInt(hasEnvs?.cnt ?? '0') > 0) {
+      throw new BadRequestException('No se puede eliminar: la sede tiene ambientes. Elimínalos primero o desactívala.');
+    }
+
+    await this.db.query(
+      `UPDATE modules.locations SET deleted_at = now(), is_active = false WHERE id = $1`,
+      [id],
+    );
+    return { ok: true, message: `Sede "${loc.name}" eliminada` };
+  }
+
+  /* ── Environments (per location) ────────────────────────────────── */
+
+  async createEnvironment(locationId: string, dto: { name: string; description?: string; module_id: string }) {
+    const [loc] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM modules.locations WHERE id = $1 AND module_id = $2 AND deleted_at IS NULL`,
+      [locationId, dto.module_id],
+    );
+    if (!loc) throw new NotFoundException(`Sede ${locationId} no encontrada en este módulo`);
+
+    const [env] = await this.db.query<any[]>(
+      `INSERT INTO modules.environments (location_id, module_id, name, description)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [locationId, dto.module_id, dto.name.trim(), dto.description?.trim() ?? null],
+    );
+    return env;
+  }
+
+  async updateEnvironment(id: string, dto: { name?: string; description?: string; is_active?: boolean }) {
+    const fields: string[] = [];
+    const values: any[]   = [];
+    let idx = 1;
+    if (dto.name        !== undefined) { fields.push(`name = $${idx++}`);        values.push(dto.name.trim()); }
+    if (dto.description !== undefined) { fields.push(`description = $${idx++}`); values.push(dto.description?.trim() ?? null); }
+    if (dto.is_active   !== undefined) { fields.push(`is_active = $${idx++}`);   values.push(dto.is_active); }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    const [env] = await this.db.query<any[]>(
+      `UPDATE modules.environments SET ${fields.join(', ')} WHERE id = $${idx} AND deleted_at IS NULL RETURNING *`,
+      values,
+    );
+    if (!env) throw new NotFoundException(`Ambiente ${id} no encontrado`);
+    return env;
+  }
+
+  async deleteEnvironment(id: string) {
+    const [env] = await this.db.query<{ id: string; name: string }[]>(
+      `SELECT id, name FROM modules.environments WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    if (!env) throw new NotFoundException(`Ambiente ${id} no encontrado`);
+
+    const [hasAssets] = await this.db.query<{ cnt: string }[]>(
+      `SELECT COUNT(*)::text AS cnt FROM inventory.assets WHERE environment_id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    if (parseInt(hasAssets?.cnt ?? '0') > 0) {
+      throw new BadRequestException('No se puede eliminar: existen activos en este ambiente. Desactívalo en su lugar.');
+    }
+
+    await this.db.query(
+      `UPDATE modules.environments SET deleted_at = now(), is_active = false WHERE id = $1`,
+      [id],
+    );
+    return { ok: true, message: `Ambiente "${env.name}" eliminado` };
   }
 }

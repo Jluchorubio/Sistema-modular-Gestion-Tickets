@@ -57,7 +57,13 @@ function QuickLinks() {
       href:  '/helpdesk/config',
       Icon:  Zap,
       label: 'Config Helpdesk',
-      desc:  'SLA tickets, tipos de daño, calendario del módulo',
+      desc:  'SLA tickets, tipos de daño, sedes y calendario del módulo',
+    },
+    {
+      href:  '/inventory/config',
+      Icon:  CheckCircle2,
+      label: 'Config Inventario',
+      desc:  'Categorías de activos, sedes, SLA y calendario del módulo',
     },
     {
       href:  '/requests/config',

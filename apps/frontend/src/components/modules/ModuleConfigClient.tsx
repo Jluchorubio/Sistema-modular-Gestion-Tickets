@@ -56,13 +56,15 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
   const qc      = useQueryClient();
   const canEdit = isSuperadmin || isAdminModulo;
 
-  const [accessMode, setAccessMode]         = useState<'open' | 'request'>((mod as any).access_mode ?? 'request');
-  const [assignmentMode, setAssignmentMode] = useState<'manual' | 'round_robin' | 'hybrid'>((mod as any).assignment_mode ?? 'manual');
-  const [priorityMode, setPriorityMode]     = useState<'auto' | 'manual'>((mod as any).priority_mode ?? 'auto');
-  const [priorityEditors, setPriorityEditors] = useState<'jefe_tecnico' | 'any_tech'>((mod as any).priority_editors ?? 'jefe_tecnico');
-  const [periodStart, setPeriodStart]       = useState<string>((mod as any).priority_period_start ?? '');
-  const [periodEnd, setPeriodEnd]           = useState<string>((mod as any).priority_period_end ?? '');
-  const [saved, setSaved]                   = useState(false);
+  const [accessMode, setAccessMode]               = useState<'open' | 'request'>((mod as any).access_mode ?? 'request');
+  const [assignmentMode, setAssignmentMode]       = useState<'manual' | 'round_robin' | 'hybrid'>((mod as any).assignment_mode ?? 'manual');
+  const [priorityMode, setPriorityMode]           = useState<'auto' | 'manual'>((mod as any).priority_mode ?? 'auto');
+  const [priorityEditors, setPriorityEditors]     = useState<'jefe_tecnico' | 'any_tech'>((mod as any).priority_editors ?? 'jefe_tecnico');
+  const [periodStart, setPeriodStart]             = useState<string>((mod as any).priority_period_start ?? '');
+  const [periodEnd, setPeriodEnd]                 = useState<string>((mod as any).priority_period_end ?? '');
+  const [specializationMode, setSpecializationMode] = useState<'general' | 'specialist' | 'hybrid'>((mod as any).specialization_mode ?? 'general');
+  const [autoCloseHours, setAutoCloseHours]       = useState<number>((mod as any).auto_close_hours ?? 48);
+  const [saved, setSaved]                         = useState(false);
 
   const [slaEditing, setSlaEditing] = useState<Record<string, { hrs: string; hfr: string }>>({});
 
@@ -99,6 +101,8 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
       priority_editors:      priorityMode === 'manual' ? priorityEditors : undefined,
       priority_period_start: priorityMode === 'manual' && periodStart ? periodStart : null,
       priority_period_end:   priorityMode === 'manual' && periodEnd   ? periodEnd   : null,
+      specialization_mode:   specializationMode,
+      auto_close_hours:      autoCloseHours,
     });
   }
 
@@ -278,6 +282,75 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
             </div>
           </div>
         )}
+      </div>
+
+      {/* ── Especialización de técnicos ── */}
+      <div style={card}>
+        <div style={sectionHead}>Especialización de técnicos</div>
+        <span style={fieldLabel}>¿Cómo se asignan los técnicos según su especialidad?</span>
+        <div style={radioGroup}>
+          <RadioOption
+            name="specialization" value="general"
+            checked={specializationMode === 'general'}
+            onChange={() => setSpecializationMode('general')}
+            disabled={!canEdit}
+            label="Técnicos generales"
+            desc="Cualquier técnico puede atender cualquier tipo de ticket sin filtro por especialidad."
+          />
+          <RadioOption
+            name="specialization" value="specialist"
+            checked={specializationMode === 'specialist'}
+            onChange={() => setSpecializationMode('specialist')}
+            disabled={!canEdit}
+            label="Por especialización"
+            desc="El sistema solo asigna técnicos que tengan la categoría del ticket entre sus especialidades."
+          />
+          <RadioOption
+            name="specialization" value="hybrid"
+            checked={specializationMode === 'hybrid'}
+            onChange={() => setSpecializationMode('hybrid')}
+            disabled={!canEdit}
+            label="Híbrido"
+            desc="Se intenta asignar por especialización; si no hay especialista disponible, se usa un técnico general."
+          />
+        </div>
+      </div>
+
+      {/* ── Auto-cierre de tickets ── */}
+      <div style={card}>
+        <div style={sectionHead}>Auto-cierre de tickets</div>
+        <span style={fieldLabel}>Horas de espera antes del cierre automático</span>
+        <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2, marginBottom: 14, lineHeight: 1.55 }}>
+          Cuando un ticket está en estado <strong>Realizado</strong> y el usuario no responde,
+          el sistema lo cierra automáticamente tras este período.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="number" min={1} max={720}
+              value={autoCloseHours}
+              disabled={!canEdit}
+              onChange={e => setAutoCloseHours(Math.max(1, Math.min(720, +e.target.value)))}
+              style={{ width: 80, padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', textAlign: 'center', color: '#0e2235' }}
+            />
+            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>horas</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[24, 48, 72, 168].map(h => (
+              <button key={h} type="button" disabled={!canEdit}
+                onClick={() => setAutoCloseHours(h)}
+                style={{
+                  padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                  cursor: canEdit ? 'pointer' : 'default', fontFamily: 'inherit',
+                  border: autoCloseHours === h ? '1px solid #ff5e3a' : '1px solid #e2e8f0',
+                  background: autoCloseHours === h ? 'rgba(255,94,58,.08)' : '#f8fafc',
+                  color: autoCloseHours === h ? '#ff5e3a' : '#64748b',
+                }}>
+                {h === 24 ? '1 día' : h === 48 ? '2 días' : h === 72 ? '3 días' : '1 semana'}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── Guardar configuración general ── */}
