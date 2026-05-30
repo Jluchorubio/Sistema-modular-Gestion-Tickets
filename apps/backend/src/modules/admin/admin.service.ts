@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 import { Logger } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
 
-const VALID_TYPES = new Set(['module', 'user', 'role', 'request']);
+const VALID_TYPES = new Set(['module', 'user', 'role', 'request', 'structure_type']);
 
 @Injectable()
 export class AdminService {
@@ -78,6 +78,15 @@ export class AdminService {
         ));
       }
     }
+    if (!moduleScoped && (!type || type === 'structure_type')) {
+      parts.push(this.db.query<any[]>(
+        `SELECT id, name AS display_name, 'structure_type' AS item_type,
+                deleted_at, scheduled_hard_delete_at,
+                EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
+                slug AS extra
+         FROM org.structure_types WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
+      ));
+    }
 
     const all = (await Promise.all(parts)).flat()
       .sort((a, b) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime());
@@ -120,6 +129,10 @@ export class AdminService {
         SELECT title, 'solicitud',
                FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
         FROM requests.admin_requests WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
+        UNION ALL
+        SELECT name, 'tipo de estructura',
+               FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
+        FROM org.structure_types WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
       ) t
       WHERE days = ANY($1)
     `, [WARNING_DAYS]);
@@ -157,6 +170,7 @@ export class AdminService {
       { table: 'users.profiles',            label: 'users' },
       { table: 'config.global_roles',       label: 'roles' },
       { table: 'requests.admin_requests',   label: 'requests' },
+      { table: 'org.structure_types',       label: 'structure_types' },
     ];
 
     const detail: Record<string, number> = {};
@@ -244,6 +258,12 @@ export class AdminService {
            SET deleted_at = NULL, scheduled_hard_delete_at = NULL
            WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
         );
+      } else if (type === 'structure_type') {
+        await this.db.query(
+          `UPDATE org.structure_types
+           SET deleted_at = NULL, scheduled_hard_delete_at = NULL, is_active = true
+           WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
+        );
       }
       return { id, ok: true };
     } catch (e: any) {
@@ -269,6 +289,10 @@ export class AdminService {
       } else if (type === 'request') {
         await this.db.query(
           `DELETE FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
+        );
+      } else if (type === 'structure_type') {
+        await this.db.query(
+          `DELETE FROM org.structure_types WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
         );
       }
       return { id, ok: true };
@@ -302,6 +326,12 @@ export class AdminService {
       await this.db.query(
         `UPDATE requests.admin_requests
          SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days'
+         WHERE id = $1 AND deleted_at IS NULL`, [id],
+      );
+    } else if (type === 'structure_type') {
+      await this.db.query(
+        `UPDATE org.structure_types
+         SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days', is_active = false
          WHERE id = $1 AND deleted_at IS NULL`, [id],
       );
     }

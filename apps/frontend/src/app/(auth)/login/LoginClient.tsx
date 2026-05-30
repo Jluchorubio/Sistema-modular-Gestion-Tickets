@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, Globe2, X } from 'lucide-react';
+import { systemConfigService } from '@/services/system-config.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/tokens';
 import { ROUTES } from '@/constants/routes';
@@ -78,6 +80,15 @@ function handleAuthRedirect(data: LoginResponse, push: (href: string) => void) {
 export function LoginClient() {
   const router       = useRouter();
   const searchParams = useSearchParams();
+
+  const { data: company } = useQuery({
+    queryKey: ['company-public'],
+    queryFn:  systemConfigService.getPublicCompanyInfo,
+    staleTime: 600_000,
+  });
+  const companyName = company?.name ?? '';
+  const logoUrl     = company?.logo_url ?? '';
+
   const [view,       setView]       = useState<AuthView>('login');
   const [otpToken,   setOtpToken]   = useState('');
   const [resetToken, setResetToken] = useState('');
@@ -217,11 +228,16 @@ export function LoginClient() {
       <section className={styles.formCol}>
         <header className={styles.formHeader}>
           <div className={styles.brand}>
-            <span className={styles.brandMark} aria-hidden="true">
-              <span />
-              <span />
-            </span>
-            <span className={styles.brandName}>LOGOTIPO</span>
+            {logoUrl
+              ? <img src={logoUrl} alt={companyName} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} />
+              : (
+                <span className={styles.brandMark} aria-hidden="true">
+                  <span />
+                  <span />
+                </span>
+              )
+            }
+            <span className={styles.brandName}>{companyName || 'Sistema'}</span>
           </div>
           <button type="button" className={styles.langBtn} aria-label="Idioma actual: español">
             <Globe2 size={12} />

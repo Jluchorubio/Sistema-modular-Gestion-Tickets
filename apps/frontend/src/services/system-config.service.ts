@@ -300,6 +300,8 @@ export const systemConfigService = {
     api.post<StructureType>(`${BASE}/org/structure-types`, dto).then(r => r.data),
   updateStructureType: (id: string, dto: Partial<Pick<StructureType, 'name' | 'description' | 'weight' | 'parent_type_id' | 'allows_users' | 'is_active' | 'sort_order' | 'icon' | 'color'>>) =>
     api.patch<StructureType>(`${BASE}/org/structure-types/${id}`, dto).then(r => r.data),
+  deleteStructureType: (id: string) =>
+    api.delete<{ ok: boolean; message: string }>(`${BASE}/org/structure-types/${id}`).then(r => r.data),
 
   /* ── Dynamic org: nodes ── */
   getOrgNodes: (params?: { type_id?: string; parent_id?: string; active?: boolean }) =>

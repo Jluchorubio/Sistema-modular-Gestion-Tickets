@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { systemConfigService } from '@/services/system-config.service';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -38,8 +39,16 @@ export function AppHeader({ noSidebar = false }: Props) {
   const router      = useRouter();
   const pathname    = usePathname();
   const qc          = useQueryClient();
-  const user           = useAuthStore((s) => s.user);
-  const clearAuth      = useAuthStore((s) => s.clearAuth);
+  const user        = useAuthStore((s) => s.user);
+  const clearAuth   = useAuthStore((s) => s.clearAuth);
+
+  const { data: company } = useQuery({
+    queryKey: ['company-public'],
+    queryFn:  systemConfigService.getPublicCompanyInfo,
+    staleTime: 600_000,
+  });
+  const companyName = company?.name ?? '';
+  const logoUrl     = company?.logo_url ?? '';
   const theme          = useUIStore((s) => s.theme);
   const setTheme       = useUIStore((s) => s.setTheme);
 
@@ -139,8 +148,11 @@ export function AppHeader({ noSidebar = false }: Props) {
         {/* ── Left: brand ── */}
         <div className={styles.left}>
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
-            <div className={styles.brandIcon} />
-            <span className={styles.brandName}>LOGOTIPO</span>
+            {logoUrl
+              ? <img src={logoUrl} alt={companyName} style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 4 }} />
+              : <div className={styles.brandIcon} />
+            }
+            {companyName && <span className={styles.brandName}>{companyName}</span>}
           </Link>
         </div>
 

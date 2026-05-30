@@ -72,7 +72,19 @@ export class SystemConfigController {
   @Patch('company')
   @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:company')
-  updateCompany(@Body() dto: UpdateCompanyDto) { return this.svc.updateCompany(dto); }
+  async updateCompany(@Req() req: Request, @Body() dto: UpdateCompanyDto) {
+    const prev   = await this.svc.getCompany();
+    const result = await this.svc.updateCompany(dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:        'UPDATE',
+      entityType:    'company',
+      entityId:      '00000000-0000-0000-0000-000000000001',
+      previousValue: prev,
+      newValue:      result,
+    });
+    return result;
+  }
 
   @Get('org/summary')
   @UseGuards(RolesGuard) @Roles('superadmin')
@@ -136,8 +148,16 @@ export class SystemConfigController {
   @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Crear o actualizar horario laboral para un día (upsert por module_id + day_of_week).' })
-  upsertBusinessHour(@Body() dto: UpsertBusinessHourDto) {
-    return this.svc.upsertBusinessHour(dto);
+  async upsertBusinessHour(@Req() req: Request, @Body() dto: UpsertBusinessHourDto) {
+    const result = await this.svc.upsertBusinessHour(dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:     'UPDATE',
+      entityType: 'business_hour',
+      entityId:   String(dto.day_of_week),
+      newValue:   result,
+    });
+    return result;
   }
 
   @Get('holidays')
@@ -152,16 +172,31 @@ export class SystemConfigController {
   @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Agregar feriado (upsert por module_id + date).' })
-  createHoliday(@Body() dto: CreateHolidayDto) {
-    return this.svc.createHoliday(dto);
+  async createHoliday(@Req() req: Request, @Body() dto: CreateHolidayDto) {
+    const result = await this.svc.createHoliday(dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:     'CREATE',
+      entityType: 'holiday',
+      entityId:   result.id,
+      newValue:   result,
+    });
+    return result;
   }
 
   @Delete('holidays/:id')
   @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Desactivar feriado.' })
-  deleteHoliday(@Param('id') id: string) {
-    return this.svc.deleteHoliday(id);
+  async deleteHoliday(@Req() req: Request, @Param('id') id: string) {
+    const result = await this.svc.deleteHoliday(id);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:     'DELETE',
+      entityType: 'holiday',
+      entityId:   id,
+    });
+    return result;
   }
 
   @Post('holidays/sync-colombia')
@@ -326,6 +361,14 @@ export class SystemConfigController {
   @RequirePermission('global:config:org')
   updateStructureType(@Param('id') id: string, @Body() dto: UpdateStructureTypeDto) {
     return this.svc.updateStructureType(id, dto);
+  }
+
+  @Delete('org/structure-types/:id')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Soft-delete tipo de estructura (90 días en papelera).' })
+  deleteStructureType(@Param('id') id: string) {
+    return this.svc.deleteStructureType(id);
   }
 
   /* ── Dynamic org: nodes ─────────────────────────────────────────── */

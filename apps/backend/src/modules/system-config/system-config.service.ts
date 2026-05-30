@@ -576,13 +576,38 @@ export class SystemConfigService {
   async getStructureTypes(onlyActive = false) {
     const key = `org:structure-types:${onlyActive}`;
     return this.cache.wrap(key, TTL.ORG_TYPES, () => {
-      const where = onlyActive ? `WHERE is_active = TRUE` : '';
+      const where = onlyActive
+        ? `WHERE is_active = TRUE AND deleted_at IS NULL`
+        : `WHERE deleted_at IS NULL`;
       return this.db.query<any[]>(
         `SELECT id, name, slug, description, weight, parent_type_id, allows_users, is_active, sort_order, icon, color
          FROM org.structure_types ${where}
          ORDER BY sort_order, name`,
       );
     });
+  }
+
+  async deleteStructureType(id: string) {
+    const [type] = await this.db.query<{ id: string; name: string }[]>(
+      `SELECT id, name FROM org.structure_types WHERE id = $1 AND deleted_at IS NULL`, [id],
+    );
+    if (!type) throw new NotFoundException(`Tipo de estructura ${id} no encontrado`);
+
+    const [inUse] = await this.db.query<{ cnt: string }[]>(
+      `SELECT COUNT(*)::text AS cnt FROM org.nodes WHERE type_id = $1 AND is_active = TRUE`, [id],
+    );
+    if (parseInt(inUse?.cnt ?? '0') > 0) {
+      throw new BadRequestException('No se puede eliminar: existen nodos usando este tipo. Desactívalo en su lugar.');
+    }
+
+    await this.db.query(
+      `UPDATE org.structure_types
+       SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days', is_active = false
+       WHERE id = $1`,
+      [id],
+    );
+    await this.cache.delByPrefix('org:structure-types:');
+    return { ok: true, message: `Tipo "${type.name}" enviado a la papelera` };
   }
 
   async createStructureType(dto: CreateStructureTypeDto) {

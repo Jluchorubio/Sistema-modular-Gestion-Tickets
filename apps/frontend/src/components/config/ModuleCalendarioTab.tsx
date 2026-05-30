@@ -125,7 +125,7 @@ export function ModuleCalendarioTab({ moduleId }: Props) {
     },
   });
   const delHolidayMut = useMutation({
-    mutationFn: systemConfigService.deleteHoliday,
+    mutationFn: (id: string) => systemConfigService.deleteHoliday(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [...holidayKey] }),
   });
 

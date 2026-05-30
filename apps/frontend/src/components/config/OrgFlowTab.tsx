@@ -696,12 +696,17 @@ function TypesTab({ types }: { types: StructureType[] }) {
       systemConfigService.updateStructureType(id, dto),
     onSuccess: inv,
   });
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => systemConfigService.deleteStructureType(id),
+    onSuccess: inv,
+  });
 
   const emptyForm = { name: '', slug: '', description: '', color: '#64748b', icon: 'folder', weight: 5, allows_users: true };
-  const [creating,  setCreating]  = useState(false);
-  const [newForm,   setNewForm]   = useState(emptyForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm,  setEditForm]  = useState<Partial<StructureType>>({});
+  const [creating,    setCreating]    = useState(false);
+  const [newForm,     setNewForm]     = useState(emptyForm);
+  const [editingId,   setEditingId]   = useState<string | null>(null);
+  const [editForm,    setEditForm]    = useState<Partial<StructureType>>({});
+  const [confirmDelId, setConfirmDelId] = useState<string | null>(null);
 
   const inp: React.CSSProperties = { padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', color: '#0f172a', background: '#fafafa' };
   const lbl: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 3 };
@@ -882,6 +887,28 @@ function TypesTab({ types }: { types: StructureType[] }) {
               <button onClick={() => startEdit(t)}
                 style={{ padding: '4px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 10, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit', flexShrink: 0 }}>
                 <Pencil size={9} /> Editar
+              </button>
+              <button onClick={() => setConfirmDelId(confirmDelId === t.id ? null : t.id)}
+                style={{ padding: '4px 8px', background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 5, fontSize: 10, cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit', flexShrink: 0 }}>
+                <Trash2 size={9} />
+              </button>
+            </div>
+          )}
+          {/* Inline confirm — outside ternary, inside outer wrapper */}
+          {confirmDelId === t.id && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#fef2f2', borderTop: '1px solid #fecaca' }}>
+              <span style={{ fontSize: 11, color: '#991b1b', flex: 1 }}>
+                ¿Eliminar tipo <strong>{t.name}</strong>? Se enviará a la papelera (90 días).
+              </span>
+              <button
+                disabled={deleteMut.isPending}
+                onClick={() => deleteMut.mutate(t.id, { onSuccess: () => setConfirmDelId(null) })}
+                style={{ padding: '4px 12px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {deleteMut.isPending ? '...' : 'Eliminar'}
+              </button>
+              <button onClick={() => setConfirmDelId(null)}
+                style={{ padding: '4px 10px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+                Cancelar
               </button>
             </div>
           )}

@@ -1223,7 +1223,10 @@ function AuditoriaTab() {
 /* ── Security tab ───────────────────────────────────────────────── */
 
 const CRITICAL_OPS = [
+  'Configuración de Empresa',
   'Fórmula de Prioridad',
+  'Horario Laboral Global',
+  'Festivos del Calendario',
   'Reglas SLA',
   'Tipos de daño',
   'Tipos de solicitud',

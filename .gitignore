@@ -46,3 +46,4 @@ coverage/
 node_modules/
 apps/backend/dist/
 .env
+audit_screenshots/
