@@ -282,7 +282,7 @@ const nodeTypes = { orgCard: OrgCard };
    INNER TOOLBAR (inside ReactFlow — gets correct RF context)
    ───────────────────────────────────────────────────────────────────────────── */
 
-function InnerToolbar() {
+function InnerToolbar({ onCollapseAll, onExpandAll }: { onCollapseAll: () => void; onExpandAll: () => void }) {
   const { fitView, zoomIn, zoomOut } = useReactFlow();
   const b: React.CSSProperties = {
     width: 26, height: 26, borderRadius: 6, border: 'none', background: '#f8fafc',
@@ -295,7 +295,10 @@ function InnerToolbar() {
         <button style={b} title="Zoom +" type="button" onClick={() => zoomIn({ duration: 180 })}><ZoomIn size={12} /></button>
         <button style={b} title="Zoom -" type="button" onClick={() => zoomOut({ duration: 180 })}><ZoomOut size={12} /></button>
         <div style={{ height: 1, background: '#f1f5f9', margin: '1px 0' }} />
-        <button style={b} title="Ajustar" type="button" onClick={() => fitView({ padding: 0.15, duration: 350 })}><Maximize2 size={12} /></button>
+        <button style={b} title="Ajustar vista" type="button" onClick={() => fitView({ padding: 0.15, duration: 350 })}><Maximize2 size={12} /></button>
+        <div style={{ height: 1, background: '#f1f5f9', margin: '1px 0' }} />
+        <button style={b} title="Colapsar todo" type="button" onClick={onCollapseAll}><ChevronRight size={12} /></button>
+        <button style={b} title="Expandir todo"  type="button" onClick={onExpandAll}><ChevronDown size={12} /></button>
       </div>
     </Panel>
   );
@@ -676,31 +679,212 @@ function InfoField({ label, v }: { label: string; v: React.ReactNode }) {
    TYPES TAB
    ───────────────────────────────────────────────────────────────────────────── */
 
-function TypesTab({ types, onUpdate }: {
-  types:    StructureType[];
-  onUpdate: (id: string, weight: number) => void;
-}) {
+const ICON_PRESETS = ['folder','layers','grid','building','building-2','briefcase','map-pin','layout','users','git-branch','cpu','server','tool','shield','star','box','tag','flag'];
+
+function slugify(s: string) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
+
+function TypesTab({ types }: { types: StructureType[] }) {
+  const qc    = useQueryClient();
+  const inv   = () => qc.invalidateQueries({ queryKey: ['org-structure-types'] });
+
+  const createMut = useMutation({
+    mutationFn: (dto: Omit<StructureType, 'id' | 'is_active'>) => systemConfigService.createStructureType(dto),
+    onSuccess: inv,
+  });
+  const updateMut = useMutation({
+    mutationFn: ({ id, ...dto }: Partial<StructureType> & { id: string }) =>
+      systemConfigService.updateStructureType(id, dto),
+    onSuccess: inv,
+  });
+
+  const emptyForm = { name: '', slug: '', description: '', color: '#64748b', icon: 'folder', weight: 5, allows_users: true };
+  const [creating,  setCreating]  = useState(false);
+  const [newForm,   setNewForm]   = useState(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm,  setEditForm]  = useState<Partial<StructureType>>({});
+
+  const inp: React.CSSProperties = { padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', color: '#0f172a', background: '#fafafa' };
+  const lbl: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 3 };
+
+  const startEdit = (t: StructureType) => {
+    setEditingId(t.id);
+    setEditForm({ name: t.name, description: t.description ?? '', color: t.color ?? '#64748b', icon: t.icon ?? 'folder', weight: t.weight, allows_users: t.allows_users, is_active: t.is_active });
+  };
+
   return (
     <div>
-      <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16, marginTop: 0 }}>
-        El peso (1–10) alimenta directamente el motor de prioridad automática.
-      </p>
-      {types.map(t => (
-        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 14px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 8, borderLeft: `4px solid ${t.color ?? '#64748b'}` }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>{t.name}</div>
-            <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2, display: 'flex', gap: 8 }}>
-              <code>{t.slug}</code>
-              {t.allows_users && <span style={{ color: '#059669', fontWeight: 600 }}>acepta usuarios</span>}
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
+        <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, maxWidth: 520 }}>
+          Cada tipo tiene un peso base (usado como sugerencia al crear nodos). El motor de prioridad usa el <strong>peso individual de cada nodo</strong>, por lo que cualquier tipo nuevo funciona automáticamente en las automatizaciones.
+        </p>
+        {!creating && (
+          <button onClick={() => { setCreating(true); setNewForm(emptyForm); }}
+            style={{ flexShrink: 0, marginLeft: 12, padding: '5px 12px', background: '#ff5e3a', color: '#fff', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}>
+            <Plus size={11} /> Nuevo tipo
+          </button>
+        )}
+      </div>
+
+      {/* Create form */}
+      {creating && (
+        <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 10, padding: 16, marginBottom: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div>
+              <label style={lbl}>Nombre *</label>
+              <input style={inp} value={newForm.name}
+                onChange={e => setNewForm(p => ({ ...p, name: e.target.value, slug: slugify(e.target.value) }))}
+                placeholder="ej. Laboratorio" />
+            </div>
+            <div>
+              <label style={lbl}>Slug (auto)</label>
+              <input style={inp} value={newForm.slug}
+                onChange={e => setNewForm(p => ({ ...p, slug: slugify(e.target.value) }))}
+                placeholder="laboratorio" />
+            </div>
+            <div>
+              <label style={lbl}>Descripción</label>
+              <input style={inp} value={newForm.description ?? ''}
+                onChange={e => setNewForm(p => ({ ...p, description: e.target.value }))}
+                placeholder="Opcional" />
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 180 }}>
-            <span style={{ fontSize: 10, color: '#64748b' }}>Peso</span>
-            <input type="range" min={1} max={10} value={t.weight}
-              onChange={e => onUpdate(t.id, +e.target.value)}
-              style={{ flex: 1, accentColor: t.color ?? '#64748b' }} />
-            <span style={{ fontSize: 12, fontWeight: 800, minWidth: 18, color: wColor(t.weight) }}>{t.weight}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 60px 140px', gap: 10, alignItems: 'end' }}>
+            <div>
+              <label style={lbl}>Color</label>
+              <input type="color" value={newForm.color}
+                onChange={e => setNewForm(p => ({ ...p, color: e.target.value }))}
+                style={{ width: '100%', height: 32, border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', padding: 2 }} />
+            </div>
+            <div>
+              <label style={lbl}>Ícono (nombre Lucide)</label>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4 }}>
+                {ICON_PRESETS.map(ic => (
+                  <button key={ic} type="button" onClick={() => setNewForm(p => ({ ...p, icon: ic }))}
+                    style={{ padding: '2px 6px', fontSize: 9, borderRadius: 4, border: `1px solid ${newForm.icon === ic ? '#ff5e3a' : '#e2e8f0'}`, background: newForm.icon === ic ? '#fff5f0' : '#fff', color: newForm.icon === ic ? '#ff5e3a' : '#64748b', cursor: 'pointer', fontFamily: 'monospace' }}>
+                    {ic}
+                  </button>
+                ))}
+              </div>
+              <input style={inp} value={newForm.icon ?? ''}
+                onChange={e => setNewForm(p => ({ ...p, icon: e.target.value }))}
+                placeholder="folder" />
+            </div>
+            <div>
+              <label style={lbl}>Peso ({newForm.weight})</label>
+              <input type="range" min={1} max={10} value={newForm.weight}
+                onChange={e => setNewForm(p => ({ ...p, weight: +e.target.value }))}
+                style={{ width: '100%', accentColor: newForm.color }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 2 }}>
+              <label style={{ ...lbl, marginBottom: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <input type="checkbox" checked={newForm.allows_users}
+                  onChange={e => setNewForm(p => ({ ...p, allows_users: e.target.checked }))} />
+                Acepta usuarios
+              </label>
+            </div>
           </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+            <button onClick={() => setCreating(false)}
+              style={{ padding: '5px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+              Cancelar
+            </button>
+            <button
+              disabled={!newForm.name.trim() || createMut.isPending}
+              onClick={() => createMut.mutate({ ...newForm, sort_order: 50 } as Omit<StructureType, 'id' | 'is_active'>, { onSuccess: () => setCreating(false) })}
+              style={{ padding: '5px 14px', background: newForm.name.trim() ? '#ff5e3a' : '#fca58a', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {createMut.isPending ? '...' : 'Crear tipo'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Types list */}
+      {types.map(t => (
+        <div key={t.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 8, borderLeft: `4px solid ${t.color ?? '#64748b'}`, opacity: t.is_active ? 1 : 0.55 }}>
+          {editingId === t.id ? (
+            /* Edit row */
+            <div style={{ padding: '12px 14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 60px', gap: 10, marginBottom: 10 }}>
+                <div>
+                  <label style={lbl}>Nombre</label>
+                  <input style={inp} value={editForm.name ?? ''} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={lbl}>Color</label>
+                  <input type="color" value={editForm.color ?? '#64748b'}
+                    onChange={e => setEditForm(p => ({ ...p, color: e.target.value }))}
+                    style={{ width: '100%', height: 32, border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', padding: 2 }} />
+                </div>
+                <div>
+                  <label style={lbl}>Ícono</label>
+                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 4 }}>
+                    {ICON_PRESETS.map(ic => (
+                      <button key={ic} type="button" onClick={() => setEditForm(p => ({ ...p, icon: ic }))}
+                        style={{ padding: '1px 5px', fontSize: 9, borderRadius: 3, border: `1px solid ${editForm.icon === ic ? '#ff5e3a' : '#e2e8f0'}`, background: editForm.icon === ic ? '#fff5f0' : '#fff', color: editForm.icon === ic ? '#ff5e3a' : '#64748b', cursor: 'pointer', fontFamily: 'monospace' }}>
+                        {ic}
+                      </button>
+                    ))}
+                  </div>
+                  <input style={inp} value={editForm.icon ?? ''} onChange={e => setEditForm(p => ({ ...p, icon: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={lbl}>Peso ({editForm.weight})</label>
+                  <input type="range" min={1} max={10} value={editForm.weight ?? 5}
+                    onChange={e => setEditForm(p => ({ ...p, weight: +e.target.value }))}
+                    style={{ width: '100%', accentColor: editForm.color ?? '#64748b' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <label style={{ fontSize: 11, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center', color: '#64748b' }}>
+                  <input type="checkbox" checked={editForm.allows_users ?? true} onChange={e => setEditForm(p => ({ ...p, allows_users: e.target.checked }))} />
+                  Acepta usuarios
+                </label>
+                <label style={{ fontSize: 11, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center', color: editForm.is_active ? '#059669' : '#dc2626' }}>
+                  <input type="checkbox" checked={editForm.is_active ?? true} onChange={e => setEditForm(p => ({ ...p, is_active: e.target.checked }))} />
+                  {editForm.is_active ? 'Activo' : 'Inactivo'}
+                </label>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                  <button onClick={() => setEditingId(null)}
+                    style={{ padding: '4px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 11, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+                    Cancelar
+                  </button>
+                  <button disabled={updateMut.isPending}
+                    onClick={() => updateMut.mutate({ id: t.id, ...editForm }, { onSuccess: () => setEditingId(null) })}
+                    style={{ padding: '4px 12px', background: '#ff5e3a', color: '#fff', border: 'none', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {updateMut.isPending ? '...' : 'Guardar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* View row */
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px' }}>
+              <div style={{ width: 32, height: 32, borderRadius: 7, background: `${t.color ?? '#64748b'}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 10, color: t.color ?? '#64748b' }}>✦</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>{t.name}</div>
+                <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2, display: 'flex', gap: 8 }}>
+                  <code style={{ fontFamily: 'monospace' }}>{t.slug}</code>
+                  {t.icon && <span>ícono: <code style={{ fontFamily: 'monospace' }}>{t.icon}</code></span>}
+                  {t.allows_users && <span style={{ color: '#059669', fontWeight: 600 }}>acepta usuarios</span>}
+                  {!t.is_active && <span style={{ color: '#dc2626', fontWeight: 600 }}>inactivo</span>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 160 }}>
+                <span style={{ fontSize: 10, color: '#64748b' }}>Peso</span>
+                <input type="range" min={1} max={10} value={t.weight}
+                  onChange={e => updateMut.mutate({ id: t.id, weight: +e.target.value })}
+                  style={{ flex: 1, accentColor: t.color ?? '#64748b' }} />
+                <span style={{ fontSize: 12, fontWeight: 800, minWidth: 18, color: wColor(t.weight) }}>{t.weight}</span>
+              </div>
+              <button onClick={() => startEdit(t)}
+                style={{ padding: '4px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 10, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit', flexShrink: 0 }}>
+                <Pencil size={9} /> Editar
+              </button>
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -714,6 +898,7 @@ function TypesTab({ types, onUpdate }: {
 function OrgCanvas({
   tree, typeMap, selectedId, setSelectedId,
   collapsed, setCollapsed, onAddChild, reparentMut,
+  onCollapseAll, onExpandAll,
 }: {
   tree:          OrgNode[];
   typeMap:       Map<string, StructureType>;
@@ -723,6 +908,8 @@ function OrgCanvas({
   setCollapsed:  React.Dispatch<React.SetStateAction<Set<string>>>;
   onAddChild:    (parentId: string, parentName: string) => void;
   reparentMut:   ReturnType<typeof useMutation<any, any, { nodeId: string; parentId: string }>>;
+  onCollapseAll: () => void;
+  onExpandAll:   () => void;
 }) {
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState<Node>([]);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -824,7 +1011,7 @@ function OrgCanvas({
         style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8 }}
         maskColor="rgba(241,245,249,.85)"
       />
-      <InnerToolbar />
+      <InnerToolbar onCollapseAll={onCollapseAll} onExpandAll={onExpandAll} />
       <FitOnChange layoutKey={layoutKey} />
 
       {/* Status bar */}
@@ -982,9 +1169,14 @@ function OrgListTab({ tree, typeMap, onSelect, onAddChild, toggleMut }: OrgListT
   const [search,   setSearch]   = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // Auto-expand root nodes on first load
+  // Auto-expand ALL non-leaf nodes on first load
   useEffect(() => {
-    setExpanded(new Set(tree.map(n => n.id)));
+    const all = new Set<string>();
+    const walk = (nodes: OrgNode[]) => nodes.forEach(n => {
+      if (n.children?.length) { all.add(n.id); walk(n.children); }
+    });
+    walk(tree);
+    setExpanded(all);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree.length === 0 ? 0 : tree[0]?.id]);
 
@@ -1203,6 +1395,15 @@ export function OrgFlowTab() {
     color: a ? '#ff5e3a' : '#64748b', transition: 'all .1s',
   });
 
+  const handleCollapseAll = useCallback(() => {
+    const s = new Set<string>();
+    const walk = (ns: OrgNode[]) => ns.forEach(n => { if (n.children?.length) { s.add(n.id); walk(n.children); } });
+    walk(tree as OrgNode[]);
+    setCollapsed(s);
+  }, [tree, setCollapsed]);
+
+  const handleExpandAll = useCallback(() => setCollapsed(new Set()), [setCollapsed]);
+
   if (treeLoad || typesLoad) return <Spinner />;
 
   return (
@@ -1219,19 +1420,6 @@ export function OrgFlowTab() {
           Lista / Tabla
         </button>
 
-        {section === 'flow' && hasTree && (
-          <>
-            <div style={{ width: 1, height: 16, background: '#e2e8f0' }} />
-            <button onClick={() => { const s = new Set<string>(); const v = (ns: OrgNode[]) => ns.forEach(n => { if (n.children?.length) { s.add(n.id); v(n.children); } }); v(tree as OrgNode[]); setCollapsed(s); }}
-              style={{ ...sBtn(false), display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}>
-              <ChevronRight size={10} /> Colapsar todo
-            </button>
-            <button onClick={() => setCollapsed(new Set())}
-              style={{ ...sBtn(false), display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}>
-              <ChevronDown size={10} /> Expandir todo
-            </button>
-          </>
-        )}
 
         {(section === 'flow' || section === 'list') && (
           <button onClick={() => { setAddPid(''); setAddPname(''); setShowAdd(v => !v); setSelectedId(null); }}
@@ -1243,7 +1431,7 @@ export function OrgFlowTab() {
 
       {/* ── Types tab ── */}
       {section === 'types' && (
-        <TypesTab types={types as StructureType[]} onUpdate={(id, w) => updateTypeMut.mutate({ id, weight: w })} />
+        <TypesTab types={types as StructureType[]} />
       )}
 
       {/* ── List tab ── */}
@@ -1310,6 +1498,8 @@ export function OrgFlowTab() {
                 setCollapsed={setCollapsed}
                 onAddChild={handleAddChild}
                 reparentMut={reparentMut}
+                onCollapseAll={handleCollapseAll}
+                onExpandAll={handleExpandAll}
               />
             </ReactFlowProvider>
           </div>
