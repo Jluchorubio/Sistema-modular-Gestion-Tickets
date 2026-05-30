@@ -143,6 +143,7 @@ export function CategoriesTab({ moduleId }: Props) {
     const hasChildren = children.length > 0;
     const isOpen = expanded.has(cat.id);
     const isEditing = editId === cat.id;
+    const [confirmDel, setConfirmDel] = useState(false);
 
     return (
       <div>
@@ -150,7 +151,7 @@ export function CategoriesTab({ moduleId }: Props) {
           display: 'flex', alignItems: 'center', gap: 8,
           padding: `9px 12px 9px ${12 + depth * 20}px`,
           background: '#fff', border: '1px solid #f1f5f9',
-          borderRadius: 6, marginBottom: 4,
+          borderRadius: confirmDel ? '6px 6px 0 0' : 6, marginBottom: confirmDel ? 0 : 4,
           opacity: cat.is_active ? 1 : 0.5,
         }}>
           {hasChildren ? (
@@ -195,14 +196,29 @@ export function CategoriesTab({ moduleId }: Props) {
           </button>
 
           <button type="button"
-            disabled={deleteMut.isPending}
-            onClick={() => {
-              if (confirm(`¿Eliminar categoría "${cat.name}"?`)) deleteMut.mutate(cat.id);
-            }}
+            onClick={() => setConfirmDel(v => !v)}
             style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             <Trash2 size={11} />
           </button>
         </div>
+
+        {confirmDel && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderTop: 'none', borderRadius: '0 0 6px 6px', marginBottom: 4 }}>
+            <span style={{ fontSize: 11, color: '#991b1b', flex: 1 }}>
+              ¿Eliminar categoría <strong>{cat.name}</strong>?
+            </span>
+            <button type="button"
+              disabled={deleteMut.isPending}
+              onClick={() => deleteMut.mutate(cat.id, { onSuccess: () => setConfirmDel(false) })}
+              style={{ padding: '3px 10px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {deleteMut.isPending ? '...' : 'Eliminar'}
+            </button>
+            <button type="button" onClick={() => setConfirmDel(false)}
+              style={{ padding: '3px 8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+              Cancelar
+            </button>
+          </div>
+        )}
 
         {isEditing && (
           <div style={{ paddingLeft: 12 + depth * 20 }}>

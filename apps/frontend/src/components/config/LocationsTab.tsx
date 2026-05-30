@@ -66,8 +66,9 @@ function EnvironmentRow({
   locId: string;
   onError: (msg: string) => void;
 }) {
-  const qc         = useQueryClient();
-  const [editing,  setEditing] = useState(false);
+  const qc              = useQueryClient();
+  const [editing,       setEditing]    = useState(false);
+  const [confirmDel,    setConfirmDel] = useState(false);
   const invalidate = () => qc.invalidateQueries({ queryKey: ['module-locations', moduleId] });
 
   const updateMut = useMutation({
@@ -110,12 +111,29 @@ function EnvironmentRow({
           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', background: 'transparent', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           <Pencil size={10} />
         </button>
-        <button type="button" disabled={deleteMut.isPending}
-          onClick={() => { if (confirm(`¿Eliminar ambiente "${env.name}"?`)) deleteMut.mutate(); }}
+        <button type="button"
+          onClick={() => setConfirmDel(v => !v)}
           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           <Trash2 size={10} />
         </button>
       </div>
+      {confirmDel && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px 7px 36px', background: '#fef2f2', border: '1px solid #fecaca', borderTop: 'none', borderRadius: '0 0 4px 4px', marginBottom: 3 }}>
+          <span style={{ fontSize: 11, color: '#991b1b', flex: 1 }}>
+            ¿Eliminar ambiente <strong>{env.name}</strong>?
+          </span>
+          <button type="button"
+            disabled={deleteMut.isPending}
+            onClick={() => deleteMut.mutate(undefined, { onSuccess: () => setConfirmDel(false) })}
+            style={{ padding: '3px 10px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            {deleteMut.isPending ? '...' : 'Eliminar'}
+          </button>
+          <button type="button" onClick={() => setConfirmDel(false)}
+            style={{ padding: '3px 8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+            Cancelar
+          </button>
+        </div>
+      )}
       {editing && (
         <div style={{ paddingLeft: 36 }}>
           <InlineForm
@@ -145,6 +163,7 @@ function LocationCard({
   const [open,         setOpen]        = useState(true);
   const [editingLoc,   setEditingLoc]  = useState(false);
   const [addingEnv,    setAddingEnv]   = useState(false);
+  const [confirmDel,   setConfirmDel]  = useState(false);
   const invalidate     = () => qc.invalidateQueries({ queryKey: ['module-locations', moduleId] });
 
   const updateLocMut = useMutation({
@@ -206,12 +225,30 @@ function LocationCard({
           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'transparent', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
           <Pencil size={11} />
         </button>
-        <button type="button" disabled={deleteLocMut.isPending}
-          onClick={() => { if (confirm(`¿Eliminar sede "${loc.name}"? Elimina también sus ambientes.`)) deleteLocMut.mutate(); }}
+        <button type="button"
+          onClick={() => setConfirmDel(v => !v)}
           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
           <Trash2 size={11} />
         </button>
       </div>
+
+      {confirmDel && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: '#fef2f2', borderTop: '1px solid #fecaca' }}>
+          <span style={{ fontSize: 11, color: '#991b1b', flex: 1 }}>
+            ¿Eliminar sede <strong>{loc.name}</strong>? Se eliminarán también sus ambientes.
+          </span>
+          <button type="button"
+            disabled={deleteLocMut.isPending}
+            onClick={() => deleteLocMut.mutate(undefined, { onSuccess: () => setConfirmDel(false) })}
+            style={{ padding: '4px 12px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            {deleteLocMut.isPending ? '...' : 'Eliminar'}
+          </button>
+          <button type="button" onClick={() => setConfirmDel(false)}
+            style={{ padding: '4px 10px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+            Cancelar
+          </button>
+        </div>
+      )}
 
       {editingLoc && (
         <div style={{ padding: '0 12px 12px' }}>
