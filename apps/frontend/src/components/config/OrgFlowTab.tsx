@@ -841,13 +841,285 @@ function OrgCanvas({
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   LIST TAB — tree-table view (no canvas needed)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function flattenSearch(nodes: OrgNode[], q: string): OrgNode[] {
+  const out: OrgNode[] = [];
+  const walk = (arr: OrgNode[]) => arr.forEach(n => {
+    if (n.name.toLowerCase().includes(q) || (n.description ?? '').toLowerCase().includes(q)) out.push(n);
+    if (n.children?.length) walk(n.children);
+  });
+  walk(nodes);
+  return out;
+}
+
+function countAll(nodes: OrgNode[]): number {
+  return nodes.reduce((s, n) => s + 1 + countAll(n.children ?? []), 0);
+}
+
+interface ListRowProps {
+  node: OrgNode;
+  depth: number;
+  typeMap: Map<string, StructureType>;
+  expanded: Set<string>;
+  toggle: (id: string) => void;
+  onSelect: (id: string) => void;
+  onAddChild: (id: string, name: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  toggleMut: any;
+}
+
+function ListRow({ node, depth, typeMap, expanded, toggle, onSelect, onAddChild, toggleMut }: ListRowProps) {
+  const type   = typeMap.get(node.type_id);
+  const color  = type?.color ?? '#64748b';
+  const hasKids = (node.children?.length ?? 0) > 0 || (node.child_count ?? 0) > 0;
+  const isOpen  = expanded.has(node.id);
+
+  const cell: React.CSSProperties = { padding: '7px 8px', verticalAlign: 'middle' };
+  const actionBtn = (bg: string, border: string, fg: string): React.CSSProperties => ({
+    background: bg, border: `1px solid ${border}`, color: fg,
+    borderRadius: 5, padding: '3px 8px', fontSize: 10, fontWeight: 600,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit',
+  });
+
+  return (
+    <>
+      <tr style={{
+        background: !node.is_active ? '#fef2f2' : depth % 2 === 0 ? '#fff' : '#fafcff',
+        opacity: node.is_active ? 1 : 0.65,
+        borderBottom: '1px solid #f1f5f9',
+        transition: 'background .1s',
+      }}>
+        {/* Indent + toggle */}
+        <td style={{ ...cell, paddingLeft: 10 + depth * 18, width: 1, whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* depth lines */}
+            {depth > 0 && <span style={{ width: depth * 2, height: 1 }} />}
+            <button
+              onClick={() => hasKids && toggle(node.id)}
+              style={{ background: 'none', border: 'none', cursor: hasKids ? 'pointer' : 'default', padding: 2, color: hasKids ? '#94a3b8' : 'transparent', display: 'flex', borderRadius: 3 }}
+            >
+              {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+          </div>
+        </td>
+
+        {/* Type badge */}
+        <td style={{ ...cell, whiteSpace: 'nowrap' }}>
+          <span style={{
+            fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+            color, background: `${color}14`, border: `1px solid ${color}28`,
+            borderRadius: 4, padding: '2px 6px', letterSpacing: .3,
+          }}>
+            {type?.name ?? node.type_slug}
+          </span>
+        </td>
+
+        {/* Name */}
+        <td style={{ ...cell, maxWidth: 260 }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#0f172a', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {node.name}
+          </span>
+          {node.description && (
+            <span style={{ fontSize: 10, color: '#94a3b8', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {node.description}
+            </span>
+          )}
+        </td>
+
+        {/* Weight */}
+        <td style={{ ...cell, textAlign: 'center', width: 50 }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: wColor(node.weight) }}>{node.weight}</span>
+        </td>
+
+        {/* Children count */}
+        <td style={{ ...cell, textAlign: 'center', width: 50 }}>
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>{node.child_count ?? node.children?.length ?? 0}</span>
+        </td>
+
+        {/* Actions */}
+        <td style={{ ...cell, whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button style={actionBtn('#f0fdf4', '#bbf7d0', '#16a34a')} onClick={() => onAddChild(node.id, node.name)}>
+              <Plus size={9} /> Hijo
+            </button>
+            <button style={actionBtn('#f8fafc', '#e2e8f0', '#475569')} onClick={() => onSelect(node.id)}>
+              <Pencil size={9} /> Editar
+            </button>
+            <button
+              style={actionBtn(node.is_active ? '#fff7ed' : '#f0fdf4', node.is_active ? '#fed7aa' : '#bbf7d0', node.is_active ? '#ea580c' : '#16a34a')}
+              onClick={() => toggleMut.mutate({ id: node.id, is_active: !node.is_active })}
+            >
+              {node.is_active ? <ToggleRight size={10} /> : <ToggleLeft size={10} />}
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      {/* Recursive children */}
+      {isOpen && node.children?.map(child => (
+        <ListRow
+          key={child.id} node={child} depth={depth + 1}
+          typeMap={typeMap} expanded={expanded} toggle={toggle}
+          onSelect={onSelect} onAddChild={onAddChild} toggleMut={toggleMut}
+        />
+      ))}
+    </>
+  );
+}
+
+interface OrgListTabProps {
+  tree: OrgNode[];
+  typeMap: Map<string, StructureType>;
+  onSelect: (id: string) => void;
+  onAddChild: (id: string, name: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  toggleMut: any;
+}
+
+function OrgListTab({ tree, typeMap, onSelect, onAddChild, toggleMut }: OrgListTabProps) {
+  const [search,   setSearch]   = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  // Auto-expand root nodes on first load
+  useEffect(() => {
+    setExpanded(new Set(tree.map(n => n.id)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tree.length === 0 ? 0 : tree[0]?.id]);
+
+  const toggle = (id: string) => setExpanded(prev => {
+    const s = new Set(prev);
+    s.has(id) ? s.delete(id) : s.add(id);
+    return s;
+  });
+
+  const expandAll = () => {
+    const all = new Set<string>();
+    const walk = (nodes: OrgNode[]) => nodes.forEach(n => { if (n.children?.length) { all.add(n.id); walk(n.children); } });
+    walk(tree);
+    setExpanded(all);
+  };
+
+  const collapseAll = () => setExpanded(new Set());
+
+  const q            = search.trim().toLowerCase();
+  const searchResult = q ? flattenSearch(tree, q) : null;
+  const total        = countAll(tree);
+
+  const thStyle: React.CSSProperties = {
+    padding: '8px 8px', textAlign: 'left', fontSize: 10, fontWeight: 700,
+    color: '#94a3b8', textTransform: 'uppercase', letterSpacing: .5,
+    background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
+  };
+
+  return (
+    <div>
+      {/* Search + controls */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
+          <AlertCircle size={12} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar nodo por nombre o descripción..."
+            style={{ width: '100%', padding: '6px 10px 6px 28px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 12, fontFamily: 'inherit', outline: 'none', color: '#0f172a', background: '#f8fafc', boxSizing: 'border-box' }}
+          />
+        </div>
+        {!q && (
+          <>
+            <button onClick={expandAll} style={{ padding: '5px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 10, fontWeight: 600, color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit' }}>
+              <ChevronDown size={10} /> Expandir todo
+            </button>
+            <button onClick={collapseAll} style={{ padding: '5px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 10, fontWeight: 600, color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit' }}>
+              <ChevronRight size={10} /> Colapsar todo
+            </button>
+          </>
+        )}
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8' }}>
+          {q ? `${searchResult!.length} resultados` : `${total} nodos`}
+        </span>
+      </div>
+
+      {/* Empty state */}
+      {tree.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
+          <GitBranch size={32} style={{ marginBottom: 12, opacity: .35 }} />
+          <p style={{ margin: 0, fontSize: 13 }}>Sin nodos. Usa "+ Nuevo nodo" para crear el primero.</p>
+        </div>
+      )}
+
+      {/* Table */}
+      {tree.length > 0 && (
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, width: 1 }} />
+                <th style={thStyle}>Tipo</th>
+                <th style={thStyle}>Nombre</th>
+                <th style={{ ...thStyle, textAlign: 'center' }}>Peso</th>
+                <th style={{ ...thStyle, textAlign: 'center' }}>Hijos</th>
+                <th style={thStyle}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {q
+                ? searchResult!.map(node => {
+                    const type  = typeMap.get(node.type_id);
+                    const color = type?.color ?? '#64748b';
+                    return (
+                      <tr key={node.id} style={{ borderBottom: '1px solid #f1f5f9', background: '#fffbf0' }}>
+                        <td style={{ padding: 8, width: 1 }} />
+                        <td style={{ padding: '7px 8px' }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color, background: `${color}14`, border: `1px solid ${color}28`, borderRadius: 4, padding: '2px 6px' }}>
+                            {type?.name ?? node.type_slug}
+                          </span>
+                        </td>
+                        <td style={{ padding: '7px 8px', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>
+                          {node.name}
+                          {node.description && <span style={{ display: 'block', fontSize: 10, color: '#94a3b8' }}>{node.description}</span>}
+                        </td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center' }}>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: wColor(node.weight) }}>{node.weight}</span>
+                        </td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#94a3b8', fontSize: 11 }}>{node.child_count ?? 0}</td>
+                        <td style={{ padding: '7px 8px' }}>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: 5, padding: '3px 8px', fontSize: 10, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit' }} onClick={() => onAddChild(node.id, node.name)}>
+                              <Plus size={9} /> Hijo
+                            </button>
+                            <button style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569', borderRadius: 5, padding: '3px 8px', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit' }} onClick={() => onSelect(node.id)}>
+                              <Pencil size={9} /> Editar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                : tree.map(node => (
+                    <ListRow
+                      key={node.id} node={node} depth={0}
+                      typeMap={typeMap} expanded={expanded} toggle={toggle}
+                      onSelect={onSelect} onAddChild={onAddChild} toggleMut={toggleMut}
+                    />
+                  ))
+              }
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    MAIN EXPORT
    ───────────────────────────────────────────────────────────────────────────── */
 
 export function OrgFlowTab() {
   const qc = useQueryClient();
 
-  const [section,    setSection]    = useState<'flow' | 'types'>('flow');
+  const [section,    setSection]    = useState<'flow' | 'types' | 'list'>('flow');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAdd,    setShowAdd]    = useState(false);
   const [addPid,     setAddPid]     = useState('');
@@ -943,6 +1215,9 @@ export function OrgFlowTab() {
         <button style={sBtn(section === 'types')} onClick={() => setSection('types')}>
           Tipos de estructura
         </button>
+        <button style={sBtn(section === 'list')} onClick={() => setSection('list')}>
+          Lista / Tabla
+        </button>
 
         {section === 'flow' && hasTree && (
           <>
@@ -958,7 +1233,7 @@ export function OrgFlowTab() {
           </>
         )}
 
-        {section === 'flow' && (
+        {(section === 'flow' || section === 'list') && (
           <button onClick={() => { setAddPid(''); setAddPname(''); setShowAdd(v => !v); setSelectedId(null); }}
             style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, background: showAdd ? '#f8fafc' : '#ff5e3a', color: showAdd ? '#64748b' : '#fff', border: showAdd ? '1px solid #e2e8f0' : 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             {showAdd ? <><X size={12} /> Cancelar</> : <><Plus size={12} /> Nuevo nodo</>}
@@ -969,6 +1244,43 @@ export function OrgFlowTab() {
       {/* ── Types tab ── */}
       {section === 'types' && (
         <TypesTab types={types as StructureType[]} onUpdate={(id, w) => updateTypeMut.mutate({ id, weight: w })} />
+      )}
+
+      {/* ── List tab ── */}
+      {section === 'list' && (
+        <>
+          {showAdd && (
+            <QuickAddPanel
+              types={types as StructureType[]}
+              flatNodes={flat as OrgNode[]}
+              parentId={addPid}
+              parentName={addPname}
+              isPending={createMut.isPending}
+              onSave={dto => createMut.mutate(dto)}
+              onCancel={() => { setShowAdd(false); setAddPid(''); setAddPname(''); }}
+            />
+          )}
+          <OrgListTab
+            tree={tree as OrgNode[]}
+            typeMap={typeMap}
+            onSelect={id => { setSelectedId(id); setShowAdd(false); }}
+            onAddChild={(pid, pname) => { handleAddChild(pid, pname); setShowAdd(true); }}
+            toggleMut={toggleMut}
+          />
+          {selectedNode && (
+            <NodeSidebar
+              node={selectedNode}
+              typeColor={selectedType?.color ?? '#64748b'}
+              typeName={selectedType?.name ?? selectedNode.type_slug}
+              flatNodes={flat as OrgNode[]}
+              onClose={() => setSelectedId(null)}
+              onAddChild={handleAddChild}
+              saveMut={saveMut}
+              deleteMut={deleteMut}
+              toggleMut={toggleMut}
+            />
+          )}
+        </>
       )}
 
       {/* ── Flow tab ── */}
