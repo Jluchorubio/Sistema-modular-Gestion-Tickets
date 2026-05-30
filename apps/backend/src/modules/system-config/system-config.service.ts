@@ -592,10 +592,11 @@ export class SystemConfigService {
     if (exists) throw new BadRequestException(`Ya existe un tipo con slug '${dto.slug}'`);
 
     const [row] = await this.db.query<any[]>(
-      `INSERT INTO org.structure_types (name, slug, description, weight, parent_type_id, allows_users, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      `INSERT INTO org.structure_types (name, slug, description, weight, parent_type_id, allows_users, sort_order, icon, color)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
       [dto.name, dto.slug, dto.description ?? null, dto.weight ?? 5,
-       dto.parent_type_id ?? null, dto.allows_users ?? true, dto.sort_order ?? 10],
+       dto.parent_type_id ?? null, dto.allows_users ?? true, dto.sort_order ?? 10,
+       dto.icon ?? 'folder', dto.color ?? '#64748b'],
     );
     await this.cache.delByPrefix('org:structure-types:');
     return row;
