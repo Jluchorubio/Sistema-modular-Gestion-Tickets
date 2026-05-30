@@ -262,7 +262,9 @@ const fInput: React.CSSProperties = {
 const fError: React.CSSProperties = { fontSize: 11, color: '#ef4444', marginTop: 3 };
 
 function CompanyTab() {
-  const qc = useQueryClient();
+  const qc       = useQueryClient();
+  const critical = useCriticalChange();
+
   const { data: company, isLoading } = useQuery({
     queryKey: ['sys-config-company'],
     queryFn:  systemConfigService.getCompany,
@@ -277,7 +279,7 @@ function CompanyTab() {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const updateMut = useMutation({
-    mutationFn: (dto: Partial<Company>) => systemConfigService.updateCompany(dto),
+    mutationFn: (auth: CriticalAuthData) => systemConfigService.updateCompany(form, auth),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sys-config-company'] });
       qc.invalidateQueries({ queryKey: ['company-public'] });
@@ -322,7 +324,10 @@ function CompanyTab() {
     const errs = validateCompanyForm(form);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
-    updateMut.mutate(form);
+    critical.triggerCritical(
+      { entityLabel: 'Configuración de Empresa', description: 'Modifica el nombre, logo, color y datos de contacto globales' },
+      async (auth) => { await updateMut.mutateAsync(auth); },
+    );
   }
 
   function handleColorPickerChange(hex: string) {
@@ -516,6 +521,7 @@ function CompanyTab() {
           <X size={13} /> Cancelar
         </button>
       </div>
+      <CriticalChangeModal {...critical} />
     </div>
   );
 }
@@ -938,7 +944,8 @@ function SyncColombiaBtn({ onSync }: { onSync: () => void }) {
 }
 
 function CalendarioTab() {
-  const qc = useQueryClient();
+  const qc       = useQueryClient();
+  const critical = useCriticalChange();
 
   const { data: hours    = [], isLoading: loadingHours    } = useQuery<BusinessHour[]>({
     queryKey: ['sys-sla-hours'],
@@ -961,8 +968,10 @@ function CalendarioTab() {
   const [dayForm, setDayForm] = useState({ start_time: '07:00', end_time: '17:00', is_active: true });
 
   const upsertMut = useMutation({
-    mutationFn: (dto: Parameters<typeof systemConfigService.upsertBusinessHour>[0]) =>
-      systemConfigService.upsertBusinessHour(dto),
+    mutationFn: (auth: CriticalAuthData) =>
+      systemConfigService.upsertBusinessHour(
+        { day_of_week: editDay!, ...dayForm }, auth,
+      ),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sys-sla-hours'] }); setEditDay(null); },
   });
 
@@ -970,7 +979,8 @@ function CalendarioTab() {
   const [holidayForm,    setHolidayForm]    = useState({ holiday_date: '', name: '' });
 
   const addHolidayMut = useMutation({
-    mutationFn: systemConfigService.createHoliday,
+    mutationFn: (auth: CriticalAuthData) =>
+      systemConfigService.createHoliday(holidayForm, auth),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sys-sla-holidays'] });
       setShowAddHoliday(false);
@@ -978,7 +988,8 @@ function CalendarioTab() {
     },
   });
   const delHolidayMut = useMutation({
-    mutationFn: systemConfigService.deleteHoliday,
+    mutationFn: ({ id, auth }: { id: string; auth: CriticalAuthData }) =>
+      systemConfigService.deleteHoliday(id, auth),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['sys-sla-holidays'] }),
   });
 
@@ -1038,7 +1049,10 @@ function CalendarioTab() {
                     {dayForm.is_active ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                   </button>
                   <button className={styles.btnSave} disabled={upsertMut.isPending}
-                    onClick={() => upsertMut.mutate({ day_of_week: dow, ...dayForm })}>
+                    onClick={() => critical.triggerCritical(
+                      { entityLabel: 'Horario Laboral', description: `Modifica el horario del ${DAY_NAMES[dow]} — afecta el cálculo de SLA activo` },
+                      async (auth) => { await upsertMut.mutateAsync(auth); },
+                    )}>
                     <Check size={13} />
                   </button>
                   <button className={styles.btnCancel} onClick={() => setEditDay(null)}>
@@ -1084,7 +1098,10 @@ function CalendarioTab() {
           <div className={styles.inlineActions}>
             <button className={styles.btnSave}
               disabled={addHolidayMut.isPending || !holidayForm.holiday_date || !holidayForm.name.trim()}
-              onClick={() => addHolidayMut.mutate(holidayForm)}>
+              onClick={() => critical.triggerCritical(
+                { entityLabel: 'Festivo', description: `Agregar "${holidayForm.name}" al calendario global — afecta el cálculo de SLA` },
+                async (auth) => { await addHolidayMut.mutateAsync(auth); },
+              )}>
               <Check size={13} /> {addHolidayMut.isPending ? 'Guardando…' : 'Guardar'}
             </button>
             <button className={styles.btnCancel} onClick={() => setShowAddHoliday(false)}>
@@ -1107,13 +1124,18 @@ function CalendarioTab() {
                 <span className={styles.listMeta}> · {h.name}</span>
               </div>
               <button className={styles.iconBtnDanger} title="Eliminar"
-                disabled={delHolidayMut.isPending} onClick={() => delHolidayMut.mutate(h.id)}>
+                disabled={delHolidayMut.isPending}
+                onClick={() => critical.triggerCritical(
+                  { entityLabel: 'Eliminar Festivo', description: `Quitar "${h.name}" del calendario global` },
+                  async (auth) => { await delHolidayMut.mutateAsync({ id: h.id, auth }); },
+                )}>
                 <Trash2 size={13} />
               </button>
             </div>
           ))}
         </div>
       )}
+      <CriticalChangeModal {...critical} />
     </div>
   );
 }

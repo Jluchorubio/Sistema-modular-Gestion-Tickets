@@ -70,7 +70,7 @@ export class SystemConfigController {
   getCompany() { return this.svc.getCompany(); }
 
   @Patch('company')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:company')
   updateCompany(@Body() dto: UpdateCompanyDto) { return this.svc.updateCompany(dto); }
 
@@ -133,7 +133,7 @@ export class SystemConfigController {
   }
 
   @Post('business-hours')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Crear o actualizar horario laboral para un día (upsert por module_id + day_of_week).' })
   upsertBusinessHour(@Body() dto: UpsertBusinessHourDto) {
@@ -149,7 +149,7 @@ export class SystemConfigController {
   }
 
   @Post('holidays')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Agregar feriado (upsert por module_id + date).' })
   createHoliday(@Body() dto: CreateHolidayDto) {
@@ -157,7 +157,7 @@ export class SystemConfigController {
   }
 
   @Delete('holidays/:id')
-  @UseGuards(RolesGuard) @Roles('superadmin')
+  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
   @ApiOperation({ summary: 'Desactivar feriado.' })
   deleteHoliday(@Param('id') id: string) {

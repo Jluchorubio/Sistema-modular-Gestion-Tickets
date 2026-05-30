@@ -219,7 +219,8 @@ const BASE = '/system-config';
 export const systemConfigService = {
   /* ── Company ── */
   getCompany: () => api.get<Company>(`${BASE}/company`).then(r => r.data),
-  updateCompany: (dto: Partial<Company>) => api.patch<Company>(`${BASE}/company`, dto).then(r => r.data),
+  updateCompany: (dto: Partial<Company>, auth?: CriticalAuthData) =>
+    api.patch<Company>(`${BASE}/company`, dto, { headers: criticalHeaders(auth) }).then(r => r.data),
 
   /* ── Org summary ── */
   getOrgSummary: () => api.get<OrgSummary>(`${BASE}/org/summary`).then(r => r.data),
@@ -255,16 +256,16 @@ export const systemConfigService = {
   /* ── Business hours ── */
   getBusinessHours: (moduleId?: string) =>
     api.get<BusinessHour[]>(`${BASE}/business-hours`, { params: moduleId ? { module_id: moduleId } : {} }).then(r => r.data),
-  upsertBusinessHour: (dto: { module_id?: string; day_of_week: number; start_time: string; end_time: string; is_active?: boolean }) =>
-    api.post<BusinessHour>(`${BASE}/business-hours`, dto).then(r => r.data),
+  upsertBusinessHour: (dto: { module_id?: string; day_of_week: number; start_time: string; end_time: string; is_active?: boolean }, auth?: CriticalAuthData) =>
+    api.post<BusinessHour>(`${BASE}/business-hours`, dto, { headers: criticalHeaders(auth) }).then(r => r.data),
 
   /* ── Holidays ── */
   getHolidays: (moduleId?: string) =>
     api.get<Holiday[]>(`${BASE}/holidays`, { params: moduleId ? { module_id: moduleId } : {} }).then(r => r.data),
-  createHoliday: (dto: { holiday_date: string; name: string; module_id?: string }) =>
-    api.post<Holiday>(`${BASE}/holidays`, dto).then(r => r.data),
-  deleteHoliday: (id: string) =>
-    api.delete(`${BASE}/holidays/${id}`).then(r => r.data),
+  createHoliday: (dto: { holiday_date: string; name: string; module_id?: string }, auth?: CriticalAuthData) =>
+    api.post<Holiday>(`${BASE}/holidays`, dto, { headers: criticalHeaders(auth) }).then(r => r.data),
+  deleteHoliday: (id: string, auth?: CriticalAuthData) =>
+    api.delete(`${BASE}/holidays/${id}`, { headers: criticalHeaders(auth) }).then(r => r.data),
   syncColombiaHolidays: (year?: number) =>
     api.post<{ synced: number; skipped: number }>(`${BASE}/holidays/sync-colombia`, null, {
       params: year ? { year } : {},
