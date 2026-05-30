@@ -987,7 +987,7 @@ export function OrgFlowTab() {
           )}
 
           {/* Canvas */}
-          <div style={{ height: 600, border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,.04)' }}>
+          <div style={{ height: 'calc(100vh - 380px)', minHeight: 620, border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,.04)' }}>
             <ReactFlowProvider>
               <OrgCanvas
                 tree={tree as OrgNode[]}
