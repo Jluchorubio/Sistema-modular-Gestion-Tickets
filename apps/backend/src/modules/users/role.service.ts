@@ -155,7 +155,6 @@ export class RoleService {
         COUNT(*) FILTER (WHERE s.is_final = false)           AS open_tickets
       FROM tickets.tickets t
       JOIN tickets.states s ON s.id = t.current_state_id
-      WHERE t.deleted_at IS NULL
     `);
 
     const [requestStats] = await this.db.query<{

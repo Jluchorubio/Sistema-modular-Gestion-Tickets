@@ -50,9 +50,10 @@ export class ReportingService {
       `SELECT el.id, el.action, el.entity_type, el.entity_id,
               el.ip_address, el.created_at,
               p.first_name || ' ' || p.last_name AS actor_name,
-              p.email AS actor_email
+              c.email AS actor_email
        FROM   audit.event_log el
-       LEFT JOIN users.profiles p ON p.id = el.actor_id
+       LEFT JOIN users.profiles   p ON p.id = el.actor_id
+       LEFT JOIN auth.credentials c ON c.user_id = el.actor_id
        WHERE  1=1 ${cond}
        ORDER  BY el.created_at DESC
        LIMIT  $1`,
