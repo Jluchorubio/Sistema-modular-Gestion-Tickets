@@ -43,7 +43,7 @@ export class CriticalChangeGuard implements CanActivate {
     if (!reason || reason.trim().length < 20)
       throw new ForbiddenException('Razón requerida (mínimo 20 caracteres)');
 
-    const userId = req.user?.id;
+    const userId = req.user?.sub ?? req.user?.id;
     if (!userId) throw new UnauthorizedException();
 
     const [cred] = await this.db.query<{

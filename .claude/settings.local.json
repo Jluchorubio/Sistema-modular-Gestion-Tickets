@@ -15,7 +15,9 @@
       "Bash(Get-ChildItem -Recurse -Path src)",
       "Bash(Select-Object -First 50)",
       "Bash(Format-Table -AutoSize)",
-      "Bash(psql *)"
+      "Bash(psql *)",
+      "Bash(npm install *)",
+      "Bash(pnpm add *)"
     ]
   },
   "enabledPlugins": {

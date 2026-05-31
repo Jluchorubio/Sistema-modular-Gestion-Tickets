@@ -16,6 +16,8 @@ import { usePermissionsStore }  from '@/stores/permissions.store';
 import { Spinner }              from '@/components/ui/Spinner';
 import { useCriticalChange }    from '@/hooks/useCriticalChange';
 import { CriticalChangeModal }  from '@/components/config/CriticalChangeModal';
+import { PendingChangesBar }    from '@/components/config/PendingChangesBar';
+import { useConfigPending }     from '@/stores/configPending.store';
 import { OrgFlowTab }           from '@/components/config/OrgFlowTab';
 import type {
   Company, BusinessHour, Holiday, AuditLog,
@@ -263,7 +265,7 @@ const fError: React.CSSProperties = { fontSize: 11, color: '#ef4444', marginTop:
 
 function CompanyTab() {
   const qc       = useQueryClient();
-  const critical = useCriticalChange();
+  const pending  = useConfigPending();
 
   const { data: company, isLoading } = useQuery({
     queryKey: ['sys-config-company'],
@@ -324,10 +326,13 @@ function CompanyTab() {
     const errs = validateCompanyForm(form);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
-    critical.triggerCritical(
-      { entityLabel: 'Configuración de Empresa', description: 'Modifica el nombre, logo, color y datos de contacto globales' },
-      async (auth) => { await updateMut.mutateAsync(auth); },
-    );
+    const snapshot = { ...form };
+    pending.stage({
+      id:      'empresa',
+      label:   'Configuración de Empresa',
+      execute: async (auth) => { await updateMut.mutateAsync(auth); },
+    });
+    setEditing(false);
   }
 
   function handleColorPickerChange(hex: string) {
@@ -513,15 +518,20 @@ function CompanyTab() {
       </div>
 
       <div className={styles.inlineActions}>
-        <button className={styles.btnSave} disabled={updateMut.isPending || logoUploading}
+        <button className={styles.btnSave} disabled={logoUploading}
           onClick={handleSave}>
-          <Check size={13} /> {updateMut.isPending ? 'Guardando…' : 'Guardar'}
+          <Check size={13} />
+          {pending.hasStaged('empresa') ? 'Actualizar cambio' : 'Guardar'}
         </button>
         <button className={styles.btnCancel} onClick={handleCancel}>
           <X size={13} /> Cancelar
         </button>
       </div>
-      <CriticalChangeModal {...critical} />
+      {pending.hasStaged('empresa') && (
+        <div style={{ fontSize: 11, color: '#ff5e3a', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <AlertTriangle size={12} /> Cambio en cola — aplícalo desde la barra inferior
+        </div>
+      )}
     </div>
   );
 }
@@ -568,7 +578,7 @@ const SIM_LABELS: Record<string, string> = {
 
 function PrioridadTab() {
   const qc       = useQueryClient();
-  const critical = useCriticalChange();
+  const pending  = useConfigPending();
 
   const { data: formula, isLoading } = useQuery<PriorityFormula | null>({
     queryKey: ['priority-formula'],
@@ -654,8 +664,6 @@ function PrioridadTab() {
 
   return (
     <div>
-      <CriticalChangeModal {...critical} />
-
       {/* ── Formula weights ── */}
       <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -761,18 +769,22 @@ function PrioridadTab() {
       {/* ── Save ── */}
       <div style={{ marginBottom: 24 }}>
         <button
-          disabled={!wValid || saveMut.isPending}
-          onClick={() => critical.triggerCritical(
-            { entityLabel: 'Fórmula de Prioridad', description: 'Cambia los pesos y umbrales que determinan la prioridad automática de tickets' },
-            async (auth) => { await saveMut.mutateAsync(auth); },
-          )}
+          disabled={!wValid}
+          onClick={() => {
+            pending.stage({
+              id:      'prioridad',
+              label:   'Fórmula de Prioridad',
+              execute: async (auth) => { await saveMut.mutateAsync(auth); },
+            });
+          }}
           style={{
-            padding: '8px 20px', background: wValid ? '#0e2235' : '#e2e8f0',
+            padding: '8px 20px',
+            background: !wValid ? '#e2e8f0' : pending.hasStaged('prioridad') ? '#20c933' : '#0e2235',
             color: wValid ? '#fff' : '#94a3b8', border: 'none', borderRadius: 7,
             fontSize: 12, fontWeight: 700, cursor: wValid ? 'pointer' : 'not-allowed',
             fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
           }}>
-          <Check size={13} /> {saveMut.isPending ? 'Guardando…' : 'Guardar fórmula'}
+          <Check size={13} /> {pending.hasStaged('prioridad') ? 'En cola ✓' : 'Guardar fórmula'}
         </button>
         {saveMut.isSuccess && (
           <p style={{ fontSize: 11, color: '#22c55e', marginTop: 6 }}>Fórmula actualizada correctamente.</p>
@@ -1501,6 +1513,9 @@ export default function GlobalConfigPage() {
         </div>
 
       </div>
+
+      {/* Barra de cambios pendientes — aparece cuando hay cambios en cola */}
+      <PendingChangesBar />
     </div>
   );
 }

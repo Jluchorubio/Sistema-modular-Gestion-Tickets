@@ -1589,18 +1589,18 @@ export function CalendarClient() {
                 {/* Filter controls */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {/* Period row */}
-                  <div style={{ display: 'flex', gap: 4 }}>
+                  <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 6, padding: 2, gap: 2 }}>
                     {(['day','week','month','year'] as AuditPeriod[]).map((p) => (
                       <button
                         key={p}
                         onClick={() => setAuditPeriod(p)}
                         style={{
-                          flex: 1, padding: '4px 2px', fontSize: 9, fontWeight: 700,
+                          flex: 1, padding: '4px 2px', fontSize: 10, fontWeight: auditPeriod === p ? 700 : 500,
                           fontFamily: 'inherit', cursor: 'pointer', borderRadius: 4,
-                          textTransform: 'uppercase',
-                          border: auditPeriod === p ? '1.5px solid #0e2235' : '1px solid #e2e8f0',
-                          background: auditPeriod === p ? '#0e2235' : '#fff',
+                          border: 'none',
+                          background: auditPeriod === p ? '#ff5e3a' : 'transparent',
                           color:      auditPeriod === p ? '#fff'     : '#64748b',
+                          transition: 'background .15s, color .15s',
                         }}
                       >
                         {p === 'day' ? 'Día' : p === 'week' ? 'Sem' : p === 'month' ? 'Mes' : 'Año'}
@@ -1644,7 +1644,7 @@ export function CalendarClient() {
                     <button
                       onClick={() => refetchAudit()}
                       title="Actualizar"
-                      style={{ padding: '3px 7px', border: '1px solid #e2e8f0', borderRadius: 4, background: '#fff', cursor: 'pointer', color: '#64748b' }}
+                      style={{ padding: '3px 7px', border: '1px solid #e2e8f0', borderRadius: 4, background: '#fff', cursor: 'pointer', color: '#ff5e3a', display: 'flex', alignItems: 'center' }}
                     >
                       <RefreshCw size={11} />
                     </button>

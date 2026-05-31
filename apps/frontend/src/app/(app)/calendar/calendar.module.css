@@ -134,8 +134,8 @@
   padding: 5px 14px;
   border-radius: 9px;
   font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
+  font-weight: 600;
+  color: #8fa0af;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -144,12 +144,13 @@
   white-space: nowrap;
 }
 
-.viewBtn:hover { color: #0e2235; background: rgba(255,255,255,0.5); }
+.viewBtn:hover { color: #ff5e3a; background: rgba(255,255,255,0.6); }
 
 .viewBtnActive {
   background: #ffffff;
-  color: #0e2235;
-  box-shadow: 0 1px 4px rgba(14, 34, 53, 0.1);
+  color: #ff5e3a;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(14, 34, 53, 0.08);
 }
 
 /* ── Dot legend ─────────────────────────────────────────────────────────────── */
@@ -417,7 +418,7 @@
   transition: all 0.15s;
 }
 
-.monthNavBtn:hover { border-color: #ff5e3a; color: #ff5e3a; }
+.monthNavBtn:hover { border-color: #ff5e3a; color: #ff5e3a; background: rgba(255,94,58,0.04); }
 
 /* ── Month grid ─────────────────────────────────────────────────────────────── */
 .monthGrid { padding: 12px 14px 16px; }
