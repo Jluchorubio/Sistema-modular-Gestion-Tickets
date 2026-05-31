@@ -10,9 +10,11 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   X, CheckCircle2, XCircle, Clock, Plus, ChevronLeft, ChevronRight,
-  Settings, User, Filter, AlertTriangle,
+  Settings, User, Filter, AlertTriangle, Activity, Calendar, Users,
+  Download, RefreshCw,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
+import { useSystemConfigStore } from '@/stores/systemConfig.store';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import {
   requestsService,
@@ -45,6 +47,13 @@ import {
   EVENT_TYPE_LABELS,
   EVENT_COLORS,
 } from '@/services/calendar-events.service';
+import {
+  calendarAuditService,
+  AUDIT_ACTION_LABELS,
+  AUDIT_ACTION_COLOR,
+  AUDIT_ENTITY_LABEL,
+  type AuditEntry,
+} from '@/services/calendar-audit.service';
 import { usersService } from '@/services/users.service';
 import {
   REQUEST_STATUS_LABELS,
@@ -55,12 +64,15 @@ import {
   REQUEST_PRIORITY_COLORS,
   REQUEST_PRIORITIES,
 } from '@/constants/requests';
+import { exportCalendarAuditPdf } from '@/utils/calendar-pdf';
 import styles from '../calendar.module.css';
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 type CalendarRole = 'superadmin' | 'admin' | 'jefe' | 'user';
 type CalendarView = 'mes' | 'semana' | 'dia' | 'agenda';
 type SourceFilter  = '' | 'system_tasks' | 'user_tasks' | 'requests';
+type RightTab      = 'agenda' | 'actividad' | 'disponibilidad';
+type AuditPeriod   = 'day' | 'week' | 'month' | 'year';
 
 /* ── Role / context ────────────────────────────────────────────────────────── */
 interface CalendarContext {
@@ -127,25 +139,26 @@ function useCalendarContexts(): CalendarContext[] {
   return contexts;
 }
 
-/* ── Audit log ─────────────────────────────────────────────────────────────── */
-interface AuditEntry { ts: string; category: string; message: string; isSystem?: boolean }
+/* ── Week-of-month helper ───────────────────────────────────────────────────── */
+function getCurrentWeekOfMonth(month: number, year: number): number {
+  const now      = new Date();
+  const firstDay = new Date(year, month - 1, 1);
+  const firstDow = firstDay.getDay();
+  const offset   = firstDow === 0 ? 6 : firstDow - 1;
+  const firstMon = new Date(year, month - 1, 1 - offset);
+  return Math.max(1, Math.floor((now.getTime() - firstMon.getTime()) / (7 * 86400000)) + 1);
+}
 
-function useAuditLog() {
-  const [entries, setEntries] = useState<AuditEntry[]>([
-    { ts: new Date().toLocaleTimeString('es', { hour12: false }), category: 'SISTEMA', message: 'Calendario operativo inicializado.', isSystem: true },
-  ]);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const add = useCallback((category: string, message: string, isSystem = false) => {
-    const ts = new Date().toLocaleTimeString('es', { hour12: false });
-    setEntries((prev) => [...prev.slice(-99), { ts, category, message, isSystem }]);
-  }, []);
-
-  useEffect(() => {
-    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
-  }, [entries]);
-
-  return { entries, add, ref };
+function getWeeksInMonth(month: number, year: number): number {
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay  = new Date(year, month, 0);
+  const firstDow = firstDay.getDay();
+  const offset   = firstDow === 0 ? 6 : firstDow - 1;
+  const firstMon = new Date(year, month - 1, 1 - offset);
+  let count = 0;
+  const cur = new Date(firstMon);
+  while (cur <= lastDay) { count++; cur.setDate(cur.getDate() + 7); }
+  return count;
 }
 
 /* ── Date helpers ──────────────────────────────────────────────────────────── */
@@ -791,19 +804,28 @@ const FC_VIEW: Record<Exclude<CalendarView, 'mes'>, string> = {
 /* ── Main component ─────────────────────────────────────────────────────────── */
 export function CalendarClient() {
   const contexts    = useCalendarContexts();
+  const branding    = useSystemConfigStore((s) => s.branding);
   const [ctxIdx, setCtxIdx] = useState(0);
   const ctx          = contexts[ctxIdx] ?? contexts[0];
   const role         = ctx.role;
   const canSeeAll    = role === 'superadmin' || role === 'admin' || role === 'jefe';
   const isSuperadmin = role === 'superadmin';
 
-  const audit = useAuditLog();
-
   const today = new Date();
   const [view,        setView]        = useState<CalendarView>('mes');
   const [calYear,     setCalYear]     = useState(today.getFullYear());
   const [calMonth,    setCalMonth]    = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<Date | null>(today);
+
+  // Right panel tab state
+  const [rightTab, setRightTab] = useState<RightTab>('agenda');
+
+  // Audit filter state
+  const [auditPeriod,    setAuditPeriod]    = useState<AuditPeriod>('week');
+  const [auditWeek,      setAuditWeek]      = useState(() => getCurrentWeekOfMonth(today.getMonth() + 1, today.getFullYear()));
+  const [auditMonth,     setAuditMonth]     = useState(today.getMonth() + 1);
+  const [auditYear,      setAuditYear]      = useState(today.getFullYear());
+  const [auditExporting, setAuditExporting] = useState(false);
 
   const [statusFilter,   setStatusFilter]   = useState<RequestStatus   | ''>('');
   const [typeFilter,     setTypeFilter]     = useState<RequestType     | ''>('');
@@ -848,6 +870,20 @@ export function CalendarClient() {
     queryKey: ['calendar-events', ctxIdx, ctx.moduleId],
     queryFn:  () => calendarEventsService.getEvents(ctx.moduleId ? { module_id: ctx.moduleId } : undefined),
     staleTime: 2 * 60_000,
+  });
+
+  /* ── Audit query (only when Actividad tab is active) ── */
+  const { data: auditData, isLoading: auditLoading, refetch: refetchAudit } = useQuery({
+    queryKey: ['calendar-audit', ctx.moduleId, auditPeriod, auditWeek, auditMonth, auditYear],
+    queryFn:  () => calendarAuditService.getAudit({
+      period:    auditPeriod,
+      week:      auditPeriod === 'week'  ? auditWeek  : undefined,
+      month:     auditPeriod !== 'year'  ? auditMonth : undefined,
+      year:      auditYear,
+      module_id: ctx.moduleId,
+    }),
+    enabled:   rightTab === 'actividad',
+    staleTime: 30_000,
   });
 
   const isLoading = reqLoading || ticketLoading;
@@ -938,22 +974,29 @@ export function CalendarClient() {
   function prevMonth() {
     if (calMonth === 0) { setCalYear((y) => y - 1); setCalMonth(11); }
     else setCalMonth((m) => m - 1);
-    audit.add('CALENDARIO', 'Mes anterior.');
   }
   function nextMonth() {
     if (calMonth === 11) { setCalYear((y) => y + 1); setCalMonth(0); }
     else setCalMonth((m) => m + 1);
-    audit.add('CALENDARIO', 'Mes siguiente.');
   }
 
-  function handleDaySelect(date: Date) {
-    setSelectedDay(date);
-    audit.add('CALENDARIO', `Eventos del ${date.toLocaleDateString('es', { day: 'numeric', month: 'long' })}.`);
-  }
+  function handleDaySelect(date: Date) { setSelectedDay(date); }
+  function handleViewChange(v: CalendarView) { setView(v); }
 
-  function handleViewChange(v: CalendarView) {
-    setView(v);
-    audit.add('CALENDARIO', `Vista: ${v.toUpperCase()}.`);
+  /* ── PDF export ── */
+  async function handleExportPdf() {
+    if (!auditData) return;
+    setAuditExporting(true);
+    try {
+      await exportCalendarAuditPdf({
+        audit:       auditData,
+        companyName: branding?.name ?? 'Sistema',
+        logoUrl:     branding?.logo_url,
+        filterLabel: auditData.range.label,
+      });
+    } finally {
+      setAuditExporting(false);
+    }
   }
 
   /* ── FullCalendar events (merged requests + SLA tickets) ── */
@@ -1023,27 +1066,18 @@ export function CalendarClient() {
   function handleFCClick(info: EventClickArg) {
     info.jsEvent.preventDefault();
     if (info.event.extendedProps.meeting) {
-      const m = info.event.extendedProps.meeting as CalendarMeeting;
-      setSelectedMeeting(m);
-      audit.add('REUNIÓN', `Abriendo: "${m.reason}".`);
+      setSelectedMeeting(info.event.extendedProps.meeting as CalendarMeeting);
     } else if (info.event.extendedProps.calEvent) {
-      const e = info.event.extendedProps.calEvent as CalendarEvent;
-      setSelectedCalEvent(e);
-      audit.add('EVENTO', `Abriendo: "${e.title}".`);
+      setSelectedCalEvent(info.event.extendedProps.calEvent as CalendarEvent);
     } else if (info.event.extendedProps.ticket) {
-      const t = info.event.extendedProps.ticket as TicketListItem;
-      setSelectedTicket(t);
-      audit.add('SLA', `Ticket SLA: "${t.title}".`);
+      setSelectedTicket(info.event.extendedProps.ticket as TicketListItem);
     } else {
-      const req = info.event.extendedProps.req as AdmRequest;
-      setSelectedReq(req);
-      audit.add('DETALLE', `Abriendo: "${req.title}".`);
+      setSelectedReq(info.event.extendedProps.req as AdmRequest);
     }
   }
 
   function clearFilters() {
     setStatusFilter(''); setTypeFilter(''); setSourceFilter(''); setPriorityFilter('');
-    audit.add('FILTROS', 'Filtros limpiados.');
   }
 
   const hasFilters = !!(statusFilter || typeFilter || sourceFilter || priorityFilter);
@@ -1069,7 +1103,7 @@ export function CalendarClient() {
                   <button
                     key={c.id}
                     className={`${styles.ctxBtn} ${ctxIdx === i ? styles.ctxBtnActive : ''}`}
-                    onClick={() => { setCtxIdx(i); audit.add('CONTEXTO', `Cambiado a: ${c.label}.`); }}
+                    onClick={() => setCtxIdx(i)}
                   >
                     {c.label}
                   </button>
@@ -1216,91 +1250,244 @@ export function CalendarClient() {
             )}
           </div>
 
-          {/* Audit log */}
-          <div className={styles.auditSection}>
-            <div className={styles.auditHead}>
-              <span className={styles.auditTitle}>Auditoría y Trazabilidad (Log)</span>
-              <span className={styles.auditLive}>En Vivo</span>
-            </div>
-            <div className={styles.auditLog} ref={audit.ref}>
-              {audit.entries.map((e, i) => (
-                <div key={i} className={`${styles.auditEntry} ${e.isSystem ? styles.auditSystem : ''}`}>
-                  <span className={styles.auditTs}>[{e.ts}] {e.category}:</span>
-                  <span className={styles.auditMsg}>{e.message}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* ── Right panel ── */}
         <div className={styles.right}>
+
+          {/* Tab switcher */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: 0 }}>
+            {([
+              { id: 'agenda',        icon: <Calendar size={12} />,  label: 'Agenda'      },
+              { id: 'actividad',     icon: <Activity  size={12} />,  label: 'Actividad'   },
+              { id: 'disponibilidad',icon: <Users     size={12} />,  label: 'Equipo'      },
+            ] as { id: RightTab; icon: React.ReactNode; label: string }[]).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setRightTab(t.id)}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 4, padding: '9px 4px', fontSize: 10, fontWeight: 700,
+                  fontFamily: 'inherit', cursor: 'pointer', border: 'none',
+                  background: 'transparent',
+                  color:       rightTab === t.id ? '#0e2235' : '#94a3b8',
+                  borderBottom: rightTab === t.id ? '2px solid #ff5e3a' : '2px solid transparent',
+                  transition: 'color .15s, border-color .15s',
+                  textTransform: 'uppercase', letterSpacing: '0.04em',
+                }}
+              >
+                {t.icon} {t.label}
+              </button>
+            ))}
+          </div>
+
           <div className={styles.rightInner}>
 
-            {/* Day events (requests + SLA tickets) */}
-            <div className={styles.daySection}>
-              <div className={styles.daySectionHead}>
-                <h3 className={styles.sideSectionLabel}>Eventos del Día</h3>
-                {selectedDay && (
-                  <span className={styles.dayBadge}>
-                    {selectedDay.toLocaleDateString('es', { day: 'numeric', month: 'short' })}
-                    {totalDayItems > 0 && ` · ${totalDayItems}`}
-                  </span>
-                )}
-              </div>
+            {/* ── TAB: Agenda ── */}
+            {rightTab === 'agenda' && (
+              <div className={styles.daySection}>
+                <div className={styles.daySectionHead}>
+                  <h3 className={styles.sideSectionLabel}>
+                    {selectedDay
+                      ? selectedDay.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })
+                      : 'Eventos del Día'}
+                  </h3>
+                  {totalDayItems > 0 && (
+                    <span className={styles.dayBadge}>{totalDayItems}</span>
+                  )}
+                </div>
 
-              <div className={styles.dayList}>
-                {totalDayItems === 0 ? (
-                  <div className={styles.dayEmpty}>
-                    <span className={styles.dayEmptyIcon}>📁</span>
-                    <p>Sin eventos programados</p>
-                    <p>Selecciona un día en el calendario</p>
+                <div className={styles.dayList}>
+                  {totalDayItems === 0 ? (
+                    <div className={styles.dayEmpty}>
+                      <span className={styles.dayEmptyIcon}>📁</span>
+                      <p>Sin eventos programados</p>
+                      <p>Selecciona un día en el calendario</p>
+                    </div>
+                  ) : (
+                    <>
+                      {selectedDayCalEvents.map((e) => (
+                        <DayCalEventCard key={e.id} ev={e} onClick={() => setSelectedCalEvent(e)} />
+                      ))}
+                      {selectedDayMeetings.map((m) => (
+                        <DayMeetingCard key={m.id} meeting={m} onClick={() => setSelectedMeeting(m)} />
+                      ))}
+                      {selectedDayTickets.map((t) => (
+                        <TicketSlaCard key={t.id} ticket={t} onClick={() => setSelectedTicket(t)} />
+                      ))}
+                      {selectedDayReqs.map((req) => (
+                        <DayEventCard key={req.id} req={req} onClick={() => setSelectedReq(req)} />
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB: Actividad (real audit) ── */}
+            {rightTab === 'actividad' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
+
+                {/* Filter controls */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {/* Period row */}
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {(['day','week','month','year'] as AuditPeriod[]).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setAuditPeriod(p)}
+                        style={{
+                          flex: 1, padding: '4px 2px', fontSize: 9, fontWeight: 700,
+                          fontFamily: 'inherit', cursor: 'pointer', borderRadius: 4,
+                          textTransform: 'uppercase',
+                          border: auditPeriod === p ? '1.5px solid #0e2235' : '1px solid #e2e8f0',
+                          background: auditPeriod === p ? '#0e2235' : '#fff',
+                          color:      auditPeriod === p ? '#fff'     : '#64748b',
+                        }}
+                      >
+                        {p === 'day' ? 'Día' : p === 'week' ? 'Sem' : p === 'month' ? 'Mes' : 'Año'}
+                      </button>
+                    ))}
                   </div>
-                ) : (
-                  <>
-                    {/* Calendar events */}
-                    {selectedDayCalEvents.map((e) => (
-                      <DayCalEventCard
-                        key={e.id}
-                        ev={e}
-                        onClick={() => { setSelectedCalEvent(e); audit.add('EVENTO', `Evento: "${e.title}".`); }}
-                      />
-                    ))}
-                    {/* Meetings (scheduled today) */}
-                    {selectedDayMeetings.map((m) => (
-                      <DayMeetingCard
-                        key={m.id}
-                        meeting={m}
-                        onClick={() => { setSelectedMeeting(m); audit.add('REUNIÓN', `Reunión: "${m.reason}".`); }}
-                      />
-                    ))}
-                    {/* SLA tickets */}
-                    {selectedDayTickets.map((t) => (
-                      <TicketSlaCard
-                        key={t.id}
-                        ticket={t}
-                        onClick={() => { setSelectedTicket(t); audit.add('SLA', `Ticket: "${t.title}".`); }}
-                      />
-                    ))}
-                    {/* Requests/tasks */}
-                    {selectedDayReqs.map((req) => (
-                      <DayEventCard
-                        key={req.id}
-                        req={req}
-                        onClick={() => { setSelectedReq(req); audit.add('DETALLE', `Abriendo: "${req.title}".`); }}
-                      />
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
 
-            <AvailabilityPanel moduleId={ctx.moduleId} />
+                  {/* Secondary selectors */}
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {auditPeriod === 'week' && (
+                      <select
+                        value={auditWeek}
+                        onChange={(e) => setAuditWeek(Number(e.target.value))}
+                        style={{ flex: 1, fontSize: 11, padding: '3px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontFamily: 'inherit' }}
+                      >
+                        {Array.from({ length: getWeeksInMonth(auditMonth, auditYear) }, (_, i) => (
+                          <option key={i+1} value={i+1}>Semana {i+1}</option>
+                        ))}
+                      </select>
+                    )}
+                    {auditPeriod !== 'year' && (
+                      <select
+                        value={auditMonth}
+                        onChange={(e) => setAuditMonth(Number(e.target.value))}
+                        style={{ flex: 1, fontSize: 11, padding: '3px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontFamily: 'inherit' }}
+                      >
+                        {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m, i) => (
+                          <option key={i+1} value={i+1}>{m}</option>
+                        ))}
+                      </select>
+                    )}
+                    <select
+                      value={auditYear}
+                      onChange={(e) => setAuditYear(Number(e.target.value))}
+                      style={{ width: 68, fontSize: 11, padding: '3px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontFamily: 'inherit' }}
+                    >
+                      {[today.getFullYear() - 1, today.getFullYear()].map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => refetchAudit()}
+                      title="Actualizar"
+                      style={{ padding: '3px 7px', border: '1px solid #e2e8f0', borderRadius: 4, background: '#fff', cursor: 'pointer', color: '#64748b' }}
+                    >
+                      <RefreshCw size={11} />
+                    </button>
+                  </div>
+
+                  {/* Range label + export */}
+                  {auditData && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                      <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600, flex: 1 }}>
+                        {auditData.range.label} · {auditData.total} reg.
+                      </span>
+                      <button
+                        onClick={handleExportPdf}
+                        disabled={auditExporting || auditData.total === 0}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '4px 8px', fontSize: 9, fontWeight: 700, fontFamily: 'inherit',
+                          border: 'none', borderRadius: 4, cursor: auditData.total === 0 ? 'not-allowed' : 'pointer',
+                          background: auditData.total === 0 ? '#e2e8f0' : '#ff5e3a',
+                          color:      auditData.total === 0 ? '#94a3b8' : '#fff',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        <Download size={10} />
+                        {auditExporting ? 'Generando…' : 'PDF'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Entries list */}
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {auditLoading && (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: 12 }}>
+                      Cargando actividad…
+                    </div>
+                  )}
+                  {!auditLoading && auditData?.entries.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: 12 }}>
+                      Sin actividad en este período
+                    </div>
+                  )}
+                  {!auditLoading && auditData?.entries.map((entry) => {
+                    const color   = AUDIT_ACTION_COLOR[entry.action] ?? '#8fa0af';
+                    const label   = AUDIT_ACTION_LABELS[entry.action] ?? entry.action;
+                    const title   = entry.new_value?.title ?? entry.new_value?.entity_title ?? '';
+                    const isSystem = entry.actor_type === 'system';
+                    const time    = new Date(entry.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+                    const date    = new Date(entry.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+                    return (
+                      <div
+                        key={entry.id}
+                        style={{
+                          padding: '8px 10px',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderLeft: `3px solid ${color}`,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                          <span style={{
+                            fontSize: 8, fontWeight: 900, textTransform: 'uppercase',
+                            color, background: `${color}18`, padding: '1px 5px', borderRadius: 3,
+                          }}>
+                            {AUDIT_ENTITY_LABEL[entry.entity_type] ?? entry.entity_type}
+                          </span>
+                          <span style={{ fontSize: 9, color: '#94a3b8', marginLeft: 'auto' }}>
+                            {date} {time}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: '#0e2235', margin: '0 0 2px' }}>
+                          {label}
+                        </p>
+                        {title && (
+                          <p style={{ fontSize: 10, color: '#475569', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {title}
+                          </p>
+                        )}
+                        <p style={{ fontSize: 9, color: isSystem ? '#8fa0af' : '#64748b', margin: '2px 0 0', fontStyle: isSystem ? 'italic' : 'normal' }}>
+                          {isSystem ? 'Sistema' : entry.actor_name}
+                          {entry.actor_email && !isSystem && (
+                            <span style={{ color: '#94a3b8' }}> · {entry.actor_email}</span>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB: Disponibilidad ── */}
+            {rightTab === 'disponibilidad' && (
+              <AvailabilityPanel moduleId={ctx.moduleId} />
+            )}
           </div>
 
           <button
             className={styles.createBtn}
-            onClick={() => { setShowCreate(true); audit.add('ACCIÓN', 'Formulario de nuevo evento.'); }}
+            onClick={() => setShowCreate(true)}
           >
             <Plus size={14} />
             Crear Tarea u Evento
@@ -1309,10 +1496,10 @@ export function CalendarClient() {
       </div>
 
       {showCreate && (
-        <CreateEventModal onClose={() => setShowCreate(false)} onCreated={() => refetch()} isSuperadmin={isSuperadmin} moduleId={ctx.moduleId} onAudit={audit.add} />
+        <CreateEventModal onClose={() => setShowCreate(false)} onCreated={() => refetch()} isSuperadmin={isSuperadmin} moduleId={ctx.moduleId} onAudit={() => {}} />
       )}
       {selectedReq && (
-        <EventDetailPopup req={selectedReq} role={role} onClose={() => setSelectedReq(null)} onRefresh={() => refetch()} onAudit={audit.add} />
+        <EventDetailPopup req={selectedReq} role={role} onClose={() => setSelectedReq(null)} onRefresh={() => refetch()} onAudit={() => {}} />
       )}
       {selectedTicket && (
         <TicketSlaPopup ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />

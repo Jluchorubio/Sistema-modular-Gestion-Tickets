@@ -58,6 +58,13 @@ export class RemindersService {
           channels:  ['in_app', 'email'],
           meta:      { eventId: ev.id },
         }).catch((err: Error) => this.logger.error(`reminder cal event: ${err.message}`));
+
+        this.auditLog(null, 'system', 'calendar.reminder.calendar_event', 'calendar_reminder', ev.id, {
+          entity_title: ev.title,
+          channel:      'in_app+email',
+          recipient_id: userId,
+          scheduled_at: ev.start_at,
+        });
       }
     }
   }
@@ -101,6 +108,14 @@ export class RemindersService {
           channels:  ['in_app', 'email'],
           meta:      { meetingId: m.id },
         }).catch((err: Error) => this.logger.error(`reminder meeting: ${err.message}`));
+
+        this.auditLog(null, 'system', 'calendar.reminder.meeting', 'calendar_reminder', m.id, {
+          entity_title: m.ticket_title,
+          channel:      'in_app+email',
+          recipient_id: userId,
+          scheduled_at: m.scheduled_at,
+          provider:     m.provider,
+        });
       }
     }
   }
@@ -108,10 +123,10 @@ export class RemindersService {
   /* ── Dedup helper ────────────────────────────────────────────────────────── */
 
   private async wasReminderSent(
-    userId: string,
+    userId:    string,
     eventType: string,
-    entityId: string,
-    metaKey: string,
+    entityId:  string,
+    metaKey:   string,
   ): Promise<boolean> {
     const [row] = await this.db.query<{ id: string }[]>(
       `SELECT id FROM notifications.notification_logs
@@ -123,5 +138,23 @@ export class RemindersService {
       [userId, eventType, metaKey, entityId],
     );
     return !!row;
+  }
+
+  /* ── Audit ───────────────────────────────────────────────────────────────── */
+
+  private auditLog(
+    actorId:    string | null,
+    actorType:  'user' | 'system',
+    action:     string,
+    entityType: string,
+    entityId:   string,
+    newValue?:  Record<string, any>,
+  ): void {
+    this.db.query(
+      `INSERT INTO audit.event_log
+         (actor_id, actor_type, action, entity_type, entity_id, new_value)
+       VALUES ($1, $2::actor_type, $3, $4, $5, $6)`,
+      [actorId, actorType, action, entityType, entityId, newValue ? JSON.stringify(newValue) : null],
+    ).catch(() => { /* non-critical */ });
   }
 }

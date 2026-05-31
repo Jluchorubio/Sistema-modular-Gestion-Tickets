@@ -1,4 +1,7 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Req, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller, Get, Post, Patch, Delete,
+  Body, Param, Query, Req, UseGuards, ParseUUIDPipe,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { ProfileCompleteGuard } from '../../gateway/guards/profile-complete.guard';
@@ -49,5 +52,28 @@ export class CalendarController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.service.deleteEvent(id, req.user.sub, req.user?.is_superadmin ?? false);
+  }
+
+  @Get('audit')
+  @ApiOperation({ summary: 'Auditoría de actividad del calendario.' })
+  getAudit(
+    @Req()              req:       any,
+    @Query('period')    period?:   string,
+    @Query('day')       day?:      string,
+    @Query('week')      week?:     string,
+    @Query('month')     month?:    string,
+    @Query('year')      year?:     string,
+    @Query('module_id') moduleId?: string,
+    @Query('actor_id')  actorId?:  string,
+  ) {
+    return this.service.getAudit({
+      period,
+      day:       day   ? parseInt(day,   10) : undefined,
+      week:      week  ? parseInt(week,  10) : undefined,
+      month:     month ? parseInt(month, 10) : undefined,
+      year:      year  ? parseInt(year,  10) : undefined,
+      module_id: moduleId,
+      actor_id:  actorId,
+    });
   }
 }
