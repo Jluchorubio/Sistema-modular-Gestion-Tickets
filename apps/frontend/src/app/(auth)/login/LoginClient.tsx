@@ -128,8 +128,10 @@ export function LoginClient() {
       .catch(() => setAccessEmail(null));
   }, []);
 
+  // Hard navigation ensures the browser sends the newly-set has_session cookie
+  // with the next request, avoiding middleware race conditions.
   const redirect = (data: LoginResponse) =>
-    handleAuthRedirect(data, (href) => router.push(href));
+    handleAuthRedirect(data, (href) => { window.location.href = href; });
 
   const activeSlide = VISUAL_SLIDES[slideIndex];
 

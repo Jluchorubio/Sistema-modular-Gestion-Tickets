@@ -3,12 +3,14 @@ import {
   Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { JwtAuthGuard }      from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard }        from '../../gateway/guards/roles.guard';
 import { CriticalChangeGuard } from '../../gateway/guards/critical-change.guard';
 import { Roles }             from '../../gateway/decorators/roles.decorator';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
+import { Public }            from '../../gateway/decorators/public.decorator';
 import { SystemConfigService } from './system-config.service';
 import { AuditLogService }     from './audit-log.service';
 import {
@@ -38,7 +40,9 @@ export class SystemConfigController {
   /* ── Public endpoints (all authenticated users) ── */
 
   @Get('company/public')
-  @ApiOperation({ summary: 'Datos públicos de empresa (nombre, logo, color). Todos los usuarios.' })
+  @Public()
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Datos públicos de empresa (nombre, logo, color). Sin autenticación.' })
   getPublicCompanyInfo() { return this.svc.getPublicCompanyInfo(); }
 
   @Get('request-types')

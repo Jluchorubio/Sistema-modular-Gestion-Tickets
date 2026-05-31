@@ -28,7 +28,11 @@ function processQueue(error: unknown, token: string | null): void {
 function redirectToLogin(): void {
   tokens.clear();
   if (typeof window !== 'undefined') {
-    window.location.href = '/login';
+    // Guard: already on login → don't hard-reload (prevents infinite loop
+    // caused by unauthenticated API calls on the login page itself)
+    if (!window.location.pathname.startsWith('/login')) {
+      window.location.href = '/login';
+    }
   }
 }
 
