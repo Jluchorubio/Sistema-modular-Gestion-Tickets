@@ -6,7 +6,7 @@ import listPlugin from '@fullcalendar/list';
 import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
 import type { EventClickArg } from '@fullcalendar/core';
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   X, CheckCircle2, XCircle, Clock, Plus, ChevronLeft, ChevronRight,
@@ -1246,7 +1246,6 @@ export function CalendarClient() {
     setStatusFilter(''); setTypeFilter(''); setSourceFilter(''); setPriorityFilter('');
   }
 
-  const hasFilters = !!(statusFilter || typeFilter || sourceFilter || priorityFilter);
   const totalDayItems = selectedDayReqs.length + selectedDayTickets.length + selectedDayMeetings.length + selectedDayCalEvents.length;
 
   return (
