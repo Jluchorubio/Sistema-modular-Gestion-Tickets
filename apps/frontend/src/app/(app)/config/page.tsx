@@ -280,15 +280,13 @@ function CompanyTab() {
   const [hexInput,      setHexInput]      = useState('');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
+  /* updateMut mantenido para isPending state, pero execute usa snapshot directo */
   const updateMut = useMutation({
-    mutationFn: (auth: CriticalAuthData) => systemConfigService.updateCompany(form, auth),
+    mutationFn: (p: { data: typeof form; auth: CriticalAuthData }) =>
+      systemConfigService.updateCompany(p.data, p.auth),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sys-config-company'] });
       qc.invalidateQueries({ queryKey: ['company-public'] });
-      if (logoPreview) URL.revokeObjectURL(logoPreview);
-      setLogoPreview(null);
-      setEditing(false);
-      setErrors({});
     },
   });
 
@@ -326,11 +324,17 @@ function CompanyTab() {
     const errs = validateCompanyForm(form);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
-    const snapshot = { ...form };
+    const snapshot = { ...form }; // captura estable — no depende del estado al momento de aplicar
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoPreview(null);
     pending.stage({
-      id:      'empresa',
-      label:   'Configuración de Empresa',
-      execute: async (auth) => { await updateMut.mutateAsync(auth); },
+      id:    'empresa',
+      label: 'Configuración de Empresa',
+      execute: async (auth) => {
+        await systemConfigService.updateCompany(snapshot, auth);
+        qc.invalidateQueries({ queryKey: ['sys-config-company'] });
+        qc.invalidateQueries({ queryKey: ['company-public'] });
+      },
     });
     setEditing(false);
   }
@@ -402,10 +406,12 @@ function CompanyTab() {
     <div>
       <div className={styles.sectionTitle} style={{ marginBottom: 16 }}>Editar empresa</div>
 
-      {updateMut.isError && (
-        <div style={{ marginBottom: 14, padding: '10px 14px', background: '#fef2f2',
-          border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, color: '#991b1b' }}>
-          Error al guardar. Intenta de nuevo.
+      {pending.hasStaged('empresa') && (
+        <div style={{ marginBottom: 14, padding: '10px 14px', background: '#fff7ed',
+          border: '1px solid #fed7aa', borderRadius: 6, fontSize: 12, color: '#9a3412',
+          display: 'flex', alignItems: 'center', gap: 6 }}>
+          <AlertTriangle size={13} />
+          Cambio en cola — aplícalo desde la barra inferior para guardar en la base de datos.
         </div>
       )}
 
@@ -771,10 +777,18 @@ function PrioridadTab() {
         <button
           disabled={!wValid}
           onClick={() => {
+            const wSnap = { ...w }; const tSnap = { ...t }; const dSnap = desc;
             pending.stage({
-              id:      'prioridad',
-              label:   'Fórmula de Prioridad',
-              execute: async (auth) => { await saveMut.mutateAsync(auth); },
+              id:    'prioridad',
+              label: 'Fórmula de Prioridad',
+              execute: async (auth) => {
+                await systemConfigService.updatePriorityFormula({
+                  w_cargo: wSnap.cargo / 100, w_nodo: wSnap.nodo / 100, w_daño: wSnap.daño / 100,
+                  threshold_critica: tSnap.critica, threshold_alta: tSnap.alta, threshold_media: tSnap.media,
+                  description: dSnap || undefined,
+                }, auth);
+                qc.invalidateQueries({ queryKey: ['priority-formula'] });
+              },
             });
           }}
           style={{

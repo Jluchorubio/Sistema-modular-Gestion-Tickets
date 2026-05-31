@@ -1,120 +1,132 @@
 'use client';
 import { useState } from 'react';
-import { CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, X, Loader2 } from 'lucide-react';
 import { useConfigPending } from '@/stores/configPending.store';
 import { CriticalChangeModal } from './CriticalChangeModal';
 import type { CriticalAuthData } from '@/hooks/useCriticalChange';
 
 export function PendingChangesBar() {
   const { items, applying, results, applyAll, unstage, clearAll, clearResults } = useConfigPending();
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalOpen,  setModalOpen]  = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
   if (items.length === 0 && results.length === 0) return null;
 
   async function handleConfirm(auth: CriticalAuthData) {
     setModalError(null);
-    try {
-      await applyAll(auth);
-      setModalOpen(false);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Error al aplicar cambios';
-      setModalError(Array.isArray(msg) ? msg.join(', ') : String(msg));
-    }
+    await applyAll(auth);
+    setModalOpen(false);
   }
 
-  const hasFailed  = results.some((r) => !r.ok);
-  const allOk      = results.length > 0 && results.every((r) => r.ok);
+  const failed  = results.filter((r) => !r.ok);
+  const allOk   = results.length > 0 && failed.length === 0;
 
   return (
     <>
-      {/* Floating bar */}
+      {/* ── Full-width action bar ─────────────────────────────────────────────── */}
       <div style={{
-        position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 500, display: 'flex', alignItems: 'center', gap: 10,
-        background: '#0e2235', color: '#fff',
-        borderRadius: 12, padding: '12px 18px',
-        boxShadow: '0 8px 32px rgba(14,34,53,0.35)',
-        fontSize: 13, fontWeight: 600, maxWidth: '90vw',
-        animation: 'fadeSlideUp .2s ease',
+        position:   'fixed',
+        bottom:     0,
+        left:       0,
+        right:      0,
+        background: '#ffffff',
+        borderTop:  '3px solid #ff5e3a',
+        boxShadow:  '0 -4px 24px rgba(14,34,53,0.10)',
+        zIndex:     500,
+        padding:    '12px 32px',
+        display:    'flex',
+        alignItems: 'center',
+        gap:        16,
+        flexWrap:   'wrap',
       }}>
-        {/* Results state */}
+
+        {/* ── Post-apply results ── */}
         {results.length > 0 && items.length === 0 && (
           <>
-            {allOk ? (
-              <CheckCircle2 size={16} color="#20c933" />
-            ) : (
-              <AlertCircle size={16} color="#ff5e3a" />
-            )}
-            <span>
-              {allOk
-                ? `${results.length} cambio${results.length > 1 ? 's' : ''} aplicado${results.length > 1 ? 's' : ''} correctamente`
-                : `${results.filter(r => r.ok).length} ok · ${results.filter(r => !r.ok).length} falló`}
-            </span>
-            {hasFailed && (
-              <div style={{ fontSize: 11, color: '#ff5e3a', maxWidth: 260 }}>
-                {results.filter(r => !r.ok).map(r => (
-                  <div key={r.label}>{r.label}: {r.error}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+              {allOk ? (
+                <CheckCircle2 size={18} color="#20c933" style={{ flexShrink: 0 }} />
+              ) : (
+                <AlertCircle size={18} color="#ff5e3a" style={{ flexShrink: 0 }} />
+              )}
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>
+                  {allOk
+                    ? `${results.length} cambio${results.length > 1 ? 's' : ''} aplicado${results.length > 1 ? 's' : ''} correctamente`
+                    : `${results.filter(r => r.ok).length} ok · ${failed.length} con error`}
+                </span>
+                {failed.map(r => (
+                  <div key={r.label} style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }}>
+                    {r.label}: {r.error}
+                  </div>
                 ))}
               </div>
-            )}
+            </div>
             <button
               onClick={clearResults}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8fa0af', padding: '0 2px', display: 'flex' }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: 8,
+                background: '#fff', cursor: 'pointer', color: '#64748b',
+                fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+              }}
             >
-              <X size={14} />
+              <X size={13} /> Cerrar
             </button>
           </>
         )}
 
-        {/* Pending state */}
+        {/* ── Pending items ── */}
         {items.length > 0 && (
           <>
+            {/* Count badge */}
             <div style={{
-              width: 22, height: 22, background: '#ff5e3a', borderRadius: 11,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 900, flexShrink: 0,
+              width: 26, height: 26, background: '#ff5e3a',
+              borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 900, color: '#fff', flexShrink: 0,
             }}>
               {items.length}
             </div>
 
+            {/* Label */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 700 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>
                 {items.length === 1 ? '1 cambio pendiente' : `${items.length} cambios pendientes`}
-              </div>
-              <div style={{ fontSize: 10, color: '#8fa0af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {' '}
+              </span>
+              <span style={{ fontSize: 12, color: '#8fa0af' }}>
                 {items.map(i => i.label).join(' · ')}
-              </div>
+              </span>
             </div>
 
-            {/* Individual discard */}
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {/* Individual discard chips */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
               {items.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => unstage(item.id)}
                   title={`Descartar: ${item.label}`}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 3,
-                    padding: '2px 8px', background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    borderRadius: 6, cursor: 'pointer', color: '#94a3b8', fontSize: 10,
-                    fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '4px 10px', background: '#f8fafc',
+                    border: '1px solid #e2e8f0', borderRadius: 6,
+                    cursor: 'pointer', color: '#64748b', fontSize: 11,
+                    fontFamily: 'inherit', fontWeight: 500,
                   }}
                 >
-                  <XCircle size={10} />
-                  {item.label}
+                  <X size={10} /> {item.label}
                 </button>
               ))}
             </div>
 
+            {/* Actions */}
             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
               <button
                 onClick={clearAll}
                 style={{
-                  padding: '7px 14px', background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: 8, cursor: 'pointer', color: '#94a3b8',
+                  padding: '8px 16px', background: '#fff',
+                  border: '1px solid #e2e8f0', borderRadius: 8,
+                  cursor: 'pointer', color: '#64748b',
                   fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
                 }}
               >
@@ -124,13 +136,18 @@ export function PendingChangesBar() {
                 onClick={() => { setModalError(null); setModalOpen(true); }}
                 disabled={applying}
                 style={{
-                  padding: '7px 18px', background: '#ff5e3a', border: 'none',
-                  borderRadius: 8, cursor: applying ? 'not-allowed' : 'pointer',
-                  color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
-                  opacity: applying ? 0.7 : 1,
+                  padding: '8px 20px', background: applying ? '#e2e8f0' : '#20c933',
+                  border: 'none', borderRadius: 8,
+                  cursor: applying ? 'not-allowed' : 'pointer',
+                  color: '#fff', fontSize: 12, fontWeight: 700,
+                  fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
+                  transition: 'background .15s',
                 }}
               >
-                {applying ? 'Aplicando…' : 'Aplicar cambios →'}
+                {applying
+                  ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Aplicando…</>
+                  : <>Aplicar cambios →</>
+                }
               </button>
             </div>
           </>
