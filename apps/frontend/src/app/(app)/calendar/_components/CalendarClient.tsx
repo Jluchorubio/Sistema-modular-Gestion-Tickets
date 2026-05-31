@@ -831,6 +831,7 @@ export function CalendarClient() {
   const [typeFilter,     setTypeFilter]     = useState<RequestType     | ''>('');
   const [sourceFilter,   setSourceFilter]   = useState<SourceFilter>('');
   const [priorityFilter, setPriorityFilter] = useState<RequestPriority | ''>('');
+  const [filtersOpen,    setFiltersOpen]    = useState(false);
 
   const [showCreate,       setShowCreate]       = useState(false);
   const [selectedReq,      setSelectedReq]      = useState<AdmRequest | null>(null);
@@ -969,6 +970,23 @@ export function CalendarClient() {
     meetings: meetings.filter((m) => m.status === 'scheduled').length,
     eventos:  calEvents.filter((e) => e.status === 'active').length,
   }), [requests, slaTickets, meetings, calEvents]);
+
+  /* ── Urgency indicators ── */
+  const urgency = useMemo(() => {
+    const slaBreached = slaTickets.filter((t) => t.sla_status === 'breached').length;
+    const now         = Date.now();
+    const meetingSoon = meetings.filter((m) => {
+      const diff = (new Date(m.scheduled_at).getTime() - now) / 60000;
+      return diff > 0 && diff <= 120 && m.status === 'scheduled';
+    }).length;
+    const pendingHigh = requests.filter(
+      (r) => r.priority === 'alta' && r.status === 'pending',
+    ).length;
+    return { slaBreached, meetingSoon, pendingHigh };
+  }, [slaTickets, meetings, requests]);
+
+  const hasUrgency   = urgency.slaBreached > 0 || urgency.meetingSoon > 0;
+  const activeFilters = [statusFilter, typeFilter, sourceFilter, priorityFilter].filter(Boolean).length;
 
   /* ── Month nav ── */
   function prevMonth() {
@@ -1112,11 +1130,34 @@ export function CalendarClient() {
             )}
           </div>
 
+          {/* Urgency banner — solo si hay items críticos */}
+          {hasUrgency && (
+            <div className={styles.urgencyBar}>
+              <span className={styles.urgencyLabel}>Atención</span>
+              {urgency.slaBreached > 0 && (
+                <span className={`${styles.urgencyItem} ${styles.urgencyItemRed}`}>
+                  <AlertTriangle size={10} />
+                  {urgency.slaBreached} SLA {urgency.slaBreached === 1 ? 'vencido' : 'vencidos'}
+                </span>
+              )}
+              {urgency.meetingSoon > 0 && (
+                <span className={`${styles.urgencyItem} ${styles.urgencyItemGreen}`}>
+                  📹 {urgency.meetingSoon} {urgency.meetingSoon === 1 ? 'reunión próxima' : 'reuniones próximas'}
+                </span>
+              )}
+              {urgency.pendingHigh > 0 && (
+                <span className={`${styles.urgencyItem} ${styles.urgencyItemAmber}`}>
+                  ⚡ {urgency.pendingHigh} alta prioridad pendiente
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Heading */}
           <div className={styles.heading}>
             <div>
               <h1 className={styles.title}>Calendario de Operaciones</h1>
-              <p className={styles.subtitle}>Control de SLA, Mantenimientos y Coordinación Global</p>
+              <p className={styles.subtitle}>SLA · Reuniones · Solicitudes · Eventos</p>
             </div>
             <div className={styles.viewSwitcher}>
               {(['mes', 'semana', 'dia', 'agenda'] as CalendarView[]).map((v) => (
@@ -1127,84 +1168,97 @@ export function CalendarClient() {
             </div>
           </div>
 
-          {/* Stats strip */}
+          {/* Stats strip — compact horizontal chips */}
           <div className={styles.statsStrip}>
             {[
-              { label: 'Total',      value: stats.total,    color: '#0e2235' },
-              { label: 'Pendientes', value: stats.pending,  color: REQUEST_STATUS_COLORS.pending },
-              { label: 'En proceso', value: stats.inProg,   color: REQUEST_STATUS_COLORS.in_progress },
-              { label: 'Completados',value: stats.done,     color: REQUEST_STATUS_COLORS.completed },
-              { label: 'SLA activos',value: stats.slaOpen,  color: SLA_STATUS_COLORS.active },
-              { label: 'Reuniones',  value: stats.meetings, color: '#34a853' },
-              { label: 'Eventos',    value: stats.eventos,  color: '#8b5cf6' },
+              { label: 'Solicitudes', value: stats.total,    color: '#0e2235' },
+              { label: 'Pendientes',  value: stats.pending,  color: REQUEST_STATUS_COLORS.pending },
+              { label: 'En proceso',  value: stats.inProg,   color: REQUEST_STATUS_COLORS.in_progress },
+              { label: 'SLA activos', value: stats.slaOpen,  color: SLA_STATUS_COLORS.active },
+              { label: 'Reuniones',   value: stats.meetings, color: '#34a853' },
+              { label: 'Eventos',     value: stats.eventos,  color: '#8b5cf6' },
             ].map(({ label, value, color }) => (
               <div key={label} className={styles.statChip}>
                 <span className={styles.statValue} style={{ color }}>{value}</span>
                 <span className={styles.statLabel}>{label}</span>
               </div>
             ))}
-
-            {/* Dot legend */}
-            <div className={styles.dotLegend}>
-              <span className={styles.dotLegendItem}>
-                <span className={styles.dotCoral} style={{ position: 'relative', display: 'inline-block' }} /> Solicitudes
-              </span>
-              <span className={styles.dotLegendItem}>
-                <span className={styles.dotSla} style={{ position: 'relative', display: 'inline-block' }} /> SLA Tickets
-              </span>
-              <span className={styles.dotLegendItem}>
-                <span className={styles.dotMeet} style={{ position: 'relative', display: 'inline-block' }} /> Reuniones
-              </span>
-              <span className={styles.dotLegendItem}>
-                <span className={styles.dotCal} style={{ position: 'relative', display: 'inline-block' }} /> Eventos
-              </span>
-            </div>
           </div>
 
-          {/* Filters */}
-          <div className={styles.filtersPanel}>
-            <div className={styles.filtersPanelHead}>
-              <Filter size={11} color="#ff5e3a" />
-              <span className={styles.filtersPanelTitle}>Filtros Dinámicos del Sistema</span>
-            </div>
-            <div className={styles.filtersGrid}>
-              <div className={styles.fGroup}>
-                <label className={styles.fGroupLabel}>Estado</label>
-                <select className={styles.fGroupSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as RequestStatus | '')}>
-                  <option value="">Todos</option>
-                  {Object.entries(REQUEST_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </div>
-              <div className={styles.fGroup}>
-                <label className={styles.fGroupLabel}>Prioridad</label>
-                <select className={styles.fGroupSelect} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as RequestPriority | '')}>
-                  <option value="">Todas</option>
-                  {REQUEST_PRIORITIES.map((p) => <option key={p} value={p}>{REQUEST_PRIORITY_LABELS[p]}</option>)}
-                </select>
-              </div>
-              <div className={styles.fGroup}>
-                <label className={styles.fGroupLabel}>Tipo</label>
-                <select className={styles.fGroupSelect} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as RequestType | '')}>
-                  <option value="">Todos</option>
-                  {([...REQUEST_TYPES, 'task'] as RequestType[]).map((t) => <option key={t} value={t}>{REQUEST_TYPE_LABELS[t] ?? t}</option>)}
-                </select>
-              </div>
-              <div className={styles.fGroup}>
-                <label className={styles.fGroupLabel}>Origen</label>
-                <select className={styles.fGroupSelect} value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}>
-                  <option value="">Todo</option>
-                  <option value="system_tasks">Sistema</option>
-                  <option value="user_tasks">Personal</option>
-                  <option value="requests">Gestión Administrativa</option>
-                </select>
-              </div>
-              {hasFilters && (
-                <div className={styles.fGroup} style={{ justifyContent: 'flex-end' }}>
-                  <button className={styles.clearBtn} onClick={clearFilters}><X size={11} /> Limpiar</button>
-                </div>
+          {/* Legend bar + filtros trigger */}
+          <div className={styles.legendBar}>
+            <span className={styles.legendItem}>
+              <span className={styles.dotCoral} /> Solicitudes
+            </span>
+            <span className={styles.legendItem}>
+              <span className={styles.dotSla} /> SLA
+            </span>
+            <span className={styles.legendItem}>
+              <span className={styles.dotMeet} /> Reuniones
+            </span>
+            <span className={styles.legendItem}>
+              <span className={styles.dotCal} /> Eventos
+            </span>
+
+            {/* Filtros trigger */}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+              <button
+                className={`${styles.filtersTrigger} ${(filtersOpen || activeFilters > 0) ? styles.filtersTriggerActive : ''}`}
+                onClick={() => setFiltersOpen((o) => !o)}
+              >
+                <Filter size={9} />
+                Filtros
+                {activeFilters > 0 && <span className={styles.filtersBadge}>{activeFilters}</span>}
+              </button>
+              {activeFilters > 0 && (
+                <button
+                  className={styles.clearBtn}
+                  onClick={() => { clearFilters(); setFiltersOpen(false); }}
+                  style={{ padding: '3px 8px', fontSize: 10, borderRadius: 20 }}
+                >
+                  <X size={9} /> Limpiar
+                </button>
               )}
             </div>
           </div>
+
+          {/* Filters panel — colapsable */}
+          {filtersOpen && (
+            <div className={styles.filtersPanel}>
+              <div className={styles.filtersGrid}>
+                <div className={styles.fGroup}>
+                  <label className={styles.fGroupLabel}>Estado</label>
+                  <select className={styles.fGroupSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as RequestStatus | '')}>
+                    <option value="">Todos</option>
+                    {Object.entries(REQUEST_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+                <div className={styles.fGroup}>
+                  <label className={styles.fGroupLabel}>Prioridad</label>
+                  <select className={styles.fGroupSelect} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as RequestPriority | '')}>
+                    <option value="">Todas</option>
+                    {REQUEST_PRIORITIES.map((p) => <option key={p} value={p}>{REQUEST_PRIORITY_LABELS[p]}</option>)}
+                  </select>
+                </div>
+                <div className={styles.fGroup}>
+                  <label className={styles.fGroupLabel}>Tipo</label>
+                  <select className={styles.fGroupSelect} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as RequestType | '')}>
+                    <option value="">Todos</option>
+                    {([...REQUEST_TYPES, 'task'] as RequestType[]).map((t) => <option key={t} value={t}>{REQUEST_TYPE_LABELS[t] ?? t}</option>)}
+                  </select>
+                </div>
+                <div className={styles.fGroup}>
+                  <label className={styles.fGroupLabel}>Origen</label>
+                  <select className={styles.fGroupSelect} value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}>
+                    <option value="">Todo</option>
+                    <option value="system_tasks">Sistema</option>
+                    <option value="user_tasks">Personal</option>
+                    <option value="requests">Gestión Administrativa</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Calendar view */}
           <div className={styles.calWrap}>
@@ -1300,23 +1354,50 @@ export function CalendarClient() {
                 <div className={styles.dayList}>
                   {totalDayItems === 0 ? (
                     <div className={styles.dayEmpty}>
-                      <span className={styles.dayEmptyIcon}>📁</span>
-                      <p>Sin eventos programados</p>
-                      <p>Selecciona un día en el calendario</p>
+                      <span className={styles.dayEmptyIcon}>📅</span>
+                      <p>Sin actividad este día</p>
+                      <p>Selecciona otro día o crea un evento</p>
+                      <button className={styles.dayEmptyBtn} onClick={() => setShowCreate(true)}>
+                        <Plus size={10} /> Crear evento
+                      </button>
                     </div>
                   ) : (
                     <>
+                      {/* Eventos propios primero */}
                       {selectedDayCalEvents.map((e) => (
-                        <DayCalEventCard key={e.id} ev={e} onClick={() => setSelectedCalEvent(e)} />
+                        <div key={e.id}>
+                          <span className={styles.typePill} style={{ background: '#8b5cf620', color: '#7c3aed', marginBottom: 3, display: 'inline-flex' }}>
+                            📅 Evento
+                          </span>
+                          <DayCalEventCard ev={e} onClick={() => setSelectedCalEvent(e)} />
+                        </div>
                       ))}
+                      {/* Reuniones */}
                       {selectedDayMeetings.map((m) => (
-                        <DayMeetingCard key={m.id} meeting={m} onClick={() => setSelectedMeeting(m)} />
+                        <div key={m.id}>
+                          <span className={styles.typePill} style={{ background: '#34a85320', color: '#15803d', marginBottom: 3, display: 'inline-flex' }}>
+                            📹 Reunión
+                          </span>
+                          <DayMeetingCard meeting={m} onClick={() => setSelectedMeeting(m)} />
+                        </div>
                       ))}
+                      {/* SLA tickets — urgencia */}
                       {selectedDayTickets.map((t) => (
-                        <TicketSlaCard key={t.id} ticket={t} onClick={() => setSelectedTicket(t)} />
+                        <div key={t.id}>
+                          <span className={styles.typePill} style={{ background: '#f59e0b20', color: '#b45309', marginBottom: 3, display: 'inline-flex' }}>
+                            🎫 SLA Ticket
+                          </span>
+                          <TicketSlaCard ticket={t} onClick={() => setSelectedTicket(t)} />
+                        </div>
                       ))}
+                      {/* Solicitudes / tareas */}
                       {selectedDayReqs.map((req) => (
-                        <DayEventCard key={req.id} req={req} onClick={() => setSelectedReq(req)} />
+                        <div key={req.id}>
+                          <span className={styles.typePill} style={{ background: '#ff5e3a18', color: '#c2410c', marginBottom: 3, display: 'inline-flex' }}>
+                            📋 {req.type === 'task' ? (req.task_source === 'system' ? 'Tarea sistema' : 'Tarea') : 'Solicitud'}
+                          </span>
+                          <DayEventCard req={req} onClick={() => setSelectedReq(req)} />
+                        </div>
                       ))}
                     </>
                   )}
