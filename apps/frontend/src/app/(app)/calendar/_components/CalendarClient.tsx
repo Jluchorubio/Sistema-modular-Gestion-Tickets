@@ -69,10 +69,12 @@ import styles from '../calendar.module.css';
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 type CalendarRole = 'superadmin' | 'admin' | 'jefe' | 'user';
-type CalendarView = 'mes' | 'semana' | 'dia' | 'agenda';
+type CalendarView = 'mes' | 'semana' | 'dia' | 'agenda' | 'año';
 type SourceFilter  = '' | 'system_tasks' | 'user_tasks' | 'requests';
 type RightTab      = 'agenda' | 'actividad' | 'disponibilidad';
 type AuditPeriod   = 'day' | 'week' | 'month' | 'year';
+
+interface DayData { reqs: number; sla: number; meet: number; cal: number }
 
 /* ── Role / context ────────────────────────────────────────────────────────── */
 interface CalendarContext {
@@ -182,19 +184,26 @@ function eventColor(req: AdmRequest): string {
 
 /* ── Month grid ────────────────────────────────────────────────────────────── */
 interface MonthGridProps {
-  year:               number;
-  month:              number;
-  daysWithEvents:     Set<string>;
-  daysWithSla:        Set<string>;
-  daysWithMeetings:   Set<string>;
-  daysWithCalEvents:  Set<string>;
-  selectedDay:        Date | null;
-  onDaySelect:        (d: Date) => void;
+  year:              number;
+  month:             number;
+  daysWithEvents:    Set<string>;
+  daysWithSla:       Set<string>;
+  daysWithMeetings:  Set<string>;
+  daysWithCalEvents: Set<string>;
+  eventsByDay:       Map<string, DayData>;
+  selectedDay:       Date | null;
+  hoveredDay:        Date | null;
+  onDaySelect:       (d: Date) => void;
+  onDayHover:        (d: Date | null) => void;
 }
 
-function MonthGrid({ year, month, daysWithEvents, daysWithSla, daysWithMeetings, daysWithCalEvents, selectedDay, onDaySelect }: MonthGridProps) {
+function MonthGrid({
+  year, month, daysWithEvents, daysWithSla, daysWithMeetings, daysWithCalEvents,
+  eventsByDay, selectedDay, hoveredDay, onDaySelect, onDayHover,
+}: MonthGridProps) {
   const todayStr    = toDateStr(new Date());
   const selectedStr = selectedDay ? toDateStr(selectedDay) : null;
+  const hoveredStr  = hoveredDay  ? toDateStr(hoveredDay)  : null;
 
   const cells = useMemo(() => {
     const first    = new Date(year, month, 1);
@@ -223,10 +232,13 @@ function MonthGrid({ year, month, daysWithEvents, daysWithSla, daysWithMeetings,
           const ds         = toDateStr(date);
           const isToday    = ds === todayStr;
           const isSelected = ds === selectedStr;
+          const isHovered  = cur && ds === hoveredStr && !isSelected;
           const hasReqs    = daysWithEvents.has(ds);
           const hasSla     = daysWithSla.has(ds);
           const hasMeet    = daysWithMeetings.has(ds);
           const hasCalEvt  = daysWithCalEvents.has(ds);
+          const data       = cur ? (eventsByDay.get(ds) ?? null) : null;
+          const hasAny     = hasReqs || hasSla || hasMeet || hasCalEvt;
 
           let cls = styles.dayCell;
           if (!cur)            cls += ` ${styles.dayCellOther}`;
@@ -234,9 +246,16 @@ function MonthGrid({ year, month, daysWithEvents, daysWithSla, daysWithMeetings,
           else if (isToday)    cls += ` ${styles.dayCellToday}`;
 
           return (
-            <div key={i} className={cls} onClick={() => cur && onDaySelect(date)}>
+            <div
+              key={i}
+              className={cls}
+              style={isHovered && !isSelected ? { background: '#f0f4f8' } : undefined}
+              onClick={() => cur && onDaySelect(date)}
+              onMouseEnter={() => cur && onDayHover(date)}
+              onMouseLeave={() => onDayHover(null)}
+            >
               <span className={styles.dayNum}>{date.getDate()}</span>
-              {!isSelected && (hasReqs || hasSla || hasMeet || hasCalEvt) && (
+              {!isSelected && hasAny && (
                 <div className={styles.dotRow}>
                   {hasReqs   && <span className={styles.dotCoral} />}
                   {hasSla    && <span className={styles.dotSla}   />}
@@ -244,9 +263,117 @@ function MonthGrid({ year, month, daysWithEvents, daysWithSla, daysWithMeetings,
                   {hasCalEvt && <span className={styles.dotCal}   />}
                 </div>
               )}
+              {/* Hover tooltip */}
+              {isHovered && data && (data.reqs + data.sla + data.meet + data.cal) > 0 && (
+                <div className={styles.dayTooltip}>
+                  {data.reqs  > 0 && <span className={styles.dayTooltipRow}><span className={styles.dayTooltipDot} style={{ background: '#ff5e3a' }} />{data.reqs} solicitud{data.reqs > 1 ? 'es' : ''}</span>}
+                  {data.sla   > 0 && <span className={styles.dayTooltipRow}><span className={styles.dayTooltipDot} style={{ background: '#f59e0b' }} />{data.sla} SLA</span>}
+                  {data.meet  > 0 && <span className={styles.dayTooltipRow}><span className={styles.dayTooltipDot} style={{ background: '#34a853' }} />{data.meet} reunión{data.meet > 1 ? 'es' : ''}</span>}
+                  {data.cal   > 0 && <span className={styles.dayTooltipRow}><span className={styles.dayTooltipDot} style={{ background: '#8b5cf6' }} />{data.cal} evento{data.cal > 1 ? 's' : ''}</span>}
+                </div>
+              )}
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+/* ── Mini month (year view) ─────────────────────────────────────────────────── */
+const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MINI_DAYS    = ['L','M','X','J','V','S','D'];
+
+function MiniMonth({ year, month, eventsByDay, onSelect }: {
+  year:        number;
+  month:       number; // 0-indexed
+  eventsByDay: Map<string, DayData>;
+  onSelect:    () => void;
+}) {
+  const firstDay  = new Date(year, month, 1);
+  const lastDate  = new Date(year, month + 1, 0).getDate();
+  const firstDow  = firstDay.getDay(); // 0=Sun
+  const startOff  = firstDow === 0 ? 6 : firstDow - 1; // offset to Monday
+  const todayStr  = toDateStr(new Date());
+  const now       = new Date();
+  const isCurrent = month === now.getMonth() && year === now.getFullYear();
+
+  // Monthly totals
+  const totals = useMemo(() => {
+    let reqs = 0, sla = 0, meet = 0, cal = 0;
+    for (let d = 1; d <= lastDate; d++) {
+      const ds = `${year}-${pad(month + 1)}-${pad(d)}`;
+      const dd = eventsByDay.get(ds);
+      if (dd) { reqs += dd.reqs; sla += dd.sla; meet += dd.meet; cal += dd.cal; }
+    }
+    return { reqs, sla, meet, cal, total: reqs + sla + meet + cal };
+  }, [year, month, lastDate, eventsByDay]);
+
+  // Build cells: leading empty + days + trailing empty (pad to 7 cols)
+  const cells: Array<{ d: number | null; ds: string | null }> = [];
+  for (let i = 0; i < startOff; i++) cells.push({ d: null, ds: null });
+  for (let d = 1; d <= lastDate; d++) {
+    cells.push({ d, ds: `${year}-${pad(month + 1)}-${pad(d)}` });
+  }
+  while (cells.length % 7 !== 0) cells.push({ d: null, ds: null });
+
+  return (
+    <div className={styles.miniMonth} onClick={onSelect} title={`Ver ${MONTHS_SHORT[month]} ${year}`}>
+      <div className={styles.miniMonthHeader}>
+        <span className={`${styles.miniMonthName} ${isCurrent ? styles.miniMonthNameCurrent : ''}`}>
+          {MONTHS_SHORT[month]}
+        </span>
+        {totals.total > 0 && (
+          <span style={{ fontSize: 8, fontWeight: 700, color: '#8fa0af' }}>
+            {totals.total}
+          </span>
+        )}
+      </div>
+
+      <div className={styles.miniWeekdays}>
+        {MINI_DAYS.map((d) => <span key={d} className={styles.miniWeekday}>{d}</span>)}
+      </div>
+
+      <div className={styles.miniDaysGrid}>
+        {cells.map((cell, i) => {
+          if (!cell.ds) return <span key={i} className={styles.miniDay} />;
+          const isToday = cell.ds === todayStr;
+          const data    = eventsByDay.get(cell.ds);
+          const total   = data ? data.reqs + data.sla + data.meet + data.cal : 0;
+
+          let bg = '#f1f5f9';
+          if (isToday) {
+            bg = '#ff5e3a';
+          } else if (total > 0 && data) {
+            const m = Math.max(data.reqs, data.sla, data.meet, data.cal);
+            const opacity = Math.min(0.2 + total * 0.1, 0.75);
+            if      (data.sla  === m) bg = `rgba(245,158,11,${opacity})`;
+            else if (data.meet === m) bg = `rgba(52,168,83,${opacity})`;
+            else if (data.cal  === m) bg = `rgba(139,92,246,${opacity})`;
+            else                      bg = `rgba(255,94,58,${opacity})`;
+          }
+
+          return (
+            <span
+              key={i}
+              className={`${styles.miniDay} ${isToday ? styles.miniDayToday : ''}`}
+              style={{ background: bg }}
+            />
+          );
+        })}
+      </div>
+
+      <div className={styles.miniMonthStats}>
+        {totals.total === 0 ? (
+          <span className={styles.miniMonthEmpty}>Sin actividad</span>
+        ) : (
+          <>
+            {totals.reqs > 0 && <span className={styles.miniStat} style={{ color: '#ff5e3a' }}>{totals.reqs}sol</span>}
+            {totals.sla  > 0 && <span className={styles.miniStat} style={{ color: '#f59e0b' }}>{totals.sla}sla</span>}
+            {totals.meet > 0 && <span className={styles.miniStat} style={{ color: '#34a853' }}>{totals.meet}reu</span>}
+            {totals.cal  > 0 && <span className={styles.miniStat} style={{ color: '#8b5cf6' }}>{totals.cal}evt</span>}
+          </>
+        )}
       </div>
     </div>
   );
@@ -795,7 +922,7 @@ function CalEventPopup({ ev, onClose }: { ev: CalendarEvent; onClose: () => void
 }
 
 /* ── FC view map ────────────────────────────────────────────────────────────── */
-const FC_VIEW: Record<Exclude<CalendarView, 'mes'>, string> = {
+const FC_VIEW: Record<string, string> = {
   semana: 'dayGridWeek',
   dia:    'dayGridDay',
   agenda: 'listMonth',
@@ -816,6 +943,7 @@ export function CalendarClient() {
   const [calYear,     setCalYear]     = useState(today.getFullYear());
   const [calMonth,    setCalMonth]    = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<Date | null>(today);
+  const [hoveredDay,  setHoveredDay]  = useState<Date | null>(null);
 
   // Right panel tab state
   const [rightTab, setRightTab] = useState<RightTab>('agenda');
@@ -935,30 +1063,46 @@ export function CalendarClient() {
     return s;
   }, [calEvents]);
 
-  /* ── Right panel: selected day items ── */
+  /* ── eventsByDay map (shared by MonthGrid hover + YearGrid heatmap) ── */
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, DayData>();
+    const inc = (key: string, field: keyof DayData) => {
+      const ex = map.get(key) ?? { reqs: 0, sla: 0, meet: 0, cal: 0 };
+      map.set(key, { ...ex, [field]: ex[field] + 1 });
+    };
+    filteredRequests.forEach((r) => inc(getReqDateStr(r), 'reqs'));
+    slaTickets.forEach((t) => t.sla_deadline && inc(t.sla_deadline.slice(0, 10), 'sla'));
+    meetings.forEach((m) => inc(m.scheduled_at.slice(0, 10), 'meet'));
+    calEvents.forEach((e) => inc(e.start_at.slice(0, 10), 'cal'));
+    return map;
+  }, [filteredRequests, slaTickets, meetings, calEvents]);
+
+  /* ── Right panel: display day = hovered ?? selected ── */
+  const displayDay = hoveredDay ?? selectedDay;
+
   const selectedDayReqs = useMemo(() => {
-    if (!selectedDay) return [];
-    const ds = toDateStr(selectedDay);
+    if (!displayDay) return [];
+    const ds = toDateStr(displayDay);
     return filteredRequests.filter((r) => getReqDateStr(r) === ds);
-  }, [filteredRequests, selectedDay]);
+  }, [filteredRequests, displayDay]);
 
   const selectedDayTickets = useMemo(() => {
-    if (!selectedDay) return [];
-    const ds = toDateStr(selectedDay);
+    if (!displayDay) return [];
+    const ds = toDateStr(displayDay);
     return slaTickets.filter((t) => t.sla_deadline!.slice(0, 10) === ds);
-  }, [slaTickets, selectedDay]);
+  }, [slaTickets, displayDay]);
 
   const selectedDayMeetings = useMemo(() => {
-    if (!selectedDay) return [];
-    const ds = toDateStr(selectedDay);
+    if (!displayDay) return [];
+    const ds = toDateStr(displayDay);
     return meetings.filter((m) => m.scheduled_at.slice(0, 10) === ds);
-  }, [meetings, selectedDay]);
+  }, [meetings, displayDay]);
 
   const selectedDayCalEvents = useMemo(() => {
-    if (!selectedDay) return [];
-    const ds = toDateStr(selectedDay);
+    if (!displayDay) return [];
+    const ds = toDateStr(displayDay);
     return calEvents.filter((e) => e.start_at.slice(0, 10) === ds);
-  }, [calEvents, selectedDay]);
+  }, [calEvents, displayDay]);
 
   /* ── Stats ── */
   const stats = useMemo(() => ({
@@ -998,8 +1142,12 @@ export function CalendarClient() {
     else setCalMonth((m) => m + 1);
   }
 
-  function handleDaySelect(date: Date) { setSelectedDay(date); }
+  function handleDaySelect(date: Date) { setSelectedDay(date); setHoveredDay(null); }
+  function handleDayHover(date: Date | null) { setHoveredDay(date); }
   function handleViewChange(v: CalendarView) { setView(v); }
+  function handleMonthSelect(month: number) { setCalMonth(month); setView('mes'); }
+  function prevYear() { setCalYear((y) => y - 1); }
+  function nextYear() { setCalYear((y) => y + 1); }
 
   /* ── PDF export ── */
   async function handleExportPdf() {
@@ -1160,9 +1308,15 @@ export function CalendarClient() {
               <p className={styles.subtitle}>SLA · Reuniones · Solicitudes · Eventos</p>
             </div>
             <div className={styles.viewSwitcher}>
-              {(['mes', 'semana', 'dia', 'agenda'] as CalendarView[]).map((v) => (
-                <button key={v} className={`${styles.viewBtn} ${view === v ? styles.viewBtnActive : ''}`} onClick={() => handleViewChange(v)}>
-                  {v.charAt(0).toUpperCase() + v.slice(1)}
+              {([
+                { id: 'mes',    label: 'Mes'    },
+                { id: 'semana', label: 'Semana' },
+                { id: 'dia',    label: 'Día'    },
+                { id: 'agenda', label: 'Lista'  },
+                { id: 'año',    label: 'Año'    },
+              ] as { id: CalendarView; label: string }[]).map(({ id, label }) => (
+                <button key={id} className={`${styles.viewBtn} ${view === id ? styles.viewBtnActive : ''}`} onClick={() => handleViewChange(id)}>
+                  {label}
                 </button>
               ))}
             </div>
@@ -1278,17 +1432,41 @@ export function CalendarClient() {
                   daysWithSla={daysWithSla}
                   daysWithMeetings={daysWithMeetings}
                   daysWithCalEvents={daysWithCalEvents}
+                  eventsByDay={eventsByDay}
                   selectedDay={selectedDay}
+                  hoveredDay={hoveredDay}
                   onDaySelect={handleDaySelect}
+                  onDayHover={handleDayHover}
                 />
               </>
             )}
 
-            {view !== 'mes' && (
+            {view === 'año' && (
+              <>
+                <div className={styles.yearNav}>
+                  <button className={styles.monthNavBtn} onClick={prevYear}><ChevronLeft size={15} /></button>
+                  <span className={styles.yearNavTitle}>{calYear}</span>
+                  <button className={styles.monthNavBtn} onClick={nextYear}><ChevronRight size={15} /></button>
+                </div>
+                <div className={styles.yearGrid}>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <MiniMonth
+                      key={i}
+                      year={calYear}
+                      month={i}
+                      eventsByDay={eventsByDay}
+                      onSelect={() => handleMonthSelect(i)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {view !== 'mes' && view !== 'año' && (
               <FullCalendar
                 key={view}
                 plugins={[dayGridPlugin, listPlugin, interactionPlugin]}
-                initialView={FC_VIEW[view]}
+                initialView={FC_VIEW[view] ?? 'dayGridWeek'}
                 locale={esLocale}
                 events={fcEvents}
                 eventClick={handleFCClick}
@@ -1342,9 +1520,10 @@ export function CalendarClient() {
               <div className={styles.daySection}>
                 <div className={styles.daySectionHead}>
                   <h3 className={styles.sideSectionLabel}>
-                    {selectedDay
-                      ? selectedDay.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })
+                    {displayDay
+                      ? displayDay.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })
                       : 'Eventos del Día'}
+                    {hoveredDay && <span style={{ color: '#8fa0af', fontSize: 8, marginLeft: 4 }}>↑ hover</span>}
                   </h3>
                   {totalDayItems > 0 && (
                     <span className={styles.dayBadge}>{totalDayItems}</span>
