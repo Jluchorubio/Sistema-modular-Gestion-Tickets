@@ -1255,14 +1255,9 @@ export function CalendarClient() {
         {/* ── Main panel ── */}
         <div className={styles.main}>
 
-          {/* Sub-header */}
-          <div className={styles.subHeader}>
-            <div className={styles.subHeaderLeft}>
-              <span className={styles.ctxBadge}>{ctx.label} · {ctx.sublabel}</span>
-              <span className={styles.subSep}>|</span>
-              <p className={styles.ctxDesc}>{ROLE_DESC[role]}</p>
-            </div>
-            {contexts.length > 1 && (
+          {/* Context bar — solo módulo activo + switcher si hay varios */}
+          {contexts.length > 1 && (
+            <div className={styles.subHeader}>
               <div className={styles.ctxSwitcher}>
                 {contexts.map((c, i) => (
                   <button
@@ -1271,11 +1266,12 @@ export function CalendarClient() {
                     onClick={() => setCtxIdx(i)}
                   >
                     {c.label}
+                    {c.sublabel && <span style={{ fontWeight: 400, opacity: 0.65, marginLeft: 3 }}>· {c.sublabel}</span>}
                   </button>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Urgency banner — solo si hay items críticos */}
           {hasUrgency && (
@@ -1304,7 +1300,9 @@ export function CalendarClient() {
           <div className={styles.heading}>
             <div>
               <h1 className={styles.title}>Calendario de Operaciones</h1>
-              <p className={styles.subtitle}>SLA · Reuniones · Solicitudes · Eventos</p>
+              <p className={styles.subtitle}>
+                {ctx.label}{ctx.sublabel ? ` · ${ctx.sublabel}` : ''} &nbsp;·&nbsp; SLA · Solicitudes · Reuniones · Eventos
+              </p>
             </div>
             <div className={styles.viewSwitcher}>
               {([
