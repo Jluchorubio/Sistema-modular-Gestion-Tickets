@@ -154,7 +154,7 @@ export class SystemConfigController {
       ...req.criticalAudit!,
       action:     'UPDATE',
       entityType: 'business_hour',
-      entityId:   String(dto.day_of_week),
+      entityId:   result.id,
       newValue:   result,
     });
     return result;
