@@ -2,10 +2,20 @@
    Calendar Module — Brand: #0e2235 (dark) / #ff5e3a (coral)
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ── Page wrapper (reemplaza ModuleLayout — el calendario no es un módulo) ── */
+.calPage {
+  background: #ffffff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 /* ── Shell ──────────────────────────────────────────────────────────────────── */
 .shell {
   display: flex;
   min-height: 700px;
+  flex: 1;
 }
 
 /* ── Main panel ─────────────────────────────────────────────────────────────── */

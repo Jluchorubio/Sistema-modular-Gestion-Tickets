@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useSystemConfigStore } from '@/stores/systemConfig.store';
-import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import {
   requestsService,
   type AdmRequest,
@@ -1249,7 +1248,7 @@ export function CalendarClient() {
   const totalDayItems = selectedDayReqs.length + selectedDayTickets.length + selectedDayMeetings.length + selectedDayCalEvents.length;
 
   return (
-    <ModuleLayout title="Calendario" description="Planificación, SLA y coordinación operativa." isSuperadmin={isSuperadmin}>
+    <div className={styles.calPage}>
       <div className={styles.shell}>
 
         {/* ── Main panel ── */}
@@ -1418,9 +1417,9 @@ export function CalendarClient() {
             {view === 'mes' && (
               <>
                 <div className={styles.monthNav}>
-                  <button className={styles.monthNavBtn} onClick={prevMonth}><ChevronLeft size={15} /></button>
+                  <button className={styles.monthNavBtn} onClick={prevMonth} title="" aria-label="Mes anterior"><ChevronLeft size={15} /></button>
                   <span className={styles.monthNavTitle}>{MONTHS_ES[calMonth]} {calYear}</span>
-                  <button className={styles.monthNavBtn} onClick={nextMonth}><ChevronRight size={15} /></button>
+                  <button className={styles.monthNavBtn} onClick={nextMonth} title="" aria-label="Mes siguiente"><ChevronRight size={15} /></button>
                 </div>
                 <MonthGrid
                   year={calYear}
@@ -1441,9 +1440,9 @@ export function CalendarClient() {
             {view === 'año' && (
               <>
                 <div className={styles.yearNav}>
-                  <button className={styles.monthNavBtn} onClick={prevYear}><ChevronLeft size={15} /></button>
+                  <button className={styles.monthNavBtn} onClick={prevYear} title="" aria-label="Año anterior"><ChevronLeft size={15} /></button>
                   <span className={styles.yearNavTitle}>{calYear}</span>
-                  <button className={styles.monthNavBtn} onClick={nextYear}><ChevronRight size={15} /></button>
+                  <button className={styles.monthNavBtn} onClick={nextYear} title="" aria-label="Año siguiente"><ChevronRight size={15} /></button>
                 </div>
                 <div className={styles.yearGrid}>
                   {Array.from({ length: 12 }, (_, i) => (
@@ -1468,9 +1467,10 @@ export function CalendarClient() {
                 events={fcEvents}
                 eventClick={handleFCClick}
                 headerToolbar={{ left: 'prev,next today', center: 'title', right: '' }}
-                buttonText={{ today: 'Hoy' }}
+                buttonText={{ today: 'Hoy', prev: '‹', next: '›' }}
+                buttonHints={{ prev: '', next: '', today: '' }}
                 height="auto"
-                firstDay={0}
+                firstDay={1}
                 dayMaxEvents={4}
                 moreLinkText={(n) => `+${n} más`}
                 noEventsText="Sin eventos para mostrar"
@@ -1768,6 +1768,6 @@ export function CalendarClient() {
       {selectedCalEvent && (
         <CalEventPopup ev={selectedCalEvent} onClose={() => setSelectedCalEvent(null)} />
       )}
-    </ModuleLayout>
+    </div>
   );
 }
