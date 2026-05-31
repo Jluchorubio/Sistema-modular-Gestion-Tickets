@@ -221,6 +221,8 @@ export const systemConfigService = {
   getCompany: () => api.get<Company>(`${BASE}/company`).then(r => r.data),
   updateCompany: (dto: Partial<Company>, auth?: CriticalAuthData) =>
     api.patch<Company>(`${BASE}/company`, dto, { headers: criticalHeaders(auth) }).then(r => r.data),
+  setupCompany: (dto: Partial<Company>) =>
+    api.patch<Company>(`${BASE}/company/setup`, dto).then(r => r.data),
 
   /* ── Org summary ── */
   getOrgSummary: () => api.get<OrgSummary>(`${BASE}/org/summary`).then(r => r.data),

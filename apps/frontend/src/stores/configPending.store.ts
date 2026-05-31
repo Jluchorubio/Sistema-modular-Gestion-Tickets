@@ -51,6 +51,11 @@ export const useConfigPending = create<ConfigPendingState>((set, get) => ({
         await item.execute(auth);
         results.push({ label: item.label, ok: true });
       } catch (err: any) {
+        // Auth errors bubble up to the modal — stop execution, keep items in queue
+        if (err?.response?.data?.type === 'critical_auth_failed') {
+          set({ applying: false });
+          throw err;
+        }
         const msg = err?.response?.data?.message ?? err?.message ?? 'Error desconocido';
         results.push({ label: item.label, ok: false, error: Array.isArray(msg) ? msg.join(', ') : String(msg) });
       }

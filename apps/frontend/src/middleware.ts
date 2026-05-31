@@ -14,6 +14,7 @@ const PROTECTED = [
   '/tickets',
   '/inventory',
   '/reports',
+  '/config',
 ];
 
 export function middleware(request: NextRequest) {

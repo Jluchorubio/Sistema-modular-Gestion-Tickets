@@ -42,16 +42,25 @@ export interface UpdateModuleDto {
   auto_close_hours?:       number;
 }
 
+export interface FieldDef {
+  key:      string;
+  label:    string;
+  type:     'text' | 'number' | 'date' | 'select' | 'boolean';
+  required: boolean;
+  options?: string[];
+}
+
 export interface ModuleCategory {
-  id:          string;
-  module_id:   string;
-  parent_id:   string | null;
-  parent_name: string | null;
-  name:        string;
-  description: string | null;
-  is_active:   boolean;
-  created_at:  string;
-  updated_at:  string;
+  id:           string;
+  module_id:    string;
+  parent_id:    string | null;
+  parent_name:  string | null;
+  name:         string;
+  description:  string | null;
+  is_active:    boolean;
+  field_schema: FieldDef[];
+  created_at:   string;
+  updated_at:   string;
 }
 
 export interface ModuleLocation {
@@ -193,12 +202,12 @@ export const modulesService = {
     return data;
   },
 
-  async createCategory(moduleId: string, dto: { name: string; description?: string; parent_id?: string | null }): Promise<ModuleCategory> {
+  async createCategory(moduleId: string, dto: { name: string; description?: string; parent_id?: string | null; field_schema?: FieldDef[] }): Promise<ModuleCategory> {
     const { data } = await api.post(`/system-modules/${moduleId}/categories`, dto);
     return data;
   },
 
-  async updateCategory(catId: string, dto: { name?: string; description?: string; is_active?: boolean }): Promise<ModuleCategory> {
+  async updateCategory(catId: string, dto: { name?: string; description?: string; is_active?: boolean; field_schema?: FieldDef[] }): Promise<ModuleCategory> {
     const { data } = await api.patch(`/system-modules/categories/${catId}`, dto);
     return data;
   },

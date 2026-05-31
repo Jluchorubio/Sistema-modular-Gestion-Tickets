@@ -430,7 +430,7 @@ export class SystemModulesService {
   async findCategoriesByModule(moduleId: string) {
     return this.db.query<any[]>(
       `SELECT c.id, c.module_id, c.parent_id, c.name, c.description, c.is_active,
-              c.created_at, c.updated_at,
+              c.field_schema, c.created_at, c.updated_at,
               p.name AS parent_name
        FROM   modules.categories c
        LEFT JOIN modules.categories p ON p.id = c.parent_id
@@ -440,7 +440,7 @@ export class SystemModulesService {
     );
   }
 
-  async createCategory(moduleId: string, dto: { name: string; description?: string; parent_id?: string }) {
+  async createCategory(moduleId: string, dto: { name: string; description?: string; parent_id?: string; field_schema?: any[] }) {
     const [mod] = await this.db.query<{ id: string }[]>(
       `SELECT id FROM modules.modules WHERE id = $1 AND deleted_at IS NULL`,
       [moduleId],
@@ -456,20 +456,21 @@ export class SystemModulesService {
     }
 
     const [cat] = await this.db.query<any[]>(
-      `INSERT INTO modules.categories (module_id, parent_id, name, description)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [moduleId, dto.parent_id ?? null, dto.name.trim(), dto.description?.trim() ?? null],
+      `INSERT INTO modules.categories (module_id, parent_id, name, description, field_schema)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [moduleId, dto.parent_id ?? null, dto.name.trim(), dto.description?.trim() ?? null, JSON.stringify(dto.field_schema ?? [])],
     );
     return cat;
   }
 
-  async updateCategory(id: string, dto: { name?: string; description?: string; is_active?: boolean }) {
+  async updateCategory(id: string, dto: { name?: string; description?: string; is_active?: boolean; field_schema?: any[] }) {
     const fields: string[] = [];
     const values: any[]   = [];
     let idx = 1;
-    if (dto.name        !== undefined) { fields.push(`name = $${idx++}`);        values.push(dto.name.trim()); }
-    if (dto.description !== undefined) { fields.push(`description = $${idx++}`); values.push(dto.description?.trim() ?? null); }
-    if (dto.is_active   !== undefined) { fields.push(`is_active = $${idx++}`);   values.push(dto.is_active); }
+    if (dto.name         !== undefined) { fields.push(`name = $${idx++}`);         values.push(dto.name.trim()); }
+    if (dto.description  !== undefined) { fields.push(`description = $${idx++}`);  values.push(dto.description?.trim() ?? null); }
+    if (dto.is_active    !== undefined) { fields.push(`is_active = $${idx++}`);    values.push(dto.is_active); }
+    if (dto.field_schema !== undefined) { fields.push(`field_schema = $${idx++}`); values.push(JSON.stringify(dto.field_schema)); }
     if (!fields.length) throw new BadRequestException('Nada que actualizar');
     fields.push(`updated_at = now()`);
     values.push(id);

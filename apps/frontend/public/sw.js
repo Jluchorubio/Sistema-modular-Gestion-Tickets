@@ -6,7 +6,7 @@ const STATIC_EXTS   = ['.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll([OFFLINE_URL, '/logo.png']))
+      .then((cache) => cache.addAll([OFFLINE_URL, '/logo.png']).catch(() => cache.add('/logo.png')))
       .then(() => self.skipWaiting()),
   );
 });

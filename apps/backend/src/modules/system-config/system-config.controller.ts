@@ -64,13 +64,19 @@ export class SystemConfigController {
   @ApiOperation({ summary: 'Marca el sistema como inicializado. Solo se llama una vez al finalizar el wizard de setup.' })
   initializeSystem() { return this.svc.initializeSystem(); }
 
-  @Get('company')
+  @Patch('company/setup')
   @UseGuards(RolesGuard) @Roles('superadmin')
+  @ApiOperation({ summary: 'Actualiza empresa durante el wizard de setup (sin re-auth crítica). Solo funciona antes de inicializar.' })
+  async setupCompany(@Body() dto: UpdateCompanyDto) {
+    return this.svc.updateCompany(dto);
+  }
+
+  @Get('company')
   @RequirePermission('global:config:view')
   getCompany() { return this.svc.getCompany(); }
 
   @Patch('company')
-  @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
+  @UseGuards(CriticalChangeGuard)
   @RequirePermission('global:config:company')
   async updateCompany(@Req() req: Request, @Body() dto: UpdateCompanyDto) {
     const prev   = await this.svc.getCompany();

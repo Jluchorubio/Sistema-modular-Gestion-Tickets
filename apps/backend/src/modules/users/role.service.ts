@@ -134,6 +134,7 @@ export class RoleService {
         COUNT(*) FILTER (WHERE is_active = false)       AS inactive_users
       FROM users.profiles
       WHERE deleted_at IS NULL
+        AND id != '00000000-0000-0000-0000-000000000001'
     `);
 
     const [moduleStats] = await this.db.query<{

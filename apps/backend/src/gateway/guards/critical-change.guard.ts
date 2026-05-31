@@ -28,20 +28,23 @@ export class CriticalChangeGuard implements CanActivate {
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
 
+    const authErr = (message: string) =>
+      new ForbiddenException({ message, type: 'critical_auth_failed' });
+
     const raw = req.headers['x-critical-auth'] as string | undefined;
-    if (!raw) throw new ForbiddenException('Se requiere autenticación crítica (X-Critical-Auth)');
+    if (!raw) throw authErr('Se requiere autenticación crítica (X-Critical-Auth)');
 
     let payload: { password?: string; totp_code?: string; reason?: string };
     try {
       payload = JSON.parse(raw);
     } catch {
-      throw new ForbiddenException('X-Critical-Auth header malformado');
+      throw authErr('X-Critical-Auth header malformado');
     }
 
     const { password, totp_code, reason } = payload;
-    if (!password)                         throw new ForbiddenException('Contraseña requerida');
+    if (!password)                         throw authErr('Contraseña requerida');
     if (!reason || reason.trim().length < 20)
-      throw new ForbiddenException('Razón requerida (mínimo 20 caracteres)');
+      throw authErr('Motivo requerido (mínimo 20 caracteres)');
 
     const userId = req.user?.sub ?? req.user?.id;
     if (!userId) throw new UnauthorizedException();
@@ -63,7 +66,7 @@ export class CriticalChangeGuard implements CanActivate {
     if (!cred) throw new UnauthorizedException('Credenciales no encontradas');
 
     const passwordOk = await bcrypt.compare(password, cred.password_hash);
-    if (!passwordOk) throw new ForbiddenException('Contraseña incorrecta');
+    if (!passwordOk) throw authErr('Contraseña incorrecta');
 
     let verified_2fa = false;
     if (cred.totp_enabled && cred.totp_secret) {
@@ -74,7 +77,7 @@ export class CriticalChangeGuard implements CanActivate {
         token:    totp_code,
         window:   1,
       });
-      if (!totpOk) throw new ForbiddenException('Código TOTP inválido o expirado');
+      if (!totpOk) throw authErr('Código TOTP inválido o expirado');
       verified_2fa = true;
     }
 

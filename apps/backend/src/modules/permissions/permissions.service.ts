@@ -9,7 +9,7 @@ export class PermissionsService {
 
   constructor(@InjectDataSource() private readonly db: DataSource) {}
 
-  async getUserPermissions(userId: string): Promise<Set<string>> {
+  async getUserPermissions(userId: string): Promise<Set<string> | null> {
     const cached = this.cache.get(userId);
     if (cached && cached.expiresAt > Date.now()) return cached.keys;
 
@@ -18,7 +18,9 @@ export class PermissionsService {
       [userId],
     );
 
-    if (!profile) return new Set();
+    // null = perfil no encontrado (JWT válido pero usuario eliminado/inexistente)
+    // Se deja que JwtAuthGuard maneje el 401 en lugar de lanzar 403
+    if (!profile) return null;
 
     const keys = new Set<string>();
 
@@ -67,8 +69,9 @@ export class PermissionsService {
     return keys;
   }
 
-  async hasPermission(userId: string, permKey: string): Promise<boolean> {
+  async hasPermission(userId: string, permKey: string): Promise<boolean | null> {
     const perms = await this.getUserPermissions(userId);
+    if (perms === null) return null; // perfil no existe — dejar al JwtAuthGuard manejar 401
     return perms.has('*') || perms.has(permKey);
   }
 

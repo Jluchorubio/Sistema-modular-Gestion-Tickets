@@ -23,7 +23,9 @@ export function DashboardStats({ stats }: Props) {
           <span className={styles.statCardValue}>{stats.modules.total}</span>
           <span className={styles.statCardLabel}>Módulos</span>
         </div>
-        <div className={styles.statCardSub}>todos accesibles</div>
+        <div className={styles.statCardSub}>
+          {stats.modules.active} activos · {stats.modules.inactive} inactivos
+        </div>
       </div>
 
       <div className={styles.statCard}>

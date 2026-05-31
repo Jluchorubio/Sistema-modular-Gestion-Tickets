@@ -21,7 +21,7 @@ export class PermissionsController {
   @ApiOperation({ summary: 'Permisos del usuario autenticado (array de keys)' })
   async getMyPermissions(@Req() req: any) {
     const perms = await this.svc.getUserPermissions(req.user.sub);
-    return Array.from(perms);
+    return Array.from(perms ?? []);
   }
 
   /* ── Árbol de permisos ─────────────────────────────────────────── */

@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { InjectDataSource } from '@nestjs/typeorm';
@@ -32,7 +33,8 @@ export class RolesGuard implements CanActivate {
       [user.sub],
     );
 
-    if (!profile) throw new ForbiddenException();
+    // Perfil no encontrado = sesión inválida (JWT de usuario eliminado) → 401
+    if (!profile) throw new UnauthorizedException('Sesión inválida — vuelve a iniciar sesión');
 
     // superadmin siempre pasa
     if (profile.is_superadmin) return true;

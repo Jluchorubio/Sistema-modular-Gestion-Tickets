@@ -86,7 +86,8 @@ export function DashboardClient() {
     queryKey:  ['system-stats'],
     queryFn:   () => usersService.getSystemStats(),
     enabled:   isSuperadmin,
-    staleTime: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   /* ── Search ── */
@@ -121,7 +122,10 @@ export function DashboardClient() {
   const [deleteTarget, setDeleteTarget] = useState<SystemModule | null>(null);
   const [maintTarget,  setMaintTarget]  = useState<SystemModule | null>(null);
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['modules'] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['modules'] });
+    qc.invalidateQueries({ queryKey: ['system-stats'] });
+  };
 
   const toggleMut = useMutation({
     mutationFn: (m: SystemModule) => modulesService.updateModule(m.id, { is_active: !m.is_active }),

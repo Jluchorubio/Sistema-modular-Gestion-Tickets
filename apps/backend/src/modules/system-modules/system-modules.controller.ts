@@ -192,7 +192,7 @@ export class SystemModulesController {
   @ApiOperation({ summary: 'Crear categoría en un módulo.' })
   createCategory(
     @Param('id') moduleId: string,
-    @Body() body: { name: string; description?: string; parent_id?: string },
+    @Body() body: { name: string; description?: string; parent_id?: string; field_schema?: object[] },
   ) {
     return this.service.createCategory(moduleId, body);
   }
@@ -204,7 +204,7 @@ export class SystemModulesController {
   @ApiOperation({ summary: 'Editar categoría.' })
   updateCategory(
     @Param('catId') catId: string,
-    @Body() body: { name?: string; description?: string; is_active?: boolean },
+    @Body() body: { name?: string; description?: string; is_active?: boolean; field_schema?: object[] },
   ) {
     return this.service.updateCategory(catId, body);
   }

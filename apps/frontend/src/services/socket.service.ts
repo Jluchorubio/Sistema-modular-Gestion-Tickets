@@ -10,7 +10,7 @@ export const socketService = {
     _socket?.disconnect();
 
     _socket = io(WS_URL, {
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
       auth: { token },
       reconnection: true,
       reconnectionDelay: 3000,

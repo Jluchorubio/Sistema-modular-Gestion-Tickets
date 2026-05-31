@@ -47,6 +47,7 @@ export function CriticalChangeModal({ isOpen, meta, onConfirm, onCancel, error, 
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!password || !reasonValid || (totpEnabled && totp.length < 6)) return;
     onConfirm({
       password,
       reason:    reason.trim(),

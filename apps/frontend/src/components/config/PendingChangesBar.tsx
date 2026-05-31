@@ -109,8 +109,14 @@ export function PendingChangesBar() {
 
   async function handleConfirm(auth: CriticalAuthData) {
     setModalError(null);
-    await applyAll(auth);
-    setModalOpen(false);
+    try {
+      await applyAll(auth);
+      setModalOpen(false);
+    } catch (err: any) {
+      // Auth error — keep modal open so user can correct credentials
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Error de autenticación';
+      setModalError(Array.isArray(msg) ? msg.join(', ') : String(msg));
+    }
   }
 
   const failed = results.filter((r) => !r.ok);
