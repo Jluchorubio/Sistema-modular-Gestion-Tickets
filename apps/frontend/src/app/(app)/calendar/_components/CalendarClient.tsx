@@ -1487,24 +1487,25 @@ export function CalendarClient() {
         <div className={styles.right}>
 
           {/* Tab switcher */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: 0 }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
             {([
-              { id: 'agenda',        icon: <Calendar size={12} />,  label: 'Agenda'      },
-              { id: 'actividad',     icon: <Activity  size={12} />,  label: 'Actividad'   },
-              { id: 'disponibilidad',icon: <Users     size={12} />,  label: 'Equipo'      },
+              { id: 'agenda',        icon: <Calendar size={11} />,  label: 'Agenda'      },
+              { id: 'actividad',     icon: <Activity  size={11} />,  label: 'Actividad'   },
+              { id: 'disponibilidad',icon: <Users     size={11} />,  label: 'Equipo'      },
             ] as { id: RightTab; icon: React.ReactNode; label: string }[]).map((t) => (
               <button
                 key={t.id}
                 onClick={() => setRightTab(t.id)}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  gap: 4, padding: '9px 4px', fontSize: 10, fontWeight: 700,
+                  gap: 4, padding: '10px 4px', fontSize: 12,
+                  fontWeight: rightTab === t.id ? 600 : 400,
                   fontFamily: 'inherit', cursor: 'pointer', border: 'none',
                   background: 'transparent',
-                  color:       rightTab === t.id ? '#0e2235' : '#94a3b8',
-                  borderBottom: rightTab === t.id ? '2px solid #ff5e3a' : '2px solid transparent',
-                  transition: 'color .15s, border-color .15s',
-                  textTransform: 'uppercase', letterSpacing: '0.04em',
+                  color:        rightTab === t.id ? '#0e2235' : '#94a3b8',
+                  borderBottom: rightTab === t.id ? '2px solid #0e2235' : '2px solid transparent',
+                  marginBottom: -1,
+                  transition: 'color .15s, border-color .15s, font-weight .1s',
                 }}
               >
                 {t.icon} {t.label}
