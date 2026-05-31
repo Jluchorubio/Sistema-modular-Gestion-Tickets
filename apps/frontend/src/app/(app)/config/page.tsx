@@ -324,7 +324,9 @@ function CompanyTab() {
     const errs = validateCompanyForm(form);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
-    const snapshot = { ...form }; // captura estable — no depende del estado al momento de aplicar
+    // Solo campos que acepta UpdateCompanyDto — strip id/slug/created_at/updated_at etc.
+    const { name, timezone, language, logo_url, primary_color, website, contact_email, contact_phone } = form;
+    const snapshot = { name, timezone, language, logo_url, primary_color, website, contact_email, contact_phone };
     if (logoPreview) URL.revokeObjectURL(logoPreview);
     setLogoPreview(null);
     pending.stage({
