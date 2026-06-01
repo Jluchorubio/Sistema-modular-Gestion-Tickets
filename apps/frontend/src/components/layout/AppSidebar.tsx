@@ -87,7 +87,7 @@ export function AppSidebar() {
             <img
               src={logoUrl}
               alt={companyName}
-              style={{ width: 32, height: 32, objectFit: 'contain', display: 'block' }}
+              style={{ width: 48, height: 48, objectFit: 'contain', display: 'block' }}
             />
           </div>
         ) : (

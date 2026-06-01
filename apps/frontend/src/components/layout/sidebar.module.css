@@ -45,13 +45,13 @@
 
 /* ── Company logo wrapper ── */
 .logoWrap {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f1f5f9;
-  border-radius: 8px;
+  background: #ffffff;
+  border-radius: 0;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -336,7 +336,7 @@
 }
 
 :global([data-theme="dark"]) .brand          { border-color: rgba(255,255,255,0.07); }
-:global([data-theme="dark"]) .logoWrap        { background: rgba(255,255,255,0.08); }
+:global([data-theme="dark"]) .logoWrap        { background: rgba(255,255,255,0.05); }
 :global([data-theme="dark"]) .brandMark::before,
 :global([data-theme="dark"]) .brandMark::after { background: rgba(255,255,255,0.9); }
 :global([data-theme="dark"]) .brandName       { color: #f1f5f9; }
