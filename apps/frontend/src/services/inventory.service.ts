@@ -70,6 +70,16 @@ export interface AssetHistoryEntry {
   actor_name:  string;
 }
 
+export interface AssetImage {
+  id:               string;
+  file_name:        string;
+  file_size:        number;
+  mime_type:        string;
+  storage_url:      string;
+  created_at:       string;
+  uploaded_by_name: string;
+}
+
 export interface AssetTicket {
   id:           string;
   title:        string;
@@ -198,6 +208,25 @@ export const inventoryService = {
 
   async getChildAssets(id: string): Promise<AssetChild[]> {
     const { data } = await api.get(`/inventory/${id}/children`);
+    return data;
+  },
+
+  async getAssetImages(id: string): Promise<AssetImage[]> {
+    const { data } = await api.get(`/inventory/${id}/images`);
+    return data;
+  },
+
+  async uploadAssetImage(id: string, file: File): Promise<AssetImage> {
+    const form = new FormData();
+    form.append('file', file);
+    const { data } = await api.post(`/inventory/${id}/images`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  async deleteAssetImage(id: string, imageId: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/inventory/${id}/images/${imageId}`);
     return data;
   },
 

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, QrCode, Pencil, Package, CheckCircle2,
-  X, User, Clock, Save, Boxes, FileText, Link2,
+  X, User, Clock, Save, Boxes, FileText, Link2, ImagePlus, Trash2,
 } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
@@ -18,6 +18,7 @@ import {
   inventoryService,
   type AssetDetail, type AssetStatus, type AssetAssignment,
   type AssetHistoryEntry, type AssetTicket, type AssetChild, type FieldDef,
+  type AssetImage,
   ASSET_STATUS_LABELS, ASSET_STATUS_COLORS,
   ASSET_ACTION_LABELS, ASSET_ACTION_COLORS,
 } from '@/services/inventory.service';
@@ -130,11 +131,13 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   const moduleId     = inventoryId ?? '';
 
   /* ── UI state ── */
-  const [showQr,    setShowQr]    = useState(false);
-  const [editing,   setEditing]   = useState(false);
-  const [activeTab, setActiveTab] = useState<'tickets' | 'historial' | 'hijos'>('tickets');
-  const [actionErr, setActionErr] = useState('');
+  const [showQr,      setShowQr]      = useState(false);
+  const [editing,     setEditing]     = useState(false);
+  const [activeTab,   setActiveTab]   = useState<'tickets' | 'historial' | 'hijos'>('tickets');
+  const [actionErr,   setActionErr]   = useState('');
   const [transReason, setTransReason] = useState('');
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Queries ── */
   const { data: asset, isLoading } = useQuery<AssetDetail>({
@@ -162,6 +165,12 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     queryFn:  () => inventoryService.getHistory(assetId),
     staleTime: 30_000,
     enabled: activeTab === 'historial',
+  });
+
+  const { data: images = [] } = useQuery<AssetImage[]>({
+    queryKey: ['asset-images', assetId],
+    queryFn:  () => inventoryService.getAssetImages(assetId),
+    staleTime: 60_000,
   });
 
   const { data: children = [] } = useQuery<AssetChild[]>({
@@ -256,6 +265,26 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     onSuccess: () => { inv(); qc.invalidateQueries({ queryKey: ['asset-assignment', assetId] }); },
     onError: (e: any) => setActionErr(e?.response?.data?.message ?? 'Error'),
   });
+
+  const uploadImgMut = useMutation({
+    mutationFn: (file: File) => inventoryService.uploadAssetImage(assetId, file),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['asset-images', assetId] }); inv(); },
+    onError: (e: any) => setActionErr(e?.response?.data?.message ?? 'Error al subir imagen'),
+  });
+
+  const deleteImgMut = useMutation({
+    mutationFn: (imageId: string) => inventoryService.deleteAssetImage(assetId, imageId),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['asset-images', assetId] }); inv(); },
+    onError: (e: any) => setActionErr(e?.response?.data?.message ?? 'Error al eliminar imagen'),
+  });
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setActionErr('La imagen no puede superar 5 MB.'); return; }
+    uploadImgMut.mutate(file);
+    e.target.value = '';
+  }
 
   /* ── Field schema for inline editing ── */
   const fieldSchema: FieldDef[] = useMemo(() => {
@@ -406,15 +435,68 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                   </>
                 )}
               </div>
-              {/* Image / icon panel */}
-              <div style={{ borderLeft: `1px solid ${C.border}`, background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px' }}>
-                <div style={{ width: 72, height: 72, borderRadius: 14, background: `${statusColor}12`, border: `1px solid ${statusColor}25`, display: 'grid', placeItems: 'center' }}>
-                  <Package size={32} style={{ color: statusColor }} />
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: C.navy, margin: '0 0 2px' }}>{asset.category_name}</p>
-                  <p style={{ fontSize: 9, fontWeight: 700, color: C.coral, textTransform: 'uppercase', letterSpacing: '.08em', margin: 0 }}>{asset.module_name}</p>
-                </div>
+              {/* ── Imagen / galería ── */}
+              <div style={{ borderLeft: `1px solid ${C.border}`, background: C.bg, display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>
+                {/* Imagen principal */}
+                {images.length > 0 ? (
+                  <div style={{ position: 'relative', flex: 1, minHeight: 140, cursor: 'pointer' }} onClick={() => setLightboxImg(images[0].storage_url)}>
+                    <img src={images[0].storage_url} alt={images[0].file_name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', minHeight: 140 }} />
+                    {canEdit && (
+                      <button type="button"
+                        onClick={e => { e.stopPropagation(); if (confirm('¿Eliminar esta imagen?')) deleteImgMut.mutate(images[0].id); }}
+                        style={{ position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: 6, background: 'rgba(14,34,53,.7)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#fff' }}>
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '20px', minHeight: 140 }}>
+                    <div style={{ width: 60, height: 60, borderRadius: 12, background: `${statusColor}12`, border: `1px solid ${statusColor}25`, display: 'grid', placeItems: 'center' }}>
+                      <Package size={26} style={{ color: statusColor }} />
+                    </div>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textAlign: 'center', margin: 0 }}>{asset.category_name}</p>
+                  </div>
+                )}
+
+                {/* Thumbnails strip (imágenes 2…5) */}
+                {images.length > 1 && (
+                  <div style={{ display: 'flex', gap: 2, padding: '4px', background: '#e8edf3', flexWrap: 'wrap' }}>
+                    {images.slice(1, 5).map(img => (
+                      <div key={img.id} style={{ position: 'relative', width: 44, height: 44, borderRadius: 4, overflow: 'hidden', cursor: 'pointer', flexShrink: 0 }}
+                        onClick={() => setLightboxImg(img.storage_url)}>
+                        <img src={img.storage_url} alt={img.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {canEdit && (
+                          <button type="button"
+                            onClick={e => { e.stopPropagation(); if (confirm('¿Eliminar?')) deleteImgMut.mutate(img.id); }}
+                            style={{ position: 'absolute', inset: 0, background: 'rgba(14,34,53,.5)', border: 'none', cursor: 'pointer', display: 'none', placeItems: 'center', color: '#fff' }}
+                            className="img-del">
+                            <X size={10} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {images.length > 5 && (
+                      <div style={{ width: 44, height: 44, borderRadius: 4, background: C.navy, display: 'grid', placeItems: 'center', flexShrink: 0, cursor: 'default' }}>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>+{images.length - 5}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                {canEdit && (
+                  <div style={{ padding: '8px', borderTop: `1px solid ${C.border}` }}>
+                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleFileSelect} />
+                    <button type="button"
+                      disabled={uploadImgMut.isPending}
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '6px', borderRadius: 6, border: `1px dashed ${C.coral}55`, background: `${C.coral}08`, fontSize: 10, fontWeight: 700, color: C.coral, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      <ImagePlus size={13} />
+                      {uploadImgMut.isPending ? 'Subiendo…' : 'Subir imagen'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -709,16 +791,20 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             </div>
           )}
 
-          {/* Privacy card */}
-          <div style={{ background: C.navy, borderRadius: 10, padding: '16px' }}>
-            <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.35)', margin: '0 0 4px' }}>Privacidad</p>
-            <p style={{ fontSize: 13, fontWeight: 800, color: '#fff', margin: '0 0 8px' }}>Control de acceso</p>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', margin: 0, lineHeight: 1.55 }}>
-              {canEdit ? 'Vista técnica completa. Serial, QR, historial y auditoría habilitados.' : 'Vista de usuario final. Datos sensibles ocultos por RBAC.'}
-            </p>
-          </div>
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightboxImg && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.88)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}
+          onClick={() => setLightboxImg(null)}>
+          <img src={lightboxImg} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 10, objectFit: 'contain', boxShadow: '0 32px 80px rgba(0,0,0,.5)' }} />
+          <button type="button" onClick={() => setLightboxImg(null)}
+            style={{ position: 'absolute', top: 20, right: 20, width: 38, height: 38, borderRadius: 8, background: 'rgba(255,255,255,.12)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#fff' }}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
       {showQr && <QrModal assetId={assetId} assetName={asset.name} onClose={() => setShowQr(false)} />}
     </ModuleLayout>

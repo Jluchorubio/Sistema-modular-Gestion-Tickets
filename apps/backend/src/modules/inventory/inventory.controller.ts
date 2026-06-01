@@ -1,5 +1,10 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Controller, Get, Post, Patch, Delete, Body, Param, Query,
+  Req, UseGuards, HttpCode, HttpStatus, UploadedFile, UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { InventoryService, CreateAssetDto, AssetStatus } from './inventory.service';
@@ -65,6 +70,34 @@ export class InventoryController {
   @ApiOperation({ summary: 'Activos hijos (parent_asset_id = id).' })
   getChildAssets(@Param('id') id: string) {
     return this.service.getChildAssets(id);
+  }
+
+  @Get(':id/images')
+  @RequirePermission('inventario:items:view')
+  @ApiOperation({ summary: 'Imágenes asociadas al activo.' })
+  getAssetImages(@Param('id') id: string) {
+    return this.service.getAssetImages(id);
+  }
+
+  @Post(':id/images')
+  @RequirePermission('inventario:items:edit')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Subir imagen al activo (máx 5 MB, JPEG/PNG/WebP).' })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  uploadAssetImage(
+    @Req() req: any,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.service.uploadAssetImage(id, req.user.sub, file);
+  }
+
+  @Delete(':id/images/:imageId')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('inventario:items:edit')
+  @ApiOperation({ summary: 'Eliminar imagen del activo.' })
+  deleteAssetImage(@Param('id') id: string, @Param('imageId') imageId: string) {
+    return this.service.deleteAssetImage(imageId, id);
   }
 
   @Post()

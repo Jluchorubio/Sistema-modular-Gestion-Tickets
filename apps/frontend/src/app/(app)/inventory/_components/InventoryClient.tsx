@@ -853,7 +853,16 @@ export function InventoryClient() {
   const goToDetail = (id: string) => router.push(`/inventory/${id}`);
 
   return (
-    <ModuleLayout moduleId={inventoryId || selectedModule || undefined} title="Inventario" description="Registro y trazabilidad de activos organizacionales." isSuperadmin={isSuperadmin}>
+    <ModuleLayout moduleId={inventoryId || selectedModule || undefined} title="Inventario" description="Registro y trazabilidad de activos organizacionales." isSuperadmin={isSuperadmin} hideInfo>
+
+      {/* ── Page header ── */}
+      <div style={{ marginBottom: 20 }}>
+        <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: C.coral, margin: '0 0 3px' }}>
+          Módulo · Inventario
+        </p>
+        <h1 style={{ fontSize: 20, fontWeight: 800, color: C.navy, margin: '0 0 4px', lineHeight: 1.2 }}>Activos operativos</h1>
+        <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>Registro, trazabilidad y control de activos físicos de la organización.</p>
+      </div>
 
       {/* Module selector */}
       {activeModules.length > 0 && (

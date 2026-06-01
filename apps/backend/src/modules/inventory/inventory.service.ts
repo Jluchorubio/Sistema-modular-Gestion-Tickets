@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { QrService } from './qr/qr.service';
+import { FilesService } from '../files/files.service';
 
 export type AssetStatus = 'disponible' | 'asignado' | 'en_reparacion' | 'dado_de_baja';
 
@@ -27,6 +28,7 @@ export class InventoryService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
     private readonly qr: QrService,
+    private readonly files: FilesService,
   ) {}
 
   async findAll(moduleId?: string, status?: string, q?: string) {
@@ -376,6 +378,47 @@ export class InventoryService {
       }
     }
     return { created, errors };
+  }
+
+  /* ── Asset images ───────────────────────────────────────────────────────── */
+
+  async getAssetImages(assetId: string) {
+    return this.db.query<any[]>(
+      `SELECT f.id, f.file_name, f.file_size, f.mime_type, f.storage_url, f.created_at,
+              p.first_name || ' ' || p.last_name AS uploaded_by_name
+       FROM   files.files f
+       LEFT JOIN users.profiles p ON p.id = f.uploaded_by
+       WHERE  f.entity_type = 'asset' AND f.entity_id = $1
+       ORDER  BY f.created_at DESC`,
+      [assetId],
+    );
+  }
+
+  async uploadAssetImage(assetId: string, actorId: string, file: Express.Multer.File) {
+    const { url } = await this.files.save(file);
+    const [record] = await this.db.query<any[]>(
+      `INSERT INTO files.files (uploaded_by, entity_type, entity_id, file_name, file_size, mime_type, storage_url)
+       VALUES ($1, 'asset', $2, $3, $4, $5, $6)
+       RETURNING id, file_name, file_size, mime_type, storage_url, created_at`,
+      [actorId, assetId, file.originalname, file.size, file.mimetype, url],
+    );
+    await this.db.query(
+      `UPDATE inventory.assets SET updated_at = now() WHERE id = $1`,
+      [assetId],
+    );
+    return record;
+  }
+
+  async deleteAssetImage(imageId: string, assetId: string) {
+    const [file] = await this.db.query<{ storage_url: string }[]>(
+      `DELETE FROM files.files
+       WHERE id = $1 AND entity_type = 'asset' AND entity_id = $2
+       RETURNING storage_url`,
+      [imageId, assetId],
+    );
+    if (!file) throw new NotFoundException('Imagen no encontrada');
+    await this.files.delete(file.storage_url);
+    return { ok: true };
   }
 
   async getAssetTickets(assetId: string) {
