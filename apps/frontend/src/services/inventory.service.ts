@@ -43,6 +43,17 @@ export interface AssetHistoryEntry {
   actor_name:  string;
 }
 
+export interface AssetTicket {
+  id:           string;
+  title:        string;
+  priority:     string;
+  created_at:   string;
+  state_label:  string;
+  state_name:   string;
+  is_final:     boolean;
+  creator_name: string;
+}
+
 export interface CreateAssetDto {
   module_id:       string;
   environment_id:  string;
@@ -150,6 +161,11 @@ export const inventoryService = {
 
   async remove(id: string): Promise<{ ok: boolean }> {
     const { data } = await api.delete(`/inventory/${id}`);
+    return data;
+  },
+
+  async getAssetTickets(id: string): Promise<AssetTicket[]> {
+    const { data } = await api.get(`/inventory/${id}/tickets`);
     return data;
   },
 

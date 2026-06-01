@@ -53,6 +53,13 @@ export class InventoryController {
     return this.service.getHistory(id);
   }
 
+  @Get(':id/tickets')
+  @RequirePermission('inventario:items:view')
+  @ApiOperation({ summary: 'Tickets asociados al activo.' })
+  getAssetTickets(@Param('id') id: string) {
+    return this.service.getAssetTickets(id);
+  }
+
   @Post()
   @RequirePermission('inventario:items:create')
   @ApiOperation({ summary: 'Crear activo de inventario.' })

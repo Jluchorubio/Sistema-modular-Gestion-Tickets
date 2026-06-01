@@ -355,6 +355,22 @@ export class InventoryService {
     return { created, errors };
   }
 
+  async getAssetTickets(assetId: string) {
+    return this.db.query<any[]>(
+      `SELECT t.id, t.title, t.priority, t.created_at,
+              s.label AS state_label, s.name AS state_name, s.is_final,
+              p.first_name || ' ' || p.last_name AS creator_name
+       FROM   inventory.ticket_assets ta
+       JOIN   tickets.tickets t  ON t.id  = ta.ticket_id
+       JOIN   tickets.states  s  ON s.id  = t.current_state_id
+       JOIN   users.profiles  p  ON p.id  = t.created_by
+       WHERE  ta.asset_id = $1
+       ORDER  BY t.created_at DESC
+       LIMIT  30`,
+      [assetId],
+    );
+  }
+
   async getQr(id: string) {
     const [asset] = await this.db.query<{ qr_code: string }[]>(
       `SELECT qr_code FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
