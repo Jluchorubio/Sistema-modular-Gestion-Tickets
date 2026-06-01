@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Check, ChevronDown, Plus, X, QrCode, Package, User, Clock, Pencil,
-  Trash2, Search, AlertTriangle, ArrowLeft, Upload,
+  Trash2, Search, AlertTriangle, Upload,
   Boxes, CheckCircle2, Wrench, Ban, LayoutGrid, List, AlignJustify,
 } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
@@ -320,59 +321,62 @@ function ViewModeDropdown({ value, onChange }: { value: ViewMode; onChange: (m: 
   );
 }
 
-/* ── AssetCard (grid view) ───────────────────────────────────────────────── */
+/* ── AssetCard (grid view) — estilo mockup ───────────────────────────────── */
 function AssetCard({ asset, onOpen, onFullDetail }: { asset: AssetListItem; onOpen: () => void; onFullDetail: () => void }) {
-  const color = ASSET_STATUS_COLORS[asset.status];
-  const [hovered, setHovered] = useState(false);
+  const color   = ASSET_STATUS_COLORS[asset.status];
+  const [hov, setHov] = useState(false);
   return (
     <article
       style={{
-        background: '#fff', borderRadius: 10,
-        border: `1px solid ${hovered ? color + '55' : C.border}`,
-        borderLeft: `4px solid ${color}`,
-        boxShadow: hovered ? `0 8px 24px rgba(14,34,53,.09)` : '0 1px 4px rgba(14,34,53,.04)',
-        transition: 'border-color .16s, box-shadow .16s',
+        background: '#fff', borderRadius: 8,
+        border: `1px solid ${hov ? 'rgba(255,94,58,.36)' : C.border}`,
+        boxShadow: hov ? '0 14px 34px rgba(14,34,53,.09)' : '0 1px 4px rgba(14,34,53,.04)',
+        transform: hov ? 'translateY(-2px)' : 'none',
+        transition: 'border-color .18s, box-shadow .18s, transform .18s',
         display: 'flex', flexDirection: 'column',
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
     >
-      {/* Card body */}
-      <div style={{ padding: '16px 16px 12px', flex: 1 }}>
-        {/* Top row */}
+      <div style={{ padding: '16px' }}>
+        {/* Icon + status */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 9, background: `${color}12`, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-            <Package size={17} style={{ color }} />
+          <div style={{ width: 46, height: 46, borderRadius: 8, background: `${color}12`, display: 'grid', placeItems: 'center', border: `1px solid ${color}20` }}>
+            <Package size={19} style={{ color }} />
           </div>
           <StatusBadge status={asset.status} />
         </div>
         {/* Name */}
-        <button type="button" onClick={onOpen} style={{ display: 'block', width: '100%', textAlign: 'left', border: 0, background: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginBottom: 6 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: hovered ? C.coral : C.navy, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color .15s', lineHeight: 1.3 }}>{asset.name}</p>
+        <button type="button" onClick={onOpen} style={{ display: 'block', width: '100%', textAlign: 'left', border: 0, background: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginBottom: 4 }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: hov ? C.coral : C.navy, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color .15s', lineHeight: 1.3 }}>{asset.name}</p>
         </button>
         {/* Meta */}
-        <p style={{ fontSize: 10, color: C.muted, margin: '0 0 14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
-          {asset.category_name} · {asset.environment_name}
+        <p style={{ fontSize: 10, color: C.muted, margin: '0 0 14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace', letterSpacing: '.03em' }}>
+          {asset.qr_code}
         </p>
-        {/* Location + serial row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 10, color: C.muted, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{asset.location_name}</span>
-          {asset.serial_number && (
-            <span style={{ fontSize: 10, color: C.sub, fontFamily: 'monospace', flexShrink: 0, maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {asset.serial_number.length > 12 ? asset.serial_number.slice(0, 12) + '…' : asset.serial_number}
-            </span>
-          )}
+        {/* Location + env */}
+        <div style={{ background: C.surface, borderRadius: 6, padding: '8px 10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: C.navy, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.environment_name}</p>
+              <p style={{ fontSize: 10, color: C.muted, margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.location_name}</p>
+            </div>
+            <button type="button" onClick={onOpen} title="Vista rápida"
+              style={{ width: 32, height: 32, borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.coral, flexShrink: 0 }}>
+              <QrCode size={13} />
+            </button>
+          </div>
         </div>
       </div>
-      {/* Card footer */}
-      <div style={{ borderTop: `1px solid ${C.border}`, padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: C.surface, borderRadius: '0 0 9px 9px' }}>
+      {/* Footer */}
+      <div style={{ borderTop: `1px solid ${C.border}`, padding: '9px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: `${C.surface}99`, borderRadius: '0 0 8px 8px' }}>
         <button type="button" onClick={onOpen}
-          style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: C.muted, fontFamily: 'inherit', padding: '2px 0' }}>
+          style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.muted, fontFamily: 'inherit' }}>
           Quick view
         </button>
         <button type="button" onClick={onFullDetail}
-          style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: C.navy, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 3 }}>
-          Ver detalles <span style={{ color: C.coral }}>→</span>
+          style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.navy, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 3 }}>
+          Ver detalles <span style={{ color: C.coral, fontSize: 12 }}>→</span>
         </button>
       </div>
     </article>
@@ -748,194 +752,9 @@ function AssetDrawer({ assetId, moduleId, canEdit, onClose, onFullDetail }: Draw
   );
 }
 
-/* ── AssetFullDetail ─────────────────────────────────────────────────────── */
-function AssetFullDetail({ assetId, moduleId, canEdit, onBack }: { assetId: string; moduleId: string; canEdit: boolean; onBack: () => void }) {
-  const [showQr,     setShowQr]     = useState(false);
-  const [showDrawer, setShowDrawer] = useState(false);
-
-  const { data: asset, isLoading } = useQuery<AssetDetail>({ queryKey: ['asset-detail', assetId], queryFn: () => inventoryService.getOne(assetId), staleTime: 30_000 });
-  const { data: assignment }       = useQuery<AssetAssignment | null>({ queryKey: ['asset-assignment', assetId], queryFn: () => inventoryService.getCurrentAssignment(assetId), staleTime: 30_000, enabled: asset?.status === 'asignado' });
-  const { data: assetTickets = [] } = useQuery<AssetTicket[]>({ queryKey: ['asset-tickets', assetId], queryFn: () => inventoryService.getAssetTickets(assetId), staleTime: 60_000 });
-
-  if (isLoading) return <div style={{ padding: '60px 0', textAlign: 'center', color: C.muted, fontSize: 13 }}>Cargando ficha…</div>;
-  if (!asset) return null;
-
-  const color = ASSET_STATUS_COLORS[asset.status];
-
-  /* Helper: data row in the ficha */
-  const Row = ({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) => (
-    <div style={{ paddingBottom: 12, borderBottom: `1px solid ${C.border}` }}>
-      <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: C.muted, margin: '0 0 3px' }}>{label}</p>
-      <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: 0, fontFamily: mono ? 'monospace' : 'inherit', wordBreak: 'break-all' }}>{value || '—'}</p>
-    </div>
-  );
-
-  return (
-    <div>
-      {/* Header nav bar */}
-      <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button type="button" onClick={onBack} style={{ width: 36, height: 36, borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, display: 'grid', placeItems: 'center', cursor: 'pointer', color: C.navy }}>
-            <ArrowLeft size={16} />
-          </button>
-          <div>
-            <p style={{ ...SECTION_HEAD, margin: '0 0 2px' }}>Ficha completa del activo</p>
-            <h2 style={{ fontSize: 17, fontWeight: 800, color: C.navy, margin: 0, lineHeight: 1.2 }}>{asset.name}</h2>
-            <p style={{ fontSize: 10, color: C.muted, margin: '3px 0 0', fontFamily: 'monospace' }}>{asset.qr_code} · {asset.category_name}</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <StatusBadge status={asset.status} size="md" />
-          <button type="button" onClick={() => setShowQr(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', fontSize: 11, fontWeight: 700, color: C.coral, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <QrCode size={13} /> Ver QR
-          </button>
-          {canEdit && (
-            <button type="button" onClick={() => setShowDrawer(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 7, border: 'none', background: C.navy, fontSize: 11, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-              <Pencil size={12} /> Editar / Acciones
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Two-column layout */}
-      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0,1fr) 300px', alignItems: 'start' }}>
-
-        {/* ── FICHA TÉCNICA — one elegant card ── */}
-        <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 10px rgba(14,34,53,.05)' }}>
-
-          {/* Card header */}
-          <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0 }}>
-              <div style={{ width: 52, height: 52, borderRadius: 12, background: `${color}12`, border: `1px solid ${color}25`, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                <Package size={22} style={{ color }} />
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: C.coral, margin: '0 0 4px' }}>{asset.module_name} · {asset.category_name}</p>
-                <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: '0 0 5px', lineHeight: 1.2 }}>{asset.name}</h3>
-                {asset.description && <p style={{ fontSize: 12, color: C.sub, margin: 0, lineHeight: 1.55 }}>{asset.description}</p>}
-              </div>
-            </div>
-            <div style={{ flexShrink: 0 }}><StatusBadge status={asset.status} size="md" /></div>
-          </div>
-
-          {/* 3-column data grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
-
-            {/* Col 1: Identificación */}
-            <div style={{ padding: '20px 20px', borderRight: `1px solid ${C.border}` }}>
-              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: C.navy, margin: '0 0 16px', paddingBottom: 8, borderBottom: `2px solid ${C.coral}` }}>Identificación</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {asset.serial_number && <Row label="Serial" value={asset.serial_number} mono />}
-                <Row label="QR Code" value={asset.qr_code} mono />
-                <Row label="Estado" value={ASSET_STATUS_LABELS[asset.status]} />
-                <Row label="Creado" value={fmtDate(asset.created_at)} />
-                <Row label="Actualizado" value={fmtDate(asset.updated_at)} />
-              </div>
-            </div>
-
-            {/* Col 2: Ubicación */}
-            <div style={{ padding: '20px 20px', borderRight: `1px solid ${C.border}` }}>
-              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: C.navy, margin: '0 0 16px', paddingBottom: 8, borderBottom: `2px solid ${C.coral}` }}>Ubicación</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <Row label="Módulo" value={asset.module_name} />
-                <Row label="Categoría" value={asset.category_name} />
-                <Row label="Ambiente" value={asset.environment_name} />
-                <Row label="Sede" value={asset.location_name} />
-              </div>
-            </div>
-
-            {/* Col 3: Asignación */}
-            <div style={{ padding: '20px 20px' }}>
-              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: C.navy, margin: '0 0 16px', paddingBottom: 8, borderBottom: `2px solid ${C.coral}` }}>Asignación</p>
-              {assignment ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {/* Avatar */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#EFF6FF', borderRadius: 8, marginBottom: 4 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: C.navy, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: '#fff' }}>{assignment.user_name.split(' ').slice(0, 2).map((w: string) => w[0]).join('')}</span>
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: '#1E3A5F', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{assignment.user_name}</p>
-                      <p style={{ fontSize: 10, color: '#3B82F6', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{assignment.user_email}</p>
-                    </div>
-                  </div>
-                  <Row label="Asignado por" value={assignment.assigned_by_name} />
-                  <Row label="Fecha asignación" value={fmtDate(assignment.assigned_at)} />
-                  {assignment.notes && <Row label="Notas" value={assignment.notes} />}
-                </div>
-              ) : (
-                <div style={{ padding: '20px 0', textAlign: 'center' }}>
-                  <Package size={22} style={{ color: C.border, display: 'block', margin: '0 auto 8px' }} />
-                  <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{asset.status === 'disponible' ? 'Sin asignación activa' : ASSET_STATUS_LABELS[asset.status]}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Specs section (if exist) */}
-          {asset.specifications && Object.keys(asset.specifications).length > 0 && (
-            <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, background: C.surface }}>
-              <p style={{ ...LABEL, marginBottom: 10 }}>Especificaciones técnicas</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {Object.entries(asset.specifications).map(([k, v]) => (
-                  <span key={k} style={{ fontSize: 11, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 6, padding: '5px 10px', color: C.sub }}>
-                    <strong style={{ color: C.navy, fontWeight: 700 }}>{k}:</strong> {String(v)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── RIGHT: tickets + context ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-          {/* Tickets recientes */}
-          <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '16px', boxShadow: '0 2px 10px rgba(14,34,53,.04)' }}>
-            <p style={SECTION_HEAD}>Tickets recientes</p>
-            <p style={{ fontSize: 13, fontWeight: 800, color: C.navy, margin: '0 0 14px' }}>Últimos casos</p>
-            {assetTickets.length === 0 ? (
-              <div style={{ padding: '18px 0', textAlign: 'center' }}>
-                <CheckCircle2 size={22} style={{ color: C.border, display: 'block', margin: '0 auto 8px' }} />
-                <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>Sin tickets asociados</p>
-              </div>
-            ) : assetTickets.slice(0, 4).map(ticket => {
-              const pColor = PRIORITY_COLORS[ticket.priority] ?? C.muted;
-              return (
-                <div key={ticket.id} style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 5 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: C.coral, fontFamily: 'monospace' }}>#{ticket.id.slice(0, 8)}</span>
-                    <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', color: ticket.is_final ? '#16A34A' : '#C2410C' }}>{ticket.state_label}</span>
-                  </div>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: C.navy, margin: '0 0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.title}</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: C.muted }}>
-                    <span style={{ color: pColor, fontWeight: 700 }}>● {ticket.priority}</span>
-                    <span>{fmtDate(ticket.created_at)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Visibility / RBAC card */}
-          <div style={{ background: C.navy, borderRadius: 10, padding: '16px' }}>
-            <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.35)', margin: '0 0 4px' }}>Visibilidad</p>
-            <p style={{ fontSize: 13, fontWeight: 800, color: '#fff', margin: '0 0 8px' }}>Control de acceso</p>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', margin: 0, lineHeight: 1.55 }}>
-              {canEdit ? 'Vista técnica completa. Serial, QR, historial y auditoría habilitados.' : 'Vista de usuario final. Datos sensibles ocultos por RBAC.'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {showQr     && <QrModal assetId={assetId} assetName={asset.name} onClose={() => setShowQr(false)} />}
-      {showDrawer && <AssetDrawer assetId={assetId} moduleId={moduleId} canEdit={canEdit} onClose={() => setShowDrawer(false)} onFullDetail={() => setShowDrawer(false)} />}
-    </div>
-  );
-}
-
 /* ── InventoryClient (main) ──────────────────────────────────────────────── */
 export function InventoryClient() {
+  const router = useRouter();
   const { modules } = useModules();
   const inventoryId = modules?.find(isInventoryModule)?.id;
   useModuleNav(INVENTORY_MODULE_NAME, INVENTORY_NAV, inventoryId);
@@ -964,7 +783,6 @@ export function InventoryClient() {
   const [categoryFilter,  setCategoryFilter]  = useState('');
   const [viewMode,        setViewMode]        = useState<ViewMode>('card');
   const [drawerAssetId,   setDrawerAssetId]   = useState<string | null>(null);
-  const [fullDetailId,    setFullDetailId]    = useState<string | null>(null);
   const [showCreate,      setShowCreate]      = useState(false);
   const [showScan,        setShowScan]        = useState(false);
   const [showBulk,        setShowBulk]        = useState(false);
@@ -1032,13 +850,7 @@ export function InventoryClient() {
     ['baja',       'Dados de baja',       <Ban size={13} />],
   ];
 
-  if (fullDetailId) {
-    return (
-      <ModuleLayout moduleId={inventoryId || selectedModule || undefined} title="Inventario" description="Ficha completa del activo." isSuperadmin={isSuperadmin}>
-        <AssetFullDetail assetId={fullDetailId} moduleId={selectedModule || inventoryId || ''} canEdit={canEdit} onBack={() => setFullDetailId(null)} />
-      </ModuleLayout>
-    );
-  }
+  const goToDetail = (id: string) => router.push(`/inventory/${id}`);
 
   return (
     <ModuleLayout moduleId={inventoryId || selectedModule || undefined} title="Inventario" description="Registro y trazabilidad de activos organizacionales." isSuperadmin={isSuperadmin}>
@@ -1183,12 +995,12 @@ export function InventoryClient() {
             <>
               {viewMode === 'card' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
-                  {filtered.map(a => <AssetCard key={a.id} asset={a} onOpen={() => setDrawerAssetId(a.id)} onFullDetail={() => setFullDetailId(a.id)} />)}
+                  {filtered.map(a => <AssetCard key={a.id} asset={a} onOpen={() => setDrawerAssetId(a.id)} onFullDetail={() => goToDetail(a.id)} />)}
                 </div>
               )}
               {viewMode === 'list' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  {filtered.map(a => <AssetListRow key={a.id} asset={a} onOpen={() => setDrawerAssetId(a.id)} onFullDetail={() => setFullDetailId(a.id)} />)}
+                  {filtered.map(a => <AssetListRow key={a.id} asset={a} onOpen={() => setDrawerAssetId(a.id)} onFullDetail={() => goToDetail(a.id)} />)}
                 </div>
               )}
               {viewMode === 'summary' && (
@@ -1205,7 +1017,7 @@ export function InventoryClient() {
       {drawerAssetId && (
         <AssetDrawer assetId={drawerAssetId} moduleId={selectedModule || inventoryId || ''} canEdit={canEdit}
           onClose={() => setDrawerAssetId(null)}
-          onFullDetail={() => { setFullDetailId(drawerAssetId); setDrawerAssetId(null); }} />
+          onFullDetail={() => { goToDetail(drawerAssetId!); setDrawerAssetId(null); }} />
       )}
       {showCreate && selectedModule && <CreateModal moduleId={selectedModule} onClose={() => setShowCreate(false)} />}
       {showScan   && <ScanModal onClose={() => setShowScan(false)} onOpen={id => setDrawerAssetId(id)} />}
