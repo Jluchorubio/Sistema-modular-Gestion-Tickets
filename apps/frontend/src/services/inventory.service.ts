@@ -18,8 +18,35 @@ export interface AssetListItem {
   location_name:    string;
 }
 
+export interface FieldDef {
+  key:       string;
+  label:     string;
+  type:      'text' | 'number' | 'date' | 'select' | 'boolean';
+  required?: boolean;
+  options?:  string[];
+}
+
+export interface AssetChild {
+  id:            string;
+  name:          string;
+  status:        AssetStatus;
+  qr_code:       string;
+  serial_number: string | null;
+  category_name: string;
+}
+
 export interface AssetDetail extends AssetListItem {
-  specifications: Record<string, unknown> | null;
+  specifications:      Record<string, unknown> | null;
+  parent_asset_id:     string | null;
+  parent_asset_name:   string | null;
+  parent_asset_status: AssetStatus | null;
+  module_id:           string;
+  environment_id:      string;
+  category_id:         string;
+  field_schema:        FieldDef[];
+  children_count:      number;
+  tickets_count:       number;
+  files_count:         number;
 }
 
 export interface AssetAssignment {
@@ -166,6 +193,11 @@ export const inventoryService = {
 
   async getAssetTickets(id: string): Promise<AssetTicket[]> {
     const { data } = await api.get(`/inventory/${id}/tickets`);
+    return data;
+  },
+
+  async getChildAssets(id: string): Promise<AssetChild[]> {
+    const { data } = await api.get(`/inventory/${id}/children`);
     return data;
   },
 

@@ -64,20 +64,43 @@ export class InventoryService {
     const [asset] = await this.db.query<any[]>(
       `SELECT a.id, a.name, a.description, a.qr_code, a.serial_number,
               a.status, a.version, a.specifications, a.created_at, a.updated_at,
+              a.parent_asset_id, a.module_id, a.environment_id, a.category_id,
               m.name  AS module_name,
               e.name  AS environment_name,
               c.name  AS category_name,
-              l.name  AS location_name
+              c.field_schema,
+              l.name  AS location_name,
+              pa.name   AS parent_asset_name,
+              pa.status AS parent_asset_status,
+              (SELECT COUNT(*)::int FROM inventory.assets ch
+               WHERE ch.parent_asset_id = a.id AND ch.deleted_at IS NULL)  AS children_count,
+              (SELECT COUNT(*)::int FROM inventory.ticket_assets ta
+               WHERE ta.asset_id = a.id)                                   AS tickets_count,
+              (SELECT COUNT(*)::int FROM files.files f
+               WHERE f.entity_type = 'asset' AND f.entity_id = a.id)      AS files_count
        FROM   inventory.assets a
-       JOIN   modules.modules      m ON m.id = a.module_id
-       JOIN   modules.environments e ON e.id = a.environment_id
-       JOIN   modules.categories   c ON c.id = a.category_id
-       JOIN   modules.locations    l ON l.id = e.location_id
+       JOIN   modules.modules      m  ON m.id  = a.module_id
+       JOIN   modules.environments e  ON e.id  = a.environment_id
+       JOIN   modules.categories   c  ON c.id  = a.category_id
+       JOIN   modules.locations    l  ON l.id  = e.location_id
+       LEFT JOIN inventory.assets  pa ON pa.id = a.parent_asset_id AND pa.deleted_at IS NULL
        WHERE  a.id = $1 AND a.deleted_at IS NULL`,
       [id],
     );
     if (!asset) throw new NotFoundException(`Asset ${id} no encontrado`);
     return asset;
+  }
+
+  async getChildAssets(id: string) {
+    return this.db.query<any[]>(
+      `SELECT a.id, a.name, a.status, a.qr_code, a.serial_number,
+              c.name AS category_name
+       FROM   inventory.assets a
+       JOIN   modules.categories c ON c.id = a.category_id
+       WHERE  a.parent_asset_id = $1 AND a.deleted_at IS NULL
+       ORDER  BY a.name`,
+      [id],
+    );
   }
 
   async create(dto: CreateAssetDto) {

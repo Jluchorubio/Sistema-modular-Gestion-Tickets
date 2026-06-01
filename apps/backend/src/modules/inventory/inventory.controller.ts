@@ -60,6 +60,13 @@ export class InventoryController {
     return this.service.getAssetTickets(id);
   }
 
+  @Get(':id/children')
+  @RequirePermission('inventario:items:view')
+  @ApiOperation({ summary: 'Activos hijos (parent_asset_id = id).' })
+  getChildAssets(@Param('id') id: string) {
+    return this.service.getChildAssets(id);
+  }
+
   @Post()
   @RequirePermission('inventario:items:create')
   @ApiOperation({ summary: 'Crear activo de inventario.' })

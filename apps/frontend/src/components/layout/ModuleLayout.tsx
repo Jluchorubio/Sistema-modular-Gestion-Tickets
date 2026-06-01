@@ -15,6 +15,7 @@ interface Props {
   description?: string | null;
   isSuperadmin?: boolean;
   subBar?: React.ReactNode;
+  hideInfo?: boolean;
   children: React.ReactNode;
 }
 
@@ -24,6 +25,7 @@ export function ModuleLayout({
   description,
   isSuperadmin = false,
   subBar,
+  hideInfo = false,
   children,
 }: Props) {
   const [showAccessModal, setShowAccessModal] = useState(false);
@@ -102,6 +104,15 @@ export function ModuleLayout({
           />
         )}
       </>
+    );
+  }
+
+  if (hideInfo) {
+    return (
+      <div className={styles.card}>
+        {subBar}
+        <div style={{ padding: '20px 28px 28px' }}>{children}</div>
+      </div>
     );
   }
 
