@@ -42,7 +42,7 @@ const s = {
     cursor: 'pointer', fontFamily: 'inherit', border: 'none',
     ...(variant === 'save'   && { background: '#059669', color: '#fff' }),
     ...(variant === 'cancel' && { background: '#fff', color: '#64748b', border: '1px solid #e2e8f0' }),
-    ...(variant === 'edit'   && { background: 'transparent', color: '#4f46e5', border: '1px solid #e2e8f0' }),
+    ...(variant === 'edit'   && { background: 'transparent', color: '#0e2235', border: '1px solid #e2e8f0' }),
   } as React.CSSProperties),
 };
 
@@ -173,7 +173,7 @@ export function SlaRequestsTab() {
             const overrides = overridesByPriority.get(prio) ?? [];
             const isOpen    = !!expanded[prio];
             return (
-              <div key={prio} style={{ marginBottom: 8, border: '1px solid #e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
+              <div key={prio} style={{ marginBottom: 8, border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
                 <button
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 14px', background: '#f8fafc', border: 'none',
@@ -190,7 +190,7 @@ export function SlaRequestsTab() {
                     <span style={{ fontSize: 12, color: '#f59e0b', flex: 1 }}>Sin regla global</span>
                   )}
                   {overrides.length > 0 && (
-                    <span style={{ fontSize: 10, color: '#6366f1', background: 'rgba(99,102,241,.08)',
+                    <span style={{ fontSize: 10, color: '#ff5e3a', background: 'rgba(99,102,241,.08)',
                       padding: '2px 8px', borderRadius: 4, border: '1px solid #c7d2fe' }}>
                       {overrides.length} override{overrides.length > 1 ? 's' : ''}
                     </span>
@@ -238,7 +238,7 @@ export function SlaRequestsTab() {
                           <div key={r.id} style={{ ...s.row, marginBottom: 6 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8,
                               marginBottom: editId === r.id ? 4 : 6 }}>
-                              <span style={{ fontSize: 11, color: '#4f46e5', fontFamily: 'monospace',
+                              <span style={{ fontSize: 11, color: '#0e2235', fontFamily: 'monospace',
                                 background: 'rgba(79,70,229,.06)', padding: '1px 6px', borderRadius: 4,
                                 border: '1px solid #c7d2fe' }}>
                                 {r.request_type}
@@ -282,11 +282,11 @@ export function SlaRequestsTab() {
           })}
 
           {/* ¿Qué SLA aplica? simulator */}
-          <div style={{ marginTop: 24, border: '1px solid #e0e7ff', borderRadius: 8,
+          <div style={{ marginTop: 24, border: '1px solid #e0e7ff', borderRadius: 2,
             background: 'rgba(99,102,241,.03)', padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-              <Search size={13} color="#6366f1" />
-              <span style={{ fontSize: 11, fontWeight: 900, color: '#4f46e5',
+              <Search size={13} color="#ff5e3a" />
+              <span style={{ fontSize: 11, fontWeight: 900, color: '#0e2235',
                 textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 ¿Qué SLA aplica?
               </span>
@@ -324,7 +324,7 @@ export function SlaRequestsTab() {
                   </span>
                   <span style={{
                     fontSize: 10, fontStyle: 'italic',
-                    color: effectiveSource === 'type-specific' ? '#059669' : '#6366f1',
+                    color: effectiveSource === 'type-specific' ? '#059669' : '#ff5e3a',
                   }}>
                     {effectiveSource === 'type-specific'
                       ? `override "${simType}"`
@@ -382,7 +382,7 @@ export function SlaRequestsTab() {
                   <div key={r.id} style={s.row}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: editId === r.id ? 4 : 0 }}>
                       <span style={pStyle}>{PRIORITY_LABEL[r.priority]}</span>
-                      <span style={{ fontSize: 11, color: '#4f46e5', fontFamily: 'monospace',
+                      <span style={{ fontSize: 11, color: '#0e2235', fontFamily: 'monospace',
                         background: 'rgba(79,70,229,.06)', padding: '1px 6px', borderRadius: 4,
                         border: '1px solid #c7d2fe' }}>
                         {r.request_type}

@@ -36,7 +36,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 const inp: React.CSSProperties = {
-  border: '1px solid #e2e8f0', borderRadius: 7, padding: '5px 9px',
+  border: '1px solid #e2e8f0', borderRadius: 2, padding: '5px 9px',
   fontSize: 12, fontFamily: 'inherit', background: '#fff',
 };
 
@@ -49,7 +49,7 @@ function ConditionChip({
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px',
-      borderRadius: 99, background: '#f1f5f9', border: '1px solid #e2e8f0',
+      borderRadius: 2, background: '#f1f5f9', border: '1px solid #e2e8f0',
       fontSize: 11, fontWeight: 600, color: '#334155',
     }}>
       <span style={{ color: '#64748b', fontSize: 10 }}>G{cond.logical_group}</span>
@@ -107,13 +107,13 @@ function AddConditionForm({
           onChange={e => setGroup(Number(e.target.value))} style={{ ...inp, width: 50 }} />
       </div>
       <button disabled={!value.trim() || mut.isPending} onClick={handleAdd}
-        style={{ padding: '5px 12px', borderRadius: 7, border: 'none', background: '#0e2235',
+        style={{ padding: '5px 12px', borderRadius: 2, border: 'none', background: '#0e2235',
           color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
           opacity: !value.trim() || mut.isPending ? 0.6 : 1 }}>
         + Agregar
       </button>
       <button onClick={onDone}
-        style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0',
+        style={{ padding: '5px 10px', borderRadius: 2, border: '1px solid #e2e8f0',
           background: '#fff', color: '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
         Cancelar
       </button>
@@ -181,7 +181,7 @@ function SlaRuleRow({
           ? <ChevronDown size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
           : <ChevronRight size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />}
         <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{rule.name}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99,
+        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 2,
           background: `${prioColor}18`, color: prioColor, border: `1px solid ${prioColor}40` }}>
           → {rule.priority_result}
         </span>
@@ -202,13 +202,13 @@ function SlaRuleRow({
             {editingHours ? (
               <>
                 <input type="number" min={1} value={hours} onChange={e => setHours(Number(e.target.value))}
-                  style={{ border: '1px solid #e2e8f0', borderRadius: 7, padding: '4px 8px', fontSize: 12, width: 70, fontFamily: 'inherit' }} />
+                  style={{ border: '1px solid #e2e8f0', borderRadius: 2, padding: '4px 8px', fontSize: 12, width: 70, fontFamily: 'inherit' }} />
                 <button onClick={handleUpdateHours} disabled={updateHoursMut.isPending}
-                  style={{ padding: '4px 10px', borderRadius: 7, border: 'none', background: '#0e2235', color: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ padding: '4px 10px', borderRadius: 2, border: 'none', background: '#0e2235', color: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                   <Check size={11} />
                 </button>
                 <button onClick={() => { setHours(rule.hours_to_resolve); setEditingHours(false); }}
-                  style={{ padding: '4px 8px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ padding: '4px 8px', borderRadius: 2, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                   <X size={11} />
                 </button>
               </>
@@ -242,7 +242,7 @@ function SlaRuleRow({
             ? <AddConditionForm ruleId={rule.id} onDone={() => setAddingCond(false)} triggerCritical={triggerCritical} />
             : (
               <button onClick={() => setAddingCond(true)}
-                style={{ padding: '5px 12px', borderRadius: 7, border: '1px dashed #e2e8f0',
+                style={{ padding: '5px 12px', borderRadius: 2, border: '1px dashed #e2e8f0',
                   background: 'transparent', color: '#64748b', fontSize: 11, cursor: 'pointer',
                   fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <Plus size={10} /> Agregar condición

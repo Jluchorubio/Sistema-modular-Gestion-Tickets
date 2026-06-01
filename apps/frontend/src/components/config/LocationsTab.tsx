@@ -8,7 +8,7 @@ import { Spinner } from '@/components/ui/Spinner';
 interface Props { moduleId: string }
 
 const inp: React.CSSProperties = {
-  width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 6,
+  width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2,
   fontSize: 13, fontFamily: 'inherit', color: '#0e2235', background: '#fff',
   boxSizing: 'border-box', outline: 'none',
 };
@@ -45,11 +45,11 @@ function InlineForm({
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" disabled={!canSave || pending}
           onClick={() => onSave(vals)}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: canSave && !pending ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: canSave && !pending ? 1 : 0.5 }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 2, fontSize: 12, fontWeight: 700, cursor: canSave && !pending ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: canSave && !pending ? 1 : 0.5 }}>
           <Check size={13} /> {pending ? 'Guardando…' : 'Guardar'}
         </button>
         <button type="button" onClick={onCancel}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           <X size={13} /> Cancelar
         </button>
       </div>
@@ -295,7 +295,7 @@ function LocationCard({
             </div>
           ) : (
             <button type="button" onClick={() => setAddingEnv(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: '#fff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: '#fff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: 2, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus size={11} /> Nuevo ambiente
             </button>
           )}
@@ -342,7 +342,7 @@ export function LocationsTab({ moduleId }: Props) {
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, color: '#991b1b', marginBottom: 12 }}>
+        <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 2, fontSize: 12, color: '#991b1b', marginBottom: 12 }}>
           {error}
           <button type="button" onClick={() => setError('')} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 700 }}>✕</button>
         </div>

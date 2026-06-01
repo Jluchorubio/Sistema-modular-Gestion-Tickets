@@ -19,16 +19,16 @@ const overlay: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 const modal: React.CSSProperties = {
-  background: '#fff', borderRadius: 10, width: '100%', maxWidth: 440,
+  background: '#fff', borderRadius: 2, width: '100%', maxWidth: 440,
   padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,.18)',
   display: 'flex', flexDirection: 'column', gap: 16,
 };
 const input: React.CSSProperties = {
   width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0',
-  borderRadius: 6, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box',
+  borderRadius: 2, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box',
 };
 const btnBase: React.CSSProperties = {
-  padding: '9px 18px', borderRadius: 6, fontSize: 13, fontWeight: 700,
+  padding: '9px 18px', borderRadius: 2, fontSize: 13, fontWeight: 700,
   cursor: 'pointer', fontFamily: 'inherit', border: 'none',
 };
 
@@ -80,7 +80,7 @@ export function CriticalChangeModal({ isOpen, meta, onConfirm, onCancel, error, 
 
         {meta.description && (
           <div style={{ fontSize: 12, color: '#475569', background: '#f8fafc',
-            border: '1px solid #e2e8f0', borderRadius: 6, padding: '8px 12px' }}>
+            border: '1px solid #e2e8f0', borderRadius: 2, padding: '8px 12px' }}>
             {meta.description}
           </div>
         )}
@@ -142,7 +142,7 @@ export function CriticalChangeModal({ isOpen, meta, onConfirm, onCancel, error, 
 
           {error && (
             <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2',
-              border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px' }}>
+              border: '1px solid #fecaca', borderRadius: 2, padding: '8px 12px' }}>
               {error}
             </div>
           )}

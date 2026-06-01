@@ -30,7 +30,7 @@ function RadioOption({
   return (
     <label style={{
       display: 'flex', gap: 10, cursor: disabled ? 'default' : 'pointer',
-      alignItems: 'flex-start', padding: '10px 14px', borderRadius: 10,
+      alignItems: 'flex-start', padding: '10px 14px', borderRadius: 2,
       background: checked ? 'rgba(255,94,58,0.05)' : 'transparent',
       border: checked ? '1px solid rgba(255,94,58,0.25)' : '1px solid transparent',
       transition: 'all 0.15s',
@@ -41,7 +41,7 @@ function RadioOption({
         style={{ marginTop: 3, accentColor: '#ff5e3a', cursor: disabled ? 'default' : 'pointer' }}
       />
       <div>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{label}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#0e2235' }}>{label}</span>
         {desc && (
           <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 3, lineHeight: 1.5, margin: '3px 0 0' }}>
             {desc}
@@ -109,7 +109,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
   const card: React.CSSProperties = {
     background: '#fff',
     border: '1px solid #e9eef4',
-    borderRadius: 14,
+    borderRadius: 2,
     padding: '20px 24px',
     marginBottom: 16,
   };
@@ -264,7 +264,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
                     type="date" value={periodStart}
                     onChange={(e) => setPeriodStart(e.target.value)}
                     disabled={!canEdit}
-                    style={{ padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#1e293b', fontFamily: 'inherit', background: '#fff' }}
+                    style={{ padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 13, color: '#0e2235', fontFamily: 'inherit', background: '#fff' }}
                   />
                 </div>
                 <div>
@@ -275,7 +275,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
                     type="date" value={periodEnd} min={periodStart}
                     onChange={(e) => setPeriodEnd(e.target.value)}
                     disabled={!canEdit}
-                    style={{ padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#1e293b', fontFamily: 'inherit', background: '#fff' }}
+                    style={{ padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 13, color: '#0e2235', fontFamily: 'inherit', background: '#fff' }}
                   />
                 </div>
               </div>
@@ -331,7 +331,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
               value={autoCloseHours}
               disabled={!canEdit}
               onChange={e => setAutoCloseHours(Math.max(1, Math.min(720, +e.target.value)))}
-              style={{ width: 80, padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', textAlign: 'center', color: '#0e2235' }}
+              style={{ width: 80, padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', textAlign: 'center', color: '#0e2235' }}
             />
             <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>horas</span>
           </div>
@@ -366,7 +366,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
             disabled={updateMut.isPending}
             style={{
               padding: '9px 22px', background: '#ff5e3a', color: '#fff',
-              border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700,
+              border: 'none', borderRadius: 2, fontSize: 13, fontWeight: 700,
               cursor: updateMut.isPending ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit', opacity: updateMut.isPending ? 0.7 : 1,
             }}
@@ -414,7 +414,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
                             ...p,
                             [rule.priority]: { hrs: e.target.value, hfr: p[rule.priority]?.hfr ?? String(rule.hours_to_first_response) },
                           }))}
-                          style={{ width: 68, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13, fontFamily: 'inherit' }}
+                          style={{ width: 68, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 13, fontFamily: 'inherit' }}
                         />
                       </td>
                       <td style={{ padding: '10px 12px' }}>
@@ -424,7 +424,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
                             ...p,
                             [rule.priority]: { hrs: p[rule.priority]?.hrs ?? String(rule.hours_to_resolve), hfr: e.target.value },
                           }))}
-                          style={{ width: 68, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13, fontFamily: 'inherit' }}
+                          style={{ width: 68, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 13, fontFamily: 'inherit' }}
                         />
                       </td>
                       <td style={{ padding: '10px 12px' }}>
@@ -449,7 +449,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
                                     { onSuccess: () => setSlaEditing((p) => { const n = { ...p }; delete n[rule.priority]; return n; }) },
                                   );
                                 }}
-                                style={{ padding: '4px 10px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                                style={{ padding: '4px 10px', background: '#ff5e3a', color: '#fff', border: 'none', borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                               >
                                 Guardar
                               </button>
@@ -460,7 +460,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
                                 onClick={() => slaResetMut.mutate(rule.priority, {
                                   onSuccess: () => setSlaEditing((p) => { const n = { ...p }; delete n[rule.priority]; return n; }),
                                 })}
-                                style={{ padding: '4px 10px', background: 'transparent', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+                                style={{ padding: '4px 10px', background: 'transparent', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 2, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
                               >
                                 Restablecer
                               </button>

@@ -28,7 +28,7 @@ const s = {
     cursor: 'pointer', fontFamily: 'inherit',
     ...(variant === 'save'   && { background: '#059669', color: '#fff', border: 'none' }),
     ...(variant === 'cancel' && { background: '#fff', color: '#64748b', border: '1px solid #e2e8f0' }),
-    ...(variant === 'edit'   && { background: 'transparent', color: '#4f46e5', border: '1px solid #e2e8f0' }),
+    ...(variant === 'edit'   && { background: 'transparent', color: '#ff5e3a', border: '1px solid #e2e8f0' }),
   } as React.CSSProperties),
 };
 
@@ -103,7 +103,7 @@ export function RequestTypesTab() {
                       <span style={{ ...s.name, opacity: t.is_active ? 1 : 0.45 }}>{t.label}</span>
                       <span style={s.meta}> · <code style={{ fontSize: 11 }}>{t.type_key}</code></span>
                       {t.requires_module && (
-                        <span style={{ ...s.meta, color: '#6366f1' }}> · módulo requerido</span>
+                        <span style={{ ...s.meta, color: '#ff5e3a' }}> · módulo requerido</span>
                       )}
                       {t.allows_manual_priority && (
                         <span style={{ ...s.meta, color: '#f59e0b' }}> · prioridad manual</span>

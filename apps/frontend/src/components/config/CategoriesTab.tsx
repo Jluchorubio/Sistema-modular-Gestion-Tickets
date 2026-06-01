@@ -11,7 +11,7 @@ import { Spinner } from '@/components/ui/Spinner';
 interface Props { moduleId: string }
 
 const inp: React.CSSProperties = {
-  width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 6,
+  width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2,
   fontSize: 13, fontFamily: 'inherit', color: '#0e2235', background: '#fff',
   boxSizing: 'border-box', outline: 'none',
 };
@@ -111,7 +111,7 @@ function FieldSchemaPanel({
         <div key={f.key} style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '5px 8px', background: '#fff', border: '1px solid #e2e8f0',
-          borderRadius: 5, marginBottom: 4,
+          borderRadius: 2, marginBottom: 4,
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: '#0e2235' }}>{f.label}</span>
@@ -124,7 +124,7 @@ function FieldSchemaPanel({
           </div>
 
           <span style={{
-            fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 99,
+            fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 2,
             background: TYPE_COLOR[f.type] + '18', color: TYPE_COLOR[f.type],
             textTransform: 'uppercase', flexShrink: 0,
           }}>
@@ -133,7 +133,7 @@ function FieldSchemaPanel({
 
           {f.required && (
             <span style={{
-              fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 99,
+              fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 2,
               background: '#fef2f2', color: '#ef4444', textTransform: 'uppercase', flexShrink: 0,
             }}>req</span>
           )}
@@ -158,7 +158,7 @@ function FieldSchemaPanel({
       ))}
 
       {adding ? (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, padding: 10, marginTop: 6 }}>
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 2, padding: 10, marginTop: 6 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
             <div>
               <label style={lbl}>Etiqueta *</label>
@@ -204,7 +204,7 @@ function FieldSchemaPanel({
               style={{
                 display: 'flex', alignItems: 'center', gap: 4,
                 padding: '5px 12px', background: '#0e2235', color: '#fff',
-                border: 'none', borderRadius: 5, fontSize: 11, fontWeight: 700,
+                border: 'none', borderRadius: 2, fontSize: 11, fontWeight: 700,
                 cursor: fieldLabel.trim() && !keyConflict ? 'pointer' : 'not-allowed',
                 opacity: fieldLabel.trim() && !keyConflict ? 1 : 0.5, fontFamily: 'inherit',
               }}>
@@ -213,7 +213,7 @@ function FieldSchemaPanel({
             <button
               type="button"
               onClick={() => { setAdding(false); setFieldLabel(''); setFieldType('text'); setRequired(false); setOptions(''); }}
-              style={{ padding: '5px 8px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}>
+              style={{ padding: '5px 8px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}>
               <X size={11} />
             </button>
           </div>
@@ -225,7 +225,7 @@ function FieldSchemaPanel({
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
             padding: '5px 10px', background: '#fff', color: '#475569',
-            border: '1px dashed #cbd5e1', borderRadius: 5,
+            border: '1px dashed #cbd5e1', borderRadius: 2,
             fontSize: 11, fontWeight: 600, cursor: 'pointer',
             fontFamily: 'inherit', marginTop: fields.length > 0 ? 4 : 0,
           }}>
@@ -252,7 +252,7 @@ function CategoryForm({
   const [parent, setParent] = useState<string>(initial?.parent_id ?? parentId ?? '');
 
   return (
-    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 10 }}>
+    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 2, padding: 16, marginBottom: 10 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 10 }}>
         <div>
           <label style={lbl}>Nombre *</label>
@@ -277,11 +277,11 @@ function CategoryForm({
           type="button"
           disabled={!name.trim()}
           onClick={() => onSave({ name, description: desc, parent_id: parent || null })}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: name.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: name.trim() ? 1 : 0.5 }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 2, fontSize: 12, fontWeight: 700, cursor: name.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: name.trim() ? 1 : 0.5 }}>
           <Check size={13} /> Guardar
         </button>
         <button type="button" onClick={onCancel}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           <X size={13} /> Cancelar
         </button>
       </div>
@@ -411,7 +411,7 @@ export function CategoriesTab({ moduleId }: Props) {
           </div>
 
           {depth === 0 && (
-            <span style={{ fontSize: 10, color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: 99, fontWeight: 600, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: 2, fontWeight: 600, flexShrink: 0 }}>
               {children.length} sub
             </span>
           )}
@@ -427,7 +427,7 @@ export function CategoriesTab({ moduleId }: Props) {
               background: isFields ? '#ede9fe' : 'transparent',
               color: isFields ? '#7c3aed' : (fieldCount > 0 ? '#7c3aed' : '#94a3b8'),
               border: `1px solid ${isFields ? '#c4b5fd' : (fieldCount > 0 ? '#ddd6fe' : '#e2e8f0')}`,
-              borderRadius: 5, fontSize: 11, fontWeight: 700,
+              borderRadius: 2, fontSize: 11, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
             }}>
             <SlidersHorizontal size={11} />
@@ -435,13 +435,13 @@ export function CategoriesTab({ moduleId }: Props) {
           </button>
 
           <button type="button" onClick={() => openEdit(cat.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'transparent', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'transparent', color: '#ff5e3a', border: '1px solid rgba(255,94,58,.2)', borderRadius: 2, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             <Pencil size={11} />
           </button>
 
           <button type="button"
             onClick={() => { setConfirmDel(v => !v); setEditId(null); setFieldsOpenId(null); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 2, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             <Trash2 size={11} />
           </button>
 
@@ -519,7 +519,7 @@ export function CategoriesTab({ moduleId }: Props) {
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, color: '#991b1b', marginBottom: 12 }}>
+        <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 2, fontSize: 12, color: '#991b1b', marginBottom: 12 }}>
           {error}
         </div>
       )}
@@ -533,10 +533,10 @@ export function CategoriesTab({ moduleId }: Props) {
       )}
 
       {roots.length === 0 && !showCreate ? (
-        <div style={{ padding: '32px', textAlign: 'center', background: '#f8fafc', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
+        <div style={{ padding: '32px', textAlign: 'center', background: '#f8fafc', borderRadius: 2, border: '1px dashed #e2e8f0' }}>
           <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>Sin categorías configuradas.</div>
           <button type="button" onClick={() => setShowCreate(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 2, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             <Plus size={13} /> Crear primera categoría
           </button>
         </div>
@@ -547,7 +547,7 @@ export function CategoriesTab({ moduleId }: Props) {
           </div>
           {!showCreate && (
             <button type="button" onClick={() => setShowCreate(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', color: '#0e2235', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', color: '#0e2235', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus size={13} /> Nueva categoría
             </button>
           )}
