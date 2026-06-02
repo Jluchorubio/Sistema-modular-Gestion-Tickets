@@ -336,33 +336,77 @@ export class InventoryService {
     );
   }
 
-  async updateAsset(id: string, dto: {
-    name?:            string;
-    description?:     string;
-    serial_number?:   string;
-    specifications?:  Record<string, unknown>;
-    environment_id?:  string;
-    category_id?:     string;
+  async updateAsset(id: string, actorId: string | null, dto: {
+    name?:             string;
+    description?:      string;
+    serial_number?:    string;
+    specifications?:   Record<string, unknown>;
+    environment_id?:   string;
+    category_id?:      string;
+    parent_asset_id?:  string | null;
   }) {
     const fields: string[] = [];
     const values: any[]    = [];
     let idx = 1;
-    const allowed = ['name','description','serial_number','specifications','environment_id','category_id'] as const;
-    for (const k of allowed) {
+    const scalarAllowed = ['name','description','serial_number','environment_id','category_id'] as const;
+    for (const k of scalarAllowed) {
       if (dto[k] !== undefined) {
         fields.push(`${k} = $${idx++}`);
-        values.push(k === 'specifications' ? JSON.stringify(dto[k]) : dto[k]);
+        values.push(dto[k]);
       }
     }
+    if (dto.specifications !== undefined) {
+      fields.push(`specifications = $${idx++}`);
+      values.push(JSON.stringify(dto.specifications));
+    }
+
+    /* parent_asset_id: explicit null clears relation, string sets it */
+    let parentChanged = false;
+    let oldParentId: string | null = null;
+    if ('parent_asset_id' in dto) {
+      if (dto.parent_asset_id === null) {
+        /* fetch old value for history */
+        const [cur] = await this.db.query<{ parent_asset_id: string | null }[]>(
+          `SELECT parent_asset_id FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`, [id],
+        );
+        oldParentId = cur?.parent_asset_id ?? null;
+        fields.push(`parent_asset_id = NULL`);
+        parentChanged = true;
+      } else if (dto.parent_asset_id) {
+        if (dto.parent_asset_id === id) throw new BadRequestException('Un activo no puede ser su propio padre');
+        const [target] = await this.db.query<{ id: string }[]>(
+          `SELECT id FROM inventory.assets WHERE (id::text = $1 OR qr_code = $1) AND deleted_at IS NULL`, [dto.parent_asset_id],
+        );
+        if (!target) throw new NotFoundException(`Activo relacionado "${dto.parent_asset_id}" no encontrado`);
+        fields.push(`parent_asset_id = $${idx++}`);
+        values.push(target.id);
+        parentChanged = true;
+      }
+    }
+
     if (!fields.length) throw new BadRequestException('Nada que actualizar');
     fields.push(`updated_at = now()`);
     values.push(id);
     const [row] = await this.db.query<any[]>(
       `UPDATE inventory.assets SET ${fields.join(', ')}
-       WHERE id = $${idx} AND deleted_at IS NULL RETURNING id, name, serial_number, status`,
+       WHERE id = $${idx} AND deleted_at IS NULL RETURNING id, name, serial_number, status, parent_asset_id`,
       values,
     );
     if (!row) throw new NotFoundException(`Asset ${id} no encontrado`);
+
+    /* Log parent change to history if changed */
+    if (parentChanged && actorId) {
+      const action = dto.parent_asset_id === null ? 'desasociado' : 'asociado';
+      const reason = dto.parent_asset_id === null
+        ? 'Desasociado de activo padre'
+        : `Asociado como componente de: ${dto.parent_asset_id}`;
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+         VALUES ($1, $2, $2, $3, $4)`,
+        [id, actorId, action, reason],
+      ).catch(() => { /* history is best-effort */ });
+    }
+
     return row;
   }
 
@@ -496,7 +540,7 @@ export class InventoryService {
     /* Look up target by UUID or QR code */
     const [target] = await this.db.query<{ id: string; name: string; parent_asset_id: string | null }[]>(
       `SELECT id, name, parent_asset_id FROM inventory.assets
-       WHERE (id = $1 OR qr_code = $1) AND deleted_at IS NULL`,
+       WHERE (id::text = $1 OR qr_code = $1) AND deleted_at IS NULL`,
       [dto.target_id],
     );
     if (!target) throw new NotFoundException(`Activo "${dto.target_id}" no encontrado`);

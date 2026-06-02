@@ -171,16 +171,18 @@ export class InventoryController {
 
   @Patch(':id')
   @RequirePermission('inventario:items:edit')
-  @ApiOperation({ summary: 'Editar datos del activo (nombre, descripción, serie, specs).' })
+  @ApiOperation({ summary: 'Editar datos del activo. parent_asset_id acepta UUID/QR o null para desasociar.' })
   updateAsset(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() dto: {
       name?: string; description?: string; serial_number?: string;
       specifications?: Record<string, unknown>;
       environment_id?: string; category_id?: string;
+      parent_asset_id?: string | null;
     },
   ) {
-    return this.service.updateAsset(id, dto);
+    return this.service.updateAsset(id, req.user.sub, dto);
   }
 
   @Delete(':id')
