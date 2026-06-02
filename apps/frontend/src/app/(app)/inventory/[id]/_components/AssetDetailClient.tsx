@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, QrCode, Pencil, Package, CheckCircle2,
   X, User, Clock, Save, Boxes, FileText, Link2, ImagePlus, Trash2,
-  ChevronRight, Plus,
+  ChevronRight, ChevronLeft, Plus,
 } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
@@ -148,15 +148,25 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   const moduleId     = inventoryId ?? '';
 
   /* ── UI state ── */
-  const [showQr,       setShowQr]       = useState(false);
-  const [editing,      setEditing]      = useState(false);
-  const [actionErr,    setActionErr]    = useState('');
-  const [transReason,  setTransReason]  = useState('');
-  const [lightboxImg,  setLightboxImg]  = useState<string | null>(null);
-  const [hoveredImgId, setHoveredImgId] = useState<string | null>(null);
-  const [newSpecKey,   setNewSpecKey]   = useState('');
-  const [newSpecVal,   setNewSpecVal]   = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showQr,      setShowQr]      = useState(false);
+  const [editing,     setEditing]     = useState(false);
+  const [actionErr,   setActionErr]   = useState('');
+  const [transReason, setTransReason] = useState('');
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [carouselIdx, setCarouselIdx] = useState(0);
+  const [newSpecKey,  setNewSpecKey]  = useState('');
+  const [newSpecVal,  setNewSpecVal]  = useState('');
+  const fileInputRef  = useRef<HTMLInputElement>(null);
+  const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /* startCarousel — declared early, images.length passed as arg */
+  const startCarousel = useCallback((total: number) => {
+    if (total <= 1) return;
+    if (carouselTimer.current) clearInterval(carouselTimer.current);
+    carouselTimer.current = setInterval(() => {
+      setCarouselIdx(i => (i + 1) % total);
+    }, 4000);
+  }, []);
 
   /* ── Queries ── */
   const { data: asset, isLoading } = useQuery<AssetDetail>({
@@ -188,6 +198,23 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     queryFn:  () => inventoryService.getAssetImages(assetId),
     staleTime: 60_000,
   });
+
+  /* Carousel auto-advance — placed after images query */
+  useEffect(() => {
+    if (images.length > 1) startCarousel(images.length);
+    return () => { if (carouselTimer.current) clearInterval(carouselTimer.current); };
+  }, [images.length, startCarousel]);
+
+  function prevSlide() {
+    if (carouselTimer.current) clearInterval(carouselTimer.current);
+    setCarouselIdx(i => (i - 1 + images.length) % images.length);
+    startCarousel(images.length);
+  }
+  function nextSlide() {
+    if (carouselTimer.current) clearInterval(carouselTimer.current);
+    setCarouselIdx(i => (i + 1) % images.length);
+    startCarousel(images.length);
+  }
 
   const { data: children = [] } = useQuery<AssetChild[]>({
     queryKey: ['asset-children', assetId],
@@ -365,23 +392,45 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
       <div style={{ background: '#fff', borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 14, overflow: 'hidden', boxShadow: '0 2px 14px rgba(14,34,53,.07)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr' }}>
 
-          {/* Left: primary image */}
-          <div style={{ background: C.bg, borderRight: `1px solid ${C.border}`, position: 'relative', cursor: images.length > 0 ? 'pointer' : 'default' }}
-            onClick={() => images.length > 0 && setLightboxImg(images[0].storage_url)}>
+          {/* Left: image carousel */}
+          <div style={{ background: C.bg, borderRight: `1px solid ${C.border}`, position: 'relative', height: 190, overflow: 'hidden', flexShrink: 0 }}>
             {images.length > 0 ? (
-              <img src={images[0].storage_url} alt={images[0].file_name}
-                style={{ width: '100%', height: 190, objectFit: 'cover', display: 'block' }} />
+              <>
+                {/* Slide */}
+                <img
+                  src={images[Math.min(carouselIdx, images.length - 1)].storage_url}
+                  alt={images[Math.min(carouselIdx, images.length - 1)].file_name}
+                  style={{ width: '100%', height: 190, objectFit: 'cover', display: 'block', cursor: 'pointer', transition: 'opacity .25s' }}
+                  onClick={() => setLightboxImg(images[Math.min(carouselIdx, images.length - 1)].storage_url)}
+                />
+                {/* Prev / Next */}
+                {images.length > 1 && (
+                  <>
+                    <button type="button" onClick={prevSlide}
+                      style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, borderRadius: 7, background: 'rgba(14,34,53,.6)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#fff' }}>
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button type="button" onClick={nextSlide}
+                      style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, borderRadius: 7, background: 'rgba(14,34,53,.6)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#fff' }}>
+                      <ChevronRight size={14} />
+                    </button>
+                    {/* Dots */}
+                    <div style={{ position: 'absolute', bottom: 7, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
+                      {images.map((_, idx) => (
+                        <button key={idx} type="button"
+                          onClick={() => { if (carouselTimer.current) clearInterval(carouselTimer.current); setCarouselIdx(idx); startCarousel(images.length); }}
+                          style={{ width: idx === Math.min(carouselIdx, images.length - 1) ? 18 : 7, height: 7, borderRadius: 99, background: idx === Math.min(carouselIdx, images.length - 1) ? '#fff' : 'rgba(255,255,255,.5)', border: 'none', cursor: 'pointer', padding: 0, transition: 'width .2s, background .2s' }} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
             ) : (
               <div style={{ height: 190, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10 }}>
                 <div style={{ width: 66, height: 66, borderRadius: 14, background: `${statusColor}14`, border: `1px solid ${statusColor}25`, display: 'grid', placeItems: 'center' }}>
                   <Package size={30} style={{ color: statusColor }} />
                 </div>
                 <p style={{ fontSize: 10, color: C.muted, margin: 0, textAlign: 'center', padding: '0 12px', lineHeight: 1.4 }}>{asset.category_name}</p>
-              </div>
-            )}
-            {images.length > 1 && (
-              <div style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(14,34,53,.7)', borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 700, color: '#fff' }}>
-                +{images.length - 1}
               </div>
             )}
           </div>
@@ -826,26 +875,33 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             </p>
             {images.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 8 }}>
-                {images.map(img => (
-                  <div key={img.id}
-                    style={{ position: 'relative', aspectRatio: '1', borderRadius: 6, overflow: 'hidden', border: `1px solid ${C.border}` }}
-                    onMouseEnter={() => setHoveredImgId(img.id)}
-                    onMouseLeave={() => setHoveredImgId(null)}>
-                    <img
-                      src={img.storage_url}
-                      alt={img.file_name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', display: 'block' }}
-                      onClick={() => setLightboxImg(img.storage_url)}
-                    />
-                    {canEdit && hoveredImgId === img.id && (
-                      <button type="button"
-                        onClick={e => { e.stopPropagation(); if (confirm('¿Eliminar esta imagen?')) deleteImgMut.mutate(img.id); }}
-                        style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(14,34,53,.65)', border: 'none', cursor: 'pointer', color: '#fff' }}>
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                {images.map(img => {
+                  const isDeleting = deleteImgMut.isPending && deleteImgMut.variables === img.id;
+                  return (
+                    <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 6, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+                      <img
+                        src={img.storage_url}
+                        alt={img.file_name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', display: 'block', opacity: isDeleting ? .4 : 1, transition: 'opacity .2s' }}
+                        onClick={() => !isDeleting && setLightboxImg(img.storage_url)}
+                      />
+                      {canEdit && (
+                        isDeleting ? (
+                          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(14,34,53,.45)' }}>
+                            <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
+                          </div>
+                        ) : (
+                          <button type="button"
+                            onClick={e => { e.stopPropagation(); deleteImgMut.mutate(img.id); }}
+                            title="Eliminar imagen"
+                            style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 5, background: 'rgba(239,68,68,.85)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#fff' }}>
+                            <X size={11} />
+                          </button>
+                        )
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Sin imágenes cargadas.</p>
@@ -866,6 +922,8 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
 
         </div>
       </div>
+
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
       {/* ── Lightbox ── */}
       {lightboxImg && (

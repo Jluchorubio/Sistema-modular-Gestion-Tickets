@@ -496,8 +496,8 @@ function AssetDrawer({ assetId, moduleId, canEdit, onClose, onFullDetail }: Draw
 
   return (
     <>
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.25)', zIndex: 48, backdropFilter: 'blur(1px)' }} onClick={onClose} />
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 540, background: '#fff', zIndex: 50, display: 'flex', flexDirection: 'column', boxShadow: '-6px 0 40px rgba(14,34,53,.14)', borderLeft: `1px solid ${C.border}` }}>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.25)', zIndex: 101, backdropFilter: 'blur(1px)' }} onClick={onClose} />
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 540, background: '#fff', zIndex: 102, display: 'flex', flexDirection: 'column', boxShadow: '-6px 0 40px rgba(14,34,53,.14)', borderLeft: `1px solid ${C.border}` }}>
 
         {/* Header */}
         <div style={{ background: C.navy, padding: '20px 20px 0', flexShrink: 0 }}>
