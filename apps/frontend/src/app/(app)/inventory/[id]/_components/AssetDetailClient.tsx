@@ -60,22 +60,7 @@ const C = {
   bg: "#f8fafc",
 };
 
-const FSM_TRANSITIONS: Record<AssetStatus, AssetStatus[]> = {
-  disponible: ["en_reparacion", "dado_de_baja"],
-  asignado: ["en_reparacion", "dado_de_baja"],
-  en_reparacion: ["disponible", "dado_de_baja"],
-  dado_de_baja: [],
-};
-const FSM_LABELS: Partial<Record<AssetStatus, string>> = {
-  en_reparacion: "Enviar a reparación",
-  dado_de_baja: "Dar de baja",
-  disponible: "Marcar disponible",
-};
-const FSM_COLORS: Partial<Record<AssetStatus, string>> = {
-  en_reparacion: "#f59e0b",
-  dado_de_baja: "#ef4444",
-  disponible: "#22c55e",
-};
+
 const PRIORITY_COLORS: Record<string, string> = {
   critica: "#ef4444",
   alta: "#f97316",
@@ -999,15 +984,34 @@ function AssignModal({
   pending,
 }: {
   moduleUsers: any[];
-  onAssign: (userId: string) => void;
+  onAssign: (userId: string, notes?: string) => void;
   onClose: () => void;
   pending: boolean;
 }) {
-  const [userId, setUserId] = useState("");
+  const [userId,      setUserId]      = useState("");
+  const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().slice(0, 10));
+  const [fechaFin,    setFechaFin]    = useState("");
+  const [turno,       setTurno]       = useState("");
+  const [notas,       setNotas]       = useState("");
+
+  function handleSubmit() {
+    if (!userId) return;
+    const parts: string[] = [];
+    if (fechaInicio) parts.push(`Inicio: ${fechaInicio}`);
+    if (fechaFin)    parts.push(`Fin: ${fechaFin}`);
+    if (turno)       parts.push(`Turno: ${turno}`);
+    if (notas.trim()) parts.push(notas.trim());
+    onAssign(userId, parts.length ? parts.join(" | ") : undefined);
+  }
+
+  const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 6px", display: "block" };
+  const SEL: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, boxSizing: "border-box" as const };
+  const INP: React.CSSProperties = { ...SEL };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 400, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 440, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <div>
             <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Responsable / Custodia</p>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Asignar custodio</h3>
@@ -1016,19 +1020,51 @@ function AssignModal({
             <X size={14} />
           </button>
         </div>
-        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Usuario</p>
-        <select value={userId} onChange={(e) => setUserId(e.target.value)}
-          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, marginBottom: 22, boxSizing: "border-box" as const }}>
-          <option value="">Seleccionar usuario…</option>
-          {moduleUsers.map((u: any) => (
-            <option key={u.id} value={u.id}>{u.first_name} {u.last_name} — {u.role_name}</option>
-          ))}
-        </select>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 22 }}>
+          <div>
+            <label style={LBL}>Usuario *</label>
+            <select value={userId} onChange={(e) => setUserId(e.target.value)} style={SEL}>
+              <option value="">Seleccionar usuario…</option>
+              {moduleUsers.map((u: any) => (
+                <option key={u.id} value={u.id}>{u.first_name} {u.last_name} — {u.role_name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={LBL}>Fecha inicio</label>
+              <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} style={INP} />
+            </div>
+            <div>
+              <label style={LBL}>Fecha fin (opcional)</label>
+              <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} style={INP} />
+            </div>
+          </div>
+
+          <div>
+            <label style={LBL}>Turno (opcional)</label>
+            <select value={turno} onChange={(e) => setTurno(e.target.value)} style={SEL}>
+              <option value="">Sin turno específico</option>
+              <option value="Mañana">Mañana</option>
+              <option value="Tarde">Tarde</option>
+              <option value="Noche">Noche</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={LBL}>Observaciones (opcional)</label>
+            <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={2} placeholder="Notas adicionales sobre la asignación…"
+              style={{ ...INP, resize: "vertical" as const, lineHeight: 1.5 }} />
+          </div>
+        </div>
+
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
-          <button type="button" disabled={!userId || pending} onClick={() => { if (userId) onAssign(userId); }}
+          <button type="button" disabled={!userId || pending} onClick={handleSubmit}
             style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: userId && !pending ? C.navy : C.muted, color: "#fff", fontSize: 12, fontWeight: 700, cursor: userId && !pending ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
-            {pending ? "Asignando…" : "Asignar"}
+            {pending ? "Asignando…" : "Asignar custodia"}
           </button>
         </div>
       </div>
@@ -1036,58 +1072,60 @@ function AssignModal({
   );
 }
 
-/* ── StatusModal ── */
-function StatusModal({
-  currentStatus,
-  transitions,
-  onTransition,
+/* ── DecommissionModal ── */
+const MOTIVOS = ["Obsolescencia", "Daño irreparable", "Robo", "Pérdida", "Otro"] as const;
+
+function DecommissionModal({
+  onDecommission,
   onClose,
   pending,
 }: {
-  currentStatus: AssetStatus;
-  transitions: AssetStatus[];
-  onTransition: (status: AssetStatus, reason: string) => void;
+  onDecommission: (reason: string) => void;
   onClose: () => void;
   pending: boolean;
 }) {
-  const [newStatus, setNewStatus] = useState<AssetStatus | "">("");
-  const [reason, setReason] = useState("");
-  const isDanger = newStatus === "dado_de_baja";
+  const [motivo,       setMotivo]       = useState("");
+  const [observaciones, setObservaciones] = useState("");
+
+  function handleConfirm() {
+    if (!motivo) return;
+    const reason = observaciones.trim() ? `${motivo} — ${observaciones.trim()}` : motivo;
+    onDecommission(reason);
+  }
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 400, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <div>
-            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Activo</p>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Cambiar estado</h3>
+            <p style={{ fontSize: 9, fontWeight: 800, color: "#ef4444", textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Acción irreversible</p>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Dar de baja</h3>
           </div>
           <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
             <X size={14} />
           </button>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: C.bg, borderRadius: 9, marginBottom: 18 }}>
-          <p style={{ fontSize: 11, color: C.muted, margin: 0, fontWeight: 600 }}>Estado actual:</p>
-          <StatusBadge status={currentStatus} />
+
+        <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, marginBottom: 20 }}>
+          <p style={{ fontSize: 12, color: "#ef4444", margin: 0, fontWeight: 600 }}>El activo quedará registrado como dado de baja permanentemente y no podrá reactivarse.</p>
         </div>
-        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Nuevo estado</p>
-        <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as AssetStatus)}
-          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, marginBottom: 14, boxSizing: "border-box" as const }}>
-          <option value="">Seleccionar…</option>
-          {transitions.map((s) => <option key={s} value={s}>{FSM_LABELS[s] ?? s}</option>)}
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Motivo *</p>
+        <select value={motivo} onChange={(e) => setMotivo(e.target.value)}
+          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${motivo ? C.border : "#fecaca"}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, marginBottom: 14, boxSizing: "border-box" as const }}>
+          <option value="">Seleccionar motivo…</option>
+          {MOTIVOS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
-        {isDanger && (
-          <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, marginBottom: 14 }}>
-            <p style={{ fontSize: 12, color: "#ef4444", margin: 0, fontWeight: 600 }}>Esta acción no puede revertirse. El activo quedará registrado como dado de baja permanentemente.</p>
-          </div>
-        )}
-        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Motivo (opcional)</p>
-        <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Describe el motivo del cambio…"
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Observaciones (opcional)</p>
+        <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows={2} placeholder="Detalles adicionales sobre la baja…"
           style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", marginBottom: 22, boxSizing: "border-box" as const }} />
+
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
-          <button type="button" disabled={!newStatus || pending} onClick={() => { if (newStatus) onTransition(newStatus as AssetStatus, reason); }}
-            style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: !newStatus || pending ? C.muted : isDanger ? "#ef4444" : C.navy, color: "#fff", fontSize: 12, fontWeight: 700, cursor: !newStatus || pending ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
-            {pending ? "Guardando…" : isDanger ? "Dar de baja" : "Guardar cambio"}
+          <button type="button" disabled={!motivo || pending} onClick={handleConfirm}
+            style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: motivo && !pending ? "#ef4444" : C.muted, color: "#fff", fontSize: 12, fontWeight: 700, cursor: motivo && !pending ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
+            {pending ? "Procesando…" : "Confirmar baja"}
           </button>
         </div>
       </div>
@@ -1159,33 +1197,52 @@ function RelateAssetModal({
 function ReportProblemModal({
   assetName,
   assetId,
+  moduleId,
+  categoryId,
+  environmentId,
   moduleName,
   onClose,
 }: {
   assetName: string;
   assetId: string;
+  moduleId: string;
+  categoryId: string;
+  environmentId: string;
   moduleName: string;
   onClose: () => void;
 }) {
-  const [title, setTitle] = useState(`Problema con: ${assetName}`);
+  const [title,       setTitle]       = useState(`Problema con: ${assetName}`);
   const [description, setDescription] = useState("");
-  const [sent, setSent] = useState(false);
 
   const BTN: React.CSSProperties = {
     padding: "9px 22px", borderRadius: 8, border: "none", fontSize: 12,
     fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
   };
 
-  if (sent) {
+  const createMut = useMutation({
+    mutationFn: () => ticketsService.create({
+      module_id:       moduleId,
+      category_id:     categoryId,
+      environment_id:  environmentId,
+      title:           title.trim(),
+      description:     description.trim() || undefined,
+      asset_id:        assetId,
+    }),
+  });
+
+  if (createMut.isSuccess) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
         <div style={{ background: "#fff", borderRadius: 14, padding: "32px", maxWidth: 380, width: "100%", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#f0fdf4", border: "2px solid #22c55e", display: "grid", placeItems: "center", margin: "0 auto 16px" }}>
             <CheckCircle2 size={24} style={{ color: "#22c55e" }} />
           </div>
-          <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: "0 0 8px" }}>Reporte enviado</h3>
-          <p style={{ fontSize: 13, color: C.sub, margin: "0 0 24px", lineHeight: 1.6 }}>
-            El problema fue reportado al módulo <strong>{moduleName}</strong>. Un técnico lo revisará pronto.
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: "0 0 8px" }}>Ticket creado</h3>
+          <p style={{ fontSize: 13, color: C.sub, margin: "0 0 6px", lineHeight: 1.6 }}>
+            El problema fue reportado en <strong>{moduleName}</strong>.
+          </p>
+          <p style={{ fontSize: 11, color: C.muted, margin: "0 0 24px", fontFamily: "monospace" }}>
+            #{(createMut.data as any)?.id?.slice(0, 8)}
           </p>
           <button type="button" onClick={onClose} style={{ ...BTN, background: C.navy, color: "#fff" }}>Cerrar</button>
         </div>
@@ -1213,7 +1270,15 @@ function ReportProblemModal({
           <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{assetName}</span>
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Título</p>
+        {createMut.isError && (
+          <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, marginBottom: 14 }}>
+            <p style={{ fontSize: 12, color: "#ef4444", margin: 0, fontWeight: 600 }}>
+              {(createMut.error as any)?.response?.data?.message ?? "Error al crear el ticket. Inténtalo de nuevo."}
+            </p>
+          </div>
+        )}
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Asunto *</p>
         <input value={title} onChange={(e) => setTitle(e.target.value)}
           style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", marginBottom: 14, boxSizing: "border-box" as const }} />
 
@@ -1223,13 +1288,10 @@ function ReportProblemModal({
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ ...BTN, border: `1px solid ${C.border}`, background: "#fff", color: C.sub }}>Cancelar</button>
-          <button type="button" disabled={!title.trim()}
-            onClick={() => {
-              /* TODO: wire to ticketsService.create(moduleId, { title, description, asset_id: assetId }) */
-              setSent(true);
-            }}
-            style={{ ...BTN, background: title.trim() ? C.coral : C.muted, color: "#fff", cursor: title.trim() ? "pointer" : "not-allowed" }}>
-            Enviar reporte
+          <button type="button" disabled={!title.trim() || createMut.isPending}
+            onClick={() => { if (title.trim()) createMut.mutate(); }}
+            style={{ ...BTN, background: title.trim() && !createMut.isPending ? C.coral : C.muted, color: "#fff", cursor: title.trim() && !createMut.isPending ? "pointer" : "not-allowed" }}>
+            {createMut.isPending ? "Creando ticket…" : "Reportar problema"}
           </button>
         </div>
       </div>
@@ -1436,9 +1498,9 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   const [editing, setEditing] = useState(false);
   const [actionErr, setActionErr] = useState("");
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
-  const [showAssign, setShowAssign] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showReport, setShowReport] = useState(false);
+  const [showAssign,       setShowAssign]       = useState(false);
+  const [showDecommission, setShowDecommission] = useState(false);
+  const [showReport,       setShowReport]       = useState(false);
   const [showRelate, setShowRelate] = useState(false);
   const [selectedImg, setSelectedImg] = useState(0);
   const [cropPending, setCropPending] = useState<{
@@ -1583,7 +1645,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     mutationFn: ({ status, reason }: { status: AssetStatus; reason?: string }) =>
       inventoryService.transition(assetId, { status, reason: reason || undefined }),
     onSuccess: () => {
-      setShowStatusModal(false);
+      setShowDecommission(false);
       setActionErr("");
       inv();
       qc.invalidateQueries({ queryKey: ["asset-assignment", assetId] });
@@ -1592,8 +1654,8 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   });
 
   const assignMut = useMutation({
-    mutationFn: (userId: string) =>
-      inventoryService.assign(assetId, { user_id: userId }),
+    mutationFn: ({ userId, notes }: { userId: string; notes?: string }) =>
+      inventoryService.assign(assetId, { user_id: userId, notes }),
     onSuccess: () => {
       setShowAssign(false);
       inv();
@@ -2394,7 +2456,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                 )}
                 <div style={{ flex: 1 }} />
                 {canEdit && asset.status !== "dado_de_baja" && (
-                  <button type="button" onClick={() => setShowStatusModal(true)}
+                  <button type="button" onClick={() => setShowDecommission(true)}
                     style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: "1.5px solid #ef444440", background: "#ef444408", fontSize: 12, fontWeight: 700, color: "#ef4444", cursor: "pointer", fontFamily: "inherit" }}>
                     Dar de baja
                   </button>
@@ -2918,18 +2980,16 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
       {showAssign && (
         <AssignModal
           moduleUsers={moduleUsers as any[]}
-          onAssign={(userId) => assignMut.mutate(userId)}
+          onAssign={(userId, notes) => assignMut.mutate({ userId, notes })}
           onClose={() => setShowAssign(false)}
           pending={assignMut.isPending}
         />
       )}
 
-      {showStatusModal && asset && (
-        <StatusModal
-          currentStatus={asset.status}
-          transitions={["dado_de_baja"]}
-          onTransition={(status, reason) => transMut.mutate({ status, reason })}
-          onClose={() => setShowStatusModal(false)}
+      {showDecommission && asset && (
+        <DecommissionModal
+          onDecommission={(reason) => transMut.mutate({ status: "dado_de_baja", reason })}
+          onClose={() => setShowDecommission(false)}
           pending={transMut.isPending}
         />
       )}
@@ -2952,6 +3012,9 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
         <ReportProblemModal
           assetName={asset.name}
           assetId={assetId}
+          moduleId={asset.module_id}
+          categoryId={asset.category_id}
+          environmentId={asset.environment_id}
           moduleName={asset.module_name}
           onClose={() => setShowReport(false)}
         />
