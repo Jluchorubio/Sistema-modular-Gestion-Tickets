@@ -773,34 +773,6 @@ function ImageLightbox({
           )}
         </div>
         <div style={{ display: "flex", gap: 7 }}>
-          {canEdit && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(current.id);
-              }}
-              disabled={deletePending}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "6px 13px",
-                borderRadius: 7,
-                background: "rgba(239,68,68,.8)",
-                border: "none",
-                cursor: "pointer",
-                color: "#fff",
-                fontSize: 11,
-                fontWeight: 700,
-                fontFamily: "inherit",
-                opacity: deletePending ? 0.5 : 1,
-              }}
-            >
-              <Trash2 size={13} />
-              {deletePending ? "Eliminando…" : "Eliminar foto"}
-            </button>
-          )}
           <button
             type="button"
             onClick={(e) => {
@@ -1019,6 +991,252 @@ function ImageLightbox({
   );
 }
 
+/* ── AssignModal ── */
+function AssignModal({
+  moduleUsers,
+  onAssign,
+  onClose,
+  pending,
+}: {
+  moduleUsers: any[];
+  onAssign: (userId: string) => void;
+  onClose: () => void;
+  pending: boolean;
+}) {
+  const [userId, setUserId] = useState("");
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 400, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div>
+            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Responsable / Custodia</p>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Asignar custodio</h3>
+          </div>
+          <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
+            <X size={14} />
+          </button>
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Usuario</p>
+        <select value={userId} onChange={(e) => setUserId(e.target.value)}
+          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, marginBottom: 22, boxSizing: "border-box" as const }}>
+          <option value="">Seleccionar usuario…</option>
+          {moduleUsers.map((u: any) => (
+            <option key={u.id} value={u.id}>{u.first_name} {u.last_name} — {u.role_name}</option>
+          ))}
+        </select>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
+          <button type="button" disabled={!userId || pending} onClick={() => { if (userId) onAssign(userId); }}
+            style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: userId && !pending ? C.navy : C.muted, color: "#fff", fontSize: 12, fontWeight: 700, cursor: userId && !pending ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
+            {pending ? "Asignando…" : "Asignar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── StatusModal ── */
+function StatusModal({
+  currentStatus,
+  transitions,
+  onTransition,
+  onClose,
+  pending,
+}: {
+  currentStatus: AssetStatus;
+  transitions: AssetStatus[];
+  onTransition: (status: AssetStatus, reason: string) => void;
+  onClose: () => void;
+  pending: boolean;
+}) {
+  const [newStatus, setNewStatus] = useState<AssetStatus | "">("");
+  const [reason, setReason] = useState("");
+  const isDanger = newStatus === "dado_de_baja";
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div>
+            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Activo</p>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Cambiar estado</h3>
+          </div>
+          <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
+            <X size={14} />
+          </button>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: C.bg, borderRadius: 9, marginBottom: 18 }}>
+          <p style={{ fontSize: 11, color: C.muted, margin: 0, fontWeight: 600 }}>Estado actual:</p>
+          <StatusBadge status={currentStatus} />
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Nuevo estado</p>
+        <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as AssetStatus)}
+          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, marginBottom: 14, boxSizing: "border-box" as const }}>
+          <option value="">Seleccionar…</option>
+          {transitions.map((s) => <option key={s} value={s}>{FSM_LABELS[s] ?? s}</option>)}
+        </select>
+        {isDanger && (
+          <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, marginBottom: 14 }}>
+            <p style={{ fontSize: 12, color: "#ef4444", margin: 0, fontWeight: 600 }}>Esta acción no puede revertirse. El activo quedará registrado como dado de baja permanentemente.</p>
+          </div>
+        )}
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Motivo (opcional)</p>
+        <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Describe el motivo del cambio…"
+          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", marginBottom: 22, boxSizing: "border-box" as const }} />
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
+          <button type="button" disabled={!newStatus || pending} onClick={() => { if (newStatus) onTransition(newStatus as AssetStatus, reason); }}
+            style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: !newStatus || pending ? C.muted : isDanger ? "#ef4444" : C.navy, color: "#fff", fontSize: 12, fontWeight: 700, cursor: !newStatus || pending ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+            {pending ? "Guardando…" : isDanger ? "Dar de baja" : "Guardar cambio"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── RelateAssetModal ── */
+function RelateAssetModal({
+  currentAssetId,
+  currentAssetName,
+  onRelate,
+  onClose,
+  pending,
+}: {
+  currentAssetId: string;
+  currentAssetName: string;
+  onRelate: (targetId: string, type: "child" | "parent") => void;
+  onClose: () => void;
+  pending: boolean;
+}) {
+  const [assetCode, setAssetCode] = useState("");
+  const [relType, setRelType] = useState<"child" | "parent">("child");
+
+  const BTN: React.CSSProperties = { padding: "9px 22px", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
+  const SEL: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, marginBottom: 14, boxSizing: "border-box" as const };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div>
+            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Relaciones</p>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Asociar dispositivo</h3>
+          </div>
+          <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
+            <X size={14} />
+          </button>
+        </div>
+
+        <div style={{ padding: "10px 14px", background: C.bg, borderRadius: 9, marginBottom: 18, display: "flex", gap: 8, alignItems: "center" }}>
+          <Link2 size={13} style={{ color: C.muted, flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{currentAssetName}</span>
+        </div>
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Tipo de relación</p>
+        <select value={relType} onChange={(e) => setRelType(e.target.value as "child" | "parent")} style={SEL}>
+          <option value="child">Este activo contiene al otro (componente hijo)</option>
+          <option value="parent">El otro activo contiene a este (activo padre)</option>
+        </select>
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>ID o Código QR del dispositivo</p>
+        <input value={assetCode} onChange={(e) => setAssetCode(e.target.value)} placeholder="Ej: QR-PENDING-abc123 o UUID…"
+          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", marginBottom: 22, boxSizing: "border-box" as const }} />
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button type="button" onClick={onClose} style={{ ...BTN, border: `1px solid ${C.border}`, background: "#fff", color: C.sub }}>Cancelar</button>
+          <button type="button" disabled={!assetCode.trim() || pending} onClick={() => { if (assetCode.trim()) onRelate(assetCode.trim(), relType); }}
+            style={{ ...BTN, background: assetCode.trim() && !pending ? C.navy : C.muted, color: "#fff", cursor: assetCode.trim() && !pending ? "pointer" : "not-allowed" }}>
+            {pending ? "Asociando…" : "Asociar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── ReportProblemModal ── */
+function ReportProblemModal({
+  assetName,
+  assetId,
+  moduleName,
+  onClose,
+}: {
+  assetName: string;
+  assetId: string;
+  moduleName: string;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(`Problema con: ${assetName}`);
+  const [description, setDescription] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const BTN: React.CSSProperties = {
+    padding: "9px 22px", borderRadius: 8, border: "none", fontSize: 12,
+    fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+  };
+
+  if (sent) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: "32px", maxWidth: 380, width: "100%", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#f0fdf4", border: "2px solid #22c55e", display: "grid", placeItems: "center", margin: "0 auto 16px" }}>
+            <CheckCircle2 size={24} style={{ color: "#22c55e" }} />
+          </div>
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: "0 0 8px" }}>Reporte enviado</h3>
+          <p style={{ fontSize: 13, color: C.sub, margin: "0 0 24px", lineHeight: 1.6 }}>
+            El problema fue reportado al módulo <strong>{moduleName}</strong>. Un técnico lo revisará pronto.
+          </p>
+          <button type="button" onClick={onClose} style={{ ...BTN, background: C.navy, color: "#fff" }}>Cerrar</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 460, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div>
+            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>
+              {moduleName}
+            </p>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Reportar problema</h3>
+          </div>
+          <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
+            <X size={14} />
+          </button>
+        </div>
+
+        <div style={{ padding: "10px 14px", background: C.bg, borderRadius: 9, marginBottom: 18, display: "flex", gap: 8, alignItems: "center" }}>
+          <Package size={14} style={{ color: C.muted, flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{assetName}</span>
+        </div>
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Título</p>
+        <input value={title} onChange={(e) => setTitle(e.target.value)}
+          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", marginBottom: 14, boxSizing: "border-box" as const }} />
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Descripción</p>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Describe el problema con el mayor detalle posible…"
+          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", marginBottom: 22, boxSizing: "border-box" as const }} />
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button type="button" onClick={onClose} style={{ ...BTN, border: `1px solid ${C.border}`, background: "#fff", color: C.sub }}>Cancelar</button>
+          <button type="button" disabled={!title.trim()}
+            onClick={() => {
+              /* TODO: wire to ticketsService.create(moduleId, { title, description, asset_id: assetId }) */
+              setSent(true);
+            }}
+            style={{ ...BTN, background: title.trim() ? C.coral : C.muted, color: "#fff", cursor: title.trim() ? "pointer" : "not-allowed" }}>
+            Enviar reporte
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── CameraModal — captura via getUserMedia ── */
 function CameraModal({
   onCapture,
@@ -1217,8 +1435,11 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   const [showQr, setShowQr] = useState(false);
   const [editing, setEditing] = useState(false);
   const [actionErr, setActionErr] = useState("");
-  const [transReason, setTransReason] = useState("");
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [showAssign, setShowAssign] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [showRelate, setShowRelate] = useState(false);
   const [selectedImg, setSelectedImg] = useState(0);
   const [cropPending, setCropPending] = useState<{
     file: File;
@@ -1283,7 +1504,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     queryKey: ["module-members", moduleId],
     queryFn: () => usersService.getModuleUsers(moduleId),
     staleTime: 5 * 60_000,
-    enabled: !!moduleId && asset?.status === "disponible",
+    enabled: !!moduleId,
   });
 
   /* Clamp selectedImg */
@@ -1359,13 +1580,10 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   });
 
   const transMut = useMutation({
-    mutationFn: (s: AssetStatus) =>
-      inventoryService.transition(assetId, {
-        status: s,
-        reason: transReason || undefined,
-      }),
+    mutationFn: ({ status, reason }: { status: AssetStatus; reason?: string }) =>
+      inventoryService.transition(assetId, { status, reason: reason || undefined }),
     onSuccess: () => {
-      setTransReason("");
+      setShowStatusModal(false);
       setActionErr("");
       inv();
       qc.invalidateQueries({ queryKey: ["asset-assignment", assetId] });
@@ -1377,6 +1595,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     mutationFn: (userId: string) =>
       inventoryService.assign(assetId, { user_id: userId }),
     onSuccess: () => {
+      setShowAssign(false);
       inv();
       qc.invalidateQueries({ queryKey: ["asset-assignment", assetId] });
       qc.invalidateQueries({ queryKey: ["asset-history", assetId] });
@@ -1888,7 +2107,9 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
               minHeight: 320,
             }}
           >
-            <div>
+            {/* TOP ROW: info left + quick buttons right */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 20 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
               <p
                 style={{
                   fontSize: 11,
@@ -2117,106 +2338,69 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                   </div>
                 </div>
               )}
-            </div>
+              </div>{/* /info left */}
 
-            <div
-              style={{
-                display: "flex",
-                gap: 9,
-                flexWrap: "wrap",
-                marginTop: 28,
-              }}
-            >
-              {canEdit &&
-                asset.status !== "dado_de_baja" &&
-                (editing ? (
+              {/* Quick actions — apilados top-right */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0, minWidth: 116 }}>
+                <button type="button" onClick={() => setShowQr(true)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.coral, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                  <QrCode size={13} /> Ver QR
+                </button>
+                {canEdit && asset.status !== "dado_de_baja" && !editing && (
+                  <button type="button" onClick={startEditing}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                    <Pencil size={13} /> Editar
+                  </button>
+                )}
+                {canEdit && editing && (
                   <>
-                    <button
-                      type="button"
-                      disabled={updateMut.isPending}
-                      onClick={() => updateMut.mutate()}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "9px 20px",
-                        borderRadius: 9,
-                        border: "none",
-                        background: C.navy,
-                        color: "#fff",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        opacity: updateMut.isPending ? 0.6 : 1,
-                      }}
-                    >
-                      <Save size={13} />
-                      {updateMut.isPending ? "Guardando…" : "Guardar cambios"}
+                    <button type="button" disabled={updateMut.isPending} onClick={() => updateMut.mutate()}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none", background: C.navy, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%", opacity: updateMut.isPending ? 0.6 : 1 }}>
+                      <Save size={13} /> {updateMut.isPending ? "Guardando…" : "Guardar"}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditing(false);
-                        setActionErr("");
-                      }}
-                      style={{
-                        padding: "9px 16px",
-                        borderRadius: 9,
-                        border: `1px solid ${C.border}`,
-                        background: "#fff",
-                        fontSize: 12,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        color: C.sub,
-                      }}
-                    >
+                    <button type="button" onClick={() => { setEditing(false); setActionErr(""); }}
+                      style={{ padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub, width: "100%" }}>
                       Cancelar
                     </button>
                   </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={startEditing}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "9px 20px",
-                      borderRadius: 9,
-                      border: `1px solid ${C.border}`,
-                      background: "#fff",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: C.navy,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    <Pencil size={13} /> Editar
+                )}
+              </div>
+            </div>{/* /top flex row */}
+
+            {/* Fila inferior — acciones secundarias */}
+            {!editing && (
+              <div style={{ display: "flex", gap: 8, marginTop: 22, alignItems: "center", flexWrap: "wrap" }}>
+                <button type="button" onClick={() => setShowReport(true)}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                  Reportar problema
+                </button>
+                {canEdit && asset.status === "disponible" && (
+                  <button type="button" onClick={() => setShowAssign(true)}
+                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                    Asignar custodia
                   </button>
-                ))}
-              <button
-                type="button"
-                onClick={() => setShowQr(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "9px 18px",
-                  borderRadius: 9,
-                  border: `1px solid ${C.border}`,
-                  background: "#fff",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: C.coral,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                <QrCode size={13} /> Ver QR
-              </button>
-            </div>
+                )}
+                {canEdit && asset.status === "asignado" && assignment && (
+                  <button type="button" disabled={unassignMut.isPending} onClick={() => unassignMut.mutate()}
+                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: "1.5px solid #ef444455", background: "#ef444408", fontSize: 12, fontWeight: 700, color: "#ef4444", cursor: "pointer", fontFamily: "inherit" }}>
+                    {unassignMut.isPending ? "Devolviendo…" : "Devolver custodia"}
+                  </button>
+                )}
+                {canEdit && (
+                  <button type="button" onClick={() => setShowRelate(true)}
+                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                    Asociar dispositivo
+                  </button>
+                )}
+                <div style={{ flex: 1 }} />
+                {canEdit && asset.status !== "dado_de_baja" && (
+                  <button type="button" onClick={() => setShowStatusModal(true)}
+                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: "1.5px solid #ef444440", background: "#ef444408", fontSize: 12, fontWeight: 700, color: "#ef4444", cursor: "pointer", fontFamily: "inherit" }}>
+                    Dar de baja
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
           {/* ── Especificaciones ── */}
@@ -2360,66 +2544,9 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                   <p style={{ fontSize: 11, color: "#3b82f6", margin: "0 0 2px" }}>{assignment.user_email}</p>
                   <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>Desde {fmtDate(assignment.assigned_at)}</p>
                 </div>
-                {canEdit && (
-                  <button
-                    type="button"
-                    disabled={unassignMut.isPending}
-                    onClick={() => unassignMut.mutate()}
-                    style={{ padding: "6px 12px", borderRadius: 7, border: "1.5px solid #ef444455", background: "#ef444410", color: "#ef4444", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
-                  >
-                    {unassignMut.isPending ? "…" : "Devolver"}
-                  </button>
-                )}
               </div>
             ) : (
-              <div style={{ padding: "12px 14px", background: C.bg, borderRadius: 10, textAlign: "center", marginBottom: 14 }}>
-                <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>Sin custodio asignado</p>
-              </div>
-            )}
-
-            {/* Asignar — solo si disponible y canEdit */}
-            {canEdit && asset.status === "disponible" && (
-              <div style={{ marginBottom: 14 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>
-                  Asignar a
-                </p>
-                <select
-                  style={{ ...INPUT, fontSize: 12 }}
-                  defaultValue=""
-                  onChange={(e) => { if (e.target.value) assignMut.mutate(e.target.value); }}
-                >
-                  <option value="">Seleccionar usuario…</option>
-                  {(moduleUsers as any[]).map((u: any) => (
-                    <option key={u.id} value={u.id}>{u.first_name} {u.last_name} — {u.role_name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Cambiar estado (FSM) */}
-            {canEdit && asset.status !== "dado_de_baja" && FSM_TRANSITIONS[asset.status].length > 0 && (
-              <div style={{ paddingTop: 14, borderTop: `1px solid ${C.border}`, marginBottom: custodianHistory.length > 0 ? 14 : 0 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 9px" }}>
-                  Cambiar estado
-                </p>
-                <input
-                  style={{ ...INPUT, marginBottom: 9, fontSize: 12 }}
-                  placeholder="Motivo (opcional)…"
-                  value={transReason}
-                  onChange={(e) => setTransReason(e.target.value)}
-                />
-                <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                  {FSM_TRANSITIONS[asset.status].map((s) => {
-                    const c = FSM_COLORS[s] ?? C.muted;
-                    return (
-                      <button key={s} type="button" disabled={transMut.isPending} onClick={() => transMut.mutate(s)}
-                        style={{ flex: 1, padding: "8px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, border: `1.5px solid ${c}55`, background: `${c}12`, color: c, cursor: "pointer", fontFamily: "inherit", opacity: transMut.isPending ? 0.5 : 1, whiteSpace: "nowrap" }}>
-                        {FSM_LABELS[s] ?? s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>Sin custodio asignado</p>
             )}
 
             {/* Historial custodios */}
@@ -2788,6 +2915,48 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
         </div>{/* /surface única */}
 
       {/* ── Modals ── */}
+      {showAssign && (
+        <AssignModal
+          moduleUsers={moduleUsers as any[]}
+          onAssign={(userId) => assignMut.mutate(userId)}
+          onClose={() => setShowAssign(false)}
+          pending={assignMut.isPending}
+        />
+      )}
+
+      {showStatusModal && asset && (
+        <StatusModal
+          currentStatus={asset.status}
+          transitions={["dado_de_baja"]}
+          onTransition={(status, reason) => transMut.mutate({ status, reason })}
+          onClose={() => setShowStatusModal(false)}
+          pending={transMut.isPending}
+        />
+      )}
+
+      {showRelate && asset && (
+        <RelateAssetModal
+          currentAssetId={assetId}
+          currentAssetName={asset.name}
+          onRelate={(targetId, type) => {
+            /* TODO: wire to inventoryService.setRelation(assetId, targetId, type) */
+            console.log("Relate:", assetId, "→", targetId, type);
+            setShowRelate(false);
+          }}
+          onClose={() => setShowRelate(false)}
+          pending={false}
+        />
+      )}
+
+      {showReport && asset && (
+        <ReportProblemModal
+          assetName={asset.name}
+          assetId={assetId}
+          moduleName={asset.module_name}
+          onClose={() => setShowReport(false)}
+        />
+      )}
+
       {showCamera && (
         <CameraModal
           onCapture={(file) => {
