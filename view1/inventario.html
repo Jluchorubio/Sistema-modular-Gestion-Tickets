@@ -4,1498 +4,1383 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario de Activos - Modulo Operativo</title>
-
+    <title>IT Control - Consola de Activos Corporativos</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter para tipografía corporativa limpia -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
         rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
                     colors: {
                         brand: {
-                            dark: '#0e2235',
-                            darker: '#061320',
-                            coral: '#ff5e3a',
-                            green: '#20c933',
-                            bg: '#f8fafc',
-                            border: '#e2e8f0',
-                            muted: '#64748b'
+                            dark: '#0e2235',       // Azul oscuro corporativo principal
+                            darker: '#061320',     // Fondo profundo para contraste
+                            neonGreen: '#2ecc71',   // Verde de estado "Disponible"
+                            neonOrange: '#ff9f43',  // Naranja de estado "Asignado"
+                            lightBg: '#f8fafc',    // Fondo general limpio
+                            borderColor: '#cbd5e1' // Bordes finos de precisión
                         }
                     }
                 }
             }
         }
     </script>
-
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f8fafc;
-            color: #0e2235;
-            -webkit-font-smoothing: antialiased;
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
         }
 
-        .grid-backdrop {
-            background-image: radial-gradient(rgba(14, 34, 53, .045) 1px, transparent 1px);
-            background-size: 22px 22px;
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 0px;
         }
 
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
 
-        .asset-card {
-            transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
-        }
-
-        .asset-card:hover {
-            border-color: rgba(255, 94, 58, .36);
-            box-shadow: 0 14px 34px rgba(15, 34, 53, .08);
-            transform: translateY(-2px);
-        }
-
-        .drawer-closed {
-            transform: translateX(104%);
-        }
-
-        .drawer-open {
-            transform: translateX(0);
-        }
-
-        .toast-hidden {
-            opacity: 0;
-            transform: translateY(12px);
-            pointer-events: none;
-        }
-
-        .toast-visible {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
+        /* Estilos de acordeón para hardware */
+        .hardware-details[open] summary i {
+            transform: rotate(180deg);
         }
     </style>
 </head>
 
-<body class="min-h-screen grid-backdrop p-2 md:p-4">
-    <div
-        class="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1480px] flex-col overflow-hidden rounded-lg border border-brand-border bg-white shadow-[0_20px_55px_rgba(15,34,53,.08)]">
+<body class="bg-brand-lightBg font-sans text-slate-800 flex h-screen overflow-hidden">
 
-        <header class="shrink-0 border-b border-brand-border bg-white px-4 py-3 md:px-6">
-            <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="hidden h-10 w-10 place-items-center rounded-md bg-brand-dark text-white md:grid">
-                        <i class="fa-solid fa-boxes-stacked text-sm"></i>
-                    </div>
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span
-                                class="rounded-sm bg-brand-coral/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-brand-coral">Modulo
-                                Inventario</span>
-                            <span id="role-label"
-                                class="rounded-sm bg-brand-dark/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-brand-dark">Admin
-                                / tecnico</span>
-                        </div>
-                        <h1 class="mt-1 text-xl font-black tracking-tight text-brand-dark md:text-2xl">Activos
-                            operativos</h1>
-                    </div>
+    <!-- NOTIFICACIONES TOAST MINIMALISTAS -->
+    <div id="toast"
+        class="fixed top-4 right-4 z-50 transform translate-y-[-150%] transition-all duration-300 bg-brand-dark text-white px-4 py-3 rounded-none shadow-lg border border-slate-700 border-l-4 border-l-brand-neonGreen flex items-center gap-3 pointer-events-none">
+        <i id="toast-icon" class="fa-solid fa-microchip text-brand-neonGreen text-xs"></i>
+        <div>
+            <p id="toast-title" class="font-extrabold text-[9px] uppercase tracking-wider text-slate-400 font-mono">
+                SYS_STATUS</p>
+            <p id="toast-message" class="text-xs font-semibold">Operación completada.</p>
+        </div>
+    </div>
+
+    <!-- SIDEBAR (Navegación Técnica Estrecha) -->
+    <aside
+        class="w-64 bg-brand-dark text-slate-300 flex flex-col justify-between hidden lg:flex shrink-0 border-r border-slate-800">
+        <div>
+            <!-- Header de la Aplicación -->
+            <div class="p-5 flex items-center gap-3 border-b border-slate-800 bg-brand-darker">
+                <div
+                    class="w-8 h-8 rounded-none bg-gradient-to-tr from-brand-neonOrange to-brand-neonGreen flex items-center justify-center text-brand-darker font-black text-sm">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-black text-xs tracking-wider leading-none">IT CONTROL</h1>
+                    <span class="text-[9px] font-mono text-slate-500 font-bold block mt-0.5">V3.5 HARDWARE SUITE</span>
+                </div>
+            </div>
+
+            <!-- Navegación Primaria -->
+            <nav class="p-3 space-y-1">
+                <div class="px-3 py-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono">Monitoreo
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                    <label class="flex h-10 items-center gap-2 rounded-md border border-brand-border bg-slate-50 px-3">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Rol</span>
-                        <select id="role-select" onchange="setRole(this.value)"
-                            class="bg-transparent text-xs font-black text-brand-dark outline-none">
-                            <option value="admin">Administrador</option>
-                            <option value="user">Usuario final</option>
-                        </select>
-                    </label>
-                    <button onclick="openScanModal()"
-                        class="inline-flex h-10 items-center gap-2 rounded-md border border-brand-border bg-white px-3 text-xs font-black text-brand-dark hover:bg-slate-50">
-                        <i class="fa-solid fa-qrcode text-brand-coral"></i>
-                        Escanear QR
+                <a href="#" onclick="switchRole('admin')"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-none transition text-slate-400 hover:bg-slate-800 hover:text-white group">
+                    <i class="fa-solid fa-chart-line w-4 text-center text-xs group-hover:text-brand-neonGreen"></i>
+                    <span class="text-xs font-bold">Consola Global</span>
+                </a>
+
+                <a href="#" onclick="switchRole('user')"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-none bg-slate-800 text-white font-bold border-l-2 border-brand-neonGreen">
+                    <i class="fa-solid fa-boxes-stacked w-4 text-center text-xs text-brand-neonGreen"></i>
+                    <span class="text-xs">Inventario de Activos</span>
+                </a>
+
+                <a href="#"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-none transition text-slate-400 hover:bg-slate-800 hover:text-white group">
+                    <i class="fa-solid fa-wrench w-4 text-center text-xs group-hover:text-brand-neonOrange"></i>
+                    <span class="text-xs font-bold">Incidencias & Soporte</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Usuario de Sesión -->
+        <div class="p-4 border-t border-slate-800 flex items-center gap-3 bg-brand-darker/60">
+            <div
+                class="w-8 h-8 rounded-none bg-slate-700 flex items-center justify-center text-white font-bold text-xs border border-slate-600 font-mono">
+                JR
+            </div>
+            <div class="flex-1 min-w-0 font-sans">
+                <p class="text-xs font-extrabold text-white truncate leading-none">José Rubio</p>
+                <span class="text-[8px] text-slate-400 font-mono block mt-1 tracking-wider uppercase">Operaciones
+                    TI</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- WORKSPACE PRINCIPAL -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-brand-lightBg">
+
+        <!-- HEADER DE ACCIÓN DE DISPOSITIVO -->
+        <header class="h-14 border-b border-slate-200 bg-white px-5 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2">
+                <button class="lg:hidden text-slate-600 mr-2">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <span
+                        class="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest block">Módulo
+                        Operativo</span>
+                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-wider leading-none mt-0.5">Control
+                        Físico de Activos</h2>
+                </div>
+            </div>
+
+            <!-- Alternar de Roles (Switcher elegante para demostración) -->
+            <div class="flex items-center gap-4">
+                <div class="bg-slate-100 p-0.5 rounded-none border border-slate-200 flex items-center">
+                    <button id="btn-role-user" onclick="switchRole('user')"
+                        class="px-3 py-1 text-[10px] font-bold transition-all bg-white text-slate-800 border border-slate-200/50 uppercase tracking-wide">
+                        <i class="fa-solid fa-user mr-1 text-slate-500"></i> Vista: Usuario
                     </button>
-                    <button id="create-btn" onclick="openCreateModal()"
-                        class="inline-flex h-10 items-center gap-2 rounded-md bg-brand-dark px-4 text-xs font-black text-white hover:bg-brand-darker">
-                        <i class="fa-solid fa-plus text-brand-green"></i>
-                        Registrar activo
+                    <button id="btn-role-admin" onclick="switchRole('admin')"
+                        class="px-3 py-1 text-[10px] font-bold transition-all text-slate-500 hover:text-slate-800 uppercase tracking-wide">
+                        <i class="fa-solid fa-user-gear mr-1 text-slate-500"></i> Vista: Admin
                     </button>
                 </div>
+
+                <div class="w-px h-5 bg-slate-200"></div>
+
+                <!-- Notificaciones de Servidor -->
+                <button
+                    class="relative w-8 h-8 hover:bg-slate-100 flex items-center justify-center text-slate-600 transition border border-transparent">
+                    <i class="fa-solid fa-bolt text-xs"></i>
+                    <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-brand-neonOrange rounded-none"></span>
+                </button>
             </div>
         </header>
 
-        <div class="flex min-h-0 flex-1 flex-col-reverse xl:flex-row">
-            <main class="min-w-0 flex-1 overflow-y-auto bg-brand-bg p-4 md:p-6">
-                <div id="inventory-main-view">
-                <section id="admin-metrics" class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
-                    <article class="rounded-md border border-brand-border bg-white p-4">
-                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Total activos</p>
-                        <p id="metric-total" class="mt-2 text-3xl font-black text-brand-dark">0</p>
-                    </article>
-                    <article class="rounded-md border border-brand-border bg-white p-4">
-                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Operativos</p>
-                        <p id="metric-operational" class="mt-2 text-3xl font-black text-brand-dark">0</p>
-                    </article>
-                    <article class="rounded-md border border-brand-border bg-white p-4">
-                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Mantenimiento</p>
-                        <p id="metric-maintenance" class="mt-2 text-3xl font-black text-brand-dark">0</p>
-                    </article>
-                    <article class="rounded-md border border-brand-border bg-white p-4">
-                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Tickets ligados</p>
-                        <p id="metric-tickets" class="mt-2 text-3xl font-black text-brand-dark">0</p>
-                    </article>
-                    <article class="rounded-md border border-brand-border bg-brand-dark p-4 text-white">
-                        <p class="text-[10px] font-black uppercase tracking-wider text-white/55">Salud global</p>
-                        <p id="metric-health" class="mt-2 text-3xl font-black">0%</p>
-                    </article>
-                </section>
+        <!-- CONTENEDOR PRINCIPAL SCROLLABLE -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5" id="main-content-view">
 
-                <section class="rounded-md border border-brand-border bg-white">
-                    <div class="border-b border-brand-border p-4">
-                        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                            <div>
-                                <p id="scope-eyebrow"
-                                    class="text-[10px] font-black uppercase tracking-widest text-brand-coral">Todos los
-                                    activos</p>
-                                <h2 id="scope-title" class="mt-1 text-lg font-black text-brand-dark">Inventario vivo de
-                                    la organizacion</h2>
-                                <p id="scope-copy" class="mt-1 max-w-3xl text-xs font-medium leading-relaxed text-slate-500">
-                                    Vista principal del modulo: activos fisicos, responsables, estado operativo,
-                                    relaciones, trazabilidad y entrada contextual a workflows.
+            <!-- PANEL METRICAS ADMIN -->
+            <section id="admin-dashboard-section" class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">Métricas de
+                        Almacén e Infraestructura</h3>
+                    <span
+                        class="px-2 py-0.5 bg-brand-neonGreen/10 text-brand-neonGreen text-[9px] font-mono font-bold uppercase border border-brand-neonGreen/20">System
+                        Admin Mod</span>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Total Activos</span>
+                        <span class="text-lg font-black text-slate-800 block mt-1 leading-none">1,248</span>
+                        <span class="text-[8px] text-slate-400 block mt-1.5 font-mono">Reg: 100% de la red</span>
+                    </div>
+                    <div class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Disponibles</span>
+                        <span class="text-lg font-black text-brand-neonGreen block mt-1 leading-none">184</span>
+                        <span class="text-[8px] text-brand-neonGreen font-mono block mt-1.5">✓ En stock técnico</span>
+                    </div>
+                    <div class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Asignados</span>
+                        <span class="text-lg font-black text-brand-neonOrange block mt-1 leading-none">1,024</span>
+                        <span class="text-[8px] text-slate-400 block mt-1.5">Con custodios vigentes</span>
+                    </div>
+                    <div class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">En
+                            Mantenimiento</span>
+                        <span class="text-lg font-black text-yellow-500 block mt-1 leading-none">32</span>
+                        <span class="text-[8px] text-yellow-500 font-mono block mt-1.5">⚠️ Requieren atención</span>
+                    </div>
+                    <div
+                        class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all col-span-2 md:col-span-1">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Dados de Baja</span>
+                        <span class="text-lg font-black text-slate-400 block mt-1 leading-none">8</span>
+                        <span class="text-[8px] text-slate-400 font-mono block mt-1.5">Obsolescencia física</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ACCIONES Y FILTRO -->
+            <div class="bg-white p-3 border border-slate-200 flex flex-col sm:flex-row items-center gap-3">
+                <div class="relative flex-1 w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-slate-400 text-xs"></i>
+                    <input type="text" id="asset-search" oninput="filterAssets()"
+                        placeholder="Escribe el nombre, serial, tag de inventario o ubicación para filtrar..."
+                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-dark focus:border-brand-dark transition text-xs font-medium">
+                </div>
+
+                <button onclick="openQrScannerSimulator()"
+                    class="w-full sm:w-auto px-5 py-2.5 bg-brand-dark hover:bg-brand-darker text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shrink-0">
+                    <i class="fa-solid fa-qrcode text-brand-neonGreen"></i>
+                    <span class="uppercase tracking-wider">Escanear QR</span>
+                </button>
+            </div>
+
+            <!-- NIVEL 1: CATÁLOGO DE ACTIVOS -->
+            <div class="space-y-3" id="catalog-section">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <div>
+                        <h3 id="inventory-title" class="text-xs font-black text-slate-800 uppercase tracking-wider">Mis
+                            Dispositivos Asociados</h3>
+                        <p class="text-[10px] text-slate-500 font-mono mt-0.5">Hardware bajo responsabilidad directa en
+                            planta.</p>
+                    </div>
+                    <span id="filtered-count"
+                        class="text-[10px] font-mono font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 border border-slate-200">3
+                        ACTIVOS</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="assets-grid-container">
+                    <!-- Cards inyectadas por JS -->
+                </div>
+            </div>
+
+            <!-- NIVEL 3: CENTRO DE VIDA DEL ACTIVO (FICHA COMPLETA REDISEÑADA) -->
+            <section id="level3-full-details" class="hidden space-y-5 animate-fade-in">
+                <!-- Estructura inyectada dinámicamente -->
+            </section>
+
+        </div>
+    </main>
+
+    <!-- DRAWER LATERAL (NIVEL 2: QUICK VIEW COMPACTO) -->
+    <div id="quick-view-drawer" class="fixed inset-0 z-40 pointer-events-none transition-all duration-200">
+        <div id="drawer-backdrop" onclick="closeQuickView()"
+            class="absolute inset-0 bg-brand-darker/60 opacity-0 pointer-events-none transition-opacity duration-200">
+        </div>
+        <div id="drawer-content"
+            class="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white border-l border-slate-200 transform translate-x-full transition-transform duration-200 ease-out flex flex-col pointer-events-auto">
+            <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-brand-dark text-white">
+                <div>
+                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block tracking-wider">System
+                        Quick Inspection</span>
+                    <h3 class="text-xs font-black uppercase tracking-wider">Quick View de Activo</h3>
+                </div>
+                <button onclick="closeQuickView()"
+                    class="w-6 h-6 hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4" id="drawer-body">
+                <!-- Inyección dinámica -->
+            </div>
+
+            <div class="p-4 border-t border-slate-200 bg-slate-50 space-y-2">
+                <button id="drawer-full-sheet-btn"
+                    class="w-full py-2 bg-brand-dark hover:bg-brand-darker text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 uppercase tracking-wider">
+                    <i class="fa-solid fa-network-wired text-brand-neonGreen"></i> Ver Ficha Completa
+                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="triggerIncident()"
+                        class="py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-[9px] transition-colors flex items-center justify-center gap-1.5 uppercase">
+                        <i class="fa-solid fa-triangle-exclamation text-brand-neonOrange"></i> Incidencia
+                    </button>
+                    <button onclick="showQuickHistory()"
+                        class="py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-[9px] transition-colors flex items-center justify-center gap-1.5 uppercase">
+                        <i class="fa-solid fa-timeline text-blue-500"></i> Historial
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SIMULADOR QR -->
+    <div id="qr-scanner-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-200 p-4">
+        <div class="absolute inset-0 bg-brand-darker/80" onclick="closeQrScannerSimulator()"></div>
+        <div
+            class="bg-white border border-slate-300 w-full max-w-xs p-5 relative z-10 shadow-2xl space-y-4 transform scale-95 transition-transform duration-200">
+            <button onclick="closeQrScannerSimulator()"
+                class="absolute right-3 top-3 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+            <div class="text-center">
+                <div
+                    class="w-10 h-10 bg-brand-neonOrange/10 text-brand-neonOrange flex items-center justify-center mx-auto text-lg border border-brand-neonOrange/20">
+                    <i class="fa-solid fa-qrcode"></i>
+                </div>
+                <h3 class="text-xs font-bold text-slate-800 mt-2 uppercase tracking-wider font-mono">Simulador de
+                    Lectura</h3>
+                <p class="text-[9px] text-slate-400 mt-1">Haz clic sobre un tag para simular el escaneo físico de la
+                    etiqueta del activo.</p>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+                <button onclick="simulateScan('LEN-TC-003')"
+                    class="w-full p-2 border border-slate-200 hover:border-brand-neonOrange hover:bg-slate-50 transition-all text-left flex items-center gap-2">
+                    <div class="w-6 h-6 bg-slate-100 flex items-center justify-center text-slate-500 text-xs"><i
+                            class="fa-solid fa-laptop"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-bold text-slate-800 truncate">Desktop Lenovo ThinkCentre</p>
+                        <p class="text-[8px] font-mono text-slate-400">TAG: LEN-TC-003</p>
+                    </div>
+                </button>
+                <button onclick="simulateScan('HP-450G9-002')"
+                    class="w-full p-2 border border-slate-200 hover:border-brand-neonOrange hover:bg-slate-50 transition-all text-left flex items-center gap-2">
+                    <div class="w-6 h-6 bg-slate-100 flex items-center justify-center text-slate-500 text-xs"><i
+                            class="fa-solid fa-laptop"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-bold text-slate-800 truncate">Laptop HP ProBook 450 G9</p>
+                        <p class="text-[8px] font-mono text-slate-400">TAG: HP-450G9-002</p>
+                    </div>
+                </button>
+                <button onclick="simulateScan('DELL-5420-001')"
+                    class="w-full p-2 border border-slate-200 hover:border-brand-neonOrange hover:bg-slate-50 transition-all text-left flex items-center gap-2">
+                    <div class="w-6 h-6 bg-slate-100 flex items-center justify-center text-slate-500 text-xs"><i
+                            class="fa-solid fa-laptop"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-bold text-slate-800 truncate">Laptop Dell Latitude 5420</p>
+                        <p class="text-[8px] font-mono text-slate-400">TAG: DELL-5420-001</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL QR DEL ACTIVO INDIVIDUAL (SAAS INTERACTION) -->
+    <div id="qr-detail-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-200 p-4">
+        <div class="absolute inset-0 bg-brand-darker/80" onclick="closeQrDetailModal()"></div>
+        <div
+            class="bg-white border border-slate-200 w-full max-w-sm p-6 relative z-10 shadow-2xl space-y-4 transform scale-95 transition-transform duration-200 text-center">
+            <button onclick="closeQrDetailModal()" class="absolute right-4 top-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="space-y-1">
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider font-mono">Código de Etiquetado
+                    Activo</h3>
+                <p id="qr-modal-asset-id" class="text-xs font-mono font-bold text-brand-neonOrange">LEN-TC-003</p>
+            </div>
+
+            <div class="bg-slate-50 p-6 border border-slate-200 inline-block mx-auto rounded-none">
+                <i class="fa-solid fa-qrcode text-8xl text-brand-dark"></i>
+            </div>
+
+            <p class="text-[11px] text-slate-500 leading-normal max-w-xs mx-auto">Este tag QR enlaza directamente con la
+                base de datos de control físico. El escaneo rápido desde terreno abrirá la Quick View.</p>
+
+            <div class="grid grid-cols-3 gap-2 pt-2">
+                <button
+                    onclick="showToast('Impresión', 'Enviando etiqueta de hardware a impresora cebra...', 'fa-print')"
+                    class="py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[9px] uppercase transition-colors">
+                    <i class="fa-solid fa-print block mb-1 text-slate-500"></i> Imprimir
+                </button>
+                <button
+                    onclick="showToast('Descarga', 'Descargando PNG de alta definición del código QR.', 'fa-download')"
+                    class="py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[9px] uppercase transition-colors">
+                    <i class="fa-solid fa-file-arrow-down block mb-1 text-slate-500"></i> Descargar
+                </button>
+                <button onclick="showToast('Copiado', 'Enlace único del activo copiado al portapapeles.', 'fa-link')"
+                    class="py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[9px] uppercase transition-colors">
+                    <i class="fa-solid fa-clipboard block mb-1 text-slate-500"></i> Copiar URL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGICA E INTERACCION DE LA APLICACIÓN -->
+    <script>
+        // BASE DE DATOS DE ACTIVOS DE ALTA GAMA (Alineada al catálogo real de las imágenes)
+        const assetsData = [
+            {
+                id: 'LEN-TC-003',
+                name: 'Desktop Lenovo ThinkCentre',
+                image: 'https://images.unsplash.com/photo-1587831990711-23ca6441447b?w=300&auto=format&fit=crop&q=80',
+                status: 'Disponible',
+                owner: 'José Rubio',
+                ownerType: 'Equipo Principal',
+                location: 'Sede Sur - Almacén Norte',
+                category: 'Equipos de Cómputo',
+                badgeColor: 'brand-neonGreen',
+                children: [
+                    { name: 'Mouse Logitech MX Master 3S', code: 'AST-2026-003', status: 'Activo' },
+                    { name: 'Teclado Mecánico Keychron Q1', code: 'AST-2026-441', status: 'En Mantenimiento' },
+                    { name: 'Soporte Base de Laptop de Aluminio', code: 'AST-2026-015', status: 'Activo' },
+                    { name: 'Dock USB-C Thunderbolt 4', code: 'AST-2026-192', status: 'Activo' }
+                ],
+                techSpecs: {
+                    os: 'Windows 11 Enterprise 23H2 (Build 22631.3527)',
+                    processor: 'Intel Core i5-12400 (6 Cores, 12 Threads, up to 4.4 GHz)',
+                    motherboard: 'LENOVO ThinkCentre M70q Gen 3',
+                    bios_version: 'LENOVO M41KT26A, 10/01/2026',
+                    uuid: '8B3C99D8-11EC-B909-0242-AC12000289DF',
+                    serial_number: 'MJ-082D92L',
+                    mac_ethernet: '74:DE:2B:A3:E5:1F',
+                    mac_wifi: '74:DE:2B:A3:E5:20',
+                    ip_address: '192.168.10.142 (DHCP)',
+                    ram: '16 GB DDR4 Dual-Channel @ 3200 MT/s',
+                    storage: 'Western Digital 512GB NVMe PCIe 4.0 (S.M.A.R.T: Health 99% OK)',
+                    agent_version: 'IT-Agent v3.5 (Active)'
+                },
+                financial: {
+                    provider: 'Lenovo Colombia S.A.S',
+                    invoice: 'FACT-2024-9981',
+                    purchaseDate: '15/01/2024',
+                    guarantee: 'Vigente hasta 15/01/2027',
+                    cost: '$850 USD'
+                },
+                custodians: [
+                    { name: 'José Rubio', role: 'Custodio Mañana (06:00 - 14:00)', avatar: 'JR', email: 'jose.rubio@empresa.com', active: true },
+                    { name: 'Andrés Mendoza', role: 'Custodio Tarde (14:00 - 22:00)', avatar: 'AM', email: 'andres.mendoza@empresa.com', active: false }
+                ],
+                history: [
+                    { date: '30/05/2026', title: 'Asignado a José Rubio', icon: 'fa-user-check', desc: 'Asignación complementaria del pool corporativo.' },
+                    { date: '25/05/2026', title: 'Mantenimiento Preventivo', icon: 'fa-screwdriver-wrench', desc: 'Limpieza interna de disipación y cambio de pasta térmica.' }
+                ],
+                tickets: [
+                    { id: 'TKT-554', title: 'Lentitud en booteo de disco', date: '28/05/2026', status: 'Abierto', priority: 'Media', tech: 'Sebastián Castro' }
+                ],
+                documents: [
+                    { name: 'Factura Compra Original.pdf', size: '1.2 MB', date: '15/01/2024' }
+                ]
+            },
+            {
+                id: 'HP-450G9-002',
+                name: 'Laptop HP ProBook 450 G9',
+                image: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=300&auto=format&fit=crop&q=80',
+                status: 'Disponible',
+                owner: 'José Rubio',
+                ownerType: 'Equipo Principal',
+                location: 'Sede Sur - Almacén Norte',
+                category: 'Equipos de Cómputo',
+                badgeColor: 'brand-neonGreen',
+                children: [],
+                techSpecs: {
+                    os: 'Windows 11 Pro 23H2',
+                    processor: 'Intel Core i5-1235U (10 Cores, 12 Threads)',
+                    motherboard: 'HP 89B5',
+                    bios_version: 'HP U71 v01.23, 14/09/2025',
+                    uuid: '92D731C2-82BC-4309-8812-7F31DDA99120',
+                    serial_number: '5CD23910FL',
+                    mac_ethernet: '10:72:23:45:9B:AA',
+                    mac_wifi: '10:72:23:45:9B:AB',
+                    ip_address: '192.168.10.150',
+                    ram: '8 GB DDR4 @ 3200 MT/s',
+                    storage: '512GB SSD PCIe NVMe',
+                    agent_version: 'IT-Agent v3.5 (Active)'
+                },
+                financial: {
+                    provider: 'HP Store Colombia',
+                    invoice: 'FACT-2024-1102',
+                    purchaseDate: '12/03/2024',
+                    guarantee: 'Vigente hasta 12/03/2026',
+                    cost: '$920 USD'
+                },
+                custodians: [
+                    { name: 'José Rubio', role: 'Custodio Mañana (06:00 - 14:00)', avatar: 'JR', email: 'jose.rubio@empresa.com', active: true }
+                ],
+                history: [
+                    { date: '12/03/2024', title: 'Adquisición inicial', icon: 'fa-shopping-cart', desc: 'Registro de compra y etiquetado QR.' }
+                ],
+                tickets: [],
+                documents: []
+            },
+            {
+                id: 'DELL-5420-001',
+                name: 'Laptop Dell Latitude 5420',
+                image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=300&auto=format&fit=crop&q=80',
+                status: 'Disponible',
+                owner: 'José Rubio',
+                ownerType: 'Equipo de Soporte',
+                location: 'Sede Sur - Almacén Norte',
+                category: 'Equipos de Cómputo',
+                badgeColor: 'brand-neonGreen',
+                children: [],
+                techSpecs: {
+                    os: 'Windows 11 Pro',
+                    processor: 'Intel Core i5-1135G7',
+                    motherboard: 'Dell Inc. 0WYV0Y',
+                    bios_version: 'Dell v1.21.0, 11/11/2025',
+                    uuid: 'A21D112F-92CB-4011-80AC-39180AD1929C',
+                    serial_number: 'H29A10FL',
+                    mac_ethernet: 'A4:1F:72:D2:C1:21',
+                    mac_wifi: 'A4:1F:72:D2:C1:22',
+                    ip_address: '192.168.10.155',
+                    ram: '16 GB DDR4 @ 3200 MT/s',
+                    storage: '256GB SSD PCIe NVMe',
+                    agent_version: 'IT-Agent v3.5 (Active)'
+                },
+                financial: {
+                    provider: 'Dell Colombia',
+                    invoice: 'FACT-2024-0019',
+                    purchaseDate: '20/01/2024',
+                    guarantee: 'Vigente hasta 20/01/2027',
+                    cost: '$780 USD'
+                },
+                custodians: [
+                    { name: 'José Rubio', role: 'Custodio Único', avatar: 'JR', email: 'jose.rubio@empresa.com', active: true }
+                ],
+                history: [
+                    { date: '20/01/2024', title: 'Adquisición inicial', icon: 'fa-shopping-cart', desc: 'Registro y asignación inicial.' }
+                ],
+                tickets: [],
+                documents: []
+            }
+        ];
+
+        let currentRole = 'user';
+        let activeAssetIdForDrawer = null;
+
+        window.onload = function () {
+            renderAssets();
+            switchRole('user');
+        }
+
+        function switchRole(role) {
+            currentRole = role;
+            const btnUser = document.getElementById('btn-role-user');
+            const btnAdmin = document.getElementById('btn-role-admin');
+            const dashboardSection = document.getElementById('admin-dashboard-section');
+            const inventoryTitle = document.getElementById('inventory-title');
+
+            if (role === 'admin') {
+                btnAdmin.className = "px-3 py-1 text-[10px] font-bold transition-all bg-brand-dark text-white border border-transparent uppercase tracking-wide";
+                btnUser.className = "px-3 py-1 text-[10px] font-bold transition-all text-slate-500 hover:text-slate-800 uppercase tracking-wide";
+
+                dashboardSection.classList.remove('hidden');
+                inventoryTitle.innerText = "Base de Datos de Activos de la Empresa";
+                showToast("Consola Admin", "Se ha cargado el módulo administrativo de inventario.", "fa-user-gear");
+            } else {
+                btnUser.className = "px-3 py-1 text-[10px] font-bold transition-all bg-brand-dark text-white border border-transparent uppercase tracking-wide";
+                btnAdmin.className = "px-3 py-1 text-[10px] font-bold transition-all text-slate-500 hover:text-slate-800 uppercase tracking-wide";
+
+                dashboardSection.classList.add('hidden');
+                inventoryTitle.innerText = "Mis Dispositivos Asociados";
+                showToast("Sesión de Colaborador", "Visualizando tus activos directos en planta.", "fa-user");
+            }
+            renderAssets();
+            closeFullSheet();
+        }
+
+        // RENDER DE TARJETAS TÉCNICAS (NIVEL 1 - VISTA RÁPIDA: REDISEÑADO CON EXCELENTE VISUALIZACIÓN DE IMAGEN)
+        function renderAssets(filterText = '') {
+            const container = document.getElementById('assets-grid-container');
+            container.innerHTML = '';
+
+            let filtered = assetsData;
+            if (currentRole === 'user') {
+                filtered = assetsData.filter(asset => asset.owner === 'José Rubio');
+            }
+
+            if (filterText) {
+                const search = filterText.toLowerCase();
+                filtered = filtered.filter(item =>
+                    item.name.toLowerCase().includes(search) ||
+                    item.id.toLowerCase().includes(search) ||
+                    item.location.toLowerCase().includes(search) ||
+                    item.owner.toLowerCase().includes(search)
+                );
+            }
+
+            document.getElementById('filtered-count').innerText = `${filtered.length} DISPOSITIVO${filtered.length === 1 ? '' : 'S'}`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-10 text-center bg-white border border-dashed border-slate-300">
+                        <i class="fa-solid fa-folder-open text-slate-300 text-3xl mb-1 block"></i>
+                        <p class="text-slate-500 text-xs font-bold uppercase font-mono tracking-wider">No se encontraron activos</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(asset => {
+                let stateBadge = '';
+                if (asset.status === 'Asignado') {
+                    stateBadge = `<span class="bg-orange-50 text-brand-neonOrange text-[9px] font-bold px-2 py-0.5 rounded-full border border-orange-100 uppercase tracking-wider">ASIGNADO</span>`;
+                } else if (asset.status === 'Disponible') {
+                    stateBadge = `<span class="bg-emerald-50 text-brand-neonGreen text-[9px] font-bold px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-wider">DISPONIBLE</span>`;
+                } else {
+                    stateBadge = `<span class="bg-red-50 text-red-500 text-[9px] font-bold px-2 py-0.5 rounded-full border border-red-100 uppercase tracking-wider">SOPORTE</span>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-slate-200 overflow-hidden hover:border-slate-350 hover:shadow-sm transition-all duration-150 flex flex-col justify-between rounded-none";
+                card.innerHTML = `
+                    <div class="p-4 flex gap-4 items-start">
+                        <!-- Imagen grande del dispositivo para visualizarlo con nitidez premium -->
+                        <div class="w-24 h-24 border border-slate-200 overflow-hidden bg-slate-50 flex-shrink-0 relative flex items-center justify-center">
+                            <img src="${asset.image}" alt="${asset.name}" class="w-full h-full object-cover rounded-none" onerror="this.src='https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=80'">
+                        </div>
+
+                        <!-- Detalle de jerarquía alineado con Opción 1 de la referencia -->
+                        <div class="flex-1 min-w-0 flex flex-col justify-between h-24">
+                            <div class="flex justify-end items-start">
+                                ${stateBadge}
+                            </div>
+                            
+                            <div class="space-y-1">
+                                <h4 class="text-xs font-black text-slate-800 leading-tight uppercase tracking-wide truncate" title="${asset.name}">
+                                    ${asset.name}
+                                </h4>
+                                <p class="text-[10px] text-slate-400 font-semibold truncate leading-none">
+                                    ${asset.category} • Almacén Norte
                                 </p>
                             </div>
 
-                            <div class="relative">
-                                <button id="layout-dropdown-button" onclick="toggleLayoutMenu()" type="button"
-                                    class="inline-flex h-10 min-w-[132px] items-center justify-between gap-3 rounded-md border border-brand-coral bg-brand-coral px-3 text-xs font-black text-white shadow-sm">
-                                    <span id="layout-dropdown-label">Tarjeta</span>
-                                    <i class="fa-solid fa-chevron-down text-[10px] text-white/80"></i>
-                                </button>
-                                <div id="layout-dropdown-menu"
-                                    class="absolute right-0 z-30 mt-1 hidden w-44 overflow-hidden rounded-md border border-brand-border bg-white py-1 shadow-xl">
-                                    <button onclick="selectLayoutFromMenu('cards')" data-layout-option="cards"
-                                        class="layout-option flex w-full items-center gap-3 px-3 py-2 text-left text-xs font-bold text-brand-dark hover:bg-slate-50">
-                                        <i class="fa-solid fa-check w-3 text-brand-dark"></i> Tarjeta
-                                    </button>
-                                    <button onclick="selectLayoutFromMenu('list')" data-layout-option="list"
-                                        class="layout-option flex w-full items-center gap-3 px-3 py-2 text-left text-xs font-bold text-slate-500 hover:bg-slate-50">
-                                        <i class="fa-solid fa-check invisible w-3"></i> Lista
-                                    </button>
-                                    <button onclick="selectLayoutFromMenu('summary')" data-layout-option="summary"
-                                        class="layout-option flex w-full items-center gap-3 px-3 py-2 text-left text-xs font-bold text-slate-500 hover:bg-slate-50">
-                                        <i class="fa-solid fa-check invisible w-3"></i> Resumen
-                                    </button>
-                                </div>
+                            <div class="flex items-center justify-between text-[9px] text-slate-400 font-mono mt-1 border-t border-slate-100 pt-1.5">
+                                <span>Sede Sur</span>
+                                <span class="font-extrabold text-slate-500 font-sans">${asset.id}</span>
                             </div>
                         </div>
-
-                        <div class="mt-4 grid gap-3 lg:grid-cols-[1fr_170px_170px_170px]">
-                            <label class="flex h-10 items-center gap-2 rounded-md border border-brand-border bg-slate-50 px-3">
-                                <i class="fa-solid fa-magnifying-glass text-xs text-slate-400"></i>
-                                <input id="search-input" oninput="render()"
-                                    placeholder="Buscar activo, responsable, serial, ubicacion..."
-                                    class="w-full bg-transparent text-xs font-semibold text-brand-dark outline-none">
-                            </label>
-                            <select id="category-filter" onchange="render()"
-                                class="h-10 rounded-md border border-brand-border bg-slate-50 px-3 text-xs font-bold text-brand-dark outline-none">
-                                <option value="all">Categoria</option>
-                                <option value="tech">Tecnologia</option>
-                                <option value="books">Biblioteca</option>
-                                <option value="furniture">Mobiliario</option>
-                                <option value="tools">Herramientas</option>
-                                <option value="spaces">Ambientes</option>
-                            </select>
-                            <select id="status-filter" onchange="render()"
-                                class="h-10 rounded-md border border-brand-border bg-slate-50 px-3 text-xs font-bold text-brand-dark outline-none">
-                                <option value="all">Estado</option>
-                                <option value="Operativo">Operativo</option>
-                                <option value="Disponible">Disponible</option>
-                                <option value="En mantenimiento">En mantenimiento</option>
-                                <option value="Reportado">Reportado</option>
-                                <option value="Prestado">Prestado</option>
-                            </select>
-                            <select id="module-filter" onchange="render()"
-                                class="h-10 rounded-md border border-brand-border bg-slate-50 px-3 text-xs font-bold text-brand-dark outline-none">
-                                <option value="all">Workflow</option>
-                                <option value="helpdesk">Helpdesk</option>
-                                <option value="biblioteca">Biblioteca</option>
-                                <option value="facilities">Facilities</option>
-                                <option value="laboratorio">Laboratorio</option>
-                            </select>
-                        </div>
                     </div>
 
-                    <div id="asset-content" class="p-4"></div>
-                </section>
-                </div>
-
-                <section id="asset-full-view" class="hidden"></section>
-            </main>
-
-            <aside
-                class="shrink-0 border-b border-brand-border bg-white xl:w-[332px] xl:border-b-0 xl:border-l xl:border-brand-border">
-                <div class="flex max-h-[42vh] flex-col overflow-y-auto p-4 xl:max-h-none xl:h-full">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-widest text-brand-coral">Navegacion</p>
-                            <h2 class="mt-1 text-sm font-black text-brand-dark">Inventario</h2>
-                        </div>
-                        <button onclick="clearFilters()"
-                            class="rounded-md border border-brand-border bg-white px-2 py-1.5 text-[10px] font-black text-slate-500 hover:text-brand-dark">Limpiar</button>
-                    </div>
-
-                    <nav class="mt-4 space-y-1" id="scope-nav">
-                        <button data-scope="mine" onclick="setScope('mine')"
-                            class="scope-btn flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-xs font-black">
-                            <span><i class="fa-solid fa-user-check mr-2 text-brand-coral"></i>Mis dispositivos</span>
-                            <span id="count-mine" class="text-[10px] text-slate-400">0</span>
+                    <!-- Botones de Acción (Quick View & Ver Detalles) -->
+                    <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-150 flex items-center justify-between">
+                        <button onclick="openQuickView('${asset.id}')" class="text-[9px] font-black text-slate-400 hover:text-brand-dark uppercase tracking-wider transition-colors focus:outline-none">
+                            Quick View
                         </button>
-                        <button data-scope="all" onclick="setScope('all')"
-                            class="scope-btn flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-xs font-black">
-                            <span><i class="fa-solid fa-boxes-stacked mr-2 text-brand-coral"></i>Todos los activos</span>
-                            <span id="count-all" class="text-[10px] text-slate-400">0</span>
+                        <button onclick="openLevel3FullDetails('${asset.id}')" class="text-[9px] font-black text-slate-800 hover:text-brand-neonOrange uppercase tracking-wider transition-colors flex items-center gap-1 focus:outline-none">
+                            <span>Ver Detalles</span>
+                            <i class="fa-solid fa-arrow-right text-[8px]"></i>
                         </button>
-                        <button data-scope="attention" onclick="setScope('attention')"
-                            class="scope-btn flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-xs font-black">
-                            <span><i class="fa-solid fa-triangle-exclamation mr-2 text-brand-coral"></i>Requieren
-                                atencion</span>
-                            <span id="count-attention" class="text-[10px] text-slate-400">0</span>
-                        </button>
-                        <button data-scope="shared" onclick="setScope('shared')"
-                            class="scope-btn flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-xs font-black">
-                            <span><i class="fa-solid fa-people-arrows mr-2 text-brand-coral"></i>Compartidos</span>
-                            <span id="count-shared" class="text-[10px] text-slate-400">0</span>
-                        </button>
-                    </nav>
-
-                    <div class="mt-5 border-t border-brand-border pt-4">
-                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Tipos operativos</p>
-                        <div id="category-summary" class="mt-3 space-y-2"></div>
                     </div>
-
-                    <div id="admin-side-panel" class="mt-5 border-t border-brand-border pt-4">
-                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Panel tecnico</p>
-                        <div class="mt-3 space-y-2">
-                            <button onclick="setScope('warranties')"
-                                class="flex w-full items-center justify-between rounded-md border border-brand-border bg-slate-50 px-3 py-2.5 text-left text-xs font-black text-brand-dark">
-                                <span><i class="fa-solid fa-calendar-check mr-2 text-brand-coral"></i>Garantias proximas</span>
-                                <span id="count-warranties" class="text-[10px] text-slate-400">0</span>
-                            </button>
-                            <button onclick="openAuditModal()"
-                                class="flex w-full items-center justify-between rounded-md border border-brand-border bg-slate-50 px-3 py-2.5 text-left text-xs font-black text-brand-dark">
-                                <span><i class="fa-solid fa-shield-halved mr-2 text-brand-coral"></i>Auditoria</span>
-                                <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
-                            </button>
-                            <button onclick="toast('Preparando plantilla CSV/Excel con validaciones.', 'success')"
-                                class="flex w-full items-center justify-between rounded-md border border-brand-border bg-brand-dark px-3 py-2.5 text-left text-xs font-black text-white">
-                                <span><i class="fa-solid fa-file-import mr-2 text-brand-green"></i>Importacion masiva</span>
-                                <i class="fa-solid fa-chevron-right text-[10px] text-white/50"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 border-t border-brand-border pt-4">
-                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Actividad reciente</p>
-                        <div id="recent-activity" class="mt-2 divide-y divide-slate-100"></div>
-                    </div>
-                </div>
-            </aside>
-        </div>
-    </div>
-
-    <section id="detail-drawer"
-        class="drawer-closed fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l border-brand-border bg-white shadow-2xl transition-transform duration-300">
-        <div class="border-b border-brand-border bg-brand-dark p-5 text-white">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <p id="drawer-module" class="text-[10px] font-black uppercase tracking-widest text-brand-coral">
-                        Workflow</p>
-                    <h2 id="drawer-title" class="mt-1 text-lg font-black">Activo</h2>
-                    <p id="drawer-subtitle" class="mt-1 text-xs font-medium text-white/60">ID</p>
-                </div>
-                <button onclick="closeDrawer()"
-                    class="grid h-9 w-9 place-items-center rounded-md bg-white/10 text-white hover:bg-white/15">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div class="mt-4 grid grid-cols-4 gap-2">
-                <button data-tab="general" onclick="setDrawerTab('general')"
-                    class="drawer-tab rounded-md bg-white px-2 py-2 text-[11px] font-black text-brand-dark">General</button>
-                <button data-tab="relations" onclick="setDrawerTab('relations')"
-                    class="drawer-tab rounded-md bg-white/10 px-2 py-2 text-[11px] font-black text-white">Relaciones</button>
-                <button data-tab="tickets" onclick="setDrawerTab('tickets')"
-                    class="drawer-tab rounded-md bg-white/10 px-2 py-2 text-[11px] font-black text-white">Tickets</button>
-                <button data-tab="history" onclick="setDrawerTab('history')"
-                    class="drawer-tab rounded-md bg-white/10 px-2 py-2 text-[11px] font-black text-white">Historial</button>
-            </div>
-        </div>
-        <div id="drawer-body" class="flex-1 overflow-y-auto p-5"></div>
-    </section>
-
-    <div id="scan-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/45 p-4">
-        <div class="w-full max-w-md rounded-lg border border-brand-border bg-white p-5 shadow-2xl">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-brand-coral">QR / Serial</p>
-                    <h2 class="mt-1 text-lg font-black text-brand-dark">Buscar activo fisico</h2>
-                    <p class="mt-1 text-xs font-medium leading-relaxed text-slate-500">El QR no se muestra en cada card:
-                        se consulta desde acciones para no saturar la vista principal.</p>
-                </div>
-                <button onclick="closeScanModal()" class="text-slate-400 hover:text-brand-dark">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div class="mt-4 rounded-md border border-dashed border-brand-coral bg-slate-50 p-5 text-center">
-                <i class="fa-solid fa-qrcode text-5xl text-brand-dark"></i>
-                <p class="mt-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Simulador de lectura</p>
-            </div>
-            <div class="mt-3 flex flex-wrap gap-2">
-                <button onclick="fillScan('AST-2026-002')"
-                    class="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black text-brand-dark">Propio</button>
-                <button onclick="fillScan('AST-2026-005')"
-                    class="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black text-brand-dark">Compartido</button>
-                <button onclick="fillScan('AST-2026-001')"
-                    class="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black text-brand-dark">Restringido</button>
-            </div>
-            <input id="scan-input" placeholder="AST-2026-002, QR-DIS-WS-42 o serial..."
-                class="mt-3 h-11 w-full rounded-md border border-brand-border bg-slate-50 px-3 text-center text-xs font-black text-brand-dark outline-none focus:border-brand-coral">
-            <button onclick="submitScan()"
-                class="mt-3 h-11 w-full rounded-md bg-brand-coral text-xs font-black text-white">Abrir activo</button>
-        </div>
-    </div>
-
-    <div id="create-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/45 p-4">
-        <div class="w-full max-w-xl rounded-lg border border-brand-border bg-white p-5 shadow-2xl">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-brand-coral">Registro rapido</p>
-                    <h2 class="mt-1 text-lg font-black text-brand-dark">Nuevo activo</h2>
-                </div>
-                <button onclick="closeCreateModal()" class="text-slate-400 hover:text-brand-dark">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <form onsubmit="createAsset(event)" class="mt-4 grid gap-3 md:grid-cols-2">
-                <input id="new-name" required placeholder="Nombre"
-                    class="h-10 rounded-md border border-brand-border bg-slate-50 px-3 text-xs font-bold outline-none">
-                <select id="new-category"
-                    class="h-10 rounded-md border border-brand-border bg-slate-50 px-3 text-xs font-bold outline-none">
-                    <option value="tech">Tecnologia</option>
-                    <option value="books">Biblioteca</option>
-                    <option value="furniture">Mobiliario</option>
-                    <option value="tools">Herramientas</option>
-                    <option value="spaces">Ambiente fisico</option>
-                </select>
-                <input id="new-owner" placeholder="Responsable"
-                    class="h-10 rounded-md border border-brand-border bg-slate-50 px-3 text-xs font-bold outline-none">
-                <input id="new-location" placeholder="Ubicacion"
-                    class="h-10 rounded-md border border-brand-border bg-slate-50 px-3 text-xs font-bold outline-none">
-                <input id="new-serial" placeholder="Serial"
-                    class="h-10 rounded-md border border-brand-border bg-slate-50 px-3 text-xs font-bold outline-none md:col-span-2">
-                <button class="h-11 rounded-md bg-brand-dark text-xs font-black text-white md:col-span-2">Guardar</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="audit-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/45 p-4">
-        <div class="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-brand-border bg-white p-5 shadow-2xl">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-brand-coral">Auditoria</p>
-                    <h2 class="mt-1 text-lg font-black text-brand-dark">Trazabilidad operacional</h2>
-                </div>
-                <button onclick="closeAuditModal()" class="text-slate-400 hover:text-brand-dark">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div id="audit-list" class="mt-4 divide-y divide-slate-100"></div>
-        </div>
-    </div>
-
-    <div id="toast"
-        class="toast-hidden fixed bottom-5 right-5 z-[70] max-w-sm rounded-md border border-brand-border bg-white px-4 py-3 text-xs font-bold text-brand-dark shadow-2xl transition-all duration-200">
-        <span id="toast-text">Listo</span>
-    </div>
-
-    <script>
-        const categoryConfig = {
-            tech: { label: 'Tecnologia', icon: 'fa-laptop', module: 'helpdesk', color: 'text-blue-600' },
-            books: { label: 'Biblioteca', icon: 'fa-book', module: 'biblioteca', color: 'text-emerald-600' },
-            furniture: { label: 'Mobiliario', icon: 'fa-chair', module: 'facilities', color: 'text-slate-600' },
-            tools: { label: 'Herramientas', icon: 'fa-screwdriver-wrench', module: 'laboratorio', color: 'text-amber-600' },
-            spaces: { label: 'Ambientes', icon: 'fa-building', module: 'facilities', color: 'text-brand-coral' }
-        };
-
-        const actionConfig = {
-            tech: ['Reportar problema', 'Solicitar mantenimiento', 'Ver tickets'],
-            books: ['Reservar', 'Solicitar prestamo', 'Reportar dano'],
-            furniture: ['Solicitar traslado', 'Reportar deterioro', 'Ver ubicacion'],
-            tools: ['Registrar novedad', 'Programar calibracion', 'Solicitar revision'],
-            spaces: ['Crear inspeccion', 'Reportar novedad', 'Ver activos hijos']
-        };
-
-        let state = {
-            role: 'admin',
-            scope: 'all',
-            layout: 'cards',
-            drawerTab: 'general',
-            selectedAssetId: null
-        };
-
-        let assets = [
-            {
-                id: 'AST-2026-001',
-                qr: 'QR-INF-SRV-01',
-                name: 'Servidor Principal Node-Alpha',
-                description: 'Activo critico para bases de datos y orquestacion de servicios.',
-                category: 'tech',
-                status: 'Operativo',
-                health: 92,
-                criticality: 'Critica',
-                owner: 'Ing. Alejandro Silva',
-                department: 'Tecnologia',
-                node: 'Direccion Operativa > Tecnologia',
-                location: 'Data Center - Piso 3',
-                brand: 'Dell',
-                model: 'PowerEdge R750',
-                serial: 'MXL8429X7D',
-                warranty: '2027-12-15',
-                children: ['UPS Respaldo Critico', 'Switch Core 48p'],
-                parent: null,
-                tickets: 1,
-                isCommon: false,
-                isSensitive: true,
-                lastActivity: 'Revision preventiva hace 2 dias'
-            },
-            {
-                id: 'AST-2026-002',
-                qr: 'QR-DIS-WS-42',
-                name: 'Workstation Diseno UX/UI',
-                description: 'Estacion de alto rendimiento asignada a prototipado y producto digital.',
-                category: 'tech',
-                status: 'Operativo',
-                health: 96,
-                criticality: 'Media',
-                owner: 'Lorena Montes',
-                department: 'Diseno & Experiencia',
-                node: 'Direccion Operativa > Producto > Diseno',
-                location: 'Oficina 102 - Creativos',
-                brand: 'Apple',
-                model: 'Mac Studio M2 Max',
-                serial: 'C02H2990Q6W',
-                warranty: '2027-02-10',
-                children: ['Monitor Studio Display', 'Kit teclado y mouse', 'Dock station USB-C'],
-                parent: null,
-                tickets: 0,
-                isCommon: false,
-                isSensitive: false,
-                lastActivity: 'Asignacion validada hoy'
-            },
-            {
-                id: 'AST-2026-003',
-                qr: 'QR-DIS-MON-99',
-                name: 'Monitor Studio Display 27',
-                description: 'Pantalla asociada a la workstation de diseno con historial de parpadeo.',
-                category: 'tech',
-                status: 'En mantenimiento',
-                health: 64,
-                criticality: 'Media',
-                owner: 'Lorena Montes',
-                department: 'Diseno & Experiencia',
-                node: 'Direccion Operativa > Producto > Diseno',
-                location: 'Taller interno',
-                brand: 'Apple',
-                model: 'Studio Display 5K',
-                serial: 'C4HHD09ALK',
-                warranty: '2026-11-10',
-                children: [],
-                parent: 'Workstation Diseno UX/UI',
-                tickets: 3,
-                isCommon: false,
-                isSensitive: false,
-                lastActivity: 'Ticket actualizado hace 4 horas'
-            },
-            {
-                id: 'AST-2026-004',
-                qr: 'QR-ACC-11',
-                name: 'Kit Teclado y Mouse Magic',
-                description: 'Accesorios hijos de la workstation asignada.',
-                category: 'tech',
-                status: 'Operativo',
-                health: 98,
-                criticality: 'Baja',
-                owner: 'Lorena Montes',
-                department: 'Diseno & Experiencia',
-                node: 'Direccion Operativa > Producto > Diseno',
-                location: 'Oficina 102 - Creativos',
-                brand: 'Apple',
-                model: 'Magic Keyboard + Mouse',
-                serial: 'KY91028301',
-                warranty: '2027-02-10',
-                children: [],
-                parent: 'Workstation Diseno UX/UI',
-                tickets: 0,
-                isCommon: false,
-                isSensitive: false,
-                lastActivity: 'Inventario fisico confirmado'
-            },
-            {
-                id: 'AST-2026-005',
-                qr: 'QR-BIB-DEV-001',
-                name: 'Libro Clean Code',
-                description: 'Manual de desarrollo con workflow de prestamo y reserva.',
-                category: 'books',
-                status: 'Prestado',
-                health: 88,
-                criticality: 'Baja',
-                owner: 'Oscar Mendoza',
-                department: 'Tecnologia',
-                node: 'Direccion Operativa > Tecnologia',
-                location: 'Biblioteca central',
-                brand: 'Prentice Hall',
-                model: 'Edicion impresa',
-                serial: '9780132350884',
-                warranty: 'No aplica',
-                children: [],
-                parent: null,
-                tickets: 0,
-                isCommon: true,
-                isSensitive: false,
-                lastActivity: 'Prestamo vence en 5 dias'
-            },
-            {
-                id: 'AST-2026-006',
-                qr: 'QR-MOB-DIS-10',
-                name: 'Mesa Modular de Innovacion',
-                description: 'Mobiliario compartido con conectividad y sillas asociadas.',
-                category: 'furniture',
-                status: 'Disponible',
-                health: 91,
-                criticality: 'Baja',
-                owner: 'Area libre',
-                department: 'General',
-                node: 'Direccion Administrativa > Espacios',
-                location: 'Sala de Innovacion',
-                brand: 'Herman Miller',
-                model: 'Ratio Desk Smart',
-                serial: 'HM-RAT-2024-99',
-                warranty: '2029-08-30',
-                children: ['8 sillas ergonomicas', 'Modulo electrico central'],
-                parent: null,
-                tickets: 0,
-                isCommon: true,
-                isSensitive: false,
-                lastActivity: 'Disponible para reserva'
-            },
-            {
-                id: 'AST-2026-007',
-                qr: 'QR-LAB-HER-101',
-                name: 'Kit de Soldadura de Precision',
-                description: 'Herramienta de laboratorio con calibracion y trazabilidad de uso.',
-                category: 'tools',
-                status: 'Reportado',
-                health: 38,
-                criticality: 'Alta',
-                owner: 'Dr. Carlos Villamizar',
-                department: 'Ingenieria',
-                node: 'Direccion Operativa > Laboratorio',
-                location: 'Laboratorio de Hardware',
-                brand: 'Hakko / Fluke',
-                model: 'FX-888D + Fluke 115',
-                serial: 'HK-FLK-2025-11',
-                warranty: '2026-06-30',
-                children: ['Multimetro', 'Puntas de soldadura', 'Caja metalica'],
-                parent: null,
-                tickets: 1,
-                isCommon: true,
-                isSensitive: false,
-                lastActivity: 'Novedad registrada ayer'
-            },
-            {
-                id: 'AST-2026-008',
-                qr: 'QR-ESP-LAB-01',
-                name: 'Laboratorio de Hardware',
-                description: 'Ambiente fisico que agrupa herramientas, estaciones y equipos de prueba.',
-                category: 'spaces',
-                status: 'Operativo',
-                health: 86,
-                criticality: 'Alta',
-                owner: 'Coordinacion de Ingenieria',
-                department: 'Ingenieria',
-                node: 'Direccion Operativa > Laboratorio',
-                location: 'Bloque B - Piso 1',
-                brand: 'Ambiente',
-                model: 'LAB-HW',
-                serial: 'ROOM-B1-014',
-                warranty: 'No aplica',
-                children: ['Kit de Soldadura de Precision', 'Osciloscopio', 'Banco de pruebas'],
-                parent: null,
-                tickets: 2,
-                isCommon: true,
-                isSensitive: false,
-                lastActivity: 'Inspeccion programada'
-            }
-        ];
-
-        let audit = [
-            { action: 'QR generado', user: 'Admin Sistema', date: '2026-05-28 15:44', text: 'Etiquetas sincronizadas para sede central.' },
-            { action: 'Cambio estado', user: 'Mesa de Ayuda', date: '2026-05-28 11:20', text: 'Monitor Studio Display paso a mantenimiento.' },
-            { action: 'Prestamo', user: 'Biblioteca', date: '2026-05-27 16:10', text: 'Libro Clean Code prestado a Oscar Mendoza.' },
-            { action: 'Relacion', user: 'Inventario', date: '2026-05-27 10:20', text: 'Kit teclado y mouse vinculado a Workstation Diseno UX/UI.' }
-        ];
-
-        function getBaseVisibleAssets() {
-            if (state.role === 'admin') return assets;
-            return assets.filter(asset => asset.owner === 'Lorena Montes' || asset.isCommon);
-        }
-
-        function getScopedAssets() {
-            const base = getBaseVisibleAssets();
-            if (state.scope === 'mine') return base.filter(asset => asset.owner === 'Lorena Montes');
-            if (state.scope === 'attention') return base.filter(asset => asset.status === 'Reportado' || asset.status === 'En mantenimiento' || asset.health < 70);
-            if (state.scope === 'shared') return base.filter(asset => asset.isCommon);
-            if (state.scope === 'warranties') return base.filter(asset => asset.warranty !== 'No aplica' && asset.warranty <= '2027-02-10');
-            return base;
-        }
-
-        function getFilteredAssets() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const category = document.getElementById('category-filter').value;
-            const status = document.getElementById('status-filter').value;
-            const module = document.getElementById('module-filter').value;
-
-            return getScopedAssets().filter(asset => {
-                const haystack = `${asset.id} ${asset.qr} ${asset.name} ${asset.owner} ${asset.location} ${asset.serial} ${asset.node}`.toLowerCase();
-                const cat = categoryConfig[asset.category];
-                return haystack.includes(query) &&
-                    (category === 'all' || asset.category === category) &&
-                    (status === 'all' || asset.status === status) &&
-                    (module === 'all' || cat.module === module);
-            });
-        }
-
-        function render() {
-            renderMetrics();
-            renderScopeNav();
-            renderCategories();
-            renderActivity();
-            renderContent();
-        }
-
-        function renderMetrics() {
-            const total = assets.length;
-            const operational = assets.filter(asset => asset.status === 'Operativo').length;
-            const maintenance = assets.filter(asset => asset.status === 'En mantenimiento' || asset.status === 'Reportado').length;
-            const tickets = assets.reduce((sum, asset) => sum + asset.tickets, 0);
-            const health = Math.round(assets.reduce((sum, asset) => sum + asset.health, 0) / assets.length);
-            setText('metric-total', total);
-            setText('metric-operational', operational);
-            setText('metric-maintenance', maintenance);
-            setText('metric-tickets', tickets);
-            setText('metric-health', `${health}%`);
-        }
-
-        function renderContent() {
-            const container = document.getElementById('asset-content');
-            const data = getFilteredAssets();
-            updateScopeCopy(data.length);
-            if (!data.length) {
-                container.innerHTML = `<div class="rounded-md border border-dashed border-brand-border bg-slate-50 p-12 text-center text-xs font-bold text-slate-400">No hay activos visibles bajo estos criterios.</div>`;
-                return;
-            }
-            if (state.layout === 'list') {
-                container.innerHTML = renderList(data);
-                return;
-            }
-            if (state.layout === 'summary') {
-                container.innerHTML = renderSummary(data);
-                return;
-            }
-            container.innerHTML = `<div class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">${data.map(renderCard).join('')}</div>`;
-        }
-
-        function renderCard(asset) {
-            const cat = categoryConfig[asset.category];
-            const status = statusMeta(asset.status);
-            return `
-                <article class="asset-card rounded-md border border-brand-border bg-white">
-                    <div class="p-4">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex min-w-0 items-start gap-3">
-                                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-slate-50 ${cat.color}">
-                                    <i class="fa-solid ${cat.icon} text-lg"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <button onclick="openDrawer('${asset.id}')" class="block truncate text-left text-sm font-black text-brand-dark hover:text-brand-coral">${asset.name}</button>
-                                    <p class="mt-1 truncate text-[10px] font-mono font-bold text-slate-400">${asset.id} / ${cat.module}</p>
-                                </div>
-                            </div>
-                            <span class="shrink-0 rounded-full ${status.bg} px-2 py-1 text-[9px] font-black uppercase ${status.text}">
-                                <span class="mr-1 inline-block h-1.5 w-1.5 rounded-full ${status.dot}"></span>${asset.status}
-                            </span>
-                        </div>
-                        <p class="mt-3 min-h-[38px] text-xs font-medium leading-relaxed text-slate-500">${asset.description}</p>
-                        <div class="mt-4 grid grid-cols-4 gap-2">
-                            ${miniMetric('Salud', asset.health + '%', asset.health < 55 ? 'text-brand-coral' : asset.health < 80 ? 'text-amber-500' : 'text-brand-green')}
-                            ${miniMetric('Hijos', asset.children.length, 'text-brand-dark')}
-                            ${miniMetric('Tickets', asset.tickets, 'text-brand-coral')}
-                            ${miniMetric('Crit.', asset.criticality, 'text-brand-dark')}
-                        </div>
-                        <div class="mt-4 rounded-md bg-slate-50 p-3">
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="min-w-0">
-                                    <p class="truncate text-xs font-black text-brand-dark">${asset.owner}</p>
-                                    <p class="mt-0.5 truncate text-[10px] font-bold text-slate-400">${asset.location}</p>
-                                </div>
-                                <button onclick="openQr('${asset.id}')" class="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-brand-border bg-white text-brand-coral" title="Ver QR">
-                                    <i class="fa-solid fa-qrcode"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-3">
-                        <button onclick="runAction('${asset.id}', '${actionConfig[asset.category][0]}')" class="rounded-md bg-brand-coral px-3 py-2 text-[10px] font-black text-white">${actionConfig[asset.category][0]}</button>
-                        <div class="flex items-center gap-3">
-                            <button onclick="openDrawer('${asset.id}')" class="text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-brand-dark">Quick view</button>
-                            <button onclick="openFullDetail('${asset.id}')" class="text-[10px] font-black uppercase tracking-wider text-brand-dark hover:text-brand-coral">Ver mas detalles</button>
-                        </div>
-                    </div>
-                </article>
-            `;
-        }
-
-        function renderList(data) {
-            return `
-                <div class="overflow-hidden rounded-md border border-brand-border bg-white">
-                    <div class="divide-y divide-slate-100">
-                        ${data.map(asset => {
-                const cat = categoryConfig[asset.category];
-                const status = statusMeta(asset.status);
-                return `
-                            <div class="grid gap-3 p-4 hover:bg-slate-50 lg:grid-cols-[1fr_180px_160px_120px_136px] lg:items-center">
-                                <div class="flex min-w-0 items-center gap-3">
-                                    <div class="grid h-14 w-[74px] shrink-0 place-items-center overflow-hidden rounded-md bg-slate-50 ${cat.color}" style="background-image: linear-gradient(30deg, rgba(255,255,255,.45) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.45) 87.5%), linear-gradient(150deg, rgba(255,255,255,.35) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.35) 87.5%); background-size: 26px 26px;">
-                                        <i class="fa-solid ${cat.icon}"></i>
-                                    </div>
-                                    <div class="min-w-0">
-                                        <button onclick="openDrawer('${asset.id}')" class="truncate text-left text-sm font-black text-brand-dark hover:text-brand-coral">${asset.name}</button>
-                                        <p class="mt-0.5 truncate text-[10px] font-mono font-bold text-slate-400">${asset.id} / ${asset.serial}</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-black text-brand-dark">${asset.owner}</p>
-                                    <p class="mt-0.5 text-[10px] font-bold text-slate-400">${asset.department}</p>
-                                </div>
-                                <div>
-                                    <p class="truncate text-xs font-bold text-slate-600">${asset.location}</p>
-                                    <p class="mt-0.5 text-[10px] font-bold uppercase text-brand-coral">${cat.module}</p>
-                                </div>
-                                <span class="w-fit rounded-full ${status.bg} px-2 py-1 text-[9px] font-black uppercase ${status.text}">${asset.status}</span>
-                                <div class="flex gap-1 lg:justify-end">
-                                    <button onclick="openQr('${asset.id}')" class="grid h-9 w-9 place-items-center rounded-md border border-brand-border bg-white text-brand-coral" title="QR"><i class="fa-solid fa-qrcode"></i></button>
-                                    <button onclick="openDrawer('${asset.id}')" class="grid h-9 w-9 place-items-center rounded-md bg-brand-dark text-white" title="Ficha"><i class="fa-solid fa-chevron-right text-xs"></i></button>
-                                    <button onclick="openFullDetail('${asset.id}')" class="h-9 rounded-md border border-brand-border bg-white px-2 text-[10px] font-black text-brand-dark" title="Ver mas detalles">Mas</button>
-                                </div>
-                            </div>
-                        `;
-            }).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderSummary(data) {
-            return `
-                <div class="grid gap-4 lg:grid-cols-2">
-                    ${data.map(asset => {
-                const cat = categoryConfig[asset.category];
-                const status = statusMeta(asset.status);
-                return `
-                            <article class="rounded-md border border-brand-border bg-white p-4">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p class="text-[10px] font-black uppercase tracking-wider text-brand-coral">${cat.label}</p>
-                                        <button onclick="openDrawer('${asset.id}')" class="mt-1 text-left text-sm font-black text-brand-dark hover:text-brand-coral">${asset.name}</button>
-                                    </div>
-                                    <span class="rounded-full ${status.bg} px-2 py-1 text-[9px] font-black uppercase ${status.text}">${asset.status}</span>
-                                </div>
-                                <div class="mt-4 grid grid-cols-2 gap-2">
-                                    ${infoCell('Responsable', asset.owner)}
-                                    ${infoCell('Ubicacion', asset.location)}
-                                    ${infoCell('Nodo', asset.node)}
-                                    ${infoCell('Relaciones', `${asset.children.length} hijos${asset.parent ? ' / 1 padre' : ''}`)}
-                                </div>
-                                <div class="mt-4 flex flex-wrap gap-2">
-                                    ${actionConfig[asset.category].map(action => `<button onclick="runAction('${asset.id}', '${action}')" class="rounded-md border border-brand-border bg-slate-50 px-3 py-2 text-[10px] font-black text-brand-dark hover:text-brand-coral">${action}</button>`).join('')}
-                                    <button onclick="openQr('${asset.id}')" class="rounded-md border border-brand-border bg-white px-3 py-2 text-[10px] font-black text-brand-coral"><i class="fa-solid fa-qrcode mr-1"></i>QR</button>
-                                    <button onclick="openFullDetail('${asset.id}')" class="rounded-md bg-brand-dark px-3 py-2 text-[10px] font-black text-white">Ver mas detalles</button>
-                                </div>
-                            </article>
-                        `;
-            }).join('')}
-                </div>
-            `;
-        }
-
-        function openDrawer(id) {
-            state.selectedAssetId = id;
-            state.drawerTab = 'general';
-            const asset = assets.find(item => item.id === id);
-            document.getElementById('drawer-title').innerText = asset.name;
-            document.getElementById('drawer-subtitle').innerText = `${asset.id} / ${asset.location}`;
-            document.getElementById('drawer-module').innerText = `${categoryConfig[asset.category].module} workflow`;
-            document.getElementById('detail-drawer').className = document.getElementById('detail-drawer').className.replace('drawer-closed', 'drawer-open');
-            renderDrawer();
-        }
-
-        function closeDrawer() {
-            const drawer = document.getElementById('detail-drawer');
-            drawer.className = drawer.className.replace('drawer-open', 'drawer-closed');
-        }
-
-        function setDrawerTab(tab) {
-            state.drawerTab = tab;
-            renderDrawer();
-        }
-
-        function renderDrawer() {
-            const asset = assets.find(item => item.id === state.selectedAssetId);
-            if (!asset) return;
-            document.querySelectorAll('.drawer-tab').forEach(btn => {
-                const active = btn.dataset.tab === state.drawerTab;
-                btn.className = active
-                    ? 'drawer-tab rounded-md bg-white px-2 py-2 text-[11px] font-black text-brand-dark'
-                    : 'drawer-tab rounded-md bg-white/10 px-2 py-2 text-[11px] font-black text-white';
-            });
-            if (state.drawerTab === 'relations') return renderDrawerRelations(asset);
-            if (state.drawerTab === 'tickets') return renderDrawerTickets(asset);
-            if (state.drawerTab === 'history') return renderDrawerHistory(asset);
-            renderDrawerGeneral(asset);
-        }
-
-        function renderDrawerGeneral(asset) {
-            const cat = categoryConfig[asset.category];
-            const admin = state.role === 'admin';
-            document.getElementById('drawer-body').innerHTML = `
-                <div class="space-y-4">
-                    <div class="rounded-md border border-brand-border bg-slate-50 p-4">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-[10px] font-black uppercase tracking-wider text-brand-coral">${cat.label}</p>
-                                <h3 class="mt-1 text-sm font-black text-brand-dark">Resumen operativo</h3>
-                                <p class="mt-2 text-xs font-medium leading-relaxed text-slate-500">${asset.description}</p>
-                            </div>
-                            <button onclick="openQr('${asset.id}')" class="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white text-brand-coral" title="Ver QR">
-                                <i class="fa-solid fa-qrcode"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        ${infoCell('Responsable', asset.owner)}
-                        ${infoCell('Departamento', asset.department)}
-                        ${infoCell('Ubicacion', asset.location)}
-                        ${infoCell('Criticidad', asset.criticality)}
-                        ${infoCell('Salud', asset.health + '%')}
-                        ${infoCell('Estado', asset.status)}
-                    </div>
-                    <div class="rounded-md border border-brand-border bg-white p-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-sm font-black text-brand-dark">Acciones contextuales</h3>
-                            <span class="text-[10px] font-black uppercase tracking-wider text-brand-coral">${cat.module}</span>
-                        </div>
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            ${actionConfig[asset.category].map(action => `<button onclick="runAction('${asset.id}', '${action}')" class="rounded-md border border-brand-border bg-slate-50 px-3 py-2 text-[10px] font-black text-brand-dark hover:text-brand-coral">${action}</button>`).join('')}
-                            <button onclick="openFullDetail('${asset.id}')" class="rounded-md bg-brand-dark px-3 py-2 text-[10px] font-black text-white">Ver mas detalles</button>
-                        </div>
-                    </div>
-                    ${admin ? `
-                        <div class="rounded-md border border-brand-border bg-white p-4">
-                            <h3 class="text-sm font-black text-brand-dark">Datos tecnicos</h3>
-                            <div class="mt-3 grid grid-cols-2 gap-3">
-                                ${infoCell('Marca', asset.brand)}
-                                ${infoCell('Modelo', asset.model)}
-                                ${infoCell('Serial', asset.serial)}
-                                ${infoCell('Garantia', asset.warranty)}
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="rounded-md border border-brand-border bg-slate-50 p-4">
-                            <h3 class="text-sm font-black text-brand-dark">Visibilidad por permisos</h3>
-                            <p class="mt-1 text-xs font-medium leading-relaxed text-slate-500">Esta vista oculta seriales sensibles, auditoria avanzada e informacion tecnica de terceros.</p>
-                        </div>
-                    `}
-                </div>
-            `;
-        }
-
-        function renderDrawerRelations(asset) {
-            document.getElementById('drawer-body').innerHTML = `
-                <div class="space-y-4">
-                    <div class="rounded-md border border-brand-border bg-white p-4">
-                        <h3 class="text-sm font-black text-brand-dark">Jerarquia del activo</h3>
-                        <div class="mt-4 border-l-2 border-brand-coral/30 pl-4">
-                            ${asset.parent ? `<div class="mb-3 rounded-md bg-slate-50 p-3 text-xs font-black text-brand-dark">Padre: ${asset.parent}</div>` : `<div class="mb-3 rounded-md bg-brand-dark p-3 text-xs font-black text-white">Activo raiz</div>`}
-                            ${asset.children.length ? asset.children.map(child => `<div class="mb-2 rounded-md border border-brand-border bg-slate-50 p-3 text-xs font-bold text-slate-600"><i class="fa-solid fa-turn-up rotate-90 text-[10px] text-brand-coral mr-2"></i>${child}</div>`).join('') : '<p class="text-xs font-bold text-slate-400">Sin activos hijos asociados.</p>'}
-                        </div>
-                    </div>
-                    <div class="rounded-md border border-brand-border bg-slate-50 p-4">
-                        <h3 class="text-sm font-black text-brand-dark">Nodo organizacional</h3>
-                        <p class="mt-2 text-xs font-bold text-slate-600">${asset.node}</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderDrawerTickets(asset) {
-            const tickets = asset.tickets
-                ? Array.from({ length: asset.tickets }).map((_, i) => `
-                    <div class="rounded-md border border-brand-border bg-slate-50 p-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-black text-brand-coral">TCK-${4080 + i}</span>
-                            <span class="rounded-sm bg-amber-100 px-2 py-1 text-[9px] font-black text-amber-700">En progreso</span>
-                        </div>
-                        <p class="mt-2 text-xs font-black text-brand-dark">Incidencia asociada a ${asset.name}</p>
-                        <p class="mt-1 text-[10px] font-semibold text-slate-500">Hereda responsable, ubicacion, categoria y QR del activo.</p>
-                    </div>
-                `).join('')
-                : '<div class="rounded-md border border-dashed border-brand-border bg-slate-50 p-8 text-center text-xs font-bold text-slate-400">Sin tickets activos asociados.</div>';
-            document.getElementById('drawer-body').innerHTML = `
-                <div class="space-y-3">
-                    <button onclick="runAction('${asset.id}', 'Reportar problema')" class="w-full rounded-md bg-brand-coral px-4 py-3 text-xs font-black text-white">Crear ticket contextual</button>
-                    ${tickets}
-                </div>
-            `;
-        }
-
-        function renderDrawerHistory(asset) {
-            document.getElementById('drawer-body').innerHTML = `
-                <div class="space-y-3">
-                    <div class="rounded-md border border-brand-border bg-white p-4">
-                        <h3 class="text-sm font-black text-brand-dark">Ciclo de vida</h3>
-                        <div class="mt-4 space-y-3 border-l-2 border-brand-coral/30 pl-4">
-                            <div><p class="text-xs font-black text-brand-dark">Creacion y QR</p><p class="text-[10px] font-semibold text-slate-500">${asset.qr} generado automaticamente.</p></div>
-                            <div><p class="text-xs font-black text-brand-dark">Asignacion</p><p class="text-[10px] font-semibold text-slate-500">Responsable actual: ${asset.owner}.</p></div>
-                            <div><p class="text-xs font-black text-brand-dark">Ultima actividad</p><p class="text-[10px] font-semibold text-slate-500">${asset.lastActivity}.</p></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function openFullDetail(id) {
-            const asset = assets.find(item => item.id === id);
-            if (!asset) return;
-            state.selectedAssetId = id;
-            closeDrawer();
-            document.getElementById('inventory-main-view').classList.add('hidden');
-            document.getElementById('asset-full-view').classList.remove('hidden');
-            renderFullDetail(asset);
-        }
-
-        function closeFullDetail() {
-            document.getElementById('asset-full-view').classList.add('hidden');
-            document.getElementById('inventory-main-view').classList.remove('hidden');
-        }
-
-        function renderFullDetail(asset) {
-            const cat = categoryConfig[asset.category];
-            const status = statusMeta(asset.status);
-            const admin = state.role === 'admin';
-            const tickets = buildTickets(asset);
-            const userInfo = getResponsibleInfo(asset);
-            document.getElementById('asset-full-view').innerHTML = `
-                <div class="space-y-4">
-                    <div class="rounded-md border border-brand-border bg-white p-4">
-                        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                            <div class="flex items-start gap-3">
-                                <button onclick="closeFullDetail()" class="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-brand-border bg-slate-50 text-brand-dark hover:text-brand-coral">
-                                    <i class="fa-solid fa-arrow-left"></i>
-                                </button>
-                                <div>
-                                    <p class="text-[10px] font-black uppercase tracking-widest text-brand-coral">Ficha completa del activo</p>
-                                    <h2 class="mt-1 text-xl font-black text-brand-dark">${asset.name}</h2>
-                                    <p class="mt-1 text-xs font-medium text-slate-500">${asset.id} / ${cat.label} / ${cat.module}</p>
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <span class="rounded-full ${status.bg} px-3 py-2 text-[10px] font-black uppercase ${status.text}">
-                                    <span class="mr-1 inline-block h-1.5 w-1.5 rounded-full ${status.dot}"></span>${asset.status}
-                                </span>
-                                <button onclick="openQr('${asset.id}')" class="rounded-md border border-brand-border bg-white px-3 py-2 text-xs font-black text-brand-coral">
-                                    <i class="fa-solid fa-qrcode mr-1"></i> Ver QR
-                                </button>
-                                <button onclick="runAction('${asset.id}', '${actionConfig[asset.category][0]}')" class="rounded-md bg-brand-coral px-3 py-2 text-xs font-black text-white">${actionConfig[asset.category][0]}</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid gap-4 xl:grid-cols-[1fr_360px]">
-                        <section class="space-y-4">
-                            <article class="overflow-hidden rounded-md border border-brand-border bg-white">
-                                <div class="border-b border-brand-border bg-[#d9e8f6] px-5 py-4 text-center">
-                                    <h3 class="text-sm font-black uppercase tracking-wider text-brand-dark">Ficha tecnica y operacional del componente</h3>
-                                </div>
-                                <div class="grid border-b border-brand-border lg:grid-cols-[1fr_280px]">
-                                    <div class="p-5">
-                                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Componente</p>
-                                        <h4 class="mt-1 text-lg font-black text-brand-dark">${asset.name}</h4>
-                                        <p class="mt-3 text-sm font-medium leading-relaxed text-slate-600">${asset.description}</p>
-                                        <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                                            ${infoCell('Salud', asset.health + '%')}
-                                            ${infoCell('Criticidad', asset.criticality)}
-                                            ${infoCell('Tickets', asset.tickets)}
-                                            ${infoCell('Hijos', asset.children.length)}
-                                        </div>
-                                    </div>
-                                    <div class="border-t border-brand-border bg-slate-50 p-5 lg:border-l lg:border-t-0">
-                                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Imagen / categoria</p>
-                                        <div class="mt-4 grid h-44 place-items-center rounded-md border border-brand-border bg-white">
-                                            <div class="text-center">
-                                                <div class="mx-auto grid h-20 w-20 place-items-center rounded-md bg-slate-50 ${cat.color}">
-                                                    <i class="fa-solid ${cat.icon} text-4xl"></i>
-                                                </div>
-                                                <p class="mt-3 text-xs font-black text-brand-dark">${cat.label}</p>
-                                                <p class="mt-1 text-[10px] font-bold uppercase text-brand-coral">${cat.module}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="grid lg:grid-cols-3">
-                                    <div class="border-b border-brand-border p-5 lg:border-b-0 lg:border-r">
-                                        <h4 class="text-xs font-black uppercase tracking-wider text-brand-dark">Caracteristicas tecnicas</h4>
-                                        <div class="mt-4 space-y-2">
-                                            ${infoRow('Marca', asset.brand)}
-                                            ${infoRow('Modelo', asset.model)}
-                                            ${admin ? infoRow('Serial', asset.serial) : infoRow('Serial', 'Oculto por permisos')}
-                                            ${infoRow('Garantia', asset.warranty)}
-                                            ${infoRow('QR', asset.qr)}
-                                        </div>
-                                    </div>
-                                    <div class="border-b border-brand-border p-5 lg:border-b-0 lg:border-r">
-                                        <h4 class="text-xs font-black uppercase tracking-wider text-brand-dark">Caracteristicas operativas</h4>
-                                        <div class="mt-4 space-y-2">
-                                            ${infoRow('Estado', asset.status)}
-                                            ${infoRow('Departamento', asset.department)}
-                                            ${infoRow('Ubicacion', asset.location)}
-                                            ${infoRow('Nodo', asset.node)}
-                                            ${infoRow('Ultima actividad', asset.lastActivity)}
-                                        </div>
-                                    </div>
-                                    <div class="p-5">
-                                        <h4 class="text-xs font-black uppercase tracking-wider text-brand-dark">Responsable / usuario</h4>
-                                        <div class="mt-4 rounded-md bg-slate-50 p-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="grid h-11 w-11 place-items-center rounded-md bg-brand-dark text-xs font-black text-white">${userInfo.initials}</div>
-                                                <div class="min-w-0">
-                                                    <p class="truncate text-sm font-black text-brand-dark">${asset.owner}</p>
-                                                    <p class="truncate text-[10px] font-bold text-slate-400">${userInfo.role}</p>
-                                                </div>
-                                            </div>
-                                            <div class="mt-4 space-y-2">
-                                                ${infoRow('Correo', userInfo.email)}
-                                                ${infoRow('Area', asset.department)}
-                                                ${infoRow('Cargo asociado', userInfo.position)}
-                                                ${infoRow('Permiso activo', userInfo.permission)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </article>
-
-                            <article class="rounded-md border border-brand-border bg-white p-5">
-                                <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                                    <div>
-                                        <p class="text-[10px] font-black uppercase tracking-widest text-brand-coral">Relaciones y ciclo de vida</p>
-                                        <h3 class="mt-1 text-sm font-black text-brand-dark">Jerarquia del activo</h3>
-                                    </div>
-                                    <button onclick="setLayout('summary'); closeFullDetail();" class="rounded-md border border-brand-border bg-white px-3 py-2 text-xs font-black text-brand-dark">Ver en resumen</button>
-                                </div>
-                                <div class="mt-4 grid gap-3 md:grid-cols-2">
-                                    <div class="rounded-md bg-slate-50 p-4">
-                                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Activo padre</p>
-                                        <p class="mt-1 text-xs font-black text-brand-dark">${asset.parent || 'Activo raiz / sin padre'}</p>
-                                    </div>
-                                    <div class="rounded-md bg-slate-50 p-4">
-                                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Activos hijos</p>
-                                        <div class="mt-2 flex flex-wrap gap-2">
-                                            ${asset.children.length ? asset.children.map(child => `<span class="rounded-md border border-brand-border bg-white px-2 py-1 text-[10px] font-black text-slate-600">${child}</span>`).join('') : '<span class="text-xs font-bold text-slate-400">Sin activos hijos</span>'}
-                                        </div>
-                                    </div>
-                                </div>
-                            </article>
-                        </section>
-
-                        <aside class="space-y-4">
-                            <article class="rounded-md border border-brand-border bg-white p-5">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <p class="text-[10px] font-black uppercase tracking-widest text-brand-coral">Tickets recientes</p>
-                                        <h3 class="mt-1 text-sm font-black text-brand-dark">Ultimos casos</h3>
-                                    </div>
-                                    <button onclick="showAllTickets('${asset.id}')" class="text-[10px] font-black uppercase tracking-wider text-brand-coral">Ver mas</button>
-                                </div>
-                                <div id="full-ticket-list" class="mt-4 space-y-2">
-                                    ${tickets.slice(0, 3).map(renderTicketItem).join('')}
-                                </div>
-                            </article>
-
-                            <article class="rounded-md border border-brand-border bg-white p-5">
-                                <p class="text-[10px] font-black uppercase tracking-widest text-brand-coral">Acciones</p>
-                                <div class="mt-4 flex flex-col gap-2">
-                                    ${actionConfig[asset.category].map(action => `<button onclick="runAction('${asset.id}', '${action}')" class="rounded-md border border-brand-border bg-slate-50 px-3 py-2.5 text-left text-xs font-black text-brand-dark hover:text-brand-coral">${action}</button>`).join('')}
-                                </div>
-                            </article>
-
-                            <article class="rounded-md border border-brand-border bg-brand-dark p-5 text-white">
-                                <p class="text-[10px] font-black uppercase tracking-widest text-white/50">Privacidad</p>
-                                <h3 class="mt-1 text-sm font-black">Visibilidad por capas</h3>
-                                <p class="mt-2 text-xs font-medium leading-relaxed text-white/65">${admin ? 'Vista tecnica completa habilitada para administradores y tecnicos autorizados.' : 'Vista de usuario final: seriales sensibles, auditoria profunda y datos de terceros se mantienen ocultos.'}</p>
-                            </article>
-                        </aside>
-                    </div>
-                </div>
-            `;
-        }
-
-        function buildTickets(asset) {
-            if (!asset.tickets) {
-                return [{
-                    id: 'SIN-TICKETS',
-                    status: 'Sin casos',
-                    title: 'No hay tickets recientes ligados a este activo',
-                    owner: asset.owner,
-                    date: 'Sin fecha',
-                    summary: 'El activo no registra incidencias activas en Helpdesk.'
-                }];
-            }
-            return Array.from({ length: Math.max(asset.tickets, 4) }).map((_, index) => ({
-                id: `TCK-${4080 + index}`,
-                status: index === 0 ? 'En progreso' : index === 1 ? 'Pendiente validacion' : 'Cerrado',
-                title: index === 0 ? `Revision operacional de ${asset.name}` : `Seguimiento historico ${index + 1}`,
-                owner: index % 2 === 0 ? 'Mesa de Ayuda' : asset.owner,
-                date: index === 0 ? '2026-05-28' : `2026-05-${24 - index}`,
-                summary: 'Caso asociado automaticamente al activo con contexto de ubicacion, responsable y categoria.'
-            }));
-        }
-
-        function renderTicketItem(ticket) {
-            const badge = ticket.status === 'Cerrado' ? 'bg-emerald-50 text-emerald-700' : ticket.status === 'Sin casos' ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-700';
-            return `
-                <div class="rounded-md border border-brand-border bg-slate-50 p-3">
-                    <div class="flex items-center justify-between gap-3">
-                        <span class="text-[10px] font-black text-brand-coral">${ticket.id}</span>
-                        <span class="rounded-sm px-2 py-1 text-[9px] font-black ${badge}">${ticket.status}</span>
-                    </div>
-                    <p class="mt-2 text-xs font-black text-brand-dark">${ticket.title}</p>
-                    <p class="mt-1 text-[10px] font-semibold leading-relaxed text-slate-500">${ticket.summary}</p>
-                    <div class="mt-2 flex items-center justify-between text-[9px] font-bold text-slate-400">
-                        <span>${ticket.owner}</span>
-                        <span>${ticket.date}</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        function showAllTickets(id) {
-            const asset = assets.find(item => item.id === id);
-            if (!asset) return;
-            document.getElementById('full-ticket-list').innerHTML = buildTickets(asset).map(renderTicketItem).join('');
-            toast('Mostrando historial ampliado de tickets.', 'success');
-        }
-
-        function getResponsibleInfo(asset) {
-            const cleanName = asset.owner.replace(/[^a-zA-ZÁÉÍÓÚáéíóúÑñ ]/g, '').trim();
-            const parts = cleanName.split(/\s+/).filter(Boolean);
-            const initials = parts.length ? parts.slice(0, 2).map(part => part[0]).join('').toUpperCase() : 'NA';
-            const slug = parts.length ? parts.join('.').toLowerCase() : 'sin.asignar';
-            const isShared = asset.isCommon || asset.owner.toLowerCase().includes('area');
-            return {
-                initials,
-                email: isShared ? 'recurso.compartido@empresa.local' : `${slug}@empresa.local`,
-                role: isShared ? 'Responsable operativo compartido' : 'Usuario asignado',
-                position: asset.department === 'Tecnologia' ? 'Analista / responsable tecnico' : asset.department === 'Ingenieria' ? 'Coordinador de laboratorio' : 'Colaborador asociado',
-                permission: state.role === 'admin' ? 'Lectura tecnica y auditoria' : 'Lectura resumida y acciones permitidas'
-            };
-        }
-
-        function setRole(role) {
-            state.role = role;
-            if (role === 'user' && state.scope === 'all') state.scope = 'mine';
-            document.getElementById('role-label').innerText = role === 'admin' ? 'Admin / tecnico' : 'Usuario final';
-            document.getElementById('admin-metrics').classList.toggle('hidden', role !== 'admin');
-            document.getElementById('admin-side-panel').classList.toggle('hidden', role !== 'admin');
-            document.getElementById('create-btn').classList.toggle('hidden', role !== 'admin');
-            render();
-            toast(role === 'admin' ? 'Vista administrativa activada.' : 'Vista de usuario final activada.', 'success');
-        }
-
-        function setScope(scope) {
-            state.scope = scope;
-            render();
-        }
-
-        function setLayout(layout) {
-            state.layout = layout;
-            window.localStorage.setItem('inventoryMock:assets:view', layout);
-            updateLayoutDropdown();
-            renderContent();
-        }
-
-        function toggleLayoutMenu() {
-            document.getElementById('layout-dropdown-menu').classList.toggle('hidden');
-        }
-
-        function selectLayoutFromMenu(layout) {
-            setLayout(layout);
-            document.getElementById('layout-dropdown-menu').classList.add('hidden');
-        }
-
-        function updateLayoutDropdown() {
-            const labels = { cards: 'Tarjeta', list: 'Lista', summary: 'Resumen' };
-            setText('layout-dropdown-label', labels[state.layout] || 'Tarjeta');
-            document.querySelectorAll('.layout-option').forEach(option => {
-                const active = option.dataset.layoutOption === state.layout;
-                option.className = active
-                    ? 'layout-option flex w-full items-center gap-3 px-3 py-2 text-left text-xs font-bold text-brand-dark hover:bg-slate-50'
-                    : 'layout-option flex w-full items-center gap-3 px-3 py-2 text-left text-xs font-bold text-slate-500 hover:bg-slate-50';
-                const check = option.querySelector('i');
-                if (check) check.classList.toggle('invisible', !active);
-            });
-        }
-
-        function renderScopeNav() {
-            const base = getBaseVisibleAssets();
-            setText('count-mine', base.filter(asset => asset.owner === 'Lorena Montes').length);
-            setText('count-all', base.length);
-            setText('count-attention', base.filter(asset => asset.status === 'Reportado' || asset.status === 'En mantenimiento' || asset.health < 70).length);
-            setText('count-shared', base.filter(asset => asset.isCommon).length);
-            setText('count-warranties', base.filter(asset => asset.warranty !== 'No aplica' && asset.warranty <= '2027-02-10').length);
-            document.querySelectorAll('.scope-btn').forEach(btn => {
-                const active = btn.dataset.scope === state.scope;
-                btn.className = active
-                    ? 'scope-btn flex w-full items-center justify-between rounded-md bg-brand-dark px-3 py-2.5 text-left text-xs font-black text-white'
-                    : 'scope-btn flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-xs font-black text-slate-600 hover:bg-slate-50 hover:text-brand-dark';
-            });
-        }
-
-        function updateScopeCopy(count) {
-            const labels = {
-                mine: ['Mis dispositivos', 'Activos asignados a tu usuario y sus accesorios visibles.'],
-                all: ['Todos los activos', 'Vista global de activos, relaciones y workflows operativos.'],
-                attention: ['Requieren atencion', 'Activos reportados, en mantenimiento o con baja salud operacional.'],
-                shared: ['Compartidos', 'Recursos comunes, ambientes, libros y herramientas disponibles por permiso.'],
-                warranties: ['Garantias proximas', 'Activos con vencimiento de garantia cercano para seguimiento tecnico.']
-            };
-            const label = labels[state.scope] || labels.all;
-            setText('scope-eyebrow', `${count} resultados visibles`);
-            setText('scope-title', label[0]);
-            setText('scope-copy', label[1]);
-        }
-
-        function renderCategories() {
-            const html = Object.entries(categoryConfig).map(([key, cat]) => {
-                const count = getBaseVisibleAssets().filter(asset => asset.category === key).length;
-                return `
-                    <button onclick="document.getElementById('category-filter').value='${key}'; render();" class="flex w-full items-center justify-between rounded-md border border-brand-border bg-slate-50 px-3 py-2 text-left">
-                        <span class="text-xs font-black text-brand-dark"><i class="fa-solid ${cat.icon} mr-2 ${cat.color}"></i>${cat.label}</span>
-                        <span class="text-[10px] font-black text-slate-400">${count}</span>
-                    </button>
                 `;
-            }).join('');
-            document.getElementById('category-summary').innerHTML = html;
+                container.appendChild(card);
+            });
         }
 
-        function renderActivity() {
-            const html = audit.slice(0, 4).map(item => `
-                <div class="py-3">
-                    <div class="flex items-center justify-between gap-3">
-                        <span class="rounded-sm bg-slate-100 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-brand-dark">${item.action}</span>
-                        <span class="text-[9px] font-bold text-slate-400">${item.date}</span>
-                    </div>
-                    <p class="mt-1 text-xs font-black text-brand-dark">${item.user}</p>
-                    <p class="mt-0.5 text-[10px] font-semibold leading-relaxed text-slate-500">${item.text}</p>
+        function filterAssets() {
+            const val = document.getElementById('asset-search').value;
+            renderAssets(val);
+        }
+
+        function openQrScannerSimulator() {
+            const modal = document.getElementById('qr-scanner-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-95');
+            modal.querySelector('.transform').classList.add('scale-100');
+        }
+
+        function closeQrScannerSimulator() {
+            const modal = document.getElementById('qr-scanner-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-100');
+            modal.querySelector('.transform').classList.add('scale-95');
+        }
+
+        function simulateScan(assetId) {
+            closeQrScannerSimulator();
+            showToast("Lectura QR Exitosa", `Dispositivo mapeado: ${assetId}`, "fa-qrcode");
+            setTimeout(() => {
+                openQuickView(assetId);
+            }, 250);
+        }
+
+        // NIVEL 2: QUICK VIEW DRAWER
+        function openQuickView(id) {
+            activeAssetIdForDrawer = id;
+            const asset = assetsData.find(a => a.id === id);
+            if (!asset) return;
+
+            const drawerBody = document.getElementById('drawer-body');
+
+            let childrenTreeHtml = `
+                <div class="text-center py-2 bg-slate-50 rounded-none border border-dashed border-slate-200 text-slate-400 text-[10px] font-medium">
+                    <i class="fa-solid fa-circle-nodes block mb-0.5"></i> Sin periféricos asociados directos
                 </div>
-            `).join('');
-            document.getElementById('recent-activity').innerHTML = html;
-            document.getElementById('audit-list').innerHTML = html;
-        }
-
-        function runAction(id, action) {
-            const asset = assets.find(item => item.id === id);
-            const module = categoryConfig[asset.category].module;
-            if (action.toLowerCase().includes('reportar') || action.toLowerCase().includes('mantenimiento') || action.toLowerCase().includes('revision')) {
-                asset.tickets += 1;
-                if (asset.status === 'Operativo') asset.status = 'Reportado';
-                asset.health = Math.max(20, asset.health - 12);
+            `;
+            if (asset.children && asset.children.length > 0) {
+                childrenTreeHtml = `<div class="space-y-1 border-l border-slate-250 ml-2 pl-2.5 pt-0.5">`;
+                asset.children.forEach((child, index) => {
+                    const lineSymbol = index === asset.children.length - 1 ? '└─' : '├─';
+                    childrenTreeHtml += `
+                        <div class="flex items-center gap-1.5 text-[11px] text-slate-600 py-0.5">
+                            <span class="text-slate-400 font-mono text-[11px]">${lineSymbol}</span>
+                            <span class="w-1.5 h-1.5 bg-brand-neonGreen"></span>
+                            <span class="font-bold text-slate-800 truncate flex-1">${child.name}</span>
+                            <span class="text-[8px] font-mono font-bold text-slate-400 bg-slate-100 px-1 border border-slate-200">${child.code}</span>
+                        </div>
+                    `;
+                });
+                childrenTreeHtml += `</div>`;
             }
-            audit.unshift({
-                action,
-                user: state.role === 'admin' ? 'Admin Sistema' : 'Lorena Montes',
-                date: '2026-05-28 18:20',
-                text: `${action} ejecutada sobre ${asset.id} via modulo ${module}.`
+
+            let historyHtml = '';
+            asset.history.slice(0, 2).forEach(item => {
+                historyHtml += `
+                    <div class="flex gap-2 text-[11px] bg-slate-50 p-2 border border-slate-100">
+                        <div class="w-5 h-5 rounded-none bg-white flex items-center justify-center text-slate-500 shrink-0 border border-slate-200 text-[9px]">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold text-slate-800 leading-tight">${item.title}</p>
+                            <span class="text-[8px] text-slate-400 block mt-0.5 font-mono">${item.date}</span>
+                        </div>
+                    </div>
+                `;
             });
-            render();
-            if (state.selectedAssetId === id) renderDrawer();
-            toast(`${action} enviada a ${module}.`, 'success');
+
+            drawerBody.innerHTML = `
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-150">
+                    <div class="w-12 h-12 border border-slate-200 overflow-hidden bg-slate-50 flex-shrink-0">
+                        <img src="${asset.image}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=100&auto=format&fit=crop&q=80'">
+                    </div>
+                    <div>
+                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 uppercase">${asset.id}</span>
+                        <h4 class="text-xs font-black text-slate-800 mt-0.5 leading-tight">${asset.name}</h4>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                    <div class="space-y-0.5">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-wider block">Custodio Asignado</span>
+                        <p class="text-xs font-bold text-slate-800">${asset.owner}</p>
+                        <p class="text-[10px] font-bold text-brand-neonOrange flex items-center gap-1 mt-0.5">
+                            <i class="fa-solid fa-circle-user text-[9px]"></i> ${asset.ownerType}
+                        </p>
+                    </div>
+                    <button onclick="openQrDetailModal('${asset.id}')" class="w-10 h-10 bg-white hover:bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0 transition-colors" title="Ver código QR">
+                        <i class="fa-solid fa-qrcode text-xl text-brand-dark"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-2">
+                    <h5 class="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info"></i> Ubicación & Tiempos
+                    </h5>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-slate-50 p-2 border border-slate-150">
+                            <span class="text-[8px] text-slate-400 block uppercase font-mono">Ubicación</span>
+                            <span class="text-[10px] font-bold text-slate-700 block mt-0.5 truncate">${asset.location}</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 border border-slate-150">
+                            <span class="text-[8px] text-slate-400 block uppercase font-mono">Fecha Asignación</span>
+                            <span class="text-[10px] font-bold text-slate-700 block mt-0.5 truncate">01/05/2026</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h5 class="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                            <i class="fa-solid fa-network-wired"></i> Dispositivos Asociados
+                        </h5>
+                        <span class="text-[9px] font-mono font-bold bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5">${asset.children.length} ITEMS</span>
+                    </div>
+                    ${childrenTreeHtml}
+                </div>
+
+                <div class="space-y-2">
+                    <h5 class="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <i class="fa-solid fa-timeline"></i> Trazabilidad Reciente
+                    </h5>
+                    <div class="space-y-2">
+                        ${historyHtml}
+                    </div>
+                </div>
+            `;
+
+            const fullSheetBtn = document.getElementById('drawer-full-sheet-btn');
+            fullSheetBtn.onclick = function () {
+                closeQuickView();
+                openLevel3FullDetails(id);
+            };
+
+            const drawer = document.getElementById('quick-view-drawer');
+            const backdrop = document.getElementById('drawer-backdrop');
+            const content = document.getElementById('drawer-content');
+
+            drawer.classList.remove('pointer-events-none');
+            backdrop.classList.remove('opacity-0', 'pointer-events-none');
+            backdrop.classList.add('opacity-100', 'pointer-events-auto');
+            content.classList.remove('translate-x-full');
+            content.classList.add('translate-x-0');
         }
 
-        function openQr(id) {
-            const asset = assets.find(item => item.id === id);
-            const canSee = state.role === 'admin' || asset.owner === 'Lorena Montes' || asset.isCommon;
-            if (!canSee) {
-                toast('Activo registrado en el sistema. No tienes permisos para visualizar este dispositivo.', 'error');
-                return;
-            }
-            fillScan(asset.qr);
-            openScanModal();
+        function closeQuickView() {
+            const drawer = document.getElementById('quick-view-drawer');
+            const backdrop = document.getElementById('drawer-backdrop');
+            const content = document.getElementById('drawer-content');
+
+            backdrop.classList.remove('opacity-100', 'pointer-events-auto');
+            backdrop.classList.add('opacity-0', 'pointer-events-none');
+            content.classList.remove('translate-x-0');
+            content.classList.add('translate-x-full');
+            setTimeout(() => {
+                drawer.classList.add('pointer-events-none');
+            }, 200);
         }
 
-        function submitScan() {
-            const value = document.getElementById('scan-input').value.trim().toLowerCase();
-            const asset = assets.find(item => item.id.toLowerCase() === value || item.qr.toLowerCase() === value || item.serial.toLowerCase() === value);
-            if (!asset) {
-                toast('QR o serial no reconocido.', 'error');
-                return;
-            }
-            const canSee = state.role === 'admin' || asset.owner === 'Lorena Montes' || asset.isCommon;
-            if (!canSee) {
-                audit.unshift({ action: 'Acceso denegado', user: 'Lorena Montes', date: '2026-05-28 18:20', text: `Intento de escaneo no autorizado sobre ${asset.id}.` });
-                renderActivity();
-                closeScanModal();
-                toast('Activo registrado en el sistema. No tienes permisos para visualizar este dispositivo.', 'error');
-                return;
-            }
-            closeScanModal();
-            openDrawer(asset.id);
+        function triggerIncident() {
+            showToast("Nueva Incidencia", "Abriendo ticket de soporte en cola operativa TI.", "fa-ticket");
         }
 
-        function createAsset(event) {
-            event.preventDefault();
-            const id = `AST-2026-${String(assets.length + 1).padStart(3, '0')}`;
-            const category = document.getElementById('new-category').value;
-            assets.push({
-                id,
-                qr: `QR-${id}`,
-                name: document.getElementById('new-name').value,
-                description: 'Activo creado desde registro rapido del modulo.',
-                category,
-                status: 'Disponible',
-                health: 100,
-                criticality: 'Media',
-                owner: document.getElementById('new-owner').value || 'Sin asignar',
-                department: 'General',
-                node: 'Nodo pendiente',
-                location: document.getElementById('new-location').value || 'Sin ubicacion',
-                brand: 'Pendiente',
-                model: 'Pendiente',
-                serial: document.getElementById('new-serial').value || id,
-                warranty: 'Pendiente',
-                children: [],
-                parent: null,
-                tickets: 0,
-                isCommon: false,
-                isSensitive: false,
-                lastActivity: 'Creado ahora'
+        function showQuickHistory() {
+            showToast("Trazabilidad TI", "Cargando log de auditoría completo desde el servidor.", "fa-timeline");
+        }
+
+        // --- MANEJO DE MODAL QR INDIVIDUAL ---
+        function openQrDetailModal(assetId) {
+            document.getElementById('qr-modal-asset-id').innerText = assetId;
+            const modal = document.getElementById('qr-detail-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-95');
+            modal.querySelector('.transform').classList.add('scale-100');
+        }
+
+        function closeQrDetailModal() {
+            const modal = document.getElementById('qr-detail-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-100');
+            modal.querySelector('.transform').classList.add('scale-95');
+        }
+
+        // --- SISTEMA INTERACTIVO DE PESTAÑAS (TABS) ---
+        function switchTab(tabId) {
+            const panes = document.querySelectorAll('.tab-pane');
+            panes.forEach(p => p.classList.add('hidden'));
+
+            const activePane = document.getElementById(`pane-${tabId}`);
+            if (activePane) activePane.classList.remove('hidden');
+
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(t => {
+                t.classList.remove('border-brand-neonOrange', 'text-brand-neonOrange', 'font-black');
+                t.classList.add('border-transparent', 'text-slate-400');
             });
-            audit.unshift({ action: 'Creacion', user: 'Admin Sistema', date: '2026-05-28 18:20', text: `Activo ${id} registrado.` });
-            closeCreateModal();
-            event.target.reset();
-            render();
-            toast(`Activo ${id} registrado.`, 'success');
+
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if (activeTab) {
+                activeTab.classList.remove('border-transparent', 'text-slate-400');
+                activeTab.classList.add('border-brand-neonOrange', 'text-brand-neonOrange', 'font-black');
+            }
         }
 
-        function clearFilters() {
-            document.getElementById('search-input').value = '';
-            document.getElementById('category-filter').value = 'all';
-            document.getElementById('status-filter').value = 'all';
-            document.getElementById('module-filter').value = 'all';
-            state.scope = state.role === 'admin' ? 'all' : 'mine';
-            render();
+        // --- SIMULADOR DE ACCIONES DE RELACIÓN HIERARCHY ---
+        function handleRelationAction(actionType, code) {
+            if (actionType === 'add') {
+                showToast("Vincular Dispositivo", "Abriendo catálogo de periféricos para asociar al activo padre...", "fa-link");
+            } else if (actionType === 'unlink') {
+                showToast("Desvincular", `Desasociando periférico ${code} de forma segura.`, "fa-link-slash");
+            } else if (actionType === 'move') {
+                showToast("Mover Jerarquía", `Moviendo periférico ${code} a un nuevo activo padre en planta.`, "fa-arrows-spin");
+            }
         }
 
-        function statusMeta(status) {
-            if (status === 'Operativo') return { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-brand-green' };
-            if (status === 'Disponible') return { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' };
-            if (status === 'En mantenimiento') return { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' };
-            if (status === 'Reportado') return { bg: 'bg-red-50', text: 'text-brand-coral', dot: 'bg-brand-coral' };
-            if (status === 'Prestado') return { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' };
-            return { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' };
+        // NIVEL 3: DETALLE COMPLETO (CENTRO DE VIDA DEL ACTIVO - REDISEÑO SAAS)
+        function openLevel3FullDetails(id) {
+            const asset = assetsData.find(a => a.id === id);
+            if (!asset) return;
+
+            document.getElementById('catalog-section').classList.add('hidden');
+            const level3Container = document.getElementById('level3-full-details');
+            level3Container.classList.remove('hidden');
+
+            // 1. Pre-calculamos los responsables por turnos (Turnos dinámicos)
+            let custodiansHtml = '';
+            asset.custodians.forEach(c => {
+                const activeClass = c.active ? 'border-brand-neonGreen bg-brand-neonGreen/5' : 'border-slate-100 bg-slate-50';
+                const activeBadge = c.active
+                    ? '<span class="px-1.5 py-0.5 bg-brand-neonGreen text-brand-darker font-mono font-bold text-[8px]">CUSTODIO ACTIVO</span>'
+                    : `<button onclick="activateCustodianShift('${asset.id}', '${c.name}')" class="px-1.5 py-0.5 bg-white border border-slate-200 hover:border-slate-450 text-slate-600 font-mono text-[8px] transition-colors font-bold uppercase">ASIGNAR</button>`;
+
+                custodiansHtml += `
+                    <div class="p-2 border ${activeClass} flex items-center justify-between gap-3 transition-all duration-150">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="w-6 h-6 bg-brand-dark text-white font-extrabold text-[9px] flex items-center justify-center font-mono">
+                                ${c.avatar}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[11px] font-black text-slate-800 leading-none">${c.name}</p>
+                                <p class="text-[9px] text-slate-500 mt-0.5 leading-none font-medium">${c.role}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            ${activeBadge}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 2. Pre-calculamos la línea de tiempo resumida de Vida
+            let summaryTimelineHtml = '<div class="relative pl-3 border-l border-slate-200 space-y-3 pt-1">';
+            asset.history.slice(0, 3).forEach(item => {
+                summaryTimelineHtml += `
+                    <div class="relative">
+                        <span class="absolute -left-[18.5px] top-1 w-2 h-2 rounded-none bg-brand-neonOrange"></span>
+                        <div class="space-y-0.5">
+                            <span class="text-[8px] font-mono text-slate-400 block">${item.date}</span>
+                            <h5 class="text-[11px] font-bold text-slate-800 leading-tight">${item.title}</h5>
+                            <p class="text-[10px] text-slate-500 leading-relaxed">${item.desc}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            summaryTimelineHtml += '</div>';
+
+            // 3. Pre-calculamos la Tabla de Tickets de Soporte
+            let ticketsTableHtml = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse font-sans text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 tracking-wider">
+                                <th class="py-2.5 px-3 uppercase font-mono text-[9px]">ID TICKET</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">ASUNTO / INCIDENCIA</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">FECHA REPORTE</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">PRIORIDAD</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">ESTADO</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">TÉCNICO</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-600 font-medium">
+            `;
+            if (asset.tickets && asset.tickets.length > 0) {
+                asset.tickets.forEach(t => {
+                    const statusBadge = t.status === 'Abierto' ? 'bg-orange-50 text-brand-neonOrange border border-orange-100' : 'bg-slate-100 text-slate-500 border border-slate-200';
+                    const priorityClass = t.priority === 'Alta' ? 'text-red-500 font-extrabold' : 'text-slate-500';
+                    ticketsTableHtml += `
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="py-3 px-3 font-mono text-brand-neonOrange font-bold">${t.id}</td>
+                            <td class="py-3 px-3 text-slate-800 font-semibold">${t.title}</td>
+                            <td class="py-3 px-3 font-mono text-[10px]">${t.date}</td>
+                            <td class="py-3 px-3"><span class="text-[10px] ${priorityClass}">${t.priority}</span></td>
+                            <td class="py-3 px-3"><span class="px-1.5 py-0.5 rounded-none text-[8px] font-bold ${statusBadge}">${t.status}</span></td>
+                            <td class="py-3 px-3 font-semibold text-slate-700">${t.tech}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                ticketsTableHtml += `<tr><td colspan="6" class="py-8 text-center text-slate-400 italic">No hay tickets de Helpdesk vinculados a este hardware.</td></tr>`;
+            }
+            ticketsTableHtml += `</tbody></table></div>`;
+
+            // 4. Pre-calculamos el Árbol Visual de Relaciones (Estructura jerárquica premium)
+            let relationsTreeHtml = `
+                <div class="space-y-4 font-sans text-xs">
+                    <div class="flex items-center justify-between border-b border-slate-150 pb-2">
+                        <span class="text-[9px] font-mono font-bold text-slate-400 uppercase block tracking-wider">Estructura Jerárquica del Activo Principal</span>
+                        <button onclick="handleRelationAction('add')" class="px-2.5 py-1 bg-brand-dark hover:bg-brand-darker text-white font-mono text-[8px] font-bold uppercase transition-colors">
+                            <i class="fa-solid fa-plus mr-1"></i> Agregar Dispositivo Hijo
+                        </button>
+                    </div>
+
+                    <!-- Nodo Principal -->
+                    <div class="p-3 bg-brand-dark text-white border border-brand-darker flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-laptop text-brand-neonOrange text-sm"></i>
+                            <div>
+                                <h4 class="font-extrabold text-[11px] uppercase tracking-wide leading-none">${asset.name}</h4>
+                                <span class="text-[8px] font-mono text-slate-400 block mt-1">${asset.id}</span>
+                            </div>
+                        </div>
+                        <span class="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-brand-neonOrange/20 text-brand-neonOrange border border-brand-neonOrange/30">ACTIVO PADRE</span>
+                    </div>
+
+                    <!-- Hijos Directos en Ramificación -->
+                    <div class="pl-6 border-l border-slate-200 space-y-2 relative">
+            `;
+            if (asset.children && asset.children.length > 0) {
+                asset.children.forEach(child => {
+                    relationsTreeHtml += `
+                        <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-300 font-mono text-sm">├──</span>
+                                <i class="fa-solid fa-plug text-brand-neonGreen text-xs"></i>
+                                <div>
+                                    <p class="font-bold text-slate-800 leading-none">${child.name}</p>
+                                    <p class="text-[8px] font-mono text-slate-400 mt-1">UUID: ${child.code}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 uppercase">${child.status}</span>
+                                <button onclick="handleRelationAction('unlink', '${child.code}')" class="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Desvincular periférico">
+                                    <i class="fa-solid fa-link-slash text-[10px]"></i>
+                                </button>
+                                <button onclick="handleRelationAction('move', '${child.code}')" class="p-1 hover:bg-slate-100 text-slate-400 hover:text-brand-dark transition-colors" title="Mover de activo principal">
+                                    <i class="fa-solid fa-arrows-spin text-[10px]"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                relationsTreeHtml += `<p class="text-xs text-slate-400 italic">No se han registrado elementos secundarios asociados.</p>`;
+            }
+            relationsTreeHtml += `</div></div>`;
+
+            // 5. Pre-calculamos el Acordeón Técnico de Hardware
+            let hardwareAccordionHtml = `
+                <div class="space-y-2">
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden" open>
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-microchip text-brand-neonOrange"></i> Procesador / Chipset (CPU)
+                            </h4>
+                            <span class="text-slate-400 group-open:text-brand-neonOrange"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150">
+                            ${asset.techSpecs.processor}
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-memory text-brand-neonGreen"></i> Memoria RAM Instalada
+                            </h4>
+                            <span class="text-slate-400 group-open:text-brand-neonGreen"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150">
+                            ${asset.techSpecs.ram}
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-hdd text-blue-500"></i> Almacenamiento & S.M.A.R.T. (SSD)
+                            </h4>
+                            <span class="text-slate-400 group-open:text-blue-500"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150">
+                            ${asset.techSpecs.storage}
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-network-wired text-indigo-500"></i> Interfaces de Red (MAC / IP)
+                            </h4>
+                            <span class="text-slate-400 group-open:text-indigo-500"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150 space-y-1">
+                            <p><strong>IPv4 Principal:</strong> ${asset.techSpecs.ip_address}</p>
+                            <p><strong>Ethernet MAC:</strong> ${asset.techSpecs.mac_ethernet}</p>
+                            <p><strong>Wireless MAC:</strong> ${asset.techSpecs.mac_wifi}</p>
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-fingerprint text-purple-500"></i> Sistema Operativo & Agente
+                            </h4>
+                            <span class="text-slate-400 group-open:text-purple-500"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150 space-y-1">
+                            <p><strong>Compilación OS:</strong> ${asset.techSpecs.os}</p>
+                            <p><strong>Versión Agente:</strong> ${asset.techSpecs.agent_version}</p>
+                            <p><strong>UUID de Registro:</strong> ${asset.techSpecs.uuid}</p>
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-gears text-slate-500"></i> BIOS de Placa Base (Motherboard)
+                            </h4>
+                            <span class="text-slate-400 group-open:text-slate-500"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150 space-y-1">
+                            <p><strong>Motherboard:</strong> ${asset.techSpecs.motherboard}</p>
+                            <p><strong>Versión BIOS:</strong> ${asset.techSpecs.bios_version}</p>
+                        </div>
+                    </details>
+                </div>
+            `;
+
+            // 6. Pre-calculamos los Documentos Adjuntos
+            let documentsHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 font-sans">';
+            asset.documents.forEach(doc => {
+                documentsHtml += `
+                    <div class="p-3 bg-slate-50 border border-slate-200 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-8 h-8 bg-slate-200 text-slate-600 flex items-center justify-center text-sm rounded-none">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h5 class="text-xs font-bold text-slate-800 truncate">${doc.name}</h5>
+                                <p class="text-[9px] text-slate-400 font-mono mt-0.5">${doc.size} • Subido el ${doc.date}</p>
+                            </div>
+                        </div>
+                        <button onclick="showToast('Descarga', 'Descargando archivo adjunto de los servidores corporativos...', 'fa-download')" class="p-1 hover:bg-white border border-transparent hover:border-slate-200 text-slate-600 transition-all">
+                            <i class="fa-solid fa-download text-xs"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            documentsHtml += '</div>';
+
+            // 7. Pre-calculamos la Trazabilidad Histórica Completa (Auditoría)
+            let auditTimelineHtml = '<div class="relative pl-3.5 border-l border-slate-200 space-y-4 pt-1 font-sans">';
+            asset.history.forEach(item => {
+                auditTimelineHtml += `
+                    <div class="relative">
+                        <span class="absolute -left-[19px] top-0.5 w-2.5 h-2.5 rounded-none bg-white border border-brand-neonOrange flex items-center justify-center">
+                            <span class="w-1 h-1 bg-brand-neonOrange block"></span>
+                        </span>
+                        <div class="space-y-0.5">
+                            <span class="text-[8px] font-bold text-slate-400 block font-mono leading-none">${item.date}</span>
+                            <h5 class="text-xs font-bold text-slate-800 leading-tight">${item.title}</h5>
+                            <p class="text-[10px] text-slate-500 leading-normal mt-0.5">${item.desc}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            auditTimelineHtml += '</div>';
+
+            // 8. Renderizamos la Ficha Completa SaaS en Rejilla de alta Jerarquía
+            level3Container.innerHTML = `
+                <!-- HERO SUPERIOR (ESTILO NOTION/LINEAR) -->
+                <div class="bg-white border border-slate-200 p-5 flex flex-col md:flex-row gap-5 items-start justify-between">
+                    <div class="flex flex-col md:flex-row gap-5 items-start">
+                        <!-- Imagen Grande del Activo -->
+                        <div class="w-20 h-20 md:w-28 md:h-28 border border-slate-200 overflow-hidden bg-slate-50 flex-shrink-0">
+                            <img src="${asset.image}" alt="${asset.name}" class="w-full h-full object-cover">
+                        </div>
+                        
+                        <!-- Identidad del Hardware -->
+                        <div class="space-y-2 min-w-0">
+                            <div>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[10px] font-mono font-bold bg-brand-dark text-white px-1.5 py-0.5 uppercase tracking-wide">${asset.id}</span>
+                                    <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 border border-slate-200 uppercase">${asset.category}</span>
+                                    <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 border border-slate-200 uppercase">${asset.location}</span>
+                                </div>
+                                <h2 class="text-lg md:text-xl font-black text-slate-800 mt-1 uppercase tracking-wide leading-tight">${asset.name}</h2>
+                            </div>
+                            
+                            <div class="flex items-center gap-4 text-xs font-semibold text-slate-500">
+                                <span>Custodio: <strong class="text-slate-800">${asset.owner}</strong></span>
+                                <span class="w-1.5 h-1.5 bg-slate-300"></span>
+                                <span>Garantía: <strong class="text-brand-neonOrange">${asset.financial.guarantee}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Badges de Estado y Acciones Rápidas -->
+                    <div class="flex flex-col items-end gap-2.5 w-full md:w-auto shrink-0 border-t md:border-t-0 pt-3 md:pt-0">
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 bg-brand-neonGreen/10 text-brand-neonGreen text-[9px] font-mono font-bold uppercase border border-brand-neonGreen/20">🟢 OPERATIVO</span>
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-mono font-bold uppercase border border-slate-200">🟟 GARANTÍA ACTIVA</span>
+                            <span class="px-2 py-0.5 bg-orange-50 text-brand-neonOrange text-[9px] font-mono font-bold uppercase border border-orange-100">🔵 ${asset.tickets.length} INCIDENCIAS</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-1.5 w-full md:w-auto">
+                            <button onclick="triggerIncident()" class="flex-1 md:flex-none px-3 py-1.5 bg-brand-neonOrange hover:bg-brand-neonOrange/90 text-white font-bold text-[10px] uppercase transition-colors">Crear Incidencia</button>
+                            <button onclick="showQuickHistory()" class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[10px] uppercase transition-colors">Historial</button>
+                            <button onclick="window.print()" class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[10px] uppercase transition-colors"><i class="fa-solid fa-print"></i></button>
+                            <button onclick="openQrDetailModal('${asset.id}')" class="px-3 py-1.5 bg-brand-dark hover:bg-brand-darker text-white font-bold text-[10px] uppercase transition-colors"><i class="fa-solid fa-qrcode mr-1"></i> QR</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ARQUITECTURA EN DOS COLUMNAS (CONTENIDO + SIDEBAR DERECHO) -->
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+                    
+                    <!-- COLUMNA PRINCIPAL IZQUIERDA (Páginas con TABS) -> lg:col-span-3 -->
+                    <div class="lg:col-span-3 space-y-4">
+                        
+                        <!-- Barra de Navegación de Tabs (Estilo SaaS Premium) -->
+                        <div class="bg-white border border-slate-200 p-1 flex items-center gap-1 border-b-2">
+                            <button id="tab-resumen" onclick="switchTab('resumen')" class="tab-btn px-4 py-2 border-b-2 border-brand-neonOrange text-brand-neonOrange font-black text-xs uppercase tracking-wider transition-all">Resumen</button>
+                            <button id="tab-tickets" onclick="switchTab('tickets')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Tickets</button>
+                            <button id="tab-relaciones" onclick="switchTab('relaciones')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Relaciones</button>
+                            <button id="tab-hardware" onclick="switchTab('hardware')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Hardware</button>
+                            <button id="tab-documentos" onclick="switchTab('documentos')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Documentos</button>
+                            <button id="tab-auditoria" onclick="switchTab('auditoria')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Auditoría</button>
+                        </div>
+
+                        <!-- PANEL CONTENEDOR DE TABS -->
+                        <div class="bg-white border border-slate-200 p-5">
+                            
+                            <!-- TAB 1: RESUMEN -->
+                            <div id="pane-resumen" class="tab-pane space-y-5">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Custodio Principal</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1">${asset.owner}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Ubicación Actual</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 truncate">${asset.location}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Vigencia Garantía</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 text-brand-neonOrange">${asset.financial.guarantee}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Proveedor Homologado</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 truncate">${asset.financial.provider}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Valor Comercial</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 font-mono">${asset.financial.cost}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Fecha Adquisición</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 font-mono">${asset.financial.purchaseDate}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">N° Factura Compra</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 font-mono">${asset.financial.invoice}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">SLA Soporte</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1">Menor a 4 Horas</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2 pt-2">
+                                    <h4 class="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider">Línea de Vida Reciente</h4>
+                                    ${summaryTimelineHtml}
+                                </div>
+                            </div>
+
+                            <!-- TAB 2: TICKETS -->
+                            <div id="pane-tickets" class="tab-pane hidden space-y-4">
+                                ${ticketsTableHtml}
+                            </div>
+
+                            <!-- TAB 3: RELACIONES -->
+                            <div id="pane-relaciones" class="tab-pane hidden space-y-4">
+                                ${relationsTreeHtml}
+                            </div>
+
+                            <!-- TAB 4: HARDWARE (Plegables por defecto para evitar saturar) -->
+                            <div id="pane-hardware" class="tab-pane hidden space-y-4">
+                                ${hardwareAccordionHtml}
+                            </div>
+
+                            <!-- TAB 5: DOCUMENTOS -->
+                            <div id="pane-documentos" class="tab-pane hidden space-y-4">
+                                ${documentsHtml}
+                            </div>
+
+                            <!-- TAB 6: AUDITORÍA -->
+                            <div id="pane-auditoria" class="tab-pane hidden space-y-4">
+                                ${auditTimelineHtml}
+                            </div>
+
+                        </div>
+
+                        <!-- Botón Volver de Ficha -->
+                        <button onclick="closeFullSheet()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 border border-slate-250 text-slate-700 font-bold text-xs uppercase transition-all tracking-wider rounded-none">
+                            Volver al Catálogo General de Activos
+                        </button>
+
+                    </div>
+
+                    <!-- COLUMNA SIDEBAR DERECHO (INFORMACIÓN FIJA) -> lg:col-span-1 -->
+                    <div class="lg:col-span-1 space-y-4">
+                        
+                        <!-- Panel de Control Técnico Directo -->
+                        <div class="bg-white border border-slate-200 p-4 space-y-4">
+                            <div class="border-b border-slate-100 pb-2">
+                                <span class="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-widest block">Operational Dashboard</span>
+                                <h3 class="text-xs font-black uppercase tracking-wider">Estado en Planta</h3>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Disponibilidad / Estado</span>
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 mt-1">
+                                        <span class="w-2 h-2 bg-brand-neonGreen"></span>
+                                        <span>Operando Correctamente</span>
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Custodio Técnico Asignado</span>
+                                    <span class="text-xs font-extrabold text-slate-800 block mt-1">${asset.owner}</span>
+                                </div>
+
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Ubicación Física de Planta</span>
+                                    <span class="text-xs font-semibold text-slate-600 block mt-1 truncate">${asset.location}</span>
+                                </div>
+
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Incidentes Activos Helpdesk</span>
+                                    <span class="text-xs font-extrabold text-brand-neonOrange block mt-1">1 Tickets en Proceso</span>
+                                </div>
+
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Última Sincronización Agente</span>
+                                    <span class="text-[10px] font-mono font-bold text-slate-500 block mt-1">Hace 2 minutos (OK)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel de Turnos / Responsables Secundarios (image_d3bb87.png) -->
+                        <div class="bg-white border border-slate-200 p-4 space-y-3">
+                            <div class="border-b border-slate-100 pb-2">
+                                <h4 class="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-users text-brand-neonGreen text-xs"></i> Custodia Compartida
+                                </h4>
+                            </div>
+                            <div class="space-y-2">
+                                ${custodiansHtml}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            `;
         }
 
-        function miniMetric(label, value, color) {
-            return `<div class="rounded-md bg-slate-50 p-2"><p class="text-[9px] font-black uppercase text-slate-400">${label}</p><p class="mt-1 truncate text-sm font-black ${color}">${value}</p></div>`;
+        function closeFullSheet() {
+            document.getElementById('level3-full-details').classList.add('hidden');
+            document.getElementById('catalog-section').classList.remove('hidden');
         }
 
-        function infoCell(label, value) {
-            return `<div class="rounded-md bg-slate-50 p-3"><p class="text-[9px] font-black uppercase tracking-wider text-slate-400">${label}</p><p class="mt-1 break-words text-xs font-black text-brand-dark">${value || 'No aplica'}</p></div>`;
+        // ALTERNAR EL TURNO DE CUSTODIOS DE FORMA INTERACTIVA (Fiel al esquema de image_d3bb87.png)
+        function activateCustodianShift(assetId, custodianName) {
+            const asset = assetsData.find(a => a.id === assetId);
+            if (!asset) return;
+
+            asset.custodians.forEach(c => {
+                c.active = (c.name === custodianName);
+            });
+
+            const activeCust = asset.custodians.find(c => c.active);
+            if (activeCust) {
+                asset.owner = activeCust.name;
+            }
+
+            showToast("Cambio de Turno", `Custodia asignada a: ${custodianName}`, "fa-user-check");
+
+            openLevel3FullDetails(assetId);
+            renderAssets();
         }
 
-        function setText(id, value) {
-            const el = document.getElementById(id);
-            if (el) el.innerText = value;
-        }
+        // SISTEMA DE TOASTS
+        function showToast(title, message, iconClass = 'fa-circle-check') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-title').innerText = title.toUpperCase();
+            document.getElementById('toast-message').innerText = message;
+            document.getElementById('toast-icon').className = `fa-solid ${iconClass} text-brand-neonGreen text-xs`;
 
-        function fillScan(value) {
-            document.getElementById('scan-input').value = value;
-        }
+            toast.classList.remove('translate-y-[-150%]');
+            toast.classList.add('translate-y-0');
 
-        function openScanModal() {
-            document.getElementById('scan-modal').classList.remove('hidden');
-            document.getElementById('scan-modal').classList.add('flex');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0');
+                toast.classList.add('translate-y-[-150%]');
+            }, 3000);
         }
-
-        function closeScanModal() {
-            document.getElementById('scan-modal').classList.add('hidden');
-            document.getElementById('scan-modal').classList.remove('flex');
-        }
-
-        function openCreateModal() {
-            document.getElementById('create-modal').classList.remove('hidden');
-            document.getElementById('create-modal').classList.add('flex');
-        }
-
-        function closeCreateModal() {
-            document.getElementById('create-modal').classList.add('hidden');
-            document.getElementById('create-modal').classList.remove('flex');
-        }
-
-        function openAuditModal() {
-            document.getElementById('audit-modal').classList.remove('hidden');
-            document.getElementById('audit-modal').classList.add('flex');
-        }
-
-        function closeAuditModal() {
-            document.getElementById('audit-modal').classList.add('hidden');
-            document.getElementById('audit-modal').classList.remove('flex');
-        }
-
-        function toast(message, type) {
-            const box = document.getElementById('toast');
-            document.getElementById('toast-text').innerText = message;
-            box.className = `toast-visible fixed bottom-5 right-5 z-[70] max-w-sm rounded-md border px-4 py-3 text-xs font-bold shadow-2xl transition-all duration-200 ${type === 'error' ? 'border-red-100 bg-red-50 text-brand-coral' : 'border-brand-border bg-white text-brand-dark'}`;
-            window.clearTimeout(window.__toastTimer);
-            window.__toastTimer = window.setTimeout(() => {
-                box.className = 'toast-hidden fixed bottom-5 right-5 z-[70] max-w-sm rounded-md border border-brand-border bg-white px-4 py-3 text-xs font-bold text-brand-dark shadow-2xl transition-all duration-200';
-            }, 2600);
-        }
-
-        window.addEventListener('load', () => {
-            setRole('admin');
-            const storedLayout = window.localStorage.getItem('inventoryMock:assets:view');
-            setLayout(['cards', 'list', 'summary'].includes(storedLayout) ? storedLayout : 'cards');
-        });
     </script>
 </body>
 

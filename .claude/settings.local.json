@@ -17,7 +17,10 @@
       "Bash(Format-Table -AutoSize)",
       "Bash(psql *)",
       "Bash(npm install *)",
-      "Bash(pnpm add *)"
+      "Bash(pnpm add *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Lenovo\\\\Desktop\\\\Sistema modular Gestion Tickets\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem *)"
     ]
   },
   "enabledPlugins": {
