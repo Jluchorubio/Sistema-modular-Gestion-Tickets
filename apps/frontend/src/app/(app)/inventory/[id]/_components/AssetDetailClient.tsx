@@ -340,6 +340,31 @@ function QrModal({
             >
               {data.qr_code}
             </p>
+            <div style={{ display: "flex", gap: 7, marginTop: 16, justifyContent: "center" }}>
+              <a
+                href={data.qr_image}
+                download={`QR-${assetName.replace(/\s+/g, "-")}.png`}
+                onClick={(e) => e.stopPropagation()}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 11, fontWeight: 700, color: C.navy, textDecoration: "none", cursor: "pointer" }}
+              >
+                Descargar
+              </a>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const win = window.open("", "_blank");
+                  if (!win) return;
+                  win.document.write(`<!DOCTYPE html><html><head><title>QR ${assetName}</title><style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;gap:12px}img{width:240px;height:240px}p{font-size:11px;color:#64748b;font-family:monospace;letter-spacing:.06em}</style></head><body><img src="${data.qr_image}" alt="QR"/><p>${data.qr_code}</p><p style="font-size:13px;font-weight:700;color:#0e2235">${assetName}</p></body></html>`);
+                  win.document.close();
+                  win.focus();
+                  win.print();
+                }}
+                style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 11, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Imprimir
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -1665,6 +1690,19 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     onError: (e: any) => setActionErr(e?.response?.data?.message ?? "Error"),
   });
 
+  const relateMut = useMutation({
+    mutationFn: (dto: { target_id: string; relation: 'set-child' | 'set-parent' | 'remove-parent' }) =>
+      inventoryService.relate(assetId, dto),
+    onSuccess: () => {
+      setShowRelate(false);
+      setActionErr("");
+      inv();
+      qc.invalidateQueries({ queryKey: ["asset-children", assetId] });
+      qc.invalidateQueries({ queryKey: ["asset-history", assetId] });
+    },
+    onError: (e: any) => setActionErr(e?.response?.data?.message ?? "Error al asociar activo"),
+  });
+
   const unassignMut = useMutation({
     mutationFn: () => inventoryService.unassign(assetId),
     onSuccess: () => {
@@ -2641,37 +2679,26 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             />
             {asset.parent_asset_id && (
               <div style={{ marginBottom: 18 }}>
-                <p
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: C.muted,
-                    textTransform: "uppercase",
-                    letterSpacing: ".08em",
-                    margin: "0 0 9px",
-                  }}
-                >
+                <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 9px" }}>
                   Activo padre
                 </p>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "11px 16px",
-                    background: C.bg,
-                    border: `1px solid ${C.border}`,
-                    borderRadius: 9,
-                  }}
-                >
-                  <Link2 size={14} style={{ color: C.coral }} />
-                  <span
-                    style={{ fontSize: 13, fontWeight: 700, color: C.navy }}
-                  >
-                    {asset.parent_asset_name || "—"}
-                  </span>
-                  {asset.parent_asset_status && (
-                    <StatusBadge status={asset.parent_asset_status} />
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "11px 16px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, flex: 1, minWidth: 0 }}>
+                    <Link2 size={14} style={{ color: C.coral, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.navy, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {asset.parent_asset_name || "—"}
+                    </span>
+                    {asset.parent_asset_status && <StatusBadge status={asset.parent_asset_status} />}
+                  </div>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      disabled={relateMut.isPending}
+                      onClick={() => relateMut.mutate({ target_id: asset.parent_asset_id!, relation: "remove-parent" })}
+                      style={{ padding: "8px 13px", borderRadius: 8, border: "1.5px solid #ef444440", background: "#ef444408", fontSize: 11, fontWeight: 700, color: "#ef4444", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap" as const }}
+                    >
+                      {relateMut.isPending ? "…" : "Desasociar"}
+                    </button>
                   )}
                 </div>
               </div>
@@ -2998,13 +3025,11 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
         <RelateAssetModal
           currentAssetId={assetId}
           currentAssetName={asset.name}
-          onRelate={(targetId, type) => {
-            /* TODO: wire to inventoryService.setRelation(assetId, targetId, type) */
-            console.log("Relate:", assetId, "→", targetId, type);
-            setShowRelate(false);
-          }}
+          onRelate={(targetId, type) =>
+            relateMut.mutate({ target_id: targetId, relation: type === "child" ? "set-child" : "set-parent" })
+          }
           onClose={() => setShowRelate(false)}
-          pending={false}
+          pending={relateMut.isPending}
         />
       )}
 

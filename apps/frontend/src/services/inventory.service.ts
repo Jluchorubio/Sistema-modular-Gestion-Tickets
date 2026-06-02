@@ -122,6 +122,8 @@ export const ASSET_ACTION_LABELS: Record<string, string> = {
   transferido:  'Transferido',
   dado_de_baja: 'Dado de baja',
   reparacion:   'Enviado a reparación',
+  asociado:     'Asociado como componente',
+  desasociado:  'Desasociado de padre',
 };
 
 export const ASSET_ACTION_COLORS: Record<string, string> = {
@@ -130,6 +132,8 @@ export const ASSET_ACTION_COLORS: Record<string, string> = {
   transferido:  '#8B5CF6',
   dado_de_baja: '#94A3B8',
   reparacion:   '#F59E0B',
+  asociado:     '#10B981',
+  desasociado:  '#F97316',
 };
 
 export const inventoryService = {
@@ -208,6 +212,14 @@ export const inventoryService = {
 
   async getChildAssets(id: string): Promise<AssetChild[]> {
     const { data } = await api.get(`/inventory/${id}/children`);
+    return data;
+  },
+
+  async relate(
+    id: string,
+    dto: { target_id: string; relation: 'set-child' | 'set-parent' | 'remove-parent' },
+  ): Promise<{ ok: boolean; target?: { id: string; name: string } }> {
+    const { data } = await api.post(`/inventory/${id}/relate`, dto);
     return data;
   },
 

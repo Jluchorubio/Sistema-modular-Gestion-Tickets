@@ -143,6 +143,18 @@ export class InventoryController {
     return this.service.transition(id, req.user.sub, body);
   }
 
+  @Post(':id/relate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('inventario:items:edit')
+  @ApiOperation({ summary: 'Asociar/desasociar activos (relación padre-hijo). target_id acepta UUID o QR code.' })
+  relate(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: { target_id: string; relation: 'set-child' | 'set-parent' | 'remove-parent' },
+  ) {
+    return this.service.relate(id, req.user.sub, dto);
+  }
+
   @Patch(':id/status')
   @RequirePermission('inventario:items:edit')
   @ApiOperation({ summary: 'Actualizar estado del activo (legacy — usa /transition).' })

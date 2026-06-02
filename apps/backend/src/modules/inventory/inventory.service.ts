@@ -437,6 +437,70 @@ export class InventoryService {
     );
   }
 
+  /* ── Asset relations (parent / child) ───────────────────────────────────── */
+
+  async relate(
+    assetId: string,
+    actorId: string,
+    dto: { target_id: string; relation: 'set-child' | 'set-parent' | 'remove-parent' },
+  ) {
+    if (dto.relation === 'remove-parent') {
+      const [asset] = await this.db.query<{ id: string; parent_asset_id: string | null }[]>(
+        `SELECT id, parent_asset_id FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
+        [assetId],
+      );
+      if (!asset) throw new NotFoundException(`Asset ${assetId} no encontrado`);
+      if (!asset.parent_asset_id) throw new BadRequestException('Este activo no tiene un padre asignado');
+
+      await this.db.query(
+        `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now() WHERE id = $1`,
+        [assetId],
+      );
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+         VALUES ($1, $2, $2, 'desasociado', 'Desasociado de activo padre')`,
+        [assetId, actorId],
+      );
+      return { ok: true };
+    }
+
+    /* Look up target by UUID or QR code */
+    const [target] = await this.db.query<{ id: string; name: string; parent_asset_id: string | null }[]>(
+      `SELECT id, name, parent_asset_id FROM inventory.assets
+       WHERE (id = $1 OR qr_code = $1) AND deleted_at IS NULL`,
+      [dto.target_id],
+    );
+    if (!target) throw new NotFoundException(`Activo "${dto.target_id}" no encontrado`);
+    if (target.id === assetId) throw new BadRequestException('Un activo no puede relacionarse consigo mismo');
+
+    if (dto.relation === 'set-child') {
+      /* current asset is parent, target becomes its child */
+      if (target.parent_asset_id === assetId) throw new BadRequestException('El activo ya es componente de este equipo');
+      await this.db.query(
+        `UPDATE inventory.assets SET parent_asset_id = $1, updated_at = now() WHERE id = $2`,
+        [assetId, target.id],
+      );
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+         VALUES ($1, $2, $2, 'asociado', $3)`,
+        [target.id, actorId, `Asociado como componente de: ${assetId}`],
+      );
+    } else {
+      /* dto.relation === 'set-parent': target becomes this asset's parent */
+      await this.db.query(
+        `UPDATE inventory.assets SET parent_asset_id = $1, updated_at = now() WHERE id = $2`,
+        [target.id, assetId],
+      );
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+         VALUES ($1, $2, $2, 'asociado', $3)`,
+        [assetId, actorId, `Asociado como componente de: ${target.id}`],
+      );
+    }
+
+    return { ok: true, target: { id: target.id, name: target.name } };
+  }
+
   async getQr(id: string) {
     const [asset] = await this.db.query<{ qr_code: string }[]>(
       `SELECT qr_code FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
