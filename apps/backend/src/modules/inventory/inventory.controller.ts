@@ -46,9 +46,16 @@ export class InventoryController {
 
   @Get(':id/assignment')
   @RequirePermission('inventario:items:view')
-  @ApiOperation({ summary: 'Asignación activa del activo.' })
+  @ApiOperation({ summary: 'Asignación activa más reciente del activo.' })
   getCurrentAssignment(@Param('id') id: string) {
     return this.service.getCurrentAssignment(id);
+  }
+
+  @Get(':id/assignments')
+  @RequirePermission('inventario:items:view')
+  @ApiOperation({ summary: 'Todas las asignaciones activas del activo (múltiples custodios).' })
+  getActiveAssignments(@Param('id') id: string) {
+    return this.service.getActiveAssignments(id);
   }
 
   @Get(':id/history')
@@ -122,13 +129,13 @@ export class InventoryController {
   @Post(':id/unassign')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('inventario:items:edit')
-  @ApiOperation({ summary: 'Devolver activo asignado. Estado vuelve a disponible.' })
+  @ApiOperation({ summary: 'Devolver custodia. user_id opcional para devolver custodio específico.' })
   unassign(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: { user_id?: string; reason?: string },
   ) {
-    return this.service.unassign(id, req.user.sub, body?.reason);
+    return this.service.unassign(id, req.user.sub, body?.user_id, body?.reason);
   }
 
   @Post(':id/transition')

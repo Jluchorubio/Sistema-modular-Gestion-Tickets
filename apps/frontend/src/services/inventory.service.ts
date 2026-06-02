@@ -54,6 +54,9 @@ export interface AssetAssignment {
   assigned_at:       string;
   notes:             string | null;
   assignment_status: string;
+  shift:             string | null;
+  hours_start:       string | null;
+  hours_end:         string | null;
   user_id:           string;
   user_name:         string;
   user_email:        string;
@@ -156,13 +159,21 @@ export const inventoryService = {
     return data;
   },
 
-  async assign(id: string, dto: { user_id: string; notes?: string }): Promise<{ ok: boolean; assignment_id: string }> {
+  async assign(
+    id: string,
+    dto: { user_id: string; notes?: string; shift?: string; hours_start?: string; hours_end?: string },
+  ): Promise<{ ok: boolean; assignment_id: string }> {
     const { data } = await api.post(`/inventory/${id}/assign`, dto);
     return data;
   },
 
-  async unassign(id: string, reason?: string): Promise<{ ok: boolean }> {
-    const { data } = await api.post(`/inventory/${id}/unassign`, { reason });
+  async unassign(id: string, userId?: string, reason?: string): Promise<{ ok: boolean }> {
+    const { data } = await api.post(`/inventory/${id}/unassign`, { user_id: userId, reason });
+    return data;
+  },
+
+  async getActiveAssignments(id: string): Promise<AssetAssignment[]> {
+    const { data } = await api.get(`/inventory/${id}/assignments`);
     return data;
   },
 

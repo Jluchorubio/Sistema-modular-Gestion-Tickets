@@ -132,18 +132,26 @@ export class InventoryService {
 
   /* ── FSM: assign to user ─────────────────────────────────────────────────── */
 
-  async assign(assetId: string, actorId: string, dto: { user_id: string; notes?: string }) {
+  async assign(
+    assetId: string,
+    actorId: string,
+    dto: { user_id: string; notes?: string; shift?: string; hours_start?: string; hours_end?: string },
+  ) {
     const [asset] = await this.db.query<{ status: AssetStatus }[]>(
       `SELECT status FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
       [assetId],
     );
     if (!asset) throw new NotFoundException(`Asset ${assetId} no encontrado`);
-    if (!FSM[asset.status].includes('asignado')) {
-      throw new BadRequestException(`No se puede asignar un activo en estado "${asset.status}"`);
+    if (asset.status === 'dado_de_baja') {
+      throw new BadRequestException('No se puede asignar un activo dado de baja');
     }
-    if (asset.status === 'asignado') {
-      throw new BadRequestException('El activo ya está asignado. Devuélvelo primero.');
-    }
+
+    /* Check if this specific user already has an active assignment */
+    const [existing] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM inventory.asset_assignments WHERE asset_id = $1 AND user_id = $2 AND status = 'activo'`,
+      [assetId, dto.user_id],
+    );
+    if (existing) throw new BadRequestException('Este usuario ya tiene custodia activa sobre este activo');
 
     await this.db.query(
       `UPDATE inventory.assets SET status = 'asignado' WHERE id = $1`,
@@ -151,9 +159,9 @@ export class InventoryService {
     );
 
     const [assignment] = await this.db.query<{ id: string }[]>(
-      `INSERT INTO inventory.asset_assignments (asset_id, user_id, assigned_by, notes)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [assetId, dto.user_id, actorId, dto.notes ?? null],
+      `INSERT INTO inventory.asset_assignments (asset_id, user_id, assigned_by, notes, shift, hours_start, hours_end)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [assetId, dto.user_id, actorId, dto.notes ?? null, dto.shift ?? null, dto.hours_start ?? null, dto.hours_end ?? null],
     );
 
     await this.db.query(
@@ -168,7 +176,7 @@ export class InventoryService {
 
   /* ── FSM: unassign ───────────────────────────────────────────────────────── */
 
-  async unassign(assetId: string, actorId: string, reason?: string) {
+  async unassign(assetId: string, actorId: string, userId?: string, reason?: string) {
     const [asset] = await this.db.query<{ status: AssetStatus }[]>(
       `SELECT status FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
       [assetId],
@@ -178,32 +186,34 @@ export class InventoryService {
       throw new BadRequestException('El activo no está asignado actualmente.');
     }
 
+    /* Find specific user's assignment or the most recent one */
     const [activeAssignment] = await this.db.query<{ id: string; user_id: string }[]>(
-      `SELECT id, user_id FROM inventory.asset_assignments
-       WHERE asset_id = $1 AND status = 'activo'
-       ORDER BY assigned_at DESC LIMIT 1`,
-      [assetId],
-    );
-
-    await this.db.query(
-      `UPDATE inventory.assets SET status = 'disponible' WHERE id = $1`,
-      [assetId],
+      userId
+        ? `SELECT id, user_id FROM inventory.asset_assignments WHERE asset_id = $1 AND user_id = $2 AND status = 'activo' LIMIT 1`
+        : `SELECT id, user_id FROM inventory.asset_assignments WHERE asset_id = $1 AND status = 'activo' ORDER BY assigned_at DESC LIMIT 1`,
+      userId ? [assetId, userId] : [assetId],
     );
 
     if (activeAssignment) {
       await this.db.query(
-        `UPDATE inventory.asset_assignments
-         SET status = 'devuelto', unassigned_at = now()
-         WHERE id = $1`,
+        `UPDATE inventory.asset_assignments SET status = 'devuelto', unassigned_at = now() WHERE id = $1`,
         [activeAssignment.id],
       );
-
       await this.db.query(
         `INSERT INTO inventory.asset_assignment_history
            (asset_id, user_id, assigned_by, assignment_id, action, reason)
          VALUES ($1, $2, $3, $4, 'devuelto', $5)`,
         [assetId, activeAssignment.user_id, actorId, activeAssignment.id, reason ?? null],
       );
+    }
+
+    /* If no more active assignments remain, set asset back to disponible */
+    const [remaining] = await this.db.query<{ cnt: string }[]>(
+      `SELECT COUNT(*)::text AS cnt FROM inventory.asset_assignments WHERE asset_id = $1 AND status = 'activo'`,
+      [assetId],
+    );
+    if (parseInt(remaining.cnt, 10) === 0) {
+      await this.db.query(`UPDATE inventory.assets SET status = 'disponible' WHERE id = $1`, [assetId]);
     }
 
     return { ok: true };
@@ -276,9 +286,10 @@ export class InventoryService {
   async getCurrentAssignment(assetId: string) {
     const [row] = await this.db.query<any[]>(
       `SELECT aa.id, aa.assigned_at, aa.notes, aa.status AS assignment_status,
+              aa.shift, aa.hours_start, aa.hours_end,
               p.id AS user_id,
               p.first_name || ' ' || p.last_name AS user_name,
-              p.email AS user_email,
+              p.display_email AS user_email,
               p.avatar_url,
               ab.first_name || ' ' || ab.last_name AS assigned_by_name
        FROM   inventory.asset_assignments aa
@@ -289,6 +300,24 @@ export class InventoryService {
       [assetId],
     );
     return row ?? null;
+  }
+
+  async getActiveAssignments(assetId: string) {
+    return this.db.query<any[]>(
+      `SELECT aa.id, aa.assigned_at, aa.notes, aa.status AS assignment_status,
+              aa.shift, aa.hours_start, aa.hours_end,
+              p.id AS user_id,
+              p.first_name || ' ' || p.last_name AS user_name,
+              p.display_email AS user_email,
+              p.avatar_url,
+              ab.first_name || ' ' || ab.last_name AS assigned_by_name
+       FROM   inventory.asset_assignments aa
+       JOIN   users.profiles p  ON p.id  = aa.user_id
+       JOIN   users.profiles ab ON ab.id = aa.assigned_by
+       WHERE  aa.asset_id = $1 AND aa.status = 'activo'
+       ORDER  BY aa.assigned_at ASC`,
+      [assetId],
+    );
   }
 
   /* ── History ─────────────────────────────────────────────────────────────── */
