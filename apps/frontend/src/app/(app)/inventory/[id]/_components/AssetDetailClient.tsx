@@ -86,6 +86,20 @@ const INPUT: React.CSSProperties = {
   color: C.text,
 };
 
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const y  = Math.floor(diff / 31536000000);
+  const mo = Math.floor(diff / 2592000000);
+  const d  = Math.floor(diff / 86400000);
+  const h  = Math.floor(diff / 3600000);
+  const m  = Math.floor(diff / 60000);
+  if (y  > 0) return `hace ${y} año${y  > 1 ? "s" : ""}`;
+  if (mo > 0) return `hace ${mo} mes${mo > 1 ? "es" : ""}`;
+  if (d  > 0) return `hace ${d} día${d  > 1 ? "s" : ""}`;
+  if (h  > 0) return `hace ${h}h`;
+  return `hace ${Math.max(m, 1)}min`;
+}
+
 /* ── StatusBadge ── */
 function StatusBadge({ status }: { status: AssetStatus }) {
   const color = ASSET_STATUS_COLORS[status];
@@ -2856,182 +2870,150 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             <div style={{ padding: "26px 36px", borderRight: `1px solid ${C.border}` }}>
             <SectionHeader label="Responsable / Custodia" />
 
-            {/* Custodios activos */}
             {assignments.length === 0 ? (
-              <p style={{ fontSize: 13, color: C.muted, margin: "0 0 14px" }}>Sin custodio asignado</p>
+              <div style={{ padding: "20px 0", textAlign: "center" }}>
+                <UserPlus size={24} style={{ color: C.border, display: "block", margin: "0 auto 10px" }} />
+                <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>Sin custodio asignado</p>
+              </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {assignments.map((asgn) => {
+                  const initials = asgn.user_name.split(" ").slice(0, 2).map((w: string) => w[0] ?? "").join("").toUpperCase();
                   const scheduleLabel = asgn.shift
                     ? `Turno ${asgn.shift}`
                     : asgn.hours_start && asgn.hours_end
                     ? `${asgn.hours_start} – ${asgn.hours_end}`
                     : null;
                   return (
-                    <div key={asgn.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#EFF6FF", borderRadius: 11, padding: "12px 14px" }}>
-                      <div style={{ width: 38, height: 38, borderRadius: 9, background: C.navy, display: "grid", placeItems: "center", flexShrink: 0 }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>
-                          {asgn.user_name.split(" ").slice(0, 2).map((w: string) => w[0]).join("")}
-                        </span>
-                      </div>
+                    <div key={asgn.id}
+                      style={{ display: "flex", gap: 13, padding: "14px 16px", background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 13 }}>
+                      {/* Avatar */}
+                      <button type="button"
+                        onClick={() => router.push(`/inventory/users/${asgn.user_id}/profile`)}
+                        style={{ position: "relative", flexShrink: 0, background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+                        {asgn.avatar_url ? (
+                          <img src={asgn.avatar_url} alt={asgn.user_name}
+                            style={{ width: 44, height: 44, borderRadius: 11, objectFit: "cover", display: "block" }} />
+                        ) : (
+                          <div style={{ width: 44, height: 44, borderRadius: 11, background: `${C.navy}0d`, border: `1.5px solid ${C.navy}18`, display: "grid", placeItems: "center" }}>
+                            <span style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{initials}</span>
+                          </div>
+                        )}
+                        <div style={{ position: "absolute", bottom: -2, right: -2, width: 12, height: 12, borderRadius: "50%", background: "#22c55e", border: "2.5px solid #fff" }} />
+                      </button>
+                      {/* Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: "#1e3a5f", margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{asgn.user_name}</p>
-                        {scheduleLabel && <p style={{ fontSize: 10, fontWeight: 700, color: "#3b82f6", margin: "0 0 1px", textTransform: "uppercase", letterSpacing: ".05em" }}>{scheduleLabel}</p>}
-                        <p style={{ fontSize: 10, color: C.muted, margin: 0 }}>Desde {fmtDate(asgn.assigned_at)}</p>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <button type="button"
+                              onClick={() => router.push(`/inventory/users/${asgn.user_id}/profile`)}
+                              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" as const }}>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: "0 0 2px" }}>{asgn.user_name}</p>
+                            </button>
+                            <p style={{ fontSize: 11, color: C.muted, margin: "0 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                              {asgn.user_email}
+                            </p>
+                            {scheduleLabel && (
+                              <span style={{ display: "inline-block", fontSize: 9, fontWeight: 700, color: "#3b82f6", background: "#eff6ff", padding: "2px 7px", borderRadius: 4, letterSpacing: ".05em", textTransform: "uppercase" as const }}>
+                                {scheduleLabel}
+                              </span>
+                            )}
+                          </div>
+                          {canEdit && (
+                            <button type="button" disabled={unassignMut.isPending}
+                              onClick={() => unassignMut.mutate(asgn.user_id)}
+                              style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #fecaca", background: "#fef2f2", color: "#ef4444", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap" as const }}>
+                              Devolver
+                            </button>
+                          )}
+                        </div>
+                        <p style={{ fontSize: 11, color: C.sub, margin: "6px 0 0" }}>
+                          Asociado {relativeTime(asgn.assigned_at)}
+                        </p>
                       </div>
-                      {canEdit && (
-                        <button type="button" disabled={unassignMut.isPending} onClick={() => unassignMut.mutate(asgn.user_id)}
-                          style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #fecaca", background: "#fef2f2", color: "#ef4444", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-                          Devolver
-                        </button>
-                      )}
                     </div>
                   );
                 })}
               </div>
             )}
-
-            {/* Historial custodios */}
-            {custodianHistory.length > 0 && (
-              <>
-                <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "14px 0 10px" }}>
-                  Historial de custodios
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {custodianHistory.slice(0, 8).map((h) => (
-                    <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 13px", background: C.bg, borderRadius: 9, border: `1px solid ${C.border}` }}>
-                      <div style={{ width: 7, height: 7, borderRadius: "50%", background: h.action === "asignado" ? "#3b82f6" : "#22c55e", flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {h.user_name || h.actor_name}
-                        </p>
-                        <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>
-                          {ASSET_ACTION_LABELS[h.action] ?? h.action} · {fmtDate(h.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
           </div>{/* /responsable cell */}
             <div style={{ padding: "26px 36px" }}>
             <SectionHeader
-              label={`Relaciones${children.length > 0 ? ` · ${children.length} componente${children.length !== 1 ? "s" : ""}` : ""}`}
+              label={children.length > 0 ? `Relaciones · ${children.length} componente${children.length !== 1 ? "s" : ""}` : "Relaciones"}
             />
+
+            {/* ── Activo padre ── */}
             {asset.parent_asset_id && (
-              <div style={{ marginBottom: 18 }}>
-                <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 9px" }}>
-                  Activo padre
+              <div style={{ marginBottom: 22 }}>
+                <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 9px" }}>
+                  ↑ Pertenece a
                 </p>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "11px 16px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, flex: 1, minWidth: 0 }}>
-                    <Link2 size={14} style={{ color: C.coral, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.navy, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {asset.parent_asset_name || "—"}
-                    </span>
-                    {asset.parent_asset_status && <StatusBadge status={asset.parent_asset_status} />}
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button type="button"
+                    onClick={() => router.push(`/inventory/${asset.parent_asset_id}`)}
+                    style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = C.coral + "80")}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}>
+                    <div style={{ width: 36, height: 36, borderRadius: 9, background: `${C.coral}10`, border: `1.5px solid ${C.coral}28`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                      <Package size={16} style={{ color: C.coral }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                        {asset.parent_asset_name || "—"}
+                      </p>
+                      {asset.parent_asset_status && <StatusBadge status={asset.parent_asset_status} />}
+                    </div>
+                    <ChevronRight size={14} style={{ color: C.muted, flexShrink: 0 }} />
+                  </button>
                   {canEdit && (
-                    <button
-                      type="button"
-                      disabled={relateMut.isPending}
+                    <button type="button" disabled={relateMut.isPending}
                       onClick={() => relateMut.mutate({ target_id: asset.parent_asset_id!, relation: "remove-parent" })}
-                      style={{ padding: "8px 13px", borderRadius: 8, border: "1.5px solid #ef444440", background: "#ef444408", fontSize: 11, fontWeight: 700, color: "#ef4444", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap" as const }}
-                    >
-                      {relateMut.isPending ? "…" : "Desasociar"}
+                      style={{ padding: "9px", borderRadius: 9, border: "1.5px solid #ef444430", background: "#ef444408", color: "#ef4444", cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                      <X size={13} />
                     </button>
                   )}
                 </div>
               </div>
             )}
+
+            {/* ── Componentes (árbol visual) ── */}
             {children.length > 0 ? (
               <div>
                 {asset.parent_asset_id && (
-                  <p
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      color: C.muted,
-                      textTransform: "uppercase",
-                      letterSpacing: ".08em",
-                      margin: "0 0 10px",
-                    }}
-                  >
+                  <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 10px" }}>
                     Componentes
                   </p>
                 )}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill, minmax(200px, 1fr))",
-                    gap: 9,
-                  }}
-                >
-                  {children.map((child) => (
-                    <button
-                      key={child.id}
-                      type="button"
-                      onClick={() => router.push(`/inventory/${child.id}`)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "12px 14px",
-                        background: C.bg,
-                        border: `1px solid ${C.border}`,
-                        borderRadius: 10,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        textAlign: "left",
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.borderColor = C.coral + "80")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.borderColor = C.border)
-                      }
-                    >
-                      <div
-                        style={{
-                          width: 9,
-                          height: 9,
-                          borderRadius: "50%",
-                          background: ASSET_STATUS_COLORS[child.status],
-                          flexShrink: 0,
-                        }}
-                      />
-                      <div style={{ minWidth: 0 }}>
-                        <p
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: C.navy,
-                            margin: "0 0 2px",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {child.name}
-                        </p>
-                        <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>
-                          {child.category_name}
-                        </p>
+                <div style={{ position: "relative", paddingLeft: 22 }}>
+                  {/* Línea vertical del árbol */}
+                  <div style={{ position: "absolute", left: 6, top: 10, bottom: 10, width: 2, background: C.border, borderRadius: 2 }} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    {children.map((child) => (
+                      <div key={child.id} style={{ position: "relative" }}>
+                        {/* Conector horizontal */}
+                        <div style={{ position: "absolute", left: -16, top: 18, width: 14, height: 2, background: C.border }} />
+                        <button type="button"
+                          onClick={() => router.push(`/inventory/${child.id}`)}
+                          style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = C.coral + "80"; e.currentTarget.style.background = "#fff"; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.bg; }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: ASSET_STATUS_COLORS[child.status], flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{child.name}</p>
+                            <p style={{ fontSize: 10, color: C.muted, margin: 0 }}>{child.category_name}</p>
+                          </div>
+                          <StatusBadge status={child.status} />
+                          <ChevronRight size={12} style={{ color: C.muted, flexShrink: 0 }} />
+                        </button>
                       </div>
-                    </button>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : !asset.parent_asset_id ? (
-              <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>
-                Activo raíz. Sin componentes hijos registrados.
-              </p>
+              <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>Activo raíz. Sin componentes asociados.</p>
             ) : (
-              <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>
-                Sin componentes hijos registrados.
-              </p>
+              <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>Sin componentes asociados.</p>
             )}
           </div>{/* /relaciones cell */}
           </div>{/* /responsable-relaciones grid */}
@@ -3041,204 +3023,94 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             <div style={{ padding: "26px 36px", borderRight: `1px solid ${C.border}` }}>
             <SectionHeader
               label={`Tickets asociados${asset.tickets_count > 0 ? ` (${asset.tickets_count})` : ""}`}
+              action={
+                asset.tickets_count > 0 ? (
+                  <button type="button" onClick={() => router.push(`/inventory/${assetId}/tickets`)}
+                    style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, color: C.coral, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                    Ver todos <ChevronRight size={13} />
+                  </button>
+                ) : null
+              }
             />
             {assetTickets.length === 0 ? (
-              <EmptyState
-                icon={<CheckCircle2 size={24} />}
-                text="Sin tickets asociados a este activo."
-              />
+              <EmptyState icon={<CheckCircle2 size={24} />} text="Sin tickets asociados a este activo." />
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {assetTickets.map((ticket) => {
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {assetTickets.slice(0, 3).map((ticket) => {
                   const pColor = PRIORITY_COLORS[ticket.priority] ?? C.muted;
                   return (
-                    <div
-                      key={ticket.id}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "4px 1fr auto",
-                        gap: "0 14px",
-                        alignItems: "center",
-                        padding: "12px 14px",
-                        background: C.bg,
-                        borderRadius: 10,
-                        border: `1px solid ${C.border}`,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 4,
-                          height: "100%",
-                          background: pColor,
-                          borderRadius: 2,
-                          alignSelf: "stretch",
-                        }}
-                      />
-                      <div>
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            alignItems: "center",
-                            marginBottom: 4,
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: C.coral,
-                              fontFamily: "monospace",
-                            }}
-                          >
-                            #{ticket.id.slice(0, 8)}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 9,
-                              fontWeight: 800,
-                              textTransform: "uppercase",
-                              color: ticket.is_final ? "#16a34a" : "#c2410c",
-                              background: ticket.is_final
-                                ? "#f0fdf4"
-                                : "#fff7ed",
-                              padding: "2px 7px",
-                              borderRadius: 4,
-                            }}
-                          >
+                    <div key={ticket.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                      <div style={{ width: 4, background: pColor, flexShrink: 0 }} />
+                      <div style={{ flex: 1, padding: "10px 13px", minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: C.coral, fontFamily: "monospace" }}>#{ticket.id.slice(0, 8)}</span>
+                          <span style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase" as const, color: ticket.is_final ? "#16a34a" : "#c2410c", background: ticket.is_final ? "#f0fdf4" : "#fff7ed", padding: "2px 7px", borderRadius: 4 }}>
                             {ticket.state_label}
                           </span>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: pColor, textTransform: "uppercase" as const, marginLeft: "auto" }}>● {ticket.priority}</span>
                         </div>
-                        <p
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: C.navy,
-                            margin: "0 0 3px",
-                          }}
-                        >
-                          {ticket.title}
-                        </p>
-                        <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>
-                          {ticket.creator_name} · {fmtDate(ticket.created_at)}
-                        </p>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{ticket.title}</p>
+                        <p style={{ fontSize: 10, color: C.muted, margin: 0 }}>{ticket.creator_name} · {fmtDate(ticket.created_at)}</p>
                       </div>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: pColor,
-                          textTransform: "uppercase",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        ● {ticket.priority}
-                      </span>
                     </div>
                   );
                 })}
+                {asset.tickets_count > 3 && (
+                  <button type="button" onClick={() => router.push(`/inventory/${assetId}/tickets`)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.coral}30`, background: `${C.coral}06`, color: C.coral, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                    Ver todos los tickets ({asset.tickets_count}) <ChevronRight size={13} />
+                  </button>
+                )}
               </div>
             )}
           </div>
 
             <div style={{ padding: "26px 36px" }}>
-            <SectionHeader label="Historial y auditoría" />
+            <SectionHeader
+              label="Auditoría reciente"
+              action={
+                history.length > 0 ? (
+                  <button type="button" onClick={() => router.push(`/inventory/${assetId}/history`)}
+                    style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, color: C.coral, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                    Ver historial <ChevronRight size={13} />
+                  </button>
+                ) : null
+              }
+            />
             {history.length === 0 ? (
-              <EmptyState
-                icon={<Clock size={24} />}
-                text="Sin eventos registrados."
-              />
+              <EmptyState icon={<Clock size={24} />} text="Sin eventos registrados." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {history.map((h, i) => {
+                {history.slice(0, 3).map((h, i) => {
                   const color = ASSET_ACTION_COLORS[h.action] ?? C.muted;
                   const label = ASSET_ACTION_LABELS[h.action] ?? h.action;
+                  const isLast = i === Math.min(history.length - 1, 2);
                   return (
-                    <div
-                      key={h.id}
-                      style={{
-                        display: "flex",
-                        gap: 14,
-                        paddingBottom: 16,
-                        position: "relative",
-                      }}
-                    >
-                      {i < history.length - 1 && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            left: 12,
-                            top: 24,
-                            width: 2,
-                            height: "calc(100% - 6px)",
-                            background: C.border,
-                          }}
-                        />
+                    <div key={h.id} style={{ display: "flex", gap: 14, paddingBottom: isLast ? 0 : 16, position: "relative" }}>
+                      {!isLast && (
+                        <div style={{ position: "absolute", left: 12, top: 24, width: 2, height: "calc(100% - 6px)", background: C.border }} />
                       )}
-                      <div
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: "50%",
-                          background: `${color}14`,
-                          border: `2px solid ${color}35`,
-                          display: "grid",
-                          placeItems: "center",
-                          flexShrink: 0,
-                          zIndex: 1,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: "50%",
-                            background: color,
-                          }}
-                        />
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: `${color}14`, border: `2px solid ${color}35`, display: "grid", placeItems: "center", flexShrink: 0, zIndex: 1 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
                       </div>
                       <div style={{ flex: 1, paddingTop: 1 }}>
-                        <p
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: C.navy,
-                            margin: "0 0 2px",
-                          }}
-                        >
-                          {label}
-                          {h.user_name && h.user_name !== h.actor_name ? (
-                            <span style={{ fontWeight: 500, color: C.sub }}>
-                              {" "}
-                              {h.user_name}
-                            </span>
-                          ) : null}
+                        <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: "0 0 2px" }}>
+                          {label}{h.user_name && h.user_name !== h.actor_name ? <span style={{ fontWeight: 500, color: C.sub }}> {h.user_name}</span> : null}
                         </p>
-                        <p
-                          style={{
-                            fontSize: 11,
-                            color: C.muted,
-                            margin: "0 0 1px",
-                          }}
-                        >
+                        <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>
                           por {h.actor_name} · {fmtDate(h.created_at)}
                         </p>
-                        {h.reason && (
-                          <p
-                            style={{
-                              fontSize: 11,
-                              color: C.sub,
-                              margin: 0,
-                              fontStyle: "italic",
-                            }}
-                          >
-                            {h.reason}
-                          </p>
-                        )}
+                        {h.reason && <p style={{ fontSize: 11, color: C.sub, margin: "1px 0 0", fontStyle: "italic" }}>{h.reason}</p>}
                       </div>
                     </div>
                   );
                 })}
+                {history.length > 3 && (
+                  <button type="button" onClick={() => router.push(`/inventory/${assetId}/history`)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.coral}30`, background: `${C.coral}06`, color: C.coral, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 14 }}>
+                    Ver historial completo <ChevronRight size={13} />
+                  </button>
+                )}
               </div>
             )}
           </div>{/* /historial cell */}
