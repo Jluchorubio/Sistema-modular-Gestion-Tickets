@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, X, Clock, Ticket, Search, ChevronDown, Star,
   BarChart2, ChevronRight, Users, Filter, ShieldCheck,
-  Home, ArrowLeftRight, Layers, Settings, Monitor,
+  Home, ArrowLeftRight, Layers, Settings, Monitor, AlertTriangle,
 } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
@@ -912,6 +912,36 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
           {/* Main content */}
           <div className={styles.helpdeskAdminMain}>
 
+            {/* ── SLA breach alert banner ── */}
+            {(() => {
+              const breached = allTickets.filter(t => t.sla_status === 'breached' && !t.is_final).length;
+              const critical = allTickets.filter(t => {
+                if (t.sla_status !== 'active' || t.is_final) return false;
+                const h = t.sla_deadline_tracked ? (new Date(t.sla_deadline_tracked).getTime() - Date.now()) / 3_600_000 : null;
+                return h !== null && h < 2;
+              }).length;
+              if (breached === 0 && critical === 0) return null;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderRadius: 10, background: breached > 0 ? '#fef2f2' : '#fff7ed', border: `1.5px solid ${breached > 0 ? '#fecaca' : '#fed7aa'}`, marginBottom: 4, cursor: 'pointer' }}
+                  onClick={() => { setQuickFilter(null); setSlaFilter('breached'); }}>
+                  <AlertTriangle size={16} style={{ color: breached > 0 ? '#ef4444' : '#f97316', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    {breached > 0 && (
+                      <span style={{ fontSize: 12, fontWeight: 800, color: '#ef4444' }}>
+                        {breached} ticket{breached > 1 ? 's' : ''} con SLA vencido
+                      </span>
+                    )}
+                    {critical > 0 && (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#f97316', marginLeft: breached > 0 ? 12 : 0 }}>
+                        {critical} crítico{critical > 1 ? 's' : ''} &lt;2h
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>Clic para filtrar →</span>
+                </div>
+              );
+            })()}
+
             {/* Stats */}
             <div className={styles.helpdeskStatsGrid}>
               {STAT_CARDS.map((card, i) => (
@@ -1659,6 +1689,49 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate, visualVaria
     return (
       <>
         <div className={styles.helpdeskAdminMain}>
+
+          {/* ── Top row: availability + quick links ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 4 }}>
+            {/* Availability widget */}
+            <AvailabilityWidget userId={user.id} moduleId={moduleId} />
+
+            {/* SLA urgency summary */}
+            {(() => {
+              const breached  = (assigned ?? []).filter((t) => (t as any).sla_status === 'breached').length;
+              const critical  = (assigned ?? []).filter((t) => {
+                const h = t.sla_deadline_tracked ? (new Date(t.sla_deadline_tracked).getTime() - Date.now()) / 3_600_000 : null;
+                return (t as any).sla_status === 'active' && h !== null && h < 2;
+              }).length;
+              const color = breached > 0 ? '#ef4444' : critical > 0 ? '#f97316' : '#22c55e';
+              const label = breached > 0 ? `${breached} vencido${breached > 1 ? 's' : ''}` : critical > 0 ? `${critical} crítico${critical > 1 ? 's' : ''}` : 'SLA al día';
+              return (
+                <div style={{ background: '#fff', padding: 14, borderRadius: 14, border: `1.5px solid ${color}30`, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>SLA mis tickets</p>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: color }} />
+                    {label}
+                  </span>
+                  {breached === 0 && critical === 0 && (
+                    <span style={{ fontSize: 10, color: '#94a3b8' }}>Todos en tiempo</span>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Quick links */}
+            <div style={{ background: '#fff', padding: 14, borderRadius: 14, border: '1px solid #e8edf3', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ margin: '0 0 2px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Accesos rápidos</p>
+              <button type="button" onClick={() => router.push(`/helpdesk/tech/${user.id}`)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 11, fontWeight: 700, color: '#0e2235', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Mi perfil operativo →
+              </button>
+              <button type="button" onClick={() => router.push('/helpdesk/sla')}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 11, fontWeight: 700, color: '#0e2235', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Ver SLA completo →
+              </button>
+            </div>
+          </div>
+
           {/* Stats grid */}
           <div className={styles.helpdeskStatsGrid}>
             {techStatCards.map((card) => (
@@ -1696,9 +1769,14 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate, visualVaria
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     {previous.map((t) => {
-                      const pColor = TICKET_PRIORITY_COLORS[t.priority as TicketPriority] ?? '#94a3b8';
+                      const pColor   = TICKET_PRIORITY_COLORS[t.priority as TicketPriority] ?? '#94a3b8';
+                      const slaSt    = (t as any).sla_status as string | null;
+                      const slaColor = slaSt ? (SLA_STATUS_COLORS[slaSt as keyof typeof SLA_STATUS_COLORS] ?? null) : null;
+                      const slaLabel = slaSt ? (SLA_STATUS_LABELS[slaSt as keyof typeof SLA_STATUS_LABELS] ?? null) : null;
+                      const isBreached = (t as any).sla_status === 'breached';
                       return (
                         <div key={t.id} className={styles.helpdeskCard}
+                          style={isBreached ? { borderColor: '#fecaca', background: '#fff5f5' } : undefined}
                           onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                             <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -1709,7 +1787,12 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate, visualVaria
                             </span>
                           </div>
                           <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
-                          <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
+                          <p style={{ margin: '0 0 10px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
+                          {slaColor && slaLabel && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 5, background: `${slaColor}15`, color: slaColor, border: `1px solid ${slaColor}30`, marginBottom: 10 }}>
+                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: slaColor }} />{slaLabel}
+                            </span>
+                          )}
                           <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initials(t.creator_name)}</div>
