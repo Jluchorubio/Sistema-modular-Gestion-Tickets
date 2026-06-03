@@ -1092,4 +1092,84 @@ export class TicketsService {
     );
     return row ?? null;
   }
+
+  /* ── Knowledge Base ─────────────────────────────────────────────────────── */
+
+  async getKnowledgeArticles(moduleId: string, search?: string, includeDrafts = false) {
+    const params: any[] = [moduleId];
+    let searchClause = '';
+    if (search?.trim() && search.trim().length >= 2) {
+      params.push(`%${search.trim()}%`);
+      searchClause = `AND (a.title ILIKE $${params.length} OR a.content ILIKE $${params.length} OR a.category ILIKE $${params.length})`;
+    }
+    const publishedClause = includeDrafts ? '' : 'AND a.is_published = true';
+    return this.db.query<any[]>(
+      `SELECT a.id, a.title, a.content, a.category, a.tags, a.is_published,
+              a.view_count, a.created_at, a.updated_at,
+              p.first_name || ' ' || p.last_name AS author_name,
+              a.ticket_id
+       FROM   tickets.knowledge_articles a
+       JOIN   users.profiles p ON p.id = a.created_by
+       WHERE  a.module_id = $1 ${publishedClause}
+         ${searchClause}
+       ORDER  BY a.view_count DESC, a.created_at DESC
+       LIMIT  100`,
+      params,
+    );
+  }
+
+  async getKnowledgeArticle(id: string) {
+    const [article] = await this.db.query<any[]>(
+      `SELECT a.*, p.first_name || ' ' || p.last_name AS author_name
+       FROM   tickets.knowledge_articles a
+       JOIN   users.profiles p ON p.id = a.created_by
+       WHERE  a.id = $1`,
+      [id],
+    );
+    if (!article) throw new Error('Article not found');
+    // Increment view count
+    await this.db.query(`UPDATE tickets.knowledge_articles SET view_count = view_count + 1 WHERE id = $1`, [id]).catch(() => {});
+    return article;
+  }
+
+  async createKnowledgeArticle(
+    userId: string,
+    dto: { module_id: string; title: string; content: string; category?: string; tags?: string[]; ticket_id?: string; is_published?: boolean },
+  ) {
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.knowledge_articles
+         (module_id, title, content, category, tags, ticket_id, is_published, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, title, created_at`,
+      [dto.module_id, dto.title.trim(), dto.content.trim(), dto.category ?? null, dto.tags ?? [], dto.ticket_id ?? null, dto.is_published ?? false, userId],
+    );
+    return row;
+  }
+
+  async updateKnowledgeArticle(
+    id: string,
+    userId: string,
+    dto: { title?: string; content?: string; category?: string; tags?: string[]; is_published?: boolean },
+  ) {
+    const fields: string[] = ['updated_by = $1', 'updated_at = now()'];
+    const params: any[] = [userId];
+    let p = 2;
+    if (dto.title     !== undefined) { fields.push(`title = $${p++}`);       params.push(dto.title.trim()); }
+    if (dto.content   !== undefined) { fields.push(`content = $${p++}`);     params.push(dto.content.trim()); }
+    if (dto.category  !== undefined) { fields.push(`category = $${p++}`);    params.push(dto.category); }
+    if (dto.tags      !== undefined) { fields.push(`tags = $${p++}`);        params.push(dto.tags); }
+    if (dto.is_published !== undefined) { fields.push(`is_published = $${p++}`); params.push(dto.is_published); }
+    params.push(id);
+    const [row] = await this.db.query<any[]>(
+      `UPDATE tickets.knowledge_articles SET ${fields.join(', ')} WHERE id = $${p} RETURNING id, title, is_published`,
+      params,
+    );
+    if (!row) throw new Error('Article not found');
+    return row;
+  }
+
+  async deleteKnowledgeArticle(id: string) {
+    await this.db.query(`DELETE FROM tickets.knowledge_articles WHERE id = $1`, [id]);
+    return { ok: true };
+  }
 }

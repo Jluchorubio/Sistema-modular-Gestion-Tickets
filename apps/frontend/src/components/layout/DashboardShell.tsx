@@ -9,6 +9,7 @@ import { ADMIN_ROLES } from '@/constants/roles';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
 import { ForcePwModal } from './ForcePwModal';
+import { ModuleSubNav } from './ModuleSubNav';
 import styles from './layout.module.css';
 
 function hasAdminAccess(user: { is_superadmin?: boolean; module_roles?: { status: string; role_name: string }[] } | null): boolean {
@@ -48,7 +49,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <ForcePwModal />
       <AppSidebar />
       <AppHeader />
-      <main className={styles.main}>{children}</main>
+      <main className={styles.main}>
+        <ModuleSubNav />
+        {children}
+      </main>
     </div>
   );
 }

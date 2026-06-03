@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutGrid, UserCog, ShieldCheck, BarChart2,
-  Settings2, SlidersHorizontal, Trash2,
+  SlidersHorizontal, Trash2,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui.store';
@@ -116,14 +116,12 @@ export function AppSidebar() {
         )}
       </div>
 
-      {/* ── Navigation ── */}
+      {/* ── Navigation — dynamic: module nav when in module, global otherwise ── */}
       <nav className={styles.nav} aria-label="Panel principal">
 
         {moduleNav !== null ? (
-          /* ── Module context: render module-specific nav items ── */
           moduleNav.map(renderModuleItem)
         ) : (
-          /* ── Global context: render system-wide nav items ── */
           <>
             <Link
               href="/dashboard"

@@ -293,4 +293,45 @@ export class TicketsController {
   ) {
     return this.svc.addAssignment(req.user.sub, id, body);
   }
+
+  /* ── Knowledge Base ─────────────────────────────────────────────────────── */
+
+  @Get('knowledge')
+  @RequirePermission('helpdesk:tickets:view')
+  getKnowledgeArticles(
+    @Query('module_id')       moduleId: string,
+    @Query('q')               q?: string,
+    @Query('include_drafts')  includeDrafts?: string,
+  ) {
+    return this.svc.getKnowledgeArticles(moduleId, q, includeDrafts === 'true');
+  }
+
+  @Get('knowledge/:id')
+  @RequirePermission('helpdesk:tickets:view')
+  getKnowledgeArticle(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.getKnowledgeArticle(id);
+  }
+
+  @Post('knowledge')
+  @RequirePermission('helpdesk:tickets:create')
+  createKnowledgeArticle(@Req() req: any, @Body() body: any) {
+    return this.svc.createKnowledgeArticle(req.user.sub, body);
+  }
+
+  @Patch('knowledge/:id')
+  @RequirePermission('helpdesk:tickets:edit')
+  updateKnowledgeArticle(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: any,
+  ) {
+    return this.svc.updateKnowledgeArticle(id, req.user.sub, body);
+  }
+
+  @Delete('knowledge/:id')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:edit')
+  deleteKnowledgeArticle(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.deleteKnowledgeArticle(id);
+  }
 }
