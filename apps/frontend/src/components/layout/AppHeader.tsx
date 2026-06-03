@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   Bell, User, LogOut, ChevronDown,
   CalendarDays, Clock, ChevronRight,
@@ -36,7 +36,6 @@ interface Props {
 
 export function AppHeader({ noSidebar = false }: Props) {
   const router      = useRouter();
-  const pathname    = usePathname();
   const qc          = useQueryClient();
   const user        = useAuthStore((s) => s.user);
   const clearAuth   = useAuthStore((s) => s.clearAuth);
@@ -129,11 +128,6 @@ export function AppHeader({ noSidebar = false }: Props) {
 
   const { canInstall, install } = usePWAInstall();
 
-  const navLinks = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/requests',  label: 'Solicitudes' },
-  ];
-
   return (
     <header className={`${styles.header}${noSidebar ? ` ${styles.headerFull}` : ''}`}>
       <div className={styles.inner}>
@@ -144,21 +138,6 @@ export function AppHeader({ noSidebar = false }: Props) {
             <span className={styles.brandName}>Tickets</span>
           </Link>
         </div>
-
-        {/* ── Centro nav (solo no-sidebar) ── */}
-        {noSidebar && (
-          <nav className={styles.centerNav}>
-            {navLinks.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`${styles.centerNavLink}${pathname.startsWith(href) ? ` ${styles.centerNavLinkActive}` : ''}`}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-        )}
 
         <div className={styles.right}>
           {/* ── PWA install button ── */}

@@ -19,7 +19,7 @@ const HELPDESK_DEFAULTS: SystemModule = {
   id: '__helpdesk__', name: 'Mesa de Ayuda', slug: 'helpdesk',
   description: 'Gestión de tickets de soporte técnico, incidencias y solicitudes de servicio',
   type: 'helpdesk', image_url: null, color: '#3B82F6',
-  is_active: true, has_access: true,
+  is_active: true, has_access: false, access_mode: 'request',
   maintenance_mode: false, maintenance_since: null, maintenance_message: null,
   created_at: new Date(0).toISOString(), deleted_at: null,
 };
@@ -28,7 +28,7 @@ const INVENTORY_DEFAULTS: SystemModule = {
   id: '__inventory__', name: 'Inventario', slug: 'inventario',
   description: 'Control de activos, equipos, materiales y recursos físicos de la organización',
   type: 'inventario', image_url: null, color: '#10B981',
-  is_active: true, has_access: true,
+  is_active: true, has_access: false, access_mode: 'open',
   maintenance_mode: false, maintenance_since: null, maintenance_message: null,
   created_at: new Date(0).toISOString(), deleted_at: null,
 };
@@ -37,7 +37,7 @@ const GESTION_DEFAULTS: SystemModule = {
   id: '__gestion__', name: 'Gestión Administrativa', slug: 'gestion',
   description: 'Solicitudes de acceso, cambio de rol, corrección de perfil y escalaciones',
   type: 'gestion', image_url: null, color: '#6366F1',
-  is_active: true, has_access: true,
+  is_active: true, has_access: true, access_mode: 'open',
   maintenance_mode: false, maintenance_since: null, maintenance_message: null,
   created_at: new Date(0).toISOString(), deleted_at: null,
 };
@@ -58,17 +58,21 @@ export function DashboardClient() {
   const authUser = useAuthStore(s => s.user);
   const { modules, active: activeRaw, inactive: inactiveRaw, isLoading, isError } = useModules();
 
+  const firstName    = user?.first_name    ?? '';
+  const lastName     = user?.last_name     ?? '';
+  const isSuperadmin = user?.is_superadmin ?? false;
+
   const helpdeskModule  = modules?.find(m =>
     ['helpdesk', 'tickets', 'soporte', 'soporte-tecnico', 'soporte_tecnico', 'support'].includes(m.slug) ||
     ['helpdesk', 'soporte'].includes(m.type ?? '')
-  ) ?? HELPDESK_DEFAULTS;
+  ) ?? { ...HELPDESK_DEFAULTS, has_access: isSuperadmin };
   const inventoryModule = modules?.find(m =>
     ['inventario', 'inventory'].includes(m.slug) || m.type === 'inventario'
-  ) ?? INVENTORY_DEFAULTS;
+  ) ?? { ...INVENTORY_DEFAULTS, has_access: true };   // open module
   const gestionModule   = modules?.find(m =>
     ['gestion', 'gestion-adm', 'gestion-administrativa'].includes(m.slug) ||
     (!!m.type && ['administrative', 'gestion'].includes(m.type))
-  ) ?? GESTION_DEFAULTS;
+  ) ?? { ...GESTION_DEFAULTS, has_access: true };     // always open — access request portal
 
   const builtinIds = new Set(
     [helpdeskModule.id, inventoryModule.id, gestionModule.id].filter(id => !id.startsWith('__'))
@@ -77,10 +81,6 @@ export function DashboardClient() {
 
   const active   = activeRaw.filter(m => !isBuiltin(m));
   const inactive = inactiveRaw.filter(m => !isBuiltin(m));
-
-  const firstName    = user?.first_name    ?? '';
-  const lastName     = user?.last_name     ?? '';
-  const isSuperadmin = user?.is_superadmin ?? false;
 
   const { data: sysStats } = useQuery({
     queryKey:  ['system-stats'],

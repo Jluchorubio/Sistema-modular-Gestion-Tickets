@@ -29,7 +29,6 @@ export function ModuleLayout({
   children,
 }: Props) {
   const [showAccessModal, setShowAccessModal] = useState(false);
-  const { hasAccess, isChecking } = useModuleAccess(moduleId);
 
   /* ── Fetch module data & members ── */
   const { data: mod } = useQuery({
@@ -38,6 +37,8 @@ export function ModuleLayout({
     enabled: !!moduleId,
     staleTime: 5 * 60_000,
   });
+
+  const { hasAccess, isChecking } = useModuleAccess(moduleId, mod?.access_mode);
 
   const { data: members } = useQuery({
     queryKey: ['module-members', moduleId],

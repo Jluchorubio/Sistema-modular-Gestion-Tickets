@@ -268,7 +268,7 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
                 <button
                   type="button"
                   className={styles.fieldInput}
-                  style={{ width: 96, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', paddingRight: 6, height: '100%' }}
+                  style={{ width: 96, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', paddingLeft: 10, paddingRight: 8, height: '100%' }}
                   onClick={() => { setPrefixOpen(v => !v); setPrefixSearch(''); }}
                 >
                   <Globe size={12} style={{ flexShrink: 0, color: '#94A3B8' }} />

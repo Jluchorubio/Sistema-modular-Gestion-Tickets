@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Ticket, LogOut, CheckCircle } from 'lucide-react';
+import { LogOut, CheckCircle } from 'lucide-react';
 import { tokens } from '@/lib/tokens';
 import { usersService } from '@/services/users.service';
 import { authService } from '@/services/auth.service';
@@ -178,9 +178,13 @@ export function CompleteProfileClient() {
       <aside className={styles.leftPanel}>
         <div className={styles.brand}>
           <div className={styles.brandIcon}>
-            <Ticket size={17} color="rgba(255,255,255,0.85)" />
+            {/* Brand mark — two bars */}
+            <svg width="16" height="14" viewBox="0 0 16 14" fill="none" aria-hidden="true">
+              <rect x="0" y="1" width="5" height="12" rx="2.5" fill="rgba(255,255,255,0.9)" transform="rotate(-8 3 7)" />
+              <rect x="7" y="1" width="5" height="12" rx="2.5" fill="rgba(255,255,255,0.75)" transform="rotate(-8 10 7)" />
+            </svg>
           </div>
-          <span className={styles.brandName}>Tickets System</span>
+          <span className={styles.brandName}>Nexo</span>
         </div>
 
         <div className={styles.leftHeadline}>

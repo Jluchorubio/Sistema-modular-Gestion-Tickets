@@ -34,13 +34,9 @@
 
 .mainUser {
   flex: 1;
-  padding: 32px;
+  padding: 0;
   min-width: 0;
   box-sizing: border-box;
-}
-
-@media (max-width: 720px) {
-  .mainUser { padding: 22px; }
 }
 
 /* ── Dark mode ──────────────────────────────────────────────────────────────── */

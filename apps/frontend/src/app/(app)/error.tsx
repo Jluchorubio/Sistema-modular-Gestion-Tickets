@@ -24,9 +24,9 @@ export default function AppError({ error, reset }: Props) {
         {error.message || 'Error inesperado. Por favor recarga la página.'}
       </p>
       <button
-        onClick={reset}
+        onClick={() => { reset(); window.location.reload(); }}
         style={{
-          padding: '9px 20px', background: '#6366f1', color: '#fff',
+          padding: '9px 20px', background: '#0e2235', color: '#fff',
           borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
           border: 'none', fontFamily: 'inherit',
         }}

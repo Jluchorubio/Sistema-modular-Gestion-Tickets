@@ -17,23 +17,25 @@ export class SystemModulesService {
         `SELECT id, name, slug, description, type, image_url, color, is_active,
                 maintenance_mode, maintenance_since, maintenance_message,
                 access_mode, assignment_mode, priority_mode, priority_editors,
-                priority_period_start, priority_period_end, created_at
+                priority_period_start, priority_period_end, created_at,
+                true AS has_access
          FROM modules.modules
          WHERE deleted_at IS NULL
          ORDER BY is_active DESC, name`,
       );
     }
 
-    // Non-superadmin: only modules assigned to user
+    // Non-superadmin: all active modules; has_access = open OR has a role
     return this.db.query<any[]>(
       `SELECT DISTINCT m.id, m.name, m.slug, m.description, m.type, m.image_url,
               m.color, m.is_active, m.maintenance_mode, m.maintenance_message,
               m.access_mode, m.assignment_mode, m.priority_mode, m.priority_editors,
-              m.priority_period_start, m.priority_period_end, m.created_at
+              m.priority_period_start, m.priority_period_end, m.created_at,
+              (m.access_mode = 'open' OR umr.user_id IS NOT NULL) AS has_access
        FROM   modules.modules           m
-       JOIN   modules.user_module_roles umr ON umr.module_id = m.id
-                                           AND umr.user_id   = $1
-                                           AND umr.is_active = true
+       LEFT JOIN modules.user_module_roles umr ON umr.module_id = m.id
+                                              AND umr.user_id   = $1
+                                              AND umr.is_active = true
        WHERE  m.deleted_at IS NULL AND m.is_active = true
        ORDER  BY m.name`,
       [userId],

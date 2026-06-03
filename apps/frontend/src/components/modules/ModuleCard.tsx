@@ -70,7 +70,7 @@ export const ModuleCard = memo(function ModuleCard({
   const menuRef  = useRef<HTMLDivElement>(null);
   const isRealId = !m.id.startsWith('__');
   const cfg      = TYPE_CONFIG[m.type ?? ''] ?? FALLBACK_CONFIG;
-  const isLocked = !isSuperadmin && m.has_access === false;
+  const isLocked = !isSuperadmin && !m.has_access;
   const hasMenu  = isSuperadmin && (!!onEdit || !!onToggleActive || !!onToggleMaintenance || !!onDelete);
   const inMaint  = !!m.maintenance_mode;
 
