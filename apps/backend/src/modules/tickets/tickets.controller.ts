@@ -165,6 +165,14 @@ export class TicketsController {
     return this.svc.rateTicket(req.user.sub, id, body);
   }
 
+  /* ── Timeline ───────────────────────────────────────────────────────── */
+
+  @Get(':id/timeline')
+  @RequirePermission('helpdesk:tickets:view')
+  getTimeline(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.getTimeline(id);
+  }
+
   /* ── Attachments ─────────────────────────────────────────────────────── */
 
   @Get(':id/attachments')

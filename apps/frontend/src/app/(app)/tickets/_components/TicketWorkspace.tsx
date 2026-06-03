@@ -8,6 +8,7 @@ import {
   Users, Phone, CalendarDays, X, Paperclip, ScrollText,
   Upload, FileText, ImageIcon, Trash2, HardDrive, History, Link2, Search, Unlink, Star,
 } from 'lucide-react';
+import { TicketTimeline } from './TicketTimeline';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
 import { useAuthStore } from '@/stores/auth.store';
@@ -16,6 +17,7 @@ import {
   ticketsService,
   type TicketPriority, type TicketAttachment, type TicketComment,
   type TicketAsset, type AssetHistoryEntry, type TicketRating, type RateTicketDto,
+  type TicketTimelineEvent,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
   ASSET_STATUS_COLORS, ASSET_STATUS_LABELS, ASSET_ACTION_LABELS,
@@ -148,6 +150,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     mutationFn: (file: File) => ticketsService.uploadAttachment(ticketId, file),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] });
+      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
       setUploadError('');
     },
     onError: (e: any) => setUploadError(e?.response?.data?.message ?? 'Error al subir archivo.'),
@@ -184,10 +187,21 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     staleTime: 30_000,
   });
 
+  /* ── Timeline unificada ── */
+  const { data: timeline = [], isLoading: timelineLoading } = useQuery<TicketTimelineEvent[]>({
+    queryKey: ['ticket-timeline', ticketId],
+    queryFn:  () => ticketsService.getTimeline(ticketId),
+    staleTime: 20_000,
+    refetchInterval: 30_000,
+  });
+
+  const invalidateTimeline = () => qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
+
   const addCommentMut = useMutation({
     mutationFn: () => ticketsService.addComment(ticketId, replyText.trim(), commentType),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ticket-comments', ticketId] });
+      invalidateTimeline();
       setReplyText('');
     },
   });
@@ -891,31 +905,21 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 )}
               </div>
 
-              {/* Solution / Bitácora */}
+              {/* ── Timeline unificada ── */}
               <div className={styles.hwLogCard} style={{ marginTop: 14 }}>
-                <div className={styles.hwCardTab}>SOLUCIÓN / BITÁCORA</div>
-                {comments.length > 0 && (
-                  <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {comments.map((c) => (
-                      <div key={c.id} style={{ padding: '10px 12px', borderRadius: 10, background: c.comment_type === 'internal' ? '#fef9ec' : '#f8fafc', border: `1px solid ${c.comment_type === 'internal' ? '#fde68a' : '#e2e8f0'}` }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                          <div style={{ width: 24, height: 24, borderRadius: 6, background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: '#fff' }}>{c.author_name.charAt(0).toUpperCase()}</span>
-                          </div>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#0f172a' }}>{c.author_name}</span>
-                          {c.comment_type === 'internal' && (
-                            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: '#fde68a', color: '#92400e', fontWeight: 600 }}>Interno</span>
-                          )}
-                          <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 'auto' }}>{fmtRelative(c.created_at)}</span>
-                        </div>
-                        <p style={{ fontSize: 13, color: '#334155', margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{c.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div className={styles.hwCardTab}>ACTIVIDAD Y CONVERSACIÓN</div>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                    {timeline.length} evento{timeline.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <TicketTimeline events={timeline} isLoading={timelineLoading} autoScroll={false} />
+
+                {/* Reply box */}
                 <PermissionGate perm="helpdesk:comments:add">
                 {!ticket.is_final && (
-                  <div className={styles.replyBox} style={{ marginTop: 14 }}>
+                  <div className={styles.replyBox} style={{ marginTop: 18, borderTop: '1.5px solid #e2e8f0', paddingTop: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <div style={{ width: 28, height: 28, borderRadius: 8, background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{currentUser?.first_name?.charAt(0).toUpperCase() ?? 'T'}</span>

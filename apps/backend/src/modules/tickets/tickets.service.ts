@@ -695,6 +695,110 @@ export class TicketsService {
 
   /* ── Comments ───────────────────────────────────────────────────────────── */
 
+  async getTimeline(ticketId: string) {
+    return this.db.query<any[]>(
+      `SELECT *
+       FROM (
+         /* ── Comentarios ── */
+         SELECT tc.id,
+                'comment'         AS event_type,
+                tc.comment_type   AS subtype,
+                tc.user_id,
+                p.first_name || ' ' || p.last_name AS user_name,
+                p.avatar_url,
+                tc.content,
+                NULL::jsonb       AS metadata,
+                tc.created_at
+         FROM   tickets.ticket_comments tc
+         JOIN   users.profiles p ON p.id = tc.user_id
+         WHERE  tc.ticket_id = $1 AND tc.deleted_at IS NULL
+
+         UNION ALL
+
+         /* ── Cambios de estado ── */
+         SELECT tsh.id,
+                'status_change'   AS event_type,
+                NULL              AS subtype,
+                tsh.transitioned_by AS user_id,
+                p.first_name || ' ' || p.last_name AS user_name,
+                p.avatar_url,
+                tsh.transition_reason AS content,
+                jsonb_build_object(
+                  'from_state', fs.label,
+                  'to_state',   ts.label,
+                  'to_state_name', ts.name,
+                  'is_final',   ts.is_final
+                ) AS metadata,
+                tsh.transitioned_at AS created_at
+         FROM   tickets.ticket_state_history tsh
+         JOIN   tickets.states fs ON fs.id = tsh.from_state_id
+         JOIN   tickets.states ts ON ts.id = tsh.to_state_id
+         JOIN   users.profiles p  ON p.id  = tsh.transitioned_by
+         WHERE  tsh.ticket_id = $1
+
+         UNION ALL
+
+         /* ── Asignaciones ── */
+         SELECT ta.id,
+                'assignment'      AS event_type,
+                ta.role::text     AS subtype,
+                ta.assigned_by    AS user_id,
+                pa.first_name || ' ' || pa.last_name AS user_name,
+                pa.avatar_url,
+                NULL              AS content,
+                jsonb_build_object(
+                  'assignee_name', pu.first_name || ' ' || pu.last_name,
+                  'assignee_id',   ta.user_id,
+                  'role',          ta.role,
+                  'is_active',     ta.is_active
+                ) AS metadata,
+                ta.assigned_at    AS created_at
+         FROM   tickets.ticket_assignments ta
+         JOIN   users.profiles pa ON pa.id = ta.assigned_by
+         JOIN   users.profiles pu ON pu.id = ta.user_id
+         WHERE  ta.ticket_id = $1
+
+         UNION ALL
+
+         /* ── Adjuntos ── */
+         SELECT att.id,
+                'attachment'      AS event_type,
+                att.mime_type     AS subtype,
+                att.uploaded_by   AS user_id,
+                p.first_name || ' ' || p.last_name AS user_name,
+                p.avatar_url,
+                att.original_name AS content,
+                jsonb_build_object(
+                  'mime_type',  att.mime_type,
+                  'file_size',  att.file_size,
+                  'file_url',   att.file_url
+                ) AS metadata,
+                att.created_at
+         FROM   tickets.ticket_attachments att
+         JOIN   users.profiles p ON p.id = att.uploaded_by
+         WHERE  att.ticket_id = $1 AND att.deleted_at IS NULL
+
+         UNION ALL
+
+         /* ── Aprobaciones / rechazos ── */
+         SELECT ap.id,
+                'approval'             AS event_type,
+                ap.status::text        AS subtype,
+                ap.user_id,
+                p.first_name || ' ' || p.last_name AS user_name,
+                p.avatar_url,
+                NULL                   AS content,
+                jsonb_build_object('status', ap.status::text) AS metadata,
+                COALESCE(ap.approved_at, ap.created_at) AS created_at
+         FROM   tickets.ticket_approvals ap
+         JOIN   users.profiles p ON p.id = ap.user_id
+         WHERE  ap.ticket_id = $1 AND ap.status::text != 'pending'
+       ) timeline
+       ORDER BY created_at ASC`,
+      [ticketId],
+    );
+  }
+
   async getComments(ticketId: string) {
     return this.db.query<any[]>(
       `SELECT tc.id, tc.comment_type, tc.content, tc.created_at,

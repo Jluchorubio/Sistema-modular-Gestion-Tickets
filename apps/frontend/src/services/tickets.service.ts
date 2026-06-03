@@ -77,6 +77,20 @@ export interface TicketAttachment {
   uploader_name: string;
 }
 
+export type TimelineEventType = 'comment' | 'status_change' | 'assignment' | 'attachment' | 'approval';
+
+export interface TicketTimelineEvent {
+  id:         string;
+  event_type: TimelineEventType;
+  subtype:    string | null;
+  user_id:    string | null;
+  user_name:  string | null;
+  avatar_url: string | null;
+  content:    string | null;
+  metadata:   Record<string, any> | null;
+  created_at: string;
+}
+
 export interface TicketComment {
   id:           string;
   comment_type: 'internal' | 'public';
@@ -339,6 +353,11 @@ export const ticketsService = {
 
   async rate(ticketId: string, dto: RateTicketDto): Promise<TicketRating> {
     const { data } = await api.post(`/tickets/${ticketId}/rate`, dto);
+    return data;
+  },
+
+  async getTimeline(ticketId: string): Promise<TicketTimelineEvent[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/timeline`);
     return data;
   },
 
