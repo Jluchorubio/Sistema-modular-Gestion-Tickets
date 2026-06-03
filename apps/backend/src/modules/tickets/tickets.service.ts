@@ -384,6 +384,16 @@ export class TicketsService {
       );
     }
 
+    // Link asset to ticket in junction table so inventory can query its tickets
+    if (dto.asset_id) {
+      await this.db.query(
+        `INSERT INTO inventory.ticket_assets (ticket_id, asset_id)
+         VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+        [ticket.id, dto.asset_id],
+      ).catch(() => {});
+    }
+
     // Mark auto-escalation from recurrence detection
     if (autoEscalated) {
       await this.db.query(

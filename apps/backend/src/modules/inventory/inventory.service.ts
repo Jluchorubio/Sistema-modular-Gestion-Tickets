@@ -268,7 +268,7 @@ export class InventoryService {
       await this.db.query(
         `INSERT INTO inventory.asset_assignment_history
            (asset_id, user_id, assigned_by, action, reason)
-         VALUES ($1, $1, $2, $3, $4)`,
+         VALUES ($1, NULL, $2, $3, $4)`,
         [assetId, actorId, histAction, dto.reason ?? null],
       );
     }
@@ -450,7 +450,7 @@ export class InventoryService {
     );
     await this.db.query(
       `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
-       VALUES ($1, $1, $2, 'dado_de_baja', 'Eliminado del sistema')`,
+       VALUES ($1, NULL, $2, 'dado_de_baja', 'Eliminado del sistema')`,
       [id, actorId],
     );
     return { ok: true };

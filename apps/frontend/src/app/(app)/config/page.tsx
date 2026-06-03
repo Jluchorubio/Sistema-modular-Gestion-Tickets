@@ -13,6 +13,7 @@ import { uploadService } from '@/services/upload.service';
 import { systemConfigService } from '@/services/system-config.service';
 import { usePermission }        from '@/hooks/usePermission';
 import { usePermissionsStore }  from '@/stores/permissions.store';
+import { useSuperadminGuard }   from '@/hooks/useSuperadminGuard';
 import { Spinner }              from '@/components/ui/Spinner';
 import { useCriticalChange }    from '@/hooks/useCriticalChange';
 import { CriticalChangeModal }  from '@/components/config/CriticalChangeModal';
@@ -1466,6 +1467,7 @@ function OrgRequiredScreen({ onConfigure }: { onConfigure: () => void }) {
 /* ── Main page ──────────────────────────────────────────────────── */
 
 export default function GlobalConfigPage() {
+  const { status } = useSuperadminGuard();
   const loaded  = usePermissionsStore(s => s.loaded);
   const canView = usePermission('global:sidebar:config');
   const [tab, setTab] = useState<Tab>('empresa');
@@ -1483,6 +1485,8 @@ export default function GlobalConfigPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasOrg]);
 
+  if (status === 'loading') return null;
+  if (status === 'unauthorized') return null;
   if (loaded && !canView) return null;
 
   const isBlocked = (t: Tab) => !hasOrg && GUARDED_TABS.includes(t);

@@ -800,10 +800,6 @@ CREATE TABLE IF NOT EXISTS users.profiles (
     emergency_contact_name  varchar(100),
     emergency_contact_phone varchar(50),
     last_seen_at            timestamptz,
-    headquarters_id         uuid,
-    department_id           uuid,
-    area_id                 uuid,
-    position_id             uuid,
     scheduled_hard_delete_at timestamptz,
     deleted_at              timestamptz,
     created_at              timestamptz  NOT NULL DEFAULT now(),
@@ -829,21 +825,8 @@ CREATE TABLE IF NOT EXISTS users.preferences (
 );
 
 -- ── org ──────────────────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS org.headquarters (
-    id         uuid         NOT NULL DEFAULT gen_random_uuid(),
-    name       varchar(200) NOT NULL,
-    address    text,
-    city       varchar(100),
-    country    varchar(100) NOT NULL DEFAULT 'Colombia',
-    phone      varchar(30),
-    email      varchar(255),
-    is_active  boolean      NOT NULL DEFAULT true,
-    created_at timestamptz  NOT NULL DEFAULT now(),
-    updated_at timestamptz  NOT NULL DEFAULT now(),
-    CONSTRAINT pk_headquarters PRIMARY KEY (id),
-    CONSTRAINT uq_headquarters_name UNIQUE (name)
-);
+-- Note: org.headquarters, org.departments, org.areas, org.positions were
+-- dropped in migration 013 (replaced by the dynamic org.nodes tree).
 
 CREATE TABLE IF NOT EXISTS org.departments (
     id          uuid         NOT NULL DEFAULT gen_random_uuid(),
@@ -1995,7 +1978,6 @@ CREATE INDEX IF NOT EXISTS idx_users_profiles_active      ON users.profiles (is_
 CREATE INDEX IF NOT EXISTS idx_users_profiles_deleted     ON users.profiles (deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_profiles_superadmin  ON users.profiles (is_superadmin) WHERE is_superadmin = true AND deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_profiles_last_seen_at      ON users.profiles (last_seen_at) WHERE last_seen_at IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_profiles_headquarters      ON users.profiles (headquarters_id) WHERE headquarters_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_profiles_position          ON users.profiles (position_id) WHERE position_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_profiles_username    ON users.profiles (username) WHERE username IS NOT NULL AND deleted_at IS NULL;
 
@@ -2011,14 +1993,7 @@ ALTER TABLE users.preferences ADD CONSTRAINT preferences_user_id_fkey
     FOREIGN KEY (user_id) REFERENCES users.profiles(id) ON DELETE CASCADE;
 ALTER TABLE users.profiles ADD CONSTRAINT profiles_global_role_id_fkey
     FOREIGN KEY (global_role_id) REFERENCES config.global_roles(id);
-ALTER TABLE users.profiles ADD CONSTRAINT profiles_headquarters_id_fkey
-    FOREIGN KEY (headquarters_id) REFERENCES org.headquarters(id) ON DELETE SET NULL;
-ALTER TABLE users.profiles ADD CONSTRAINT profiles_department_id_fkey
-    FOREIGN KEY (department_id) REFERENCES org.departments(id) ON DELETE SET NULL;
-ALTER TABLE users.profiles ADD CONSTRAINT profiles_area_id_fkey
-    FOREIGN KEY (area_id) REFERENCES org.areas(id) ON DELETE SET NULL;
-ALTER TABLE users.profiles ADD CONSTRAINT profiles_position_id_fkey
-    FOREIGN KEY (position_id) REFERENCES org.positions(id) ON DELETE SET NULL;
+-- Note: org.headquarters/departments/areas/positions FKs removed in migration 013.
 
 -- org
 ALTER TABLE org.areas ADD CONSTRAINT areas_department_id_fkey
@@ -2273,10 +2248,6 @@ CREATE TRIGGER trg_notif_templates_updated_at
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- org
-CREATE TRIGGER trg_org_headquarters_updated_at
-  BEFORE UPDATE ON org.headquarters
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
 CREATE TRIGGER trg_org_departments_updated_at
   BEFORE UPDATE ON org.departments
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();

@@ -9,6 +9,8 @@ import { TicketsService } from './tickets.service';
 import { SlaBreachService } from './sla/sla-breach.service';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
+import { CreateTicketDto } from './dto/create-ticket.dto';
+import { TransitionTicketDto } from './dto/transition-ticket.dto';
 
 @ApiTags('tickets')
 @ApiBearerAuth()
@@ -98,7 +100,7 @@ export class TicketsController {
 
   @Post()
   @RequirePermission('helpdesk:tickets:create')
-  create(@Req() req: any, @Body() dto: any) {
+  create(@Req() req: any, @Body() dto: CreateTicketDto) {
     return this.svc.create(req.user.sub, dto);
   }
 
@@ -107,7 +109,7 @@ export class TicketsController {
   transition(
     @Req() req: any,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { transition_id: string; reason?: string },
+    @Body() body: TransitionTicketDto,
   ) {
     return this.svc.transition(req.user.sub, id, body);
   }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePermission } from '@/hooks/usePermission';
 import { usePermissionsStore } from '@/stores/permissions.store';
+import { useSuperadminGuard } from '@/hooks/useSuperadminGuard';
 import {
   permissionsService,
   type PermissionDef,
@@ -40,6 +41,7 @@ const RISK_DESC: Record<RiskLevel, string> = {
 
 /* ── Component ── */
 export function RolesClient() {
+  const { status } = useSuperadminGuard();
   const loaded  = usePermissionsStore(s => s.loaded);
   const canView = usePermission('global:sidebar:roles');
   const qc      = useQueryClient();
@@ -164,7 +166,9 @@ export function RolesClient() {
   const isDirty       = Array.from(localGrants).some(k => !savedGrants.has(k)) ||
                         Array.from(savedGrants).some(k => !localGrants.has(k));
 
-  /* ── Permission guard ── */
+  /* ── Guards ── */
+  if (status === 'loading') return null;
+  if (status === 'unauthorized') return null;
   if (loaded && !canView) return (
     <div className={styles.pageWrap}>
       <div className={styles.mainContent}>
