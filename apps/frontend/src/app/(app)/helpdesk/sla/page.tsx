@@ -8,6 +8,7 @@ import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
+import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { ticketsService, type TicketListItem, type SlaStatus, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS } from '@/services/tickets.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 
@@ -174,6 +175,8 @@ export default function SlaPage() {
   const { user }     = useAuthStore();
   const isSuperadmin = user?.is_superadmin ?? false;
 
+  const { allowed } = useHelpdeskRoleGuard(['admin_modulo', 'jefe_tecnico', 'tecnico']);
+
   const { modules }  = useModules();
   const helpdeskId   = modules?.find(isHelpdeskModule)?.id;
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
@@ -251,6 +254,8 @@ export default function SlaPage() {
     : stats.compliance_rate >= 90 ? '#22c55e'
     : stats.compliance_rate >= 70 ? '#f59e0b'
     : '#ef4444';
+
+  if (!allowed) return null;
 
   return (
     <ModuleLayout

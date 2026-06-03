@@ -8,6 +8,7 @@ import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
+import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { ticketsService, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS } from '@/services/tickets.service';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
@@ -44,6 +45,8 @@ export default function WorkspacePage() {
   const { user } = useAuthStore();
   const isSuperadmin = user?.is_superadmin ?? false;
   const qc = useQueryClient();
+
+  const { allowed } = useHelpdeskRoleGuard(['admin_modulo', 'jefe_tecnico', 'tecnico']);
 
   const { modules } = useModules();
   const helpdeskId = modules?.find(isHelpdeskModule)?.id;
@@ -114,6 +117,8 @@ export default function WorkspacePage() {
   );
 
   const acColor = AVAIL_COLORS[myAvailStatus];
+
+  if (!allowed) return null;
 
   return (
     <ModuleLayout moduleId={helpdeskId} title="Mesa de Ayuda" description="" isSuperadmin={isSuperadmin} hideInfo>

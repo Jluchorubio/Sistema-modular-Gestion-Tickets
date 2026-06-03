@@ -46,7 +46,7 @@ export class MeetingsService {
     }
 
     const [ticket] = await this.db.query<{ id: string; module_id: string }[]>(
-      `SELECT id, module_id FROM tickets.tickets WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT id, module_id FROM tickets.tickets WHERE id = $1`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException(`Ticket ${ticketId} no encontrado`);

@@ -10,6 +10,7 @@ import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
+import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { ticketsService, type TicketListItem, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS } from '@/services/tickets.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import { fmtDate } from '@/lib/formatters';
@@ -211,6 +212,8 @@ export default function QueuePage() {
   const isSuperadmin = user?.is_superadmin ?? false;
   const qc       = useQueryClient();
 
+  const { allowed } = useHelpdeskRoleGuard(['admin_modulo', 'jefe_tecnico']);
+
   const { modules }  = useModules();
   const helpdeskId   = modules?.find(isHelpdeskModule)?.id;
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
@@ -285,6 +288,8 @@ export default function QueuePage() {
     setTakingId(ticketId);
     takeMut.mutate(ticketId);
   }
+
+  if (!allowed) return null;
 
   return (
     <ModuleLayout

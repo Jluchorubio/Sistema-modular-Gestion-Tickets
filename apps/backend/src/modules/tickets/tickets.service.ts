@@ -936,7 +936,6 @@ export class TicketsService {
        FROM   tickets.tickets t
        JOIN   tickets.states  s ON s.id = t.current_state_id
        WHERE  t.id <> $2
-         AND  t.deleted_at IS NULL
          AND  (t.title ILIKE $1 OR t.id::text ILIKE $1)
        ORDER BY t.created_at DESC
        LIMIT 10`,
@@ -951,7 +950,7 @@ export class TicketsService {
     }
 
     const [target] = await this.db.query<any[]>(
-      `SELECT id FROM tickets.tickets WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT id FROM tickets.tickets WHERE id = $1`,
       [dto.target_ticket_id],
     );
     if (!target) throw new NotFoundException('Ticket relacionado no encontrado');
@@ -1037,7 +1036,7 @@ export class TicketsService {
     const [ticket] = await this.db.query<any[]>(
       `SELECT t.id, t.created_by, s.is_final
        FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
-       WHERE  t.id = $1 AND t.deleted_at IS NULL`,
+       WHERE  t.id = $1`,
       [ticketId],
     );
     if (!ticket)          throw new NotFoundException('Ticket not found');

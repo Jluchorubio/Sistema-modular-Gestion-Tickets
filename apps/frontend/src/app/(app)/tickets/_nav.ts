@@ -19,11 +19,27 @@ export const HELPDESK_NAV: ModuleNavItem[] = [
   { key: 'config',   label: 'Configuración',    Icon: Settings2,href: '/helpdesk/config',   permKey: 'helpdesk:config:view'  },
 ];
 
-/** Operational header: shown in the horizontal sub-header above content, Helpdesk only */
+/** Operational header: shown in the horizontal sub-header above content, Helpdesk only.
+ *  allowedRoles = module roles that can see this item (superadmin always sees all). */
 export const HELPDESK_OPERATIONAL_NAV: ModuleNavItem[] = [
-  { key: 'workspace',   label: 'Mi bandeja',   Icon: LayoutDashboard, href: '/helpdesk/workspace'  },
-  { key: 'queue',       label: 'Cola',          Icon: Inbox,           href: '/helpdesk/queue'      },
-  { key: 'technicians', label: 'Técnicos',      Icon: Headset,         href: '/helpdesk/technicians'},
-  { key: 'sla',         label: 'SLA',           Icon: Clock,           href: '/helpdesk/sla'        },
-  { key: 'knowledge',   label: 'Conocimiento',  Icon: BookOpen,        href: '/helpdesk/knowledge'  },
+  {
+    key: 'workspace', label: 'Mi bandeja', Icon: LayoutDashboard, href: '/helpdesk/workspace',
+    allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico'],
+  },
+  {
+    key: 'queue', label: 'Cola', Icon: Inbox, href: '/helpdesk/queue',
+    allowedRoles: ['admin_modulo', 'jefe_tecnico'],
+  },
+  {
+    key: 'technicians', label: 'Técnicos', Icon: Headset, href: '/helpdesk/technicians',
+    allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico'],
+  },
+  {
+    key: 'sla', label: 'SLA', Icon: Clock, href: '/helpdesk/sla',
+    allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico'],
+  },
+  {
+    key: 'knowledge', label: 'Conocimiento', Icon: BookOpen, href: '/helpdesk/knowledge',
+    allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico'],
+  },
 ];

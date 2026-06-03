@@ -333,13 +333,13 @@ export class ProfileService {
               s.label AS state_label,
               s.name  AS state_name,
               s.is_final,
-              t.sla_status,
-              t.sla_deadline_tracked
+              st.status      AS sla_status,
+              st.deadline_at AS sla_deadline_tracked
        FROM   tickets.tickets t
-       JOIN   modules.modules  m ON m.id = t.module_id
-       JOIN   tickets.states   s ON s.id = t.current_state_id
+       JOIN   modules.modules  m  ON m.id = t.module_id
+       JOIN   tickets.states   s  ON s.id = t.current_state_id
+       LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
        WHERE  t.created_by = $1
-         AND  t.deleted_at IS NULL
        ORDER  BY t.created_at DESC
        LIMIT  $2`,
       [userId, limit],
@@ -384,8 +384,7 @@ export class ProfileService {
                 ON ta.ticket_id = t.id AND ta.user_id = $1 AND ta.is_active = true
          JOIN   users.profiles up ON up.id = t.created_by
          LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
-         WHERE  t.deleted_at IS NULL
-           AND  s.is_final = false
+         WHERE  s.is_final = false
            ${moduleWhere}
          ORDER  BY t.id
        ) sub
@@ -435,8 +434,7 @@ export class ProfileService {
                 ON ta.ticket_id = t.id AND ta.user_id = $1 AND ta.is_active = true
          JOIN   users.profiles up ON up.id = t.created_by
          LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
-         WHERE  t.deleted_at IS NULL
-           AND  s.is_final = false
+         WHERE  s.is_final = false
            ${moduleWhere}
          ORDER  BY t.id
        ) sub

@@ -8,6 +8,7 @@ import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
+import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { modulesService } from '@/services/modules.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import { MODULE_ROLE_LABELS } from '@/constants/roles';
@@ -173,6 +174,8 @@ export default function TechniciansPage() {
   const { user } = useAuthStore();
   const isSuperadmin = user?.is_superadmin ?? false;
 
+  const { allowed } = useHelpdeskRoleGuard(['admin_modulo', 'jefe_tecnico', 'tecnico']);
+
   const { modules } = useModules();
   const helpdeskId  = modules?.find(isHelpdeskModule)?.id;
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
@@ -215,6 +218,8 @@ export default function TechniciansPage() {
   const available   = counts.disponible ?? 0;
   const busy        = (counts.ocupado ?? 0) + (counts.en_reunion ?? 0);
   const absent      = (counts.ausente ?? 0) + (counts.fuera_horario ?? 0) + (counts.offline ?? 0);
+
+  if (!allowed) return null;
 
   return (
     <ModuleLayout
