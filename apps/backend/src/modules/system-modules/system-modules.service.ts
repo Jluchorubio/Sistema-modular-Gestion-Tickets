@@ -25,13 +25,15 @@ export class SystemModulesService {
       );
     }
 
-    // Non-superadmin: all active modules; has_access = open OR has a role
+    // Non-superadmin: all active modules; has_access = open OR always-open type OR has a role
     return this.db.query<any[]>(
       `SELECT DISTINCT m.id, m.name, m.slug, m.description, m.type, m.image_url,
               m.color, m.is_active, m.maintenance_mode, m.maintenance_message,
               m.access_mode, m.assignment_mode, m.priority_mode, m.priority_editors,
               m.priority_period_start, m.priority_period_end, m.created_at,
-              (m.access_mode = 'open' OR umr.user_id IS NOT NULL) AS has_access
+              (m.access_mode = 'open'
+               OR m.type IN ('inventario', 'inventory', 'gestion', 'administrative')
+               OR umr.user_id IS NOT NULL) AS has_access
        FROM   modules.modules           m
        LEFT JOIN modules.user_module_roles umr ON umr.module_id = m.id
                                               AND umr.user_id   = $1
@@ -143,7 +145,13 @@ export class SystemModulesService {
     if (color !== undefined) { fields.push(`color = $${idx++}`); values.push(color || null); }
 
     /* ── Operational config (migration 004) ── */
-    if (access_mode !== undefined)          { fields.push(`access_mode = $${idx++}`);          values.push(access_mode); }
+    // Built-in always-open modules (inventario, gestion) cannot change access_mode
+    const [modRow] = await this.db.query<{ type: string }[]>(
+      `SELECT type FROM modules.modules WHERE id = $1 AND deleted_at IS NULL`, [id],
+    );
+    const ALWAYS_OPEN_TYPES = ['inventario', 'inventory', 'gestion', 'administrative'];
+    const isAlwaysOpen = modRow && ALWAYS_OPEN_TYPES.includes(modRow.type);
+    if (access_mode !== undefined && !isAlwaysOpen) { fields.push(`access_mode = $${idx++}`); values.push(access_mode); }
     if (assignment_mode !== undefined)      { fields.push(`assignment_mode = $${idx++}`);      values.push(assignment_mode); }
     if (priority_mode !== undefined)        { fields.push(`priority_mode = $${idx++}`);        values.push(priority_mode); }
     if (priority_editors !== undefined)     { fields.push(`priority_editors = $${idx++}`);     values.push(priority_editors); }

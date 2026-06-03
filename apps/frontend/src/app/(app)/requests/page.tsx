@@ -138,6 +138,7 @@ export default function RequestsPage() {
       title="Gestión Administrativa"
       description="Consola centralizada de solicitudes organizacionales: autorizaciones, traslados, cambios de rol y escalamientos administrativos."
       isSuperadmin={isSuperadmin}
+      alwaysOpen
     >
       {/* ── Count + create btn row ── */}
       <div className={styles.header}>

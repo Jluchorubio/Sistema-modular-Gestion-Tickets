@@ -74,6 +74,7 @@ export default function GestionConfigPage() {
               moduleId={gestionRef.id}
               isSuperadmin={isSuperadmin}
               isAdminModulo={isAdminModulo}
+              isAlwaysOpen
             />
           )}
           {tab === 'sla'        && <SlaRequestsTab />}

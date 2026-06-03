@@ -2254,6 +2254,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
         description=""
         isSuperadmin={isSuperadmin}
         hideInfo
+        alwaysOpen
       >
         <div
           style={{
@@ -2275,6 +2276,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
         description=""
         isSuperadmin={isSuperadmin}
         hideInfo
+        alwaysOpen
       >
         <div
           style={{
@@ -2296,6 +2298,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
       description=""
       isSuperadmin={isSuperadmin}
       hideInfo
+      alwaysOpen
     >
       {/* Breadcrumb */}
       <div

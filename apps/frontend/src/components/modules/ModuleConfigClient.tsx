@@ -12,6 +12,7 @@ interface Props {
   isSuperadmin: boolean;
   isAdminModulo: boolean;
   isInventory?: boolean;
+  isAlwaysOpen?: boolean;
 }
 
 const PRIORITY_LABEL: Record<string, string> = {
@@ -53,7 +54,7 @@ function RadioOption({
   );
 }
 
-export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdminModulo, isInventory = false }: Props) {
+export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdminModulo, isInventory = false, isAlwaysOpen = false }: Props) {
   const qc      = useQueryClient();
   const canEdit = isSuperadmin || isAdminModulo;
 
@@ -96,7 +97,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
 
   function saveConfig() {
     updateMut.mutate({
-      access_mode:           accessMode,
+      ...(isAlwaysOpen ? {} : { access_mode: accessMode }),
       assignment_mode:       assignmentMode,
       priority_mode:         priorityMode,
       priority_editors:      priorityMode === 'manual' ? priorityEditors : undefined,
@@ -153,25 +154,41 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
       {/* ── Acceso al módulo ── */}
       <div style={card}>
         <div style={sectionHead}>Acceso al módulo</div>
-        <span style={fieldLabel}>Modo de acceso para nuevos usuarios</span>
-        <div style={radioGroup}>
-          <RadioOption
-            name="access" value="request"
-            checked={accessMode === 'request'}
-            onChange={() => setAccessMode('request')}
-            disabled={!canEdit}
-            label="Requiere solicitud (recomendado)"
-            desc="Los usuarios solicitan acceso y un administrador lo aprueba."
-          />
-          <RadioOption
-            name="access" value="open"
-            checked={accessMode === 'open'}
-            onChange={() => setAccessMode('open')}
-            disabled={!canEdit}
-            label="Acceso libre"
-            desc="Cualquier usuario de la organización puede entrar sin aprobación previa."
-          />
-        </div>
+        {isAlwaysOpen ? (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderRadius: 2, background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.2" style={{ marginTop: 2, flexShrink: 0 }} aria-hidden="true">
+              <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" />
+            </svg>
+            <div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#0e2235' }}>Acceso libre — permanente</span>
+              <p style={{ fontSize: 12, color: '#64748b', marginTop: 3, lineHeight: 1.5, margin: '3px 0 0' }}>
+                Este módulo es accesible para todos los usuarios de la organización sin solicitud. No se puede modificar.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <span style={fieldLabel}>Modo de acceso para nuevos usuarios</span>
+            <div style={radioGroup}>
+              <RadioOption
+                name="access" value="request"
+                checked={accessMode === 'request'}
+                onChange={() => setAccessMode('request')}
+                disabled={!canEdit}
+                label="Requiere solicitud (recomendado)"
+                desc="Los usuarios solicitan acceso y un administrador lo aprueba."
+              />
+              <RadioOption
+                name="access" value="open"
+                checked={accessMode === 'open'}
+                onChange={() => setAccessMode('open')}
+                disabled={!canEdit}
+                label="Acceso libre"
+                desc="Cualquier usuario de la organización puede entrar sin aprobación previa."
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Asignación de tickets ── */}

@@ -78,6 +78,7 @@ export default function AssetHistoryPage() {
       description=""
       isSuperadmin={isSuperadmin}
       hideInfo
+      alwaysOpen
     >
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 0 60px" }}>
 

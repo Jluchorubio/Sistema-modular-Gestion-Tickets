@@ -66,13 +66,17 @@ export function DashboardClient() {
     ['helpdesk', 'tickets', 'soporte', 'soporte-tecnico', 'soporte_tecnico', 'support'].includes(m.slug) ||
     ['helpdesk', 'soporte'].includes(m.type ?? '')
   ) ?? { ...HELPDESK_DEFAULTS, has_access: isSuperadmin };
-  const inventoryModule = modules?.find(m =>
-    ['inventario', 'inventory'].includes(m.slug) || m.type === 'inventario'
-  ) ?? { ...INVENTORY_DEFAULTS, has_access: true };   // open module
-  const gestionModule   = modules?.find(m =>
-    ['gestion', 'gestion-adm', 'gestion-administrativa'].includes(m.slug) ||
-    (!!m.type && ['administrative', 'gestion'].includes(m.type))
-  ) ?? { ...GESTION_DEFAULTS, has_access: true };     // always open — access request portal
+  const inventoryModule = (() => {
+    const m = modules?.find(m => ['inventario', 'inventory'].includes(m.slug) || m.type === 'inventario');
+    return m ? { ...m, has_access: true } : { ...INVENTORY_DEFAULTS, has_access: true };
+  })();
+  const gestionModule = (() => {
+    const m = modules?.find(m =>
+      ['gestion', 'gestion-adm', 'gestion-administrativa'].includes(m.slug) ||
+      (!!m.type && ['administrative', 'gestion'].includes(m.type))
+    );
+    return m ? { ...m, has_access: true } : { ...GESTION_DEFAULTS, has_access: true };
+  })();
 
   const builtinIds = new Set(
     [helpdeskModule.id, inventoryModule.id, gestionModule.id].filter(id => !id.startsWith('__'))

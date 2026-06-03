@@ -853,7 +853,7 @@ export function InventoryClient() {
   const goToDetail = (id: string) => router.push(`/inventory/${id}`);
 
   return (
-    <ModuleLayout moduleId={inventoryId || selectedModule || undefined} title="Inventario" description="Registro y trazabilidad de activos organizacionales." isSuperadmin={isSuperadmin} hideInfo>
+    <ModuleLayout moduleId={inventoryId || selectedModule || undefined} title="Inventario" description="Registro y trazabilidad de activos organizacionales." isSuperadmin={isSuperadmin} hideInfo alwaysOpen>
 
       {/* ── Page header ── */}
       <div style={{ marginBottom: 20 }}>

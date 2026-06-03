@@ -73,6 +73,7 @@ export default function InventoryConfigPage() {
               isSuperadmin={isSuperadmin}
               isAdminModulo={isAdminModulo}
               isInventory
+              isAlwaysOpen
             />
           )}
           {tab === 'categorias' && <CategoriesTab moduleId={inventoryRef.id} />}

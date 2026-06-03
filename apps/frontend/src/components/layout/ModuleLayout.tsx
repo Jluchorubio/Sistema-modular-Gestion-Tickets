@@ -6,6 +6,7 @@ import { Mail, LockKeyhole } from 'lucide-react';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
+import { useAuthStore } from '@/stores/auth.store';
 import { RequestModuleAccessModal } from '@/components/modules/RequestModuleAccessModal';
 import styles from './module-layout.module.css';
 
@@ -16,6 +17,7 @@ interface Props {
   isSuperadmin?: boolean;
   subBar?: React.ReactNode;
   hideInfo?: boolean;
+  alwaysOpen?: boolean;
   children: React.ReactNode;
 }
 
@@ -26,9 +28,11 @@ export function ModuleLayout({
   isSuperadmin = false,
   subBar,
   hideInfo = false,
+  alwaysOpen = false,
   children,
 }: Props) {
   const [showAccessModal, setShowAccessModal] = useState(false);
+  const authUser = useAuthStore((s) => s.user);
 
   /* ── Fetch module data & members ── */
   const { data: mod } = useQuery({
@@ -38,12 +42,18 @@ export function ModuleLayout({
     staleTime: 5 * 60_000,
   });
 
-  const { hasAccess, isChecking } = useModuleAccess(moduleId, mod?.access_mode);
+  const { hasAccess, isChecking } = useModuleAccess(moduleId, alwaysOpen ? 'open' : mod?.access_mode);
+
+  const canViewMembers = isSuperadmin || (
+    !!moduleId && !!authUser?.module_roles?.some(
+      (r) => r.module_id === moduleId && r.status === 'active' && r.role_name === 'admin_modulo',
+    )
+  );
 
   const { data: members } = useQuery({
     queryKey: ['module-members', moduleId],
     queryFn: () => usersService.getModuleUsers(moduleId!),
-    enabled: !!moduleId,
+    enabled: !!moduleId && canViewMembers,
     staleTime: 5 * 60_000,
   });
 
