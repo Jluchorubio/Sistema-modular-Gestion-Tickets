@@ -22,10 +22,10 @@ export interface SlaResult {
 }
 
 interface SlaRule {
-  id:                   string;
-  rule_order:           number;
-  resolution_time_hours: number;
-  priority_result:      string;
+  id:               string;
+  sort_order:       number;
+  hours_to_resolve: number;
+  priority_result:  string;
 }
 
 interface SlaCondition {
@@ -62,11 +62,11 @@ export class SlaEvaluatorService {
     const conditionMatch = await this.evaluateConditions(ctx);
     if (conditionMatch) {
       const deadline = await this.resolveDeadline(
-        conditionMatch.resolution_time_hours, from, ctx.module_id,
+        conditionMatch.hours_to_resolve, from, ctx.module_id,
       );
       return {
         deadline,
-        resolution_hours: conditionMatch.resolution_time_hours,
+        resolution_hours: conditionMatch.hours_to_resolve,
         policy_id: ctx.policy_id,
         rule_id:   conditionMatch.id,
         matched_by: 'condition',
@@ -77,11 +77,11 @@ export class SlaEvaluatorService {
     const priorityMatch = await this.findRuleByPriority(ctx.policy_id, ctx.priority);
     if (priorityMatch) {
       const deadline = await this.resolveDeadline(
-        priorityMatch.resolution_time_hours, from, ctx.module_id,
+        priorityMatch.hours_to_resolve, from, ctx.module_id,
       );
       return {
         deadline,
-        resolution_hours: priorityMatch.resolution_time_hours,
+        resolution_hours: priorityMatch.hours_to_resolve,
         policy_id: ctx.policy_id,
         rule_id:   priorityMatch.id,
         matched_by: 'priority_fallback',
@@ -105,12 +105,13 @@ export class SlaEvaluatorService {
   private async evaluateConditions(ctx: SlaContext): Promise<SlaRule | null> {
     // Load rules ordered by rule_order (first match wins)
     const rules = await this.db.query<SlaRule[]>(
-      `SELECT id, rule_order, resolution_time_hours, priority_result
+      `SELECT id, sort_order, hours_to_resolve, priority_result
        FROM tickets.sla_rules
        WHERE policy_id = $1
+         AND is_active = true
          AND (valid_from  IS NULL OR valid_from  <= now())
          AND (valid_until IS NULL OR valid_until >= now())
-       ORDER BY rule_order`,
+       ORDER BY sort_order`,
       [ctx.policy_id],
     );
 
@@ -123,7 +124,7 @@ export class SlaEvaluatorService {
       `SELECT rule_id, field, operator, value, logical_group
        FROM tickets.sla_conditions
        WHERE rule_id = ANY($1)
-       ORDER BY rule_id, logical_group, order_index`,
+       ORDER BY rule_id, logical_group, sort_order`,
       [ruleIds],
     );
 
@@ -199,13 +200,14 @@ export class SlaEvaluatorService {
 
   private async findRuleByPriority(policyId: string, priority: string): Promise<SlaRule | null> {
     const [rule] = await this.db.query<SlaRule[]>(
-      `SELECT id, rule_order, resolution_time_hours, priority_result
+      `SELECT id, sort_order, hours_to_resolve, priority_result
        FROM tickets.sla_rules
        WHERE policy_id      = $1
          AND priority_result = $2
+         AND is_active = true
          AND (valid_from  IS NULL OR valid_from  <= now())
          AND (valid_until IS NULL OR valid_until >= now())
-       ORDER BY rule_order
+       ORDER BY sort_order
        LIMIT 1`,
       [policyId, priority],
     );

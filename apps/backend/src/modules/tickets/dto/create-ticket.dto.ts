@@ -1,11 +1,10 @@
 import {
-  IsString, IsUUID, IsOptional, IsIn, IsInt, Min, Max, MaxLength,
+  IsString, IsUUID, IsOptional, IsIn, MaxLength,
 } from 'class-validator';
 
-const PRIORITIES   = ['baja', 'media', 'alta', 'critica'] as const;
-const URGENCIES    = ['baja', 'media', 'alta'] as const;
-const IMPACTS      = ['bajo', 'medio', 'alto'] as const;
-const REPROCESS    = [1, 2, 3, 4, 5] as const;
+const PRIORITIES = ['baja', 'media', 'alta', 'critica'] as const;
+const URGENCIES  = ['baja', 'media', 'alta'] as const;
+const IMPACTS    = ['bajo', 'medio', 'alto'] as const;
 
 export class CreateTicketDto {
   @IsUUID()           module_id:      string;
@@ -37,9 +36,4 @@ export class CreateTicketDto {
 
   @IsOptional()
   @IsUUID()           asset_id?:      string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(5)             reprocess_count?: number;
 }

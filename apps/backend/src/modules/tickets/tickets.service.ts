@@ -180,6 +180,7 @@ export class TicketsService {
               up.first_name || ' ' || up.last_name AS creator_name,
               t.reprocess_count,
               t.escalated, t.escalation_note,
+              t.asset_id,
               st.status      AS sla_status,
               st.deadline_at AS sla_deadline_tracked,
               st.breached_at,
@@ -583,6 +584,7 @@ export class TicketsService {
     if (!ticket) throw new NotFoundException('Ticket not found');
     if (ticket.state_name !== 'realizado') throw new BadRequestException('El ticket no está pendiente de validación.');
     if (ticket.created_by !== userId)      throw new ForbiddenException('Solo el solicitante puede validar este ticket.');
+    if (ticket.reprocess_count >= 5)       throw new BadRequestException('El ticket alcanzó el límite máximo de reproces (5). No puede ser devuelto nuevamente.');
 
     const [cfg] = await this.db.query<any[]>(
       `SELECT (value::jsonb->>'reproceso_max')::int AS reproceso_max

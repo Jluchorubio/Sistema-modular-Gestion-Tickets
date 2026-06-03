@@ -29,24 +29,31 @@ export function useLoadPermissions() {
 }
 
 /* Check a single permission.
-   Returns true while permissions are still loading (optimistic) to avoid
-   content flash. Backend is the authoritative security layer. */
+   Returns false while loading — no optimistic true.
+   Use usePermissionState() when you need to distinguish loading from denied. */
 export function usePermission(key: string): boolean {
   const loaded  = usePermissionsStore(s => s.loaded);
   const hasPerm = usePermissionsStore(s => s.hasPermission(key));
-  return !loaded || hasPerm;
+  return loaded && hasPerm;
+}
+
+/* Full 3-state permission check — use when you need to show a skeleton. */
+export function usePermissionState(key: string): { loading: boolean; allowed: boolean } {
+  const loaded  = usePermissionsStore(s => s.loaded);
+  const hasPerm = usePermissionsStore(s => s.hasPermission(key));
+  return { loading: !loaded, allowed: loaded && hasPerm };
 }
 
 /* Check if user has ANY of the given permissions */
 export function useHasAnyPermission(...keys: string[]): boolean {
   const loaded = usePermissionsStore(s => s.loaded);
   const hasAny = usePermissionsStore(s => keys.some(k => s.hasPermission(k)));
-  return !loaded || hasAny;
+  return loaded && hasAny;
 }
 
 /* Check if user has ALL of the given permissions */
 export function useHasAllPermissions(...keys: string[]): boolean {
   const loaded  = usePermissionsStore(s => s.loaded);
   const hasAll  = usePermissionsStore(s => keys.every(k => s.hasPermission(k)));
-  return !loaded || hasAll;
+  return loaded && hasAll;
 }
