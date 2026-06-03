@@ -54,6 +54,16 @@ export class SystemModulesController {
     return this.service.getModuleTechnicians(id, req.user.sub);
   }
 
+  @Patch(':id/technicians/status')
+  @ApiOperation({ summary: 'Técnico actualiza su propia disponibilidad en el módulo.' })
+  setTechnicianStatus(
+    @Param('id') moduleId: string,
+    @Req() req: any,
+    @Body() dto: { status: string; reason?: string; unavailable_to?: string },
+  ) {
+    return this.service.setTechnicianStatus(moduleId, req.user.sub, dto);
+  }
+
   @Post()
   @UseGuards(RolesGuard)
   @Roles('superadmin')

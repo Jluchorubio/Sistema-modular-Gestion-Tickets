@@ -336,6 +336,42 @@ export class SystemModulesService {
     );
   }
 
+  async setTechnicianStatus(
+    moduleId: string,
+    userId:   string,
+    dto: {
+      status:          string;
+      reason?:         string;
+      unavailable_to?: string;
+    },
+  ) {
+    const VALID_STATUSES = ['disponible','ocupado','en_reunion','fuera_horario','ausente','offline'];
+    if (!VALID_STATUSES.includes(dto.status)) {
+      throw new Error(`Estado inválido: ${dto.status}`);
+    }
+    const isAvailable = dto.status === 'disponible';
+
+    await this.db.query(
+      `INSERT INTO modules.technician_status
+         (user_id, module_id, status, is_available, reason, unavailable_to, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $1)
+       ON CONFLICT (user_id, module_id)
+       DO UPDATE SET
+         status          = EXCLUDED.status,
+         is_available    = EXCLUDED.is_available,
+         reason          = EXCLUDED.reason,
+         unavailable_to  = EXCLUDED.unavailable_to,
+         updated_at      = now()`,
+      [
+        userId, moduleId, dto.status, isAvailable,
+        dto.reason ?? null,
+        dto.unavailable_to ?? null,
+      ],
+    );
+
+    return { ok: true, status: dto.status, is_available: isAvailable };
+  }
+
   async findAllLocations() {
     return this.db.query<any[]>(
       `SELECT l.id, l.name, l.address, l.module_id, m.name AS module_name

@@ -196,6 +196,14 @@ export const modulesService = {
     return data;
   },
 
+  async setTechnicianStatus(
+    moduleId: string,
+    dto: { status: string; reason?: string; unavailable_to?: string },
+  ): Promise<{ ok: boolean; status: string; is_available: boolean }> {
+    const { data } = await api.patch(`/system-modules/${moduleId}/technicians/status`, dto);
+    return data;
+  },
+
   /* ── Categories ── */
   async getCategories(moduleId: string): Promise<ModuleCategory[]> {
     const { data } = await api.get(`/system-modules/${moduleId}/categories`);

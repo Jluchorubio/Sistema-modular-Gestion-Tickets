@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Star, Ticket, Clock,
+  ArrowLeft, Star, Ticket, Clock, ChevronDown,
 } from 'lucide-react';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
@@ -94,11 +94,130 @@ function QueueRow({ ticket, basePath }: { ticket: any; basePath: string }) {
   );
 }
 
+/* ── StatusPicker — solo visible para el propio técnico ── */
+const STATUS_OPTIONS: { value: TechAvailStatus; label: string; color: string; emoji: string }[] = [
+  { value: 'disponible',    label: 'Disponible',       color: '#20c933', emoji: '🟢' },
+  { value: 'ocupado',       label: 'Ocupado',          color: '#f59e0b', emoji: '🟡' },
+  { value: 'en_reunion',    label: 'En reunión',       color: '#3b82f6', emoji: '🔵' },
+  { value: 'fuera_horario', label: 'Fuera de horario', color: '#94a3b8', emoji: '⚫' },
+  { value: 'ausente',       label: 'Ausente',          color: '#ef4444', emoji: '🔴' },
+  { value: 'offline',       label: 'Offline',          color: '#64748b', emoji: '⚫' },
+];
+
+function StatusPicker({
+  currentStatus, moduleId, techId, onSuccess,
+}: {
+  currentStatus: TechAvailStatus;
+  moduleId: string;
+  techId: string;
+  onSuccess: () => void;
+}) {
+  const [open,     setOpen]     = useState(false);
+  const [reason,   setReason]   = useState('');
+  const [untilStr, setUntilStr] = useState('');
+  const [pending,  setPending]  = useState<TechAvailStatus | null>(null);
+  const qc = useQueryClient();
+
+  const mut = useMutation({
+    mutationFn: (status: TechAvailStatus) =>
+      modulesService.setTechnicianStatus(moduleId, {
+        status,
+        reason:         reason.trim() || undefined,
+        unavailable_to: untilStr || undefined,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['module-technicians', moduleId] });
+      setPending(null);
+      setOpen(false);
+      setReason('');
+      setUntilStr('');
+      onSuccess();
+    },
+  });
+
+  const current = STATUS_OPTIONS.find(s => s.value === currentStatus) ?? STATUS_OPTIONS[0];
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          padding: '9px 12px', borderRadius: 9,
+          border: `1.5px solid ${current.color}35`,
+          background: `${current.color}10`,
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        <span style={{ width: 9, height: 9, borderRadius: '50%', background: current.color, flexShrink: 0 }} />
+        <span style={{ fontSize: 12, fontWeight: 700, color: current.color, flex: 1, textAlign: 'left' as const }}>
+          {current.label}
+        </span>
+        <ChevronDown size={13} style={{ color: current.color }} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 50,
+          background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+          boxShadow: '0 8px 28px rgba(0,0,0,.12)', overflow: 'hidden',
+        }}>
+          {STATUS_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { setPending(opt.value); if (opt.value !== pending) mut.mutate(opt.value); }}
+              disabled={mut.isPending}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                padding: '9px 14px', background: opt.value === currentStatus ? `${opt.color}10` : '#fff',
+                border: 'none', borderBottom: '1px solid #f1f5f9',
+                cursor: mut.isPending ? 'wait' : 'pointer', fontFamily: 'inherit',
+                transition: 'background .1s',
+              }}
+              onMouseEnter={e => { if (!mut.isPending) (e.currentTarget as HTMLButtonElement).style.background = `${opt.color}08`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = opt.value === currentStatus ? `${opt.color}10` : '#fff'; }}
+            >
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: opt.color, flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: opt.color }}>{opt.label}</span>
+              {opt.value === currentStatus && (
+                <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 800, color: opt.color, background: `${opt.color}20`, padding: '1px 7px', borderRadius: 5 }}>ACTUAL</span>
+              )}
+            </button>
+          ))}
+          {/* Optional reason + until */}
+          <div style={{ padding: '10px 14px 12px', borderTop: '1px solid #f1f5f9' }}>
+            <input
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="Razón (opcional)"
+              style={{ width: '100%', padding: '7px 10px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', outline: 'none', marginBottom: 6, boxSizing: 'border-box' as const }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' as const }}>Disponible desde:</label>
+              <input
+                type="datetime-local"
+                value={untilStr}
+                onChange={e => setUntilStr(e.target.value)}
+                style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', outline: 'none' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Main page ── */
 export default function TechProcessPage() {
   const params   = useParams();
   const router   = useRouter();
   const techId   = params.techId as string;
+
+  const { user } = useAuthStore();
+  const isOwnProfile = user?.id === techId;
 
   const { modules, isLoading: modulesLoading } = useModules();
   const helpdeskId = modules?.find(isHelpdeskModule)?.id;
@@ -106,11 +225,14 @@ export default function TechProcessPage() {
 
   const basePath = '/helpdesk';
 
+  const qc = useQueryClient();
+
   const { data: techs, isLoading: techsLoading } = useQuery({
     queryKey: ['module-technicians', helpdeskId],
     queryFn:  () => modulesService.getModuleTechnicians(helpdeskId!),
     enabled:  !!helpdeskId,
     staleTime: 5 * 60_000,
+    refetchInterval: 30_000,
   });
 
   const tech = useMemo(() => techs?.find((t) => t.id === techId) ?? null, [techs, techId]);
@@ -204,6 +326,15 @@ export default function TechProcessPage() {
         {/* Left: profile (280px) */}
         <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid #e8edf3', padding: '28px 22px', display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto', background: '#fff' }}>
 
+          {/* Badge propio perfil */}
+          {isOwnProfile && (
+            <div style={{ background: '#0e2235', borderRadius: 8, padding: '5px 10px', textAlign: 'center' }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                Mi perfil operativo
+              </span>
+            </div>
+          )}
+
           {/* Avatar */}
           <div style={{ textAlign: 'center' }}>
             <div style={{ position: 'relative', width: 100, height: 100, margin: '0 auto 14px' }}>
@@ -218,31 +349,52 @@ export default function TechProcessPage() {
             </div>
             <h2 style={{ margin: '0 0 3px', fontSize: 16, fontWeight: 800, color: '#0e2235' }}>{fullName}</h2>
             {fullProfile?.username && <p style={{ margin: '0 0 8px', fontSize: 11, color: '#94a3b8' }}>@{fullProfile.username}</p>}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: `${ac}20`, color: ac, border: `1px solid ${ac}44` }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: ac, display: 'inline-block' }} />
-              {availLabel}
-            </span>
+          </div>
+
+          {/* Estado — solo lectura o selector según sea propio perfil */}
+          <div>
+            <p style={{ margin: '0 0 7px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+              Estado operativo{isOwnProfile ? ' — cambia tu disponibilidad' : ''}
+            </p>
+            {isOwnProfile && helpdeskId ? (
+              <StatusPicker
+                currentStatus={(tech.avail_status ?? 'offline') as TechAvailStatus}
+                moduleId={helpdeskId}
+                techId={techId}
+                onSuccess={() => qc.invalidateQueries({ queryKey: ['module-technicians', helpdeskId] })}
+              />
+            ) : (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 9, background: `${ac}14`, color: ac, border: `1px solid ${ac}35` }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: ac }} />
+                {availLabel}
+              </span>
+            )}
           </div>
 
           <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: 0 }} />
 
-          {/* Role */}
-          <div>
-            <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Rol en módulo</p>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 800, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '4px 10px', borderRadius: 7 }}>
-              🛠️ {roleLabel.toUpperCase()}
-            </span>
-          </div>
-
-          {/* Specialty */}
-          {fullProfile?.job_title && (
+          {/* Rol + especialidad */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
-              <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Especialidad</p>
-              <span style={{ fontSize: 9, fontWeight: 700, background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: 5, textTransform: 'uppercase' }}>
-                ⚙️ {fullProfile.job_title}
+              <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Rol en módulo</p>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 800, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '4px 10px', borderRadius: 7 }}>
+                🛠️ {roleLabel.toUpperCase()}
               </span>
             </div>
-          )}
+
+            {fullProfile?.job_title && (
+              <div>
+                <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Especialidad</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {fullProfile.job_title.split(',').map((spec, i) => (
+                    <span key={i} style={{ fontSize: 9, fontWeight: 700, background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: 5, textTransform: 'uppercase', whiteSpace: 'nowrap' as const }}>
+                      ⚙️ {spec.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Department */}
           {fullProfile?.department && (
