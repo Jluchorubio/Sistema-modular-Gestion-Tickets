@@ -1,4 +1,4 @@
-import { Home, BarChart2, Users, Tag, Settings2, Clock, Headset } from 'lucide-react';
+import { Home, BarChart2, Users, Tag, Settings2, Clock, Headset, Inbox } from 'lucide-react';
 import type { ModuleNavItem } from '@/types/nav.types';
 
 export const HELPDESK_MODULE_NAME = 'Mesa de Ayuda';
@@ -12,6 +12,7 @@ export function isHelpdeskModule(m: { slug: string; type?: string | null }): boo
 
 export const HELPDESK_NAV: ModuleNavItem[] = [
   { key: 'inicio',       label: 'Inicio',         Icon: Home,      href: '/helpdesk'              },
+  { key: 'queue',        label: 'Cola',            Icon: Inbox,     href: '/helpdesk/queue'        },
   { key: 'technicians',  label: 'Técnicos',        Icon: Headset,   href: '/helpdesk/technicians'  },
   { key: 'sla',          label: 'SLA',             Icon: Clock,     href: '/helpdesk/sla'          },
   { key: 'users',        label: 'Usuarios',        Icon: Users,     href: '/helpdesk/users'        },

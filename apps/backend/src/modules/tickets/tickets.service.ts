@@ -81,11 +81,12 @@ export class TicketsService {
     assigneeId?:  string;
     slaStatus?:   string;
     isReproceso?: boolean;
+    unassigned?:  boolean;
     page?:        number;
     limit?:       number;
   }) {
     const page   = Math.max(1, opts.page  ?? 1);
-    const limit  = Math.min(100, opts.limit ?? 25);
+    const limit  = Math.min(200, opts.limit ?? 25);
     const offset = (page - 1) * limit;
 
     const conds: string[] = [];
@@ -104,6 +105,13 @@ export class TicketsService {
                    AND  ta2.role = 'owner' AND ta2.is_active = true)`,
       );
       params.push(opts.assigneeId);
+    }
+    if (opts.unassigned) {
+      conds.push(
+        `NOT EXISTS (SELECT 1 FROM tickets.ticket_assignments ta2
+                     WHERE  ta2.ticket_id = t.id AND ta2.role = 'owner' AND ta2.is_active = true)`,
+      );
+      conds.push(`s.is_final = false`);
     }
     if (opts.slaStatus)   { conds.push(`st.status = $${p++}`);             params.push(opts.slaStatus); }
     if (opts.isReproceso) { conds.push(`s.name = 'reproceso'`); }

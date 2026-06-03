@@ -75,6 +75,7 @@ export class TicketsController {
     @Query('assignee_id')  assigneeId?: string,
     @Query('sla_status')   slaStatus?:  string,
     @Query('is_reproceso') isReproceso?: string,
+    @Query('unassigned')   unassigned?: string,
     @Query('page')         page?:       string,
     @Query('limit')        limit?:      string,
   ) {
@@ -87,6 +88,7 @@ export class TicketsController {
       assigneeId,
       slaStatus,
       isReproceso:  isReproceso === 'true',
+      unassigned:   unassigned  === 'true',
       page:         page  ? parseInt(page,  10) : undefined,
       limit:        limit ? parseInt(limit, 10) : undefined,
     });

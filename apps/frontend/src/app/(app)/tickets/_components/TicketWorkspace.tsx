@@ -158,7 +158,10 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
   const deletAttMut = useMutation({
     mutationFn: (attId: string) => ticketsService.deleteAttachment(ticketId, attId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] });
+      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
+    },
   });
 
   /* ── Rating ── */
@@ -222,6 +225,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] });
+      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
       setScheduledDate(''); setScheduledTime('10:00');
       setMeetingUrl(''); setMeetingReason('Asesoramiento técnico');
     },
@@ -329,6 +333,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tickets'] });
       qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
+      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
       setActiveTransId(null);
       setTransReason('');
     },
@@ -345,6 +350,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     try {
       await ticketsService.addAssignment(ticketId, selectedUserId, 'collaborator');
       qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
+      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
     } catch {
       // ignore — still add to local guest list for UI
     }
@@ -393,6 +399,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
       await ticketsService.approve(ticketId, signature.trim());
       qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
       qc.invalidateQueries({ queryKey: ['tickets'] });
+      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
       setSignature('');
     } catch (e: any) {
       setValidationError(e?.response?.data?.message ?? 'Error al aprobar.');
@@ -409,6 +416,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
       const result = await ticketsService.reject(ticketId, rejectReason.trim());
       qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
       qc.invalidateQueries({ queryKey: ['tickets'] });
+      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
       setShowRejectForm(false);
       setRejectReason('');
       if (result.escalated) {
