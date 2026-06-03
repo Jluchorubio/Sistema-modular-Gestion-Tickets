@@ -100,18 +100,20 @@ export class ProfileService {
 
     await this.db.query(
       `UPDATE users.profiles
-       SET phone            = $1,
-           address          = $2,
-           primary_sede     = $3,
-           department       = $4,
-           job_title        = $5,
-           username         = COALESCE($6, username),
-           phone_prefix     = COALESCE($8, phone_prefix),
-           country          = COALESCE($9, country),
-           state_province   = COALESCE($10, state_province),
-           city             = COALESCE($11, city),
-           profile_complete = true,
-           updated_at       = now()
+       SET phone             = $1,
+           address           = $2,
+           primary_sede      = $3,
+           department        = $4,
+           job_title         = $5,
+           username          = COALESCE($6, username),
+           phone_prefix      = COALESCE($8, phone_prefix),
+           country           = COALESCE($9, country),
+           state_province    = COALESCE($10, state_province),
+           city              = COALESCE($11, city),
+           org_node_id       = COALESCE($12, org_node_id),
+           position_node_id  = COALESCE($13, position_node_id),
+           profile_complete  = true,
+           updated_at        = now()
        WHERE id = $7 AND deleted_at IS NULL`,
       [
         dto.phone.trim(),
@@ -121,10 +123,12 @@ export class ProfileService {
         dto.job_title.trim(),
         dto.username ? dto.username.toLowerCase().trim() : null,
         userId,
-        dto.phone_prefix   ?? null,
-        dto.country        ?? null,
-        dto.state_province ?? null,
-        dto.city           ?? null,
+        dto.phone_prefix     ?? null,
+        dto.country          ?? null,
+        dto.state_province   ?? null,
+        dto.city             ?? null,
+        dto.org_node_id      ?? null,
+        dto.position_node_id ?? null,
       ],
     );
 

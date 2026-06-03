@@ -383,6 +383,12 @@ export class SystemConfigController {
 
   /* ── Dynamic org: nodes ─────────────────────────────────────────── */
 
+  @Get('org/nodes/by-slug')
+  @ApiOperation({ summary: 'Nodos activos por slug de tipo (acceso a todos los usuarios autenticados). Para formularios de perfil.' })
+  getOrgNodesBySlug(@Query('slug') slug: string) {
+    return this.svc.getOrgNodesBySlug(slug ?? '');
+  }
+
   @Get('org/nodes')
   @UseGuards(RolesGuard) @Roles('superadmin')
   @RequirePermission('global:config:view')

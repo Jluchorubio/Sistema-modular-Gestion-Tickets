@@ -50,7 +50,7 @@ export default function InventoryUserProfilePage() {
       user={data as ProfileUser}
       isOwnProfile={isOwnProfile}
       viewerIsSuperadmin={isSuperadmin || isAdminModulo}
-      onBack={() => router.push('/inventory/users')}
+      onBack={() => router.back()}
     />
   );
 }

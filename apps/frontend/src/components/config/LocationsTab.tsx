@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, MapPin, Buil
 import { modulesService, type ModuleLocation, type ModuleEnvironment } from '@/services/modules.service';
 import { Spinner } from '@/components/ui/Spinner';
 
-interface Props { moduleId: string }
+interface Props { moduleId: string; isSuperadmin?: boolean }
 
 const inp: React.CSSProperties = {
   width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2,
@@ -59,12 +59,13 @@ function InlineForm({
 
 /* ── Environment row ── */
 function EnvironmentRow({
-  env, moduleId, locId, onError,
+  env, moduleId, locId, onError, canEdit = true,
 }: {
   env: ModuleEnvironment;
   moduleId: string;
   locId: string;
   onError: (msg: string) => void;
+  canEdit?: boolean;
 }) {
   const qc              = useQueryClient();
   const [editing,       setEditing]    = useState(false);
@@ -100,22 +101,26 @@ function EnvironmentRow({
             <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>{env.description}</span>
           )}
         </div>
-        <button type="button"
-          title={env.is_active ? 'Desactivar' : 'Activar'}
-          disabled={updateMut.isPending}
-          onClick={() => updateMut.mutate({ is_active: !env.is_active })}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: env.is_active ? '#22c55e' : '#94a3b8', flexShrink: 0 }}>
-          {env.is_active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
-        </button>
-        <button type="button" onClick={() => setEditing(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', background: 'transparent', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          <Pencil size={10} />
-        </button>
-        <button type="button"
-          onClick={() => setConfirmDel(v => !v)}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          <Trash2 size={10} />
-        </button>
+        {canEdit && (
+          <>
+            <button type="button"
+              title={env.is_active ? 'Desactivar' : 'Activar'}
+              disabled={updateMut.isPending}
+              onClick={() => updateMut.mutate({ is_active: !env.is_active })}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: env.is_active ? '#22c55e' : '#94a3b8', flexShrink: 0 }}>
+              {env.is_active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+            </button>
+            <button type="button" onClick={() => setEditing(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', background: 'transparent', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Pencil size={10} />
+            </button>
+            <button type="button"
+              onClick={() => setConfirmDel(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Trash2 size={10} />
+            </button>
+          </>
+        )}
       </div>
       {confirmDel && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px 7px 36px', background: '#fef2f2', border: '1px solid #fecaca', borderTop: 'none', borderRadius: '0 0 4px 4px', marginBottom: 3 }}>
@@ -153,11 +158,12 @@ function EnvironmentRow({
 
 /* ── Location card ── */
 function LocationCard({
-  loc, moduleId, onError,
+  loc, moduleId, onError, canEdit = true,
 }: {
   loc: ModuleLocation;
   moduleId: string;
   onError: (msg: string) => void;
+  canEdit?: boolean;
 }) {
   const qc             = useQueryClient();
   const [open,         setOpen]        = useState(true);
@@ -213,23 +219,26 @@ function LocationCard({
           {envs.length} ambiente{envs.length !== 1 ? 's' : ''}
         </span>
 
-        <button type="button"
-          title={loc.is_active ? 'Desactivar sede' : 'Activar sede'}
-          disabled={updateLocMut.isPending}
-          onClick={() => updateLocMut.mutate({ is_active: !loc.is_active })}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: loc.is_active ? '#22c55e' : '#94a3b8', flexShrink: 0 }}>
-          {loc.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-        </button>
-
-        <button type="button" onClick={() => setEditingLoc(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'transparent', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-          <Pencil size={11} />
-        </button>
-        <button type="button"
-          onClick={() => setConfirmDel(v => !v)}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-          <Trash2 size={11} />
-        </button>
+        {canEdit && (
+          <>
+            <button type="button"
+              title={loc.is_active ? 'Desactivar sede' : 'Activar sede'}
+              disabled={updateLocMut.isPending}
+              onClick={() => updateLocMut.mutate({ is_active: !loc.is_active })}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: loc.is_active ? '#22c55e' : '#94a3b8', flexShrink: 0 }}>
+              {loc.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+            </button>
+            <button type="button" onClick={() => setEditingLoc(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'transparent', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              <Pencil size={11} />
+            </button>
+            <button type="button"
+              onClick={() => setConfirmDel(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              <Trash2 size={11} />
+            </button>
+          </>
+        )}
       </div>
 
       {confirmDel && (
@@ -270,7 +279,7 @@ function LocationCard({
           {envs.length > 0 && (
             <div style={{ marginBottom: addingEnv ? 8 : 0 }}>
               {envs.map(env => (
-                <EnvironmentRow key={env.id} env={env} moduleId={moduleId} locId={loc.id} onError={onError} />
+                <EnvironmentRow key={env.id} env={env} moduleId={moduleId} locId={loc.id} onError={onError} canEdit={canEdit} />
               ))}
             </div>
           )}
@@ -281,7 +290,7 @@ function LocationCard({
             </div>
           )}
 
-          {addingEnv ? (
+          {canEdit && (addingEnv ? (
             <div style={{ paddingLeft: 24 }}>
               <InlineForm
                 fields={[
@@ -298,7 +307,7 @@ function LocationCard({
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: '#fff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: 2, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus size={11} /> Nuevo ambiente
             </button>
-          )}
+          ))}
         </div>
       )}
     </div>
@@ -306,7 +315,8 @@ function LocationCard({
 }
 
 /* ── Main tab ── */
-export function LocationsTab({ moduleId }: Props) {
+export function LocationsTab({ moduleId, isSuperadmin = true }: Props) {
+  const canEdit = isSuperadmin;
   const qc = useQueryClient();
 
   const { data: locations = [], isLoading } = useQuery<ModuleLocation[]>({
@@ -339,6 +349,7 @@ export function LocationsTab({ moduleId }: Props) {
       <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16 }}>
         Las <strong>sedes</strong> son ubicaciones físicas (ej: Sede Norte). Los <strong>ambientes</strong> son
         espacios dentro de una sede (ej: Laboratorio A, Piso 2). Cada activo debe pertenecer a un ambiente.
+        {!canEdit && <span style={{ display: 'block', marginTop: 6, color: '#f97316', fontWeight: 700 }}>Solo el superadmin puede modificar sedes y ambientes.</span>}
       </div>
 
       {error && (
@@ -367,17 +378,19 @@ export function LocationsTab({ moduleId }: Props) {
           <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>
             Sin sedes configuradas. Sin sedes no puedes crear activos.
           </div>
-          <button type="button" onClick={() => setShowCreate(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <Plus size={13} /> Crear primera sede
-          </button>
+          {canEdit && (
+            <button type="button" onClick={() => setShowCreate(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Plus size={13} /> Crear primera sede
+            </button>
+          )}
         </div>
       ) : (
         <>
           {locations.map(loc => (
-            <LocationCard key={loc.id} loc={loc} moduleId={moduleId} onError={setError} />
+            <LocationCard key={loc.id} loc={loc} moduleId={moduleId} onError={setError} canEdit={canEdit} />
           ))}
-          {!showCreate && (
+          {canEdit && !showCreate && (
             <button type="button" onClick={() => setShowCreate(true)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', color: '#0e2235', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus size={13} /> Nueva sede

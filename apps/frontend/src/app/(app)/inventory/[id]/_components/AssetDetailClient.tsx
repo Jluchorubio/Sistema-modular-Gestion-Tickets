@@ -29,8 +29,8 @@ import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { useModules } from "@/hooks/useModules";
 import { useModuleNav } from "@/hooks/useModuleNav";
-import { usersService } from "@/services/users.service";
 import { ticketsService } from "@/services/tickets.service";
+import { modulesService } from "@/services/modules.service";
 import {
   INVENTORY_NAV,
   INVENTORY_MODULE_NAME,
@@ -1036,18 +1036,144 @@ function newRow(): CustodioRow {
 }
 
 /* ── AssignModal ── */
+/* ── UserPicker — autocomplete inline para selección de custodio ── */
+function UserPicker({
+  allUsers,
+  selectedId,
+  onChange,
+  style,
+}: {
+  allUsers: any[];
+  selectedId: string;
+  onChange: (id: string) => void;
+  style?: React.CSSProperties;
+}) {
+  const [query,    setQuery]    = useState("");
+  const [deptFilter, setDept]  = useState("");
+  const [open,     setOpen]     = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  /* Unique departments */
+  const departments = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    allUsers.forEach((u: any) => { if (u.department && !seen.has(u.department)) { seen.add(u.department); out.push(u.department); } });
+    return out.sort();
+  }, [allUsers]);
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    let list = deptFilter ? allUsers.filter((u: any) => u.department === deptFilter) : allUsers;
+    if (q) list = list.filter((u: any) =>
+      `${u.first_name} ${u.last_name}`.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.job_title?.toLowerCase() ?? "").includes(q),
+    );
+    return list.slice(0, 20);
+  }, [allUsers, query, deptFilter]);
+
+  const selected = allUsers.find((u: any) => u.id === selectedId);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
+
+  const BASE: React.CSSProperties = {
+    width: "100%", padding: "8px 10px", borderRadius: 7, border: `1px solid ${C.border}`,
+    fontSize: 12, fontFamily: "inherit", outline: "none", background: "#fff",
+    color: selected ? C.text : C.muted, boxSizing: "border-box" as const, cursor: "pointer", textAlign: "left" as const, ...style,
+  };
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      {/* Trigger button */}
+      <button type="button" onClick={() => setOpen(v => !v)} style={BASE}>
+        {selected
+          ? <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 700, color: C.navy }}>{selected.first_name} {selected.last_name}</span>
+              <span style={{ fontSize: 11, color: C.muted }}>{selected.job_title || selected.department || selected.email}</span>
+            </span>
+          : <span>Buscar y seleccionar usuario…</span>
+        }
+      </button>
+
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "#fff", border: `1px solid ${C.border}`, borderRadius: 9, boxShadow: "0 8px 32px rgba(14,34,53,.12)", zIndex: 300, overflow: "hidden" }}>
+          {/* Search + department filter */}
+          <div style={{ padding: "10px 10px 8px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 6 }}>
+            <div style={{ position: "relative", flex: 1 }}>
+              <Search size={13} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: C.muted, pointerEvents: "none" }} />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Nombre, email o cargo…"
+                style={{ width: "100%", padding: "6px 8px 6px 26px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }}
+              />
+            </div>
+            {departments.length > 0 && (
+              <select value={deptFilter} onChange={(e) => setDept(e.target.value)}
+                style={{ padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 11, fontFamily: "inherit", outline: "none", background: "#fff", color: deptFilter ? C.navy : C.muted, maxWidth: 130 }}>
+                <option value="">Depto…</option>
+                {departments.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            )}
+          </div>
+          {/* Results */}
+          <div style={{ maxHeight: 220, overflowY: "auto" }}>
+            {filtered.length === 0
+              ? <p style={{ padding: "12px 14px", fontSize: 12, color: C.muted, margin: 0 }}>Sin resultados.</p>
+              : filtered.map((u: any) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => { onChange(u.id); setOpen(false); setQuery(""); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 12px",
+                    background: u.id === selectedId ? `${C.navy}09` : "#fff",
+                    border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
+                  }}
+                >
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.navy, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: "#fff" }}>
+                      {u.first_name?.[0]}{u.last_name?.[0]}
+                    </span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: 0 }}>{u.first_name} {u.last_name}</p>
+                    <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{u.job_title || u.department || u.email}</p>
+                  </div>
+                  {u.id === selectedId && <CheckCircle2 size={14} style={{ color: C.navy, flexShrink: 0 }} />}
+                </button>
+              ))
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AssignModal({
-  moduleUsers,
   onAssign,
   onClose,
   pending,
 }: {
-  moduleUsers: any[];
   onAssign: (rows: { user_id: string; shift?: string; hours_start?: string; hours_end?: string; notes?: string }[]) => void;
   onClose: () => void;
   pending: boolean;
 }) {
   const [rows, setRows] = useState<CustodioRow[]>([newRow()]);
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ["assignable-users"],
+    queryFn:  () => inventoryService.getAssignableUsers(),
+    staleTime: 5 * 60_000,
+  });
 
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 5px", display: "block" };
   const SEL: React.CSSProperties = { width: "100%", padding: "8px 10px", borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, boxSizing: "border-box" as const };
@@ -1096,12 +1222,11 @@ function AssignModal({
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div>
                   <label style={LBL}>Usuario *</label>
-                  <select value={row.userId} onChange={(e) => updateRow(row.id, { userId: e.target.value })} style={SEL}>
-                    <option value="">Seleccionar usuario…</option>
-                    {moduleUsers.map((u: any) => (
-                      <option key={u.id} value={u.id}>{u.first_name} {u.last_name} — {u.role_name}</option>
-                    ))}
-                  </select>
+                  <UserPicker
+                    allUsers={allUsers}
+                    selectedId={row.userId}
+                    onChange={(id) => updateRow(row.id, { userId: id })}
+                  />
                 </div>
 
                 <div>
@@ -1190,7 +1315,7 @@ function DecommissionModal({
   onClose: () => void;
   pending: boolean;
 }) {
-  const [motivo,       setMotivo]       = useState("");
+  const [motivo,        setMotivo]        = useState("");
   const [observaciones, setObservaciones] = useState("");
 
   function handleConfirm() {
@@ -1199,12 +1324,14 @@ function DecommissionModal({
     onDecommission(reason);
   }
 
+  const SEL13: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, boxSizing: "border-box" as const };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 400, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <div>
-            <p style={{ fontSize: 9, fontWeight: 800, color: "#ef4444", textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Acción irreversible</p>
+            <p style={{ fontSize: 9, fontWeight: 800, color: "#ef4444", textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Cambio de estado definitivo</p>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Dar de baja</h3>
           </div>
           <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
@@ -1212,20 +1339,22 @@ function DecommissionModal({
           </button>
         </div>
 
-        <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, marginBottom: 20 }}>
-          <p style={{ fontSize: 12, color: "#ef4444", margin: 0, fontWeight: 600 }}>El activo quedará registrado como dado de baja permanentemente y no podrá reactivarse.</p>
+        <div style={{ padding: "12px 14px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, marginBottom: 20 }}>
+          <p style={{ fontSize: 12, color: C.sub, margin: "0 0 4px", fontWeight: 600 }}>El activo cambiará al estado <strong>"Dado de baja"</strong>.</p>
+          <p style={{ fontSize: 12, color: C.sub, margin: "0 0 4px" }}>No aparecerá como disponible para asignaciones, custodias ni nuevas operaciones.</p>
+          <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>Se desvinculan custodios y relaciones de componentes. Toda la trazabilidad histórica queda conservada.</p>
         </div>
 
         <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Motivo *</p>
         <select value={motivo} onChange={(e) => setMotivo(e.target.value)}
-          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${motivo ? C.border : "#fecaca"}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, marginBottom: 14, boxSizing: "border-box" as const }}>
+          style={{ ...SEL13, border: `1px solid ${motivo ? C.border : "#fecaca"}`, marginBottom: 14 }}>
           <option value="">Seleccionar motivo…</option>
           {MOTIVOS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
 
         <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Observaciones (opcional)</p>
         <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows={2} placeholder="Detalles adicionales sobre la baja…"
-          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", marginBottom: 22, boxSizing: "border-box" as const }} />
+          style={{ ...SEL13, resize: "vertical", marginBottom: 22 }} />
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
@@ -1479,7 +1608,6 @@ function ReportProblemModal({
   moduleId,
   categoryId,
   environmentId,
-  moduleName,
   onClose,
 }: {
   assetName: string;
@@ -1487,25 +1615,70 @@ function ReportProblemModal({
   moduleId: string;
   categoryId: string;
   environmentId: string;
-  moduleName: string;
   onClose: () => void;
 }) {
-  const [title,       setTitle]       = useState(`Problema con: ${assetName}`);
-  const [description, setDescription] = useState("");
+  const [title,               setTitle]               = useState(`Problema con: ${assetName}`);
+  const [description,         setDescription]         = useState("");
+  const [selectedModuleId,    setSelectedModuleId]    = useState(moduleId);
+  const [selectedCategoryId,  setSelectedCategoryId]  = useState(categoryId);
+  const [selectedEnvId,       setSelectedEnvId]       = useState(environmentId);
 
   const BTN: React.CSSProperties = {
     padding: "9px 22px", borderRadius: 8, border: "none", fontSize: 12,
     fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
   };
+  const SEL: React.CSSProperties = {
+    width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`,
+    fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text,
+    boxSizing: "border-box" as const, marginBottom: 14,
+  };
+
+  /* Fetch all active modules */
+  const { data: allModules = [] } = useQuery({
+    queryKey: ["system-modules-for-report"],
+    queryFn:  () => modulesService.getModules(),
+    staleTime: 5 * 60_000,
+  });
+
+  /* Fetch categories of selected module */
+  const { data: modCategories = [] } = useQuery({
+    queryKey:  ["ticket-categories-for-module", selectedModuleId],
+    queryFn:   () => ticketsService.getCategories(selectedModuleId),
+    staleTime: 60_000,
+    enabled:   !!selectedModuleId,
+  });
+
+  /* Fetch environments of selected module */
+  const { data: modEnvironments = [] } = useQuery({
+    queryKey:  ["ticket-environments-for-module", selectedModuleId],
+    queryFn:   () => ticketsService.getEnvironments(selectedModuleId),
+    staleTime: 60_000,
+    enabled:   !!selectedModuleId,
+  });
+
+  /* Auto-select first category when module changes */
+  useEffect(() => {
+    if (modCategories.length > 0) setSelectedCategoryId(modCategories[0].id);
+    else setSelectedCategoryId('');
+  }, [modCategories]);
+
+  /* Auto-select first environment when module changes */
+  useEffect(() => {
+    if (modEnvironments.length > 0) setSelectedEnvId(modEnvironments[0].id);
+    else setSelectedEnvId('');
+  }, [modEnvironments]);
+
+  const selectedModule = allModules.find(m => m.id === selectedModuleId);
+  const canSubmit = !!title.trim() && !!selectedCategoryId && !!selectedEnvId;
 
   const createMut = useMutation({
     mutationFn: () => ticketsService.create({
-      module_id:       moduleId,
-      category_id:     categoryId,
-      environment_id:  environmentId,
-      title:           title.trim(),
-      description:     description.trim() || undefined,
-      asset_id:        assetId,
+      module_id:      selectedModuleId,
+      category_id:    selectedCategoryId,
+      environment_id: selectedEnvId,
+      title:          title.trim(),
+      description:    description.trim() || undefined,
+      asset_id:       assetId,
     }),
   });
 
@@ -1518,7 +1691,7 @@ function ReportProblemModal({
           </div>
           <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: "0 0 8px" }}>Ticket creado</h3>
           <p style={{ fontSize: 13, color: C.sub, margin: "0 0 6px", lineHeight: 1.6 }}>
-            El problema fue reportado en <strong>{moduleName}</strong>.
+            Problema reportado en <strong>{selectedModule?.name ?? "módulo"}</strong>.
           </p>
           <p style={{ fontSize: 11, color: C.muted, margin: "0 0 24px", fontFamily: "monospace" }}>
             #{(createMut.data as any)?.id?.slice(0, 8)}
@@ -1531,12 +1704,10 @@ function ReportProblemModal({
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 460, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 480, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)", maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>
-              {moduleName}
-            </p>
+            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Soporte técnico</p>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Reportar problema</h3>
           </div>
           <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
@@ -1544,6 +1715,7 @@ function ReportProblemModal({
           </button>
         </div>
 
+        {/* Device chip */}
         <div style={{ padding: "10px 14px", background: C.bg, borderRadius: 9, marginBottom: 18, display: "flex", gap: 8, alignItems: "center" }}>
           <Package size={14} style={{ color: C.muted, flexShrink: 0 }} />
           <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{assetName}</span>
@@ -1557,19 +1729,52 @@ function ReportProblemModal({
           </div>
         )}
 
+        {/* Module selector */}
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Módulo de soporte *</p>
+        <select value={selectedModuleId}
+          onChange={(e) => { setSelectedModuleId(e.target.value); setSelectedCategoryId(''); setSelectedEnvId(''); }}
+          style={SEL}>
+          {allModules.filter(m => m.is_active).map(m => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </select>
+
+        {/* Category selector for selected module */}
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Categoría del ticket *</p>
+        <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} style={SEL}
+          disabled={modCategories.length === 0}>
+          {modCategories.length === 0
+            ? <option value="">Sin categorías disponibles</option>
+            : modCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+          }
+        </select>
+
+        {/* Environment selector for selected module */}
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Sede / Ambiente *</p>
+        <select value={selectedEnvId} onChange={(e) => setSelectedEnvId(e.target.value)} style={SEL}
+          disabled={modEnvironments.length === 0}>
+          {modEnvironments.length === 0
+            ? <option value="">Sin ambientes disponibles</option>
+            : modEnvironments.map(e => <option key={e.id} value={e.id}>{e.location_name ? `${e.location_name} — ${e.name}` : e.name}</option>)
+          }
+        </select>
+
+        {/* Title */}
         <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Asunto *</p>
         <input value={title} onChange={(e) => setTitle(e.target.value)}
-          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", marginBottom: 14, boxSizing: "border-box" as const }} />
+          style={{ ...SEL }} />
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Descripción</p>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Describe el problema con el mayor detalle posible…"
-          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", marginBottom: 22, boxSizing: "border-box" as const }} />
+        {/* Description */}
+        <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 7px" }}>Descripción del problema</p>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
+          placeholder="Describe el problema con el mayor detalle posible…"
+          style={{ ...SEL, resize: "vertical", marginBottom: 22 }} />
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ ...BTN, border: `1px solid ${C.border}`, background: "#fff", color: C.sub }}>Cancelar</button>
-          <button type="button" disabled={!title.trim() || createMut.isPending}
-            onClick={() => { if (title.trim()) createMut.mutate(); }}
-            style={{ ...BTN, background: title.trim() && !createMut.isPending ? C.coral : C.muted, color: "#fff", cursor: title.trim() && !createMut.isPending ? "pointer" : "not-allowed" }}>
+          <button type="button" disabled={!canSubmit || createMut.isPending}
+            onClick={() => { if (canSubmit) createMut.mutate(); }}
+            style={{ ...BTN, background: canSubmit && !createMut.isPending ? C.coral : C.muted, color: "#fff", cursor: canSubmit && !createMut.isPending ? "pointer" : "not-allowed" }}>
             {createMut.isPending ? "Creando ticket…" : "Reportar problema"}
           </button>
         </div>
@@ -1842,12 +2047,6 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     enabled: editing && !!moduleId,
   });
 
-  const { data: moduleUsers = [] } = useQuery({
-    queryKey: ["module-members", moduleId],
-    queryFn: () => usersService.getModuleUsers(moduleId),
-    staleTime: 5 * 60_000,
-    enabled: !!moduleId,
-  });
 
   /* Clamp selectedImg */
   useEffect(() => {
@@ -1929,6 +2128,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
       setActionErr("");
       inv();
       qc.invalidateQueries({ queryKey: ["asset-assignment", assetId] });
+      qc.invalidateQueries({ queryKey: ["asset-children", assetId] });
     },
     onError: (e: any) => setActionErr(e?.response?.data?.message ?? "Error"),
   });
@@ -2035,6 +2235,15 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   );
   const safeIdx =
     images.length > 0 ? Math.min(selectedImg, images.length - 1) : 0;
+
+  /* Auto-carousel: avanza cada 4s cuando hay múltiples imágenes y no está en modo edit */
+  useEffect(() => {
+    if (images.length <= 1 || editing || lightboxIdx !== null) return;
+    const id = setInterval(() => {
+      setSelectedImg(i => (i + 1) % images.length);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [images.length, editing, lightboxIdx]);
 
   /* ── Loading / not found ── */
   if (isLoading)
@@ -2148,11 +2357,11 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
           boxShadow: "0 2px 18px rgba(14,34,53,.08)",
         }}
       >
-        <div style={{ display: "grid", gridTemplateColumns: "42% 58%" }}>
-          {/* Gallery — light background */}
+        <div style={{ display: "grid", gridTemplateColumns: "40% 60%" }}>
+          {/* Gallery */}
           <div
             style={{
-              background: C.bg,
+              background: "#f0f4f8",
               display: "flex",
               flexDirection: "column",
               borderRight: `1px solid ${C.border}`,
@@ -2162,11 +2371,11 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             <div
               style={{
                 flex: 1,
-                minHeight: 280,
+                minHeight: 320,
                 position: "relative",
                 cursor: images.length > 0 ? "zoom-in" : "default",
                 overflow: "hidden",
-                background: C.bg,
+                background: "#f0f4f8",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -2182,10 +2391,11 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                     style={{
                       width: "100%",
                       height: "100%",
-                      objectFit: "contain",
+                      objectFit: "cover",
                       display: "block",
                       position: "absolute",
                       inset: 0,
+                      transition: "opacity .3s ease",
                     }}
                   />
                   {images.length > 1 && (
@@ -2752,10 +2962,10 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             )}
           </div>
         </div>
-          {/* ── Especificaciones ── */}
+          {/* ── Especificaciones / Ficha técnica ── */}
           {fieldSchema.length > 0 && (
             <div style={{ padding: "26px 36px", borderTop: `1px solid ${C.border}` }}>
-              <SectionHeader label="Especificaciones" />
+              <SectionHeader label="Ficha técnica" />
               {editing ? (
                 <div
                   style={{
@@ -2844,18 +3054,18 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                   ))}
                 </div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 48px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 56px" }}>
                   {fieldSchema.map((f) => {
                     const rawVal = asset.specifications?.[f.key];
-                    const hasValue =
-                      rawVal !== undefined && rawVal !== null && rawVal !== "";
+                    const hasValue = rawVal !== undefined && rawVal !== null && rawVal !== "";
                     return (
-                      <div key={f.key} style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "9px 0", borderBottom: `1px solid ${C.border}` }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, flexShrink: 0, minWidth: 130, textTransform: "uppercase", letterSpacing: ".05em", lineHeight: 1.5 }}>
+                      <div key={f.key}
+                        style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                        <span style={{ fontSize: 12, color: C.sub, flexShrink: 0, lineHeight: 1.5, minWidth: 100 }}>
                           {f.label}
                         </span>
-                        <span style={{ fontSize: 13, color: hasValue ? C.navy : C.muted, fontWeight: hasValue ? 600 : 400, fontStyle: hasValue ? "normal" : "italic" }}>
-                          {hasValue ? String(rawVal) : "Sin respuesta"}
+                        <span style={{ fontSize: 13, fontWeight: 600, color: hasValue ? C.navy : C.muted, fontStyle: hasValue ? "normal" : "italic", textAlign: "right" }}>
+                          {hasValue ? String(rawVal) : "—"}
                         </span>
                       </div>
                     );
@@ -3120,7 +3330,6 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
       {/* ── Modals ── */}
       {showAssign && (
         <AssignModal
-          moduleUsers={moduleUsers as any[]}
           onAssign={(rows) => assignMut.mutate(rows)}
           onClose={() => setShowAssign(false)}
           pending={assignMut.isPending}
@@ -3155,7 +3364,6 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
           moduleId={asset.module_id}
           categoryId={asset.category_id}
           environmentId={asset.environment_id}
-          moduleName={asset.module_name}
           onClose={() => setShowReport(false)}
         />
       )}

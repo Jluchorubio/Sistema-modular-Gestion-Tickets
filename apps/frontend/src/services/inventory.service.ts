@@ -272,4 +272,12 @@ export const inventoryService = {
     const { data } = await api.post('/inventory/bulk', { module_id: moduleId, rows });
     return data;
   },
+
+  async getAssignableUsers(): Promise<Array<{
+    id: string; first_name: string; last_name: string; email: string;
+    avatar_url: string | null; job_title: string | null; department: string | null;
+  }>> {
+    const { data } = await api.get('/inventory/assignable-users');
+    return data;
+  },
 };

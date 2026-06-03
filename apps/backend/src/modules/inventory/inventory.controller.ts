@@ -30,6 +30,13 @@ export class InventoryController {
     return this.service.findAll(moduleId, status, q);
   }
 
+  @Get('assignable-users')
+  @RequirePermission('inventario:items:view')
+  @ApiOperation({ summary: 'Todos los usuarios activos disponibles para asignación de custodia.' })
+  getAssignableUsers() {
+    return this.service.getAssignableUsers();
+  }
+
   @Get(':id')
   @RequirePermission('inventario:items:view')
   @ApiOperation({ summary: 'Detalle de activo.' })

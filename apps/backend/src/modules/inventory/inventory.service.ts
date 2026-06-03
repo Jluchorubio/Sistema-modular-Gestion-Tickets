@@ -154,7 +154,7 @@ export class InventoryService {
     if (existing) throw new BadRequestException('Este usuario ya tiene custodia activa sobre este activo');
 
     await this.db.query(
-      `UPDATE inventory.assets SET status = 'asignado' WHERE id = $1`,
+      `UPDATE inventory.assets SET status = 'asignado' WHERE id = $1 AND status != 'asignado'`,
       [assetId],
     );
 
@@ -277,6 +277,31 @@ export class InventoryService {
       `UPDATE inventory.assets SET status = $1 WHERE id = $2`,
       [dto.status, assetId],
     );
+
+    /* When decommissioning: unlink parent + all children to avoid dangling relations */
+    if (dto.status === 'dado_de_baja') {
+      /* Clear this asset's parent (if any) */
+      await this.db.query(
+        `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now()
+         WHERE id = $1 AND parent_asset_id IS NOT NULL`,
+        [assetId],
+      ).catch(() => {});
+      /* Unlink any children pointing to this asset */
+      const children = await this.db.query<{ id: string }[]>(
+        `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now()
+         WHERE parent_asset_id = $1 AND deleted_at IS NULL
+         RETURNING id`,
+        [assetId],
+      ).catch(() => [] as any[]);
+      /* Best-effort history entries for unlinked children */
+      for (const child of (children ?? [])) {
+        await this.db.query(
+          `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+           VALUES ($1, $2, $2, 'desasociado', 'Padre dado de baja')`,
+          [child.id, actorId],
+        ).catch(() => {});
+      }
+    }
 
     return { ok: true, status: dto.status };
   }
@@ -582,5 +607,18 @@ export class InventoryService {
     if (!asset) throw new NotFoundException(`Asset ${id} no encontrado`);
     const dataUrl = await this.qr.generate(id);
     return { id, qr_code: asset.qr_code, qr_image: dataUrl };
+  }
+
+  async getAssignableUsers() {
+    return this.db.query<any[]>(
+      `SELECT p.id, p.first_name, p.last_name, p.avatar_url,
+              p.job_title, p.department,
+              c.email
+       FROM   users.profiles   p
+       JOIN   auth.credentials c ON c.user_id = p.id
+       WHERE  p.is_active  = true
+         AND  p.deleted_at IS NULL
+       ORDER  BY p.first_name, p.last_name`,
+    );
   }
 }

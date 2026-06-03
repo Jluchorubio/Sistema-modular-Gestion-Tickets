@@ -1,26 +1,24 @@
 'use client';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Settings, CalendarClock, FolderOpen, MapPin, type LucideIcon } from 'lucide-react';
+import { Settings, FolderOpen, MapPin, type LucideIcon } from 'lucide-react';
 import { useModules }    from '@/hooks/useModules';
 import { useModuleNav }  from '@/hooks/useModuleNav';
 import { useAuthStore }  from '@/stores/auth.store';
 import { modulesService } from '@/services/modules.service';
 import { ModuleConfigClient }  from '@/components/modules/ModuleConfigClient';
-import { ModuleCalendarioTab } from '@/components/config/ModuleCalendarioTab';
 import { CategoriesTab }       from '@/components/config/CategoriesTab';
 import { LocationsTab }        from '@/components/config/LocationsTab';
 import { Spinner }             from '@/components/ui/Spinner';
 import { INVENTORY_NAV, INVENTORY_MODULE_NAME, isInventoryModule } from '../_nav';
 import styles from '@/app/(app)/requests/config/config.module.css';
 
-type Tab = 'general' | 'categorias' | 'sedes' | 'calendario';
+type Tab = 'general' | 'categorias' | 'sedes';
 
 const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
-  { key: 'general',    label: 'General',      Icon: Settings     },
-  { key: 'categorias', label: 'Categorías',   Icon: FolderOpen   },
-  { key: 'sedes',      label: 'Sedes',        Icon: MapPin       },
-  { key: 'calendario', label: 'Calendario',   Icon: CalendarClock },
+  { key: 'general',    label: 'General',      Icon: Settings  },
+  { key: 'categorias', label: 'Categorías',   Icon: FolderOpen },
+  { key: 'sedes',      label: 'Sedes',        Icon: MapPin    },
 ];
 
 export default function InventoryConfigPage() {
@@ -51,7 +49,7 @@ export default function InventoryConfigPage() {
 
         <div className={styles.header}>
           <h1 className={styles.title}>Configuración — Inventario</h1>
-          <p className={styles.subtitle}>Categorías de activos, sedes y ambientes, SLA de mantenimiento y comportamiento operativo del módulo.</p>
+          <p className={styles.subtitle}>Categorías de activos, sedes y ambientes, y modo de acceso al módulo de inventario.</p>
         </div>
 
         <div className={styles.tabBar}>
@@ -74,11 +72,11 @@ export default function InventoryConfigPage() {
               moduleId={inventoryRef.id}
               isSuperadmin={isSuperadmin}
               isAdminModulo={isAdminModulo}
+              isInventory
             />
           )}
           {tab === 'categorias' && <CategoriesTab moduleId={inventoryRef.id} />}
-          {tab === 'sedes'      && <LocationsTab  moduleId={inventoryRef.id} />}
-          {tab === 'calendario' && <ModuleCalendarioTab moduleId={inventoryRef.id} />}
+          {tab === 'sedes'      && <LocationsTab  moduleId={inventoryRef.id} isSuperadmin={isSuperadmin} />}
         </div>
 
       </div>

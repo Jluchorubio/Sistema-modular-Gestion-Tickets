@@ -60,4 +60,14 @@ export class CompleteProfileDto {
   @IsOptional()
   @MaxLength(150)
   city?: string;
+
+  @ApiPropertyOptional({ description: 'UUID del nodo org (área/departamento) al que pertenece el usuario' })
+  @IsString()
+  @IsOptional()
+  org_node_id?: string;
+
+  @ApiPropertyOptional({ description: 'UUID del nodo cargo (position) del usuario' })
+  @IsString()
+  @IsOptional()
+  position_node_id?: string;
 }

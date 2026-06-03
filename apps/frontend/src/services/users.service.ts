@@ -78,16 +78,18 @@ export interface UpdateMeDto {
 }
 
 export interface CompleteProfileDto {
-  phone:          string;
-  username?:      string;
-  job_title:      string;
-  department:     string;
-  primary_sede:   string;
-  address:        string;
-  phone_prefix?:  string;
-  country?:       string;
-  state_province?: string;
-  city?:          string;
+  phone:            string;
+  username?:        string;
+  job_title:        string;
+  department:       string;
+  primary_sede:     string;
+  address:          string;
+  phone_prefix?:    string;
+  country?:         string;
+  state_province?:  string;
+  city?:            string;
+  org_node_id?:     string;
+  position_node_id?: string;
 }
 
 export const usersService = {

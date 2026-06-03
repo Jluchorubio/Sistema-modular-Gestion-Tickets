@@ -11,6 +11,7 @@ interface Props {
   moduleId: string;
   isSuperadmin: boolean;
   isAdminModulo: boolean;
+  isInventory?: boolean;
 }
 
 const PRIORITY_LABEL: Record<string, string> = {
@@ -52,7 +53,7 @@ function RadioOption({
   );
 }
 
-export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdminModulo }: Props) {
+export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdminModulo, isInventory = false }: Props) {
   const qc      = useQueryClient();
   const canEdit = isSuperadmin || isAdminModulo;
 
@@ -174,7 +175,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
       </div>
 
       {/* ── Asignación de tickets ── */}
-      <div style={card}>
+      {!isInventory && <div style={card}>
         <div style={sectionHead}>Asignación de tickets</div>
         <span style={fieldLabel}>Formato de entrega a técnicos</span>
         <div style={radioGroup}>
@@ -203,10 +204,10 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
             desc="Round Robin automático con opción de reasignación manual posterior."
           />
         </div>
-      </div>
+      </div>}
 
       {/* ── Gestión de prioridad ── */}
-      <div style={card}>
+      {!isInventory && <div style={card}>
         <div style={sectionHead}>Gestión de prioridad</div>
         <span style={fieldLabel}>Modo de asignación de prioridad</span>
         <div style={radioGroup}>
@@ -282,10 +283,10 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Especialización de técnicos ── */}
-      <div style={card}>
+      {!isInventory && <div style={card}>
         <div style={sectionHead}>Especialización de técnicos</div>
         <span style={fieldLabel}>¿Cómo se asignan los técnicos según su especialidad?</span>
         <div style={radioGroup}>
@@ -314,10 +315,10 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
             desc="Se intenta asignar por especialización; si no hay especialista disponible, se usa un técnico general."
           />
         </div>
-      </div>
+      </div>}
 
       {/* ── Auto-cierre de tickets ── */}
-      <div style={card}>
+      {!isInventory && <div style={card}>
         <div style={sectionHead}>Auto-cierre de tickets</div>
         <span style={fieldLabel}>Horas de espera antes del cierre automático</span>
         <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2, marginBottom: 14, lineHeight: 1.55 }}>
@@ -351,7 +352,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
             ))}
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ── Guardar configuración general ── */}
       {canEdit && (
@@ -377,7 +378,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
       )}
 
       {/* ── Reglas SLA ── */}
-      <div style={card}>
+      {!isInventory && <div style={card}>
         <div style={sectionHead}>Reglas SLA</div>
         {slaLoading ? <Spinner /> : !rules?.length ? (
           <p style={{ fontSize: 13, color: '#94a3b8' }}>No hay reglas SLA configuradas para este módulo.</p>
@@ -475,7 +476,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
             </table>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -306,6 +306,10 @@ export const systemConfigService = {
     api.delete<{ ok: boolean; message: string }>(`${BASE}/org/structure-types/${id}`).then(r => r.data),
 
   /* ── Dynamic org: nodes ── */
+  getOrgNodesBySlug: (slug: string) =>
+    api.get<{ id: string; name: string; parent_id: string | null; parent_name: string | null }[]>(
+      `${BASE}/org/nodes/by-slug`, { params: { slug } },
+    ).then(r => r.data),
   getOrgNodes: (params?: { type_id?: string; parent_id?: string; active?: boolean }) =>
     api.get<OrgNode[]>(`${BASE}/org/nodes`, { params }).then(r => r.data),
   getOrgNodeTree: () =>
