@@ -1,7 +1,9 @@
 import {
   Controller, Get, Post, Delete, Patch, Body, Param, Query, Req, UseGuards, ParseUUIDPipe,
-  HttpCode, HttpStatus,
+  HttpCode, HttpStatus, UploadedFile, UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
@@ -295,6 +297,44 @@ export class TicketsController {
   }
 
   /* ── Knowledge Base ─────────────────────────────────────────────────────── */
+
+  @Post('knowledge/upload-doc')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:create')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 },
+  }))
+  async uploadKnowledgeDoc(
+    @Req() req: any,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { module_id: string; title?: string; category?: string; tags?: string },
+  ) {
+    if (!file) throw new Error('No file uploaded');
+    const path = require('path');
+    const fs   = require('fs');
+    const ext  = path.extname(file.originalname);
+    const name = `knowledge-${Date.now()}${ext}`;
+    const uploadsDir = process.env.STORAGE_PATH ?? './uploads';
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    fs.writeFileSync(path.join(uploadsDir, name), file.buffer);
+    const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
+    const fileUrl = `${backendUrl}/uploads/${name}`;
+
+    return this.svc.createKnowledgeArticle(req.user.sub, {
+      module_id:  body.module_id,
+      title:      (body.title?.trim() || file.originalname).trim(),
+      content:    '',
+      category:   body.category?.trim() || undefined,
+      tags:       body.tags ? body.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+      is_published: true,
+      doc_type:   'file',
+      file_url:   fileUrl,
+      file_name:  file.originalname,
+      file_size:  file.size,
+      file_mime:  file.mimetype,
+    });
+  }
 
   @Get('knowledge')
   @RequirePermission('helpdesk:tickets:view')

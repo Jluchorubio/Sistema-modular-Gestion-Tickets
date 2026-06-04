@@ -44,6 +44,11 @@ export interface Article {
   tags: string[];
   is_published: boolean;
   status: string;
+  doc_type: 'article' | 'file';
+  file_url: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  file_mime: string | null;
   view_count: number;
   helpful_count: number;
   not_helpful_count: number;
@@ -87,6 +92,11 @@ export const docsService = {
 
   createArticle: (dto: any) =>
     api.post('/tickets/knowledge', dto).then((r: any) => r.data),
+
+  uploadDoc: (formData: FormData) =>
+    api.post('/tickets/knowledge/upload-doc', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r: any) => r.data),
 
   updateArticle: (id: string, dto: any) =>
     api.patch(`/tickets/knowledge/${id}`, dto).then((r: any) => r.data),

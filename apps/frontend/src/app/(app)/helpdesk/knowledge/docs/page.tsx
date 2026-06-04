@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Plus, Search, Eye, ChevronRight, Pencil, Trash2, ThumbsUp } from 'lucide-react';
+import { BookOpen, Plus, Search, Eye, ChevronRight, Pencil, Trash2, ThumbsUp, Download } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
@@ -14,6 +14,30 @@ import { docsService, type Article } from '../_lib/knowledge.service';
 import { fmtDate } from '@/lib/formatters';
 
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
+
+const FILE_ICONS: Record<string, string> = {
+  'application/pdf': '📄',
+  'application/msword': '📝',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
+  'application/vnd.ms-excel': '📊',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
+  'application/vnd.ms-powerpoint': '📋',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📋',
+  'text/plain': '📃',
+  'application/zip': '🗜️',
+};
+function getFileIcon(mime?: string | null): string {
+  if (!mime) return '📁';
+  if (FILE_ICONS[mime]) return FILE_ICONS[mime];
+  if (mime.startsWith('image/')) return '🖼️';
+  if (mime.startsWith('video/')) return '🎬';
+  return '📁';
+}
+function fmtSize(bytes?: number | null): string {
+  if (!bytes) return '';
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
 
 export default function DocsPage() {
   const router = useRouter();
@@ -111,8 +135,10 @@ export default function DocsPage() {
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = C.border; (e.currentTarget as HTMLDivElement).style.boxShadow = ''; }}
             >
               {/* Icon */}
-              <div style={{ width: 40, height: 40, borderRadius: 9, background: `${C.coral}12`, border: `1px solid ${C.coral}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <BookOpen size={18} style={{ color: C.coral }} />
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: `${C.coral}10`, border: `1px solid ${C.coral}25`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {(a as any).doc_type === 'file'
+                  ? <span style={{ fontSize: 22 }}>{getFileIcon((a as any).file_mime)}</span>
+                  : <BookOpen size={18} style={{ color: C.coral }} />}
               </div>
               {/* Content */}
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -121,7 +147,10 @@ export default function DocsPage() {
                   {!a.is_published && <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#92400e' }}>BORRADOR</span>}
                 </div>
                 <p style={{ margin: '0 0 3px', fontSize: 13.5, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</p>
-                <p style={{ margin: 0, fontSize: 11, color: C.sub }}>{a.author_name} · {fmtDate(a.updated_at)}</p>
+                <p style={{ margin: 0, fontSize: 11, color: C.sub }}>
+                  {a.author_name} · {fmtDate(a.updated_at)}
+                  {(a as any).file_size ? ` · ${fmtSize((a as any).file_size)}` : ''}
+                </p>
               </div>
               {/* Tags */}
               {a.tags.length > 0 && (

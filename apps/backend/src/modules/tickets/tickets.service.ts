@@ -1125,7 +1125,9 @@ export class TicketsService {
     const publishedClause = includeDrafts ? '' : 'AND a.is_published = true';
     return this.db.query<any[]>(
       `SELECT a.id, a.title, a.content, a.category, a.tags, a.is_published,
+              a.status, a.helpful_count, a.not_helpful_count,
               a.view_count, a.created_at, a.updated_at,
+              a.doc_type, a.file_url, a.file_name, a.file_size, a.file_mime,
               p.first_name || ' ' || p.last_name AS author_name,
               a.ticket_id
        FROM   tickets.knowledge_articles a
@@ -1154,14 +1156,27 @@ export class TicketsService {
 
   async createKnowledgeArticle(
     userId: string,
-    dto: { module_id: string; title: string; content: string; category?: string; tags?: string[]; ticket_id?: string; is_published?: boolean },
+    dto: {
+      module_id: string; title: string; content?: string; category?: string;
+      tags?: string[]; ticket_id?: string; is_published?: boolean;
+      doc_type?: string; file_url?: string; file_name?: string;
+      file_size?: number; file_mime?: string;
+    },
   ) {
     const [row] = await this.db.query<any[]>(
       `INSERT INTO tickets.knowledge_articles
-         (module_id, title, content, category, tags, ticket_id, is_published, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, title, created_at`,
-      [dto.module_id, dto.title.trim(), dto.content.trim(), dto.category ?? null, dto.tags ?? [], dto.ticket_id ?? null, dto.is_published ?? false, userId],
+         (module_id, title, content, category, tags, ticket_id, is_published,
+          doc_type, file_url, file_name, file_size, file_mime, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING id, title, doc_type, created_at`,
+      [
+        dto.module_id, dto.title.trim(), (dto.content ?? '').trim(),
+        dto.category ?? null, dto.tags ?? [], dto.ticket_id ?? null,
+        dto.is_published ?? true,
+        dto.doc_type ?? 'article', dto.file_url ?? null,
+        dto.file_name ?? null, dto.file_size ?? null, dto.file_mime ?? null,
+        userId,
+      ],
     );
     return row;
   }
