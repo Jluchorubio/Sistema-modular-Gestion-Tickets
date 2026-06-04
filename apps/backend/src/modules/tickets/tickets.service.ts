@@ -169,7 +169,7 @@ export class TicketsService {
 
   /* ── Single ─────────────────────────────────────────────────────────────── */
 
-  async findOne(id: string) {
+  async findOne(id: string, userId?: string) {
     const [ticket] = await this.db.query<any[]>(
       `SELECT t.id, t.title, t.description, t.priority, t.urgency, t.impact,
               t.sla_deadline, t.created_at, t.updated_at,
@@ -240,7 +240,7 @@ export class TicketsService {
       ),
       this.db.query<any[]>(
         `SELECT tr.id, tr.name, tr.from_state_id, tr.to_state_id,
-                tr.variant,
+                tr.variant, tr.allowed_roles,
                 ts2.label AS to_label,
                 ts2.name  AS to_name
          FROM   tickets.transitions tr
@@ -252,7 +252,39 @@ export class TicketsService {
       ),
     ]);
 
-    return { ...ticket, assignments, history, transitions };
+    // Filter transitions to only those the requesting user can execute
+    const filteredTransitions = userId
+      ? await this.filterTransitionsByRole(transitions, userId, ticket.module_id)
+      : transitions;
+
+    return { ...ticket, assignments, history, transitions: filteredTransitions };
+  }
+
+  private async filterTransitionsByRole(
+    transitions: any[],
+    userId:      string,
+    moduleId:    string,
+  ): Promise<any[]> {
+    const [actor] = await this.db.query<{ is_superadmin: boolean; role_name: string | null }[]>(
+      `SELECT u.is_superadmin,
+              mr.name AS role_name
+       FROM   users.profiles u
+       LEFT JOIN modules.user_module_roles umr
+             ON umr.user_id   = u.id
+            AND umr.module_id = $2
+            AND umr.is_active = true
+       LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
+       WHERE  u.id = $1
+       LIMIT  1`,
+      [userId, moduleId],
+    );
+    if (!actor) return [];
+    if (actor.is_superadmin) return transitions;
+    const role = actor.role_name ?? '';
+    return transitions.filter(tr => {
+      const roles: string[] = Array.isArray(tr.allowed_roles) ? tr.allowed_roles : [];
+      return roles.length === 0 || roles.includes(role);
+    });
   }
 
   /* ── Create ─────────────────────────────────────────────────────────────── */

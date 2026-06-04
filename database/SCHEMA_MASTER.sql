@@ -238,8 +238,8 @@ DECLARE
     v_st_process   UUID;
     v_st_wait      UUID;
     v_st_done      UUID;
+    v_st_rejected  UUID;
     v_st_closed    UUID;
-    v_st_reprocess UUID;
     v_scope        TEXT;
 BEGIN
     v_scope := COALESCE(p_permission_scope, p_slug);
@@ -285,27 +285,29 @@ BEGIN
         VALUES (v_module_id, 1, 'Workflow estándar v1', true)
         RETURNING id INTO v_wfv_id;
 
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'abierto',    'Abierto',    true,  false) RETURNING id INTO v_st_open;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'en_proceso', 'En proceso', false, false) RETURNING id INTO v_st_process;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'en_espera',  'En espera',  false, false) RETURNING id INTO v_st_wait;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'realizado',  'Realizado',  false, false) RETURNING id INTO v_st_done;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'reproceso',  'Reproceso',  false, false) RETURNING id INTO v_st_reprocess;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'cerrado',    'Cerrado',    false, true)  RETURNING id INTO v_st_closed;
+        -- FSM states (current spec — no realizado/reproceso)
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'abierto',    'Abierto',    true,  false, false, false) RETURNING id INTO v_st_open;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'en_proceso', 'En proceso', false, false, false, false) RETURNING id INTO v_st_process;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'en_espera',  'En espera',  false, false, false, true)  RETURNING id INTO v_st_wait;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'resuelto',   'Resuelto',   false, false, true,  false) RETURNING id INTO v_st_done;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'rechazado',  'Rechazado',  false, true,  false, false) RETURNING id INTO v_st_rejected;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'cerrado',    'Cerrado',    false, true,  false, false) RETURNING id INTO v_st_closed;
 
-        INSERT INTO tickets.transitions (workflow_version_id, module_id, from_state_id, to_state_id, name) VALUES
-        (v_wfv_id, v_module_id, v_st_open,      v_st_process,   'Tomar ticket'),
-        (v_wfv_id, v_module_id, v_st_process,   v_st_wait,      'Solicitar información'),
-        (v_wfv_id, v_module_id, v_st_process,   v_st_done,      'Marcar realizado'),
-        (v_wfv_id, v_module_id, v_st_wait,      v_st_process,   'Reanudar'),
-        (v_wfv_id, v_module_id, v_st_done,      v_st_closed,    'Aprobar y cerrar'),
-        (v_wfv_id, v_module_id, v_st_done,      v_st_reprocess, 'Rechazar solución'),
-        (v_wfv_id, v_module_id, v_st_reprocess, v_st_process,   'Retomar para reproceso');
+        -- FSM transitions with role matrix and UI variants
+        INSERT INTO tickets.transitions (workflow_version_id, module_id, from_state_id, to_state_id, name, variant, allowed_roles) VALUES
+        (v_wfv_id, v_module_id, v_st_open,    v_st_process,   'Tomar ticket',        'primary', ARRAY['tecnico','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_process, v_st_wait,      'Solicitar información','warning', ARRAY['tecnico','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_wait,    v_st_process,   'Reanudar',            'primary', ARRAY['tecnico','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_process, v_st_done,      'Marcar resuelto',     'primary', ARRAY['tecnico','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_done,    v_st_closed,    'Cerrar',              'success', ARRAY['usuario','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_done,    v_st_process,   'Reabrir',             'default', ARRAY['usuario','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_process, v_st_rejected,  'Rechazar',            'danger',  ARRAY['jefe_tecnico','admin_modulo']);
     ELSE
         SELECT id INTO v_wfv_id FROM tickets.workflow_versions
         WHERE module_id = v_module_id AND version = 1;
@@ -1319,6 +1321,8 @@ CREATE TABLE IF NOT EXISTS tickets.states (
     label               varchar(100) NOT NULL,
     is_initial          boolean     NOT NULL DEFAULT false,
     is_final            boolean     NOT NULL DEFAULT false,
+    is_approval_state   boolean     NOT NULL DEFAULT false,
+    is_pause_state      boolean     NOT NULL DEFAULT false,
     is_active           boolean     NOT NULL DEFAULT true,
     version             integer     NOT NULL DEFAULT 1,
     deprecated_at       timestamptz,
@@ -1334,6 +1338,8 @@ CREATE TABLE IF NOT EXISTS tickets.transitions (
     from_state_id       uuid         NOT NULL,
     to_state_id         uuid         NOT NULL,
     name                varchar(100) NOT NULL,
+    variant             varchar(50)  NOT NULL DEFAULT 'default',
+    allowed_roles       text[]       NOT NULL DEFAULT '{}',
     is_active           boolean      NOT NULL DEFAULT true,
     version             integer      NOT NULL DEFAULT 1,
     deprecated_at       timestamptz,

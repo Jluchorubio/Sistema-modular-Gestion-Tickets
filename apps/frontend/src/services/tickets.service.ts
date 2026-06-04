@@ -35,6 +35,7 @@ export interface TicketTransition {
   to_label:      string;
   to_name:       string;
   variant:       'primary' | 'success' | 'danger' | 'warning' | 'default';
+  allowed_roles: string[];
 }
 
 export interface TicketModuleWorkflow {

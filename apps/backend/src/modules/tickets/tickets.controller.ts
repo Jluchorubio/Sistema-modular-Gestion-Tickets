@@ -98,8 +98,8 @@ export class TicketsController {
 
   @Get(':id')
   @RequirePermission('helpdesk:tickets:view')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.findOne(id);
+  findOne(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.findOne(id, req.user.sub);
   }
 
   @Post()
