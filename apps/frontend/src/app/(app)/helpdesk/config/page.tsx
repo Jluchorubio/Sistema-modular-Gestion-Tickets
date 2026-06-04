@@ -5,6 +5,7 @@ import { Settings, Shield, Wrench, CalendarClock, type LucideIcon } from 'lucide
 import { useModules }    from '@/hooks/useModules';
 import { useModuleNav }  from '@/hooks/useModuleNav';
 import { useAuthStore }  from '@/stores/auth.store';
+import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { modulesService } from '@/services/modules.service';
 import { ModuleConfigClient }   from '@/components/modules/ModuleConfigClient';
 import { SlaTicketsTab }        from '@/components/config/SlaTicketsTab';
@@ -27,6 +28,8 @@ const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
 export default function HelpdeskConfigPage() {
   const [tab, setTab] = useState<Tab>('general');
 
+  const { allowed } = useHelpdeskRoleGuard(['admin_modulo']);
+
   const { modules, isLoading: modsLoading } = useModules();
   const helpdeskRef = modules?.find(isHelpdeskModule);
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskRef?.id);
@@ -40,7 +43,7 @@ export default function HelpdeskConfigPage() {
     enabled:  !!helpdeskRef?.id,
   });
 
-  if (modsLoading || modLoading || !helpdeskRef || !mod) return <Spinner />;
+  if (!allowed || modsLoading || modLoading || !helpdeskRef || !mod) return <Spinner />;
 
   const isAdminModulo = user?.module_roles?.some(
     r => r.module_id === helpdeskRef.id && r.role_name === 'admin_modulo' && r.status === 'active',
