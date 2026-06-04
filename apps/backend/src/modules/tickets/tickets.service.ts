@@ -656,7 +656,7 @@ export class TicketsService {
 
   async rejectTicket(userId: string, ticketId: string, dto: { reason: string }) {
     const [ticket] = await this.db.query<any[]>(
-      `SELECT t.id, t.created_by, t.workflow_version_id, t.current_state_id,
+      `SELECT t.id, t.title, t.created_by, t.workflow_version_id, t.current_state_id,
               t.reprocess_count, t.module_id, t.priority, s.is_approval_state
        FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
        WHERE  t.id = $1`,
@@ -701,7 +701,7 @@ export class TicketsService {
 
     this.events.emit('ticket.state_changed', {
       ticketId,
-      title:     ticket.id,
+      title:     ticket.title,
       createdBy: ticket.created_by,
       toLabel:   'En proceso',
       actorId:   userId,

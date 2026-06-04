@@ -16,6 +16,7 @@ import { Roles } from '../../gateway/decorators/roles.decorator';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { TransitionTicketDto } from './dto/transition-ticket.dto';
 import { CreateKnowledgeArticleDto, UpdateKnowledgeArticleDto } from './dto/knowledge-article.dto';
+import { AddCommentDto, AddAttachmentDto, ApproveTicketDto, RejectTicketDto, AddAssignmentDto, AddRelationDto } from './dto/ticket-actions.dto';
 
 @ApiTags('tickets')
 @ApiBearerAuth()
@@ -126,7 +127,7 @@ export class TicketsController {
   approve(
     @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { signature?: string },
+    @Body() body: ApproveTicketDto,
   ) {
     return this.svc.approveTicket(req.user.sub, id, body);
   }
@@ -137,7 +138,7 @@ export class TicketsController {
   reject(
     @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { reason: string },
+    @Body() body: RejectTicketDto,
   ) {
     return this.svc.rejectTicket(req.user.sub, id, body);
   }
@@ -192,13 +193,7 @@ export class TicketsController {
   addAttachment(
     @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: {
-      original_name: string;
-      stored_name:   string;
-      mime_type:     string;
-      file_size:     number;
-      file_url:      string;
-    },
+    @Body() body: AddAttachmentDto,
   ) {
     return this.svc.addAttachment(req.user.sub, id, body);
   }
@@ -227,7 +222,7 @@ export class TicketsController {
   addComment(
     @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { content: string; comment_type?: string },
+    @Body() body: AddCommentDto,
   ) {
     return this.svc.addComment(req.user.sub, id, body);
   }
@@ -271,7 +266,7 @@ export class TicketsController {
   addRelation(
     @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { target_ticket_id: string; relation_type: string; notes?: string },
+    @Body() body: AddRelationDto,
   ) {
     return this.svc.addTicketRelation(req.user.sub, id, body);
   }
@@ -293,7 +288,7 @@ export class TicketsController {
   addAssignment(
     @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { user_id: string; role: string },
+    @Body() body: AddAssignmentDto,
   ) {
     return this.svc.addAssignment(req.user.sub, id, body);
   }
