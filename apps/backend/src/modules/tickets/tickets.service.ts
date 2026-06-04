@@ -1041,13 +1041,14 @@ export class TicketsService {
     resolved_on_first_attempt?: boolean;
   }) {
     const [ticket] = await this.db.query<any[]>(
-      `SELECT t.id, t.created_by, s.is_final
+      `SELECT t.id, t.created_by, s.is_final, s.is_approval_state
        FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
        WHERE  t.id = $1`,
       [ticketId],
     );
-    if (!ticket)          throw new NotFoundException('Ticket not found');
-    if (!ticket.is_final) throw new BadRequestException('Solo se pueden calificar tickets cerrados.');
+    if (!ticket) throw new NotFoundException('Ticket not found');
+    if (!ticket.is_final && !ticket.is_approval_state)
+      throw new BadRequestException('Solo se puede calificar cuando el ticket está resuelto o cerrado.');
     if (ticket.created_by !== userId) throw new ForbiddenException('Solo el solicitante puede calificar este ticket.');
 
     const [existing] = await this.db.query<any[]>(

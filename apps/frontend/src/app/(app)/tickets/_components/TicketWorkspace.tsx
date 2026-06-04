@@ -119,7 +119,6 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [commentType,     setCommentType]     = useState<'public' | 'internal'>('public');
 
   /* â”€â”€ Validation state â”€â”€ */
-  const [signature,       setSignature]       = useState('');
   const [showRejectForm,  setShowRejectForm]  = useState(false);
   const [rejectReason,    setRejectReason]    = useState('');
   const [isApproving,     setIsApproving]     = useState(false);
@@ -371,17 +370,33 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
   /* â”€â”€ Validation handlers â”€â”€ */
   async function handleApprove() {
-    if (!signature.trim()) { setValidationError('Firma requerida.'); return; }
     setIsApproving(true);
     setValidationError('');
     try {
-      await ticketsService.approve(ticketId, signature.trim());
+      await ticketsService.approve(ticketId, '');
       qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
       qc.invalidateQueries({ queryKey: ['tickets'] });
       qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-      setSignature('');
     } catch (e: any) {
       setValidationError(e?.response?.data?.message ?? 'Error al aprobar.');
+    } finally {
+      setIsApproving(false);
+    }
+  }
+
+  async function handleAcceptAndRate() {
+    if (ratingScore === 0) { setValidationError('Selecciona una calificación para aceptar.'); return; }
+    setIsApproving(true);
+    setValidationError('');
+    try {
+      await ticketsService.rate(ticketId, { score_overall: ratingScore, comment: ratingComment || undefined });
+      await ticketsService.approve(ticketId, '');
+      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
+      qc.invalidateQueries({ queryKey: ['ticket-rating', ticketId] });
+    } catch (e: any) {
+      setValidationError(e?.response?.data?.message ?? 'Error al procesar.');
     } finally {
       setIsApproving(false);
     }
@@ -570,78 +585,114 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
             {/* MAIN: banners + timeline + reply */}
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e2e8f0' }}>
 
-              {/* Validation banner */}
+              {/* Rating + acceptance banner */}
               {ticket.is_approval_state && currentUser?.id === ticket.created_by && (
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', background: '#fffbeb', flexShrink: 0 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={14} /> Validacion de solucion requerida
-                  </p>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: '#fffbeb', flexShrink: 0 }}>
                   {!showRejectForm ? (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
-                      <input value={signature} onChange={e => setSignature(e.target.value)} placeholder="Escribe tu nombre como firma..."
-                        style={{ flex: 1, minWidth: 180, padding: '7px 10px', borderRadius: 7, border: '1px solid #fde68a', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
-                      <button type="button" onClick={handleApprove} disabled={isApproving || !signature.trim()}
-                        style={{ padding: '7px 14px', borderRadius: 7, border: 'none', background: isApproving || !signature.trim() ? '#94a3b8' : '#22c55e', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {isApproving ? '...' : 'Aprobar'}
-                      </button>
-                      <button type="button" onClick={() => setShowRejectForm(true)}
-                        style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        Reabrir
-                      </button>
-                    </div>
+                    <>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: '0 0 2px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <CheckCircle2 size={14} style={{ color: '#22c55e' }} /> Solución aplicada — ¿quedaste satisfecho?
+                      </p>
+                      <p style={{ fontSize: 11, color: '#a16207', margin: '0 0 12px' }}>Califica la atención antes de aceptar. Puedes reabrir si la solución no es correcta.</p>
+
+                      {/* Stars */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                        {[1,2,3,4,5].map(s => (
+                          <button key={s} type="button" onClick={() => setRatingScore(s)}
+                            onMouseEnter={() => setRatingHover(s)} onMouseLeave={() => setRatingHover(0)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0 }}>
+                            <Star size={22} fill={(ratingHover || ratingScore) >= s ? '#f59e0b' : 'none'} stroke={(ratingHover || ratingScore) >= s ? '#f59e0b' : '#d1d5db'} />
+                          </button>
+                        ))}
+                        {ratingScore > 0 && (
+                          <span style={{ fontSize: 11, color: '#92400e', fontWeight: 700, marginLeft: 4 }}>
+                            {['','Muy malo','Malo','Regular','Bueno','Excelente'][ratingScore]}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Comment */}
+                      <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)}
+                        placeholder="Comentario opcional…" rows={2}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: 7, border: '1px solid #fde68a', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none' as const, boxSizing: 'border-box' as const, marginBottom: 10 }} />
+
+                      {/* Actions */}
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button type="button" onClick={handleAcceptAndRate} disabled={isApproving || ratingScore === 0}
+                          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, border: 'none', background: ratingScore > 0 && !isApproving ? '#22c55e' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: ratingScore > 0 && !isApproving ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                          <CheckCircle2 size={12} />{isApproving ? 'Procesando…' : 'Aceptar y calificar'}
+                        </button>
+                        <button type="button" onClick={() => setShowRejectForm(true)}
+                          style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Reabrir
+                        </button>
+                        {ratingScore === 0 && (
+                          <span style={{ fontSize: 10, color: '#a16207', fontWeight: 600 }}>↑ Selecciona estrellas para aceptar</span>
+                        )}
+                      </div>
+                    </>
                   ) : (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo de reapertura..." rows={2}
-                        style={{ flex: 1, padding: '7px 10px', borderRadius: 7, border: '1px solid #fecaca', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none' as const }} />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <button type="button" onClick={handleReject} disabled={isRejecting || !rejectReason.trim()}
-                          style={{ padding: '7px 12px', borderRadius: 7, border: 'none', background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {isRejecting ? '...' : 'Confirmar'}
-                        </button>
-                        <button type="button" onClick={() => { setShowRejectForm(false); setRejectReason(''); }}
-                          style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
-                          Cancelar
-                        </button>
+                    <div>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: '#dc2626', margin: '0 0 8px' }}>Motivo de reapertura</p>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                        <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Describe por qué no fue resuelto…" rows={2}
+                          style={{ flex: 1, padding: '7px 10px', borderRadius: 7, border: '1px solid #fecaca', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none' as const }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          <button type="button" onClick={handleReject} disabled={isRejecting || !rejectReason.trim()}
+                            style={{ padding: '7px 12px', borderRadius: 7, border: 'none', background: isRejecting || !rejectReason.trim() ? '#94a3b8' : '#ef4444', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            {isRejecting ? '…' : 'Confirmar'}
+                          </button>
+                          <button type="button" onClick={() => { setShowRejectForm(false); setRejectReason(''); }}
+                            style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
+                            Cancelar
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
-                  {validationError && <p style={{ fontSize: 11, color: '#dc2626', margin: '6px 0 0' }}>{validationError}</p>}
+                  {validationError && <p style={{ fontSize: 11, color: '#dc2626', margin: '8px 0 0' }}>{validationError}</p>}
                 </div>
               )}
 
-              {/* Rating banner */}
+              {/* Rating fallback — ticket cerrado sin calificar */}
               {ticket.is_final && currentUser?.id === ticket.created_by && !existingRating && (
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', background: '#fff7ed', flexShrink: 0 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Star size={13} /> Califica tu experiencia
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Star size={13} /> ¿Cómo fue la atención?
                   </p>
                   <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
                     {[1,2,3,4,5].map(s => (
                       <button key={s} type="button" onClick={() => setRatingScore(s)}
                         onMouseEnter={() => setRatingHover(s)} onMouseLeave={() => setRatingHover(0)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
-                        <Star size={20} fill={(ratingHover || ratingScore) >= s ? '#f59e0b' : 'none'} stroke={(ratingHover || ratingScore) >= s ? '#f59e0b' : '#d1d5db'} />
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0 }}>
+                        <Star size={22} fill={(ratingHover || ratingScore) >= s ? '#f59e0b' : 'none'} stroke={(ratingHover || ratingScore) >= s ? '#f59e0b' : '#d1d5db'} />
                       </button>
                     ))}
-                    {ratingScore > 0 && <span style={{ fontSize: 11, color: '#92400e', alignSelf: 'center', marginLeft: 4, fontWeight: 600 }}>{['','Muy malo','Malo','Regular','Bueno','Excelente'][ratingScore]}</span>}
+                    {ratingScore > 0 && <span style={{ fontSize: 11, color: '#92400e', alignSelf: 'center', marginLeft: 4, fontWeight: 700 }}>{['','Muy malo','Malo','Regular','Bueno','Excelente'][ratingScore]}</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)} placeholder="Comentario opcional..." rows={1}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)} placeholder="Comentario opcional…" rows={1}
                       style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: '1px solid #fde68a', fontSize: 11, fontFamily: 'inherit', outline: 'none', resize: 'none' as const }} />
                     <button type="button" disabled={ratingScore === 0 || rateMut.isPending}
                       onClick={() => rateMut.mutate({ score_overall: ratingScore, comment: ratingComment || undefined })}
-                      style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: ratingScore > 0 ? '#f59e0b' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: ratingScore > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
-                      {rateMut.isPending ? '...' : 'Enviar'}
+                      style={{ padding: '6px 16px', borderRadius: 7, border: 'none', background: ratingScore > 0 ? '#f59e0b' : '#e2e8f0', color: ratingScore > 0 ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: ratingScore > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
+                      {rateMut.isPending ? '…' : 'Enviar'}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Rating submitted */}
-              {ticket.is_final && currentUser?.id === ticket.created_by && existingRating && (
-                <div style={{ padding: '10px 20px', borderBottom: '1px solid #e2e8f0', background: '#f0fdf4', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>Calificacion enviada - {existingRating.score_overall}/5</span>
+              {/* Rating submitted confirmation */}
+              {(ticket.is_final || ticket.is_approval_state) && currentUser?.id === ticket.created_by && existingRating && (
+                <div style={{ padding: '10px 20px', borderBottom: '1px solid #e2e8f0', background: '#f0fdf4', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <CheckCircle2 size={14} style={{ color: '#16a34a', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>Calificación enviada</span>
+                  <div style={{ display: 'flex', gap: 2, marginLeft: 4 }}>
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} size={12} fill={s <= existingRating.score_overall ? '#f59e0b' : 'none'} stroke={s <= existingRating.score_overall ? '#f59e0b' : '#d1d5db'} />
+                    ))}
+                  </div>
+                  {existingRating.comment && <span style={{ fontSize: 11, color: '#64748b', marginLeft: 4, fontStyle: 'italic' }}>"{existingRating.comment}"</span>}
                 </div>
               )}
 
