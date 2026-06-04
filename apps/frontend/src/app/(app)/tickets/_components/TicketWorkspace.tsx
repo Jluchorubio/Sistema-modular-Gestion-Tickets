@@ -4,9 +4,10 @@ import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Clock, AlertTriangle, CheckCircle2, XCircle,
-  Phone, X, Paperclip, Link2, Search, Unlink, Star, UserX,
+  Paperclip, Star,
 } from 'lucide-react';
 import { TicketTimeline } from './TicketTimeline';
+import { TicketSidebar } from './TicketSidebar';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
 import { useAuthStore } from '@/stores/auth.store';
@@ -14,16 +15,8 @@ import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
   type TicketPriority,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
-  SLA_STATUS_COLORS, SLA_STATUS_LABELS,
-  ASSET_STATUS_COLORS, ASSET_STATUS_LABELS,
+  ticketsService,
 } from '@/services/tickets.service';
-import {
-  PROVIDER_LABELS,
-  PROVIDER_COLORS,
-  STATUS_LABELS,
-  STATUS_COLORS,
-} from '@/services/meetings.service';
-import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import styles from '../tickets.module.css';
 import { useTicketData, type LocalGuest } from './hooks/useTicketData';
@@ -50,22 +43,6 @@ function StateBadge({ label, isFinal }: { label: string; isFinal: boolean }) {
       fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600,
       background: `${color}22`, color, border: `1px solid ${color}44`,
     }}>
-      {label}
-    </span>
-  );
-}
-
-function SlaBadge({ status, deadline }: { status: string | null; deadline: string | null }) {
-  if (!status || !deadline) return null;
-  const color = SLA_STATUS_COLORS[status as keyof typeof SLA_STATUS_COLORS] ?? '#94A3B8';
-  const label = SLA_STATUS_LABELS[status as keyof typeof SLA_STATUS_LABELS] ?? status;
-  return (
-    <span style={{
-      fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600,
-      display: 'flex', alignItems: 'center', gap: 3,
-      background: `${color}22`, color, border: `1px solid ${color}44`,
-    }}>
-      <Clock size={9} />
       {label}
     </span>
   );
@@ -98,10 +75,12 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     qc,
   } = useTicketData({ ticketId, helpdeskId });
 
-  /* ── Left panel state ── */
+  /* ── Header / transition bar state ── */
   const [transReason,     setTransReason]     = useState('');
   const [activeTransId,   setActiveTransId]   = useState<string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+
+  /* ── Left panel state ── */
   const [replyText,       setReplyText]       = useState('');
   const [commentType,     setCommentType]     = useState<'public' | 'internal'>('public');
 
@@ -112,79 +91,31 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [isRejecting,     setIsRejecting]     = useState(false);
   const [validationError, setValidationError] = useState('');
 
-  /* ── Right panel state ── */
-  const [selectedUserId,   setSelectedUserId]   = useState('');
-  const [isCalling,        setIsCalling]        = useState(false);
-  const [scheduledDate,    setScheduledDate]    = useState('');
-  const [scheduledTime,    setScheduledTime]    = useState('10:00');
-  const [meetingProvider,  setMeetingProvider]  = useState<'google_meet' | 'teams' | 'zoom' | 'internal'>('google_meet');
-  const [meetingUrl,       setMeetingUrl]       = useState('');
-  const [meetingReason,    setMeetingReason]    = useState('Asesoramiento técnico');
-  const [localGuests,      setLocalGuests]      = useState<LocalGuest[]>([]);
+  /* ── Guests (shared: instant call lives in sidebar, allGuests used here) ── */
+  const [localGuests, setLocalGuests] = useState<LocalGuest[]>([]);
 
   /* ── Attachments ── */
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState('');
 
   /* ── Rating state ── */
-  const [ratingScore,     setRatingScore]     = useState(0);
-  const [ratingHover,     setRatingHover]     = useState(0);
-  const [ratingComment,   setRatingComment]   = useState('');
-
-  /* ── Relations state ── */
-  const [relSearch,       setRelSearch]       = useState('');
-  const [relType,         setRelType]         = useState('related');
-  const [relNotes,        setRelNotes]        = useState('');
-  const [relTarget,       setRelTarget]       = useState<{ id: string; title: string } | null>(null);
-  const [relSearchResults, setRelSearchResults] = useState<{ id: string; title: string; priority: string; state_label: string; is_final: boolean }[]>([]);
-  const [relSearching,    setRelSearching]    = useState(false);
-  const [showRelForm,     setShowRelForm]     = useState(false);
+  const [ratingScore,   setRatingScore]   = useState(0);
+  const [ratingHover,   setRatingHover]   = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
 
   /* ── Actions hook ── */
   const {
-    uploadMut, deletAttMut, rateMut, addCommentMut,
-    scheduleMut, cancelMeetMut, addRelMut, removeRelMut, transMut,
-    handleInstantCall, handleSchedule, removeGuest,
-    handleApprove, handleAcceptAndRate, handleReject,
-    handleRelSearch, handleFileChange,
+    uploadMut, deletAttMut, addCommentMut, rateMut, transMut,
+    scheduleMut, cancelMeetMut, addRelMut, removeRelMut,
+    handleInstantCall, removeGuest,
+    handleApprove, handleAcceptAndRate, handleReject, handleFileChange,
   } = useTicketActions({
-    ticketId,
-    helpdeskId,
-    technicians,
-    qc,
-    meetingReason,
-    meetingProvider,
-    meetingUrl,
-    scheduledDate,
-    scheduledTime,
-    setScheduledDate,
-    setScheduledTime,
-    setMeetingUrl,
-    setMeetingReason,
-    replyText,
-    commentType,
-    setReplyText,
-    setActiveTransId,
-    setTransReason,
-    localGuests,
-    setLocalGuests,
-    setUploadError,
-    relTarget,
-    relType,
-    relNotes,
-    setRelTarget,
-    setRelSearch,
-    setRelNotes,
-    setRelSearchResults,
-    setShowRelForm,
-    ratingScore,
-    ratingComment,
-    rejectReason,
-    setIsApproving,
-    setIsRejecting,
-    setValidationError,
-    setShowRejectForm,
-    setRejectReason,
+    ticketId, technicians, qc,
+    replyText, commentType, setReplyText,
+    ratingScore, ratingComment, rejectReason,
+    setIsApproving, setIsRejecting, setValidationError,
+    setShowRejectForm, setRejectReason,
+    setUploadError, localGuests, setLocalGuests,
   });
 
   /* ── Computed guests ── */
@@ -192,19 +123,6 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     () => computeAllGuests(ticket?.assignments, localGuests),
     [ticket?.assignments, localGuests],
   );
-
-  const VARIANT_BG: Record<string, string> = {
-    success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235',
-  };
-
-  function SideSection({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
-        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '.08em', margin: '0 0 10px' }}>{label}</p>
-        {children}
-      </div>
-    );
-  }
 
   /* ── Render ── */
   return (
@@ -484,310 +402,34 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
             </div>
 
             {/* RIGHT SIDEBAR */}
-            <div style={{ overflowY: 'auto', background: '#fff' }}>
-
-              {/* Asignado a */}
-              <SideSection label="Asignado a">
-                {ownerAssignment ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#ff5e3a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{ownerAssignment.user_name?.charAt(0).toUpperCase()}</span>
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{ownerAssignment.user_name}</p>
-                      <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Técnico asignado</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <UserX size={13} style={{ color: '#94a3b8' }} />
-                    <span style={{ fontSize: 12, color: '#94a3b8' }}>Sin asignar</span>
-                  </div>
-                )}
-              </SideSection>
-
-              {/* Historial de técnicos */}
-              {ticket.assignments.filter((a: { role: string }) => a.role === 'owner').length > 1 && (
-                <SideSection label="Historial de técnicos">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {ticket.assignments
-                      .filter((a: { role: string }) => a.role === 'owner')
-                      .map((a: { id: string; user_name: string; is_active: boolean; assigned_at: string }) => (
-                        <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: a.is_active ? '#ff5e3a' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: a.is_active ? '#fff' : '#94a3b8' }}>{a.user_name?.charAt(0).toUpperCase()}</span>
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: a.is_active ? '#0e2235' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.user_name}</p>
-                            <p style={{ margin: 0, fontSize: 9.5, color: '#94a3b8' }}>{fmtRelative(a.assigned_at)}</p>
-                          </div>
-                          {a.is_active && (
-                            <span style={{ fontSize: 8, fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: '#fff5f3', color: '#ff5e3a', border: '1px solid #ffd0c4', flexShrink: 0 }}>ACTUAL</span>
-                          )}
-                        </div>
-                      ))}
-                  </div>
-                </SideSection>
-              )}
-
-              {/* Solicitante */}
-              <SideSection label="Solicitante">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{ticket.creator_name?.charAt(0).toUpperCase()}</span>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{ticket.creator_name}</p>
-                    <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Solicitante</p>
-                  </div>
-                </div>
-              </SideSection>
-
-              {/* Cambiar estado */}
-              <PermissionGate perm="helpdesk:tickets:edit">
-              {!ticket.is_final && ticket.transitions.length > 0 && (
-                <SideSection label="Cambiar estado">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    {ticket.transitions.map((tr: { id: string; variant?: string; to_label: string }) => {
-                      const VBGS: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
-                      const bg = VBGS[tr.variant ?? 'default'] ?? '#0e2235';
-                      const isAct = activeTransId === tr.id;
-                      return (
-                        <button key={tr.id} type="button"
-                          onClick={() => setActiveTransId(isAct ? null : tr.id)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 7, border: 'none', background: isAct ? '#475569' : bg, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
-                          {tr.variant === 'success' ? <CheckCircle2 size={12} /> : tr.variant === 'danger' ? <XCircle size={12} /> : <ChevronRight size={12} />}
-                          {tr.to_label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </SideSection>
-              )}
-              </PermissionGate>
-
-              {/* Detalles */}
-              <SideSection label="Detalles">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {([
-                    ['Módulo',      ticket.module_name],
-                    ['Categoría',   ticket.category_name],
-                    ['Tipo de daño', ticket.damage_type_label],
-                    ['Prioridad', ticket.priority],
-                    ['Urgencia',  ticket.urgency],
-                    ['Impacto',   ticket.impact],
-                    ['Creado',    fmtDate(ticket.created_at)],
-                    ['ID',        '#' + ticket.id.slice(0, 8).toUpperCase()],
-                    ...(ticket.reprocess_count > 0 ? [['Reaperturas', String(ticket.reprocess_count)]] : []),
-                  ] as [string, string | null | undefined][]).map(([lbl, val]) => val ? (
-                    <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
-                      <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, flexShrink: 0 }}>{lbl}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', textAlign: 'right' as const, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{val}</span>
-                    </div>
-                  ) : null)}
-                </div>
-              </SideSection>
-
-              {/* SLA */}
-              <SideSection label="SLA">
-                {ticket.sla_deadline_tracked ? (
-                  <div style={{ padding: '10px 11px', background: `${slaColor}08`, borderRadius: 8, border: `1px solid ${slaColor}25` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <span style={{ fontSize: 10, color: '#64748b' }}>Deadline</span>
-                      {slaLabel && <SlaBadge status={ticket.sla_status} deadline={ticket.sla_deadline_tracked} />}
-                    </div>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 3px' }}>{fmtDate(ticket.sla_deadline_tracked)}</p>
-                    {slaCountdown && <p style={{ fontSize: 13, fontWeight: 800, color: slaColor, margin: 0 }}>{slaCountdown}</p>}
-                  </div>
-                ) : (
-                  <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Sin SLA configurado</p>
-                )}
-                {ticket.escalated && ticket.escalation_note?.startsWith('Auto-escalado') && (
-                  <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 7, background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', gap: 6 }}>
-                    <AlertTriangle size={11} style={{ color: '#ea580c', flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ fontSize: 10, color: '#9a3412', margin: 0, lineHeight: 1.4 }}>Auto-escalado por recurrencia</p>
-                  </div>
-                )}
-              </SideSection>
-
-              {/* Activo */}
-              {linkedAssets.length > 0 && (
-                <SideSection label={`Activo (${linkedAssets.length})`}>
-                  {linkedAssets.map(asset => {
-                    const sc = ASSET_STATUS_COLORS[asset.status] ?? '#94a3b8';
-                    return (
-                      <div key={asset.id} style={{ padding: '9px 11px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 6 }}>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: '0 0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.name}</p>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${sc}18`, color: sc, border: `1px solid ${sc}30` }}>
-                            {ASSET_STATUS_LABELS[asset.status] ?? asset.status}
-                          </span>
-                          <button type="button" onClick={() => router.push('/inventory/' + asset.id)}
-                            style={{ fontSize: 10, fontWeight: 700, color: '#ff5e3a', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
-                            Ver <ChevronRight size={10} />
-                          </button>
-                        </div>
-                        {asset.assigned_to_name && (
-                          <p style={{ fontSize: 10, color: '#94a3b8', margin: '4px 0 0' }}>Custodio: {asset.assigned_to_name}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </SideSection>
-              )}
-
-              {/* Participantes */}
-              <SideSection label={`Participantes (${allGuests.length})`}>
-                {allGuests.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 10 }}>
-                    {allGuests.map(g => (
-                      <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: '#fff' }}>{g.name.charAt(0).toUpperCase()}</span>
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</p>
-                          <p style={{ fontSize: 9, color: '#94a3b8', margin: 0 }}>{g.role}</p>
-                        </div>
-                        {g.isLocal && (
-                          <button type="button" onClick={() => removeGuest(g.id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', padding: 0 }}>
-                            <X size={11} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)}
-                  style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', marginBottom: 6, boxSizing: 'border-box' as const }}>
-                  <option value="">Invitar tecnico...</option>
-                  {technicians.map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
-                </select>
-                <button type="button" disabled={!selectedUserId || isCalling}
-                  onClick={() => handleInstantCall(selectedUserId, setSelectedUserId, setIsCalling)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, width: '100%', justifyContent: 'center', padding: '6px', borderRadius: 7, border: 'none', background: selectedUserId && !isCalling ? '#0e2235' : '#e2e8f0', color: selectedUserId ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: selectedUserId ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-                  <Phone size={11} /> {isCalling ? 'Invitando...' : 'Invitar'}
-                </button>
-              </SideSection>
-
-              {/* Reuniones */}
-              <SideSection label={meetings.length > 0 ? `Reuniones (${meetings.length})` : 'Reuniones'}>
-                {meetings.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 10 }}>
-                    {meetings.map(m => {
-                      const pc = PROVIDER_COLORS[m.provider] ?? '#64748b';
-                      const sc2 = STATUS_COLORS[m.status] ?? '#64748b';
-                      const dt = new Date(m.scheduled_at);
-                      return (
-                        <div key={m.id} style={{ padding: '8px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0', opacity: m.status === 'cancelled' ? .5 : 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                            <span style={{ fontSize: 9, fontWeight: 700, color: pc, textTransform: 'uppercase' as const }}>{PROVIDER_LABELS[m.provider]}</span>
-                            <span style={{ fontSize: 9, fontWeight: 600, color: sc2 }}>{STATUS_LABELS[m.status]}</span>
-                          </div>
-                          <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 1px' }}>{m.reason}</p>
-                          <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>{dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} - {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</p>
-                          {m.meeting_url && m.status !== 'cancelled' && <a href={m.meeting_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: pc, textDecoration: 'none', display: 'inline-block', marginTop: 2 }}>Unirse</a>}
-                          {m.status === 'scheduled' && (
-                            <button type="button" onClick={() => cancelMeetMut.mutate(m.id)} disabled={cancelMeetMut.isPending}
-                              style={{ display: 'block', marginTop: 3, fontSize: 9, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                              Cancelar
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  <select value={meetingProvider} onChange={e => setMeetingProvider(e.target.value as typeof meetingProvider)}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', background: '#fff', boxSizing: 'border-box' as const }}>
-                    <option value="google_meet">Google Meet</option>
-                    <option value="teams">Microsoft Teams</option>
-                    <option value="zoom">Zoom</option>
-                    <option value="internal">Enlace interno</option>
-                  </select>
-                  <input value={meetingReason} onChange={e => setMeetingReason(e.target.value)} placeholder="Motivo *"
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', boxSizing: 'border-box' as const, outline: 'none' }} />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                    <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
-                      style={{ padding: '5px 6px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', outline: 'none' }} />
-                    <select value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
-                      style={{ padding: '5px 6px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', outline: 'none', background: '#fff' }}>
-                      {['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => <option key={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <button type="button" disabled={!scheduledDate || !meetingReason.trim() || scheduleMut.isPending} onClick={() => scheduleMut.mutate()}
-                    style={{ width: '100%', padding: '6px', borderRadius: 7, border: 'none', background: scheduledDate && meetingReason.trim() ? '#ff5e3a' : '#e2e8f0', color: scheduledDate && meetingReason.trim() ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {scheduleMut.isPending ? 'Programando...' : 'Programar reunion'}
-                  </button>
-                </div>
-              </SideSection>
-
-              {/* Relacionados */}
-              {(relations.length > 0 || !ticket.is_final) && (
-                <SideSection label={relations.length > 0 ? `Relacionados (${relations.length})` : 'Relacionados'}>
-                  {relations.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
-                      {relations.map(r => (
-                        <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 9px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0' }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontSize: 11, fontWeight: 600, color: '#0e2235', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.related_title ?? r.id.slice(0,8)}</p>
-                            <p style={{ fontSize: 9, color: '#94a3b8', margin: '1px 0 0' }}>{r.relation_type}</p>
-                          </div>
-                          <button type="button" onClick={() => router.push('/helpdesk/ticket/' + r.related_id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}>
-                            <ChevronRight size={11} />
-                          </button>
-                          {!ticket.is_final && (
-                            <button type="button" onClick={() => removeRelMut.mutate(r.id)} disabled={removeRelMut.isPending}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', padding: 0 }}>
-                              <Unlink size={10} />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {!ticket.is_final && !showRelForm && (
-                    <button type="button" onClick={() => setShowRelForm(true)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: '#64748b', background: 'none', border: '1px dashed #e2e8f0', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'inherit', width: '100%', justifyContent: 'center' }}>
-                      <Link2 size={10} /> Vincular ticket
-                    </button>
-                  )}
-                  {!ticket.is_final && showRelForm && (
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 11px' }}>
-                      <div style={{ position: 'relative', marginBottom: 5 }}>
-                        <Search size={10} style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                        <input type="text" placeholder="Buscar ticket..." value={relSearch} onChange={e => handleRelSearch(e.target.value)}
-                          style={{ width: '100%', padding: '5px 7px 5px 22px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
-                      </div>
-                      {relSearchResults.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 5 }}>
-                          {relSearchResults.map(r => (
-                            <button key={r.id} type="button" onClick={() => setRelTarget(r)}
-                              style={{ fontSize: 10, padding: '4px 7px', borderRadius: 5, border: `1px solid ${relTarget?.id === r.id ? '#6366f1' : '#e2e8f0'}`, background: relTarget?.id === r.id ? '#eef2ff' : '#fff', cursor: 'pointer', textAlign: 'left' as const, fontFamily: 'inherit', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              #{r.id.slice(0,6)} - {r.title}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button type="button" onClick={() => { setShowRelForm(false); setRelSearch(''); setRelTarget(null); setRelSearchResults([]); }}
-                          style={{ flex: 1, padding: '5px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#fff', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
-                          Cancelar
-                        </button>
-                        <button type="button" disabled={!relTarget || addRelMut.isPending} onClick={() => { if (relTarget) addRelMut.mutate(); }}
-                          style={{ flex: 1, padding: '5px', borderRadius: 5, border: 'none', background: relTarget ? '#6366f1' : '#e2e8f0', color: '#fff', fontSize: 10, fontWeight: 700, cursor: relTarget ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-                          {addRelMut.isPending ? '...' : 'Vincular'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </SideSection>
-              )}
-
-            </div>
+            <TicketSidebar
+              ticketId={ticketId}
+              ticket={ticket}
+              ownerAssignment={ownerAssignment}
+              allGuests={allGuests}
+              linkedAssets={linkedAssets}
+              meetings={meetings}
+              relations={relations as any}
+              technicians={technicians}
+              sla={{ color: slaColor, label: slaLabel, countdown: slaCountdown }}
+              onTransition={(transId, reason) => transMut.mutate({ transId, reason })}
+              onCancelMeeting={(meetingId) => cancelMeetMut.mutate(meetingId)}
+              onScheduleMeeting={(data) => scheduleMut.mutate(data)}
+              onAddRelation={async (targetId, relationType, notes) => {
+                await addRelMut.mutateAsync({ targetId, relationType, notes });
+              }}
+              onRemoveRelation={(relId) => removeRelMut.mutate(relId)}
+              onInstantCall={handleInstantCall}
+              onRemoveGuest={removeGuest}
+              onSearchTickets={(q, exclude) => ticketsService.searchTickets(q, exclude)}
+              mutPending={{
+                transition:  transMut.isPending,
+                schedule:    scheduleMut.isPending,
+                cancelMeet:  cancelMeetMut.isPending,
+                addRel:      addRelMut.isPending,
+                removeRel:   removeRelMut.isPending,
+              }}
+            />
           </div>
         </div>
       )}
