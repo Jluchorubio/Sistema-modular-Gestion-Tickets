@@ -137,7 +137,7 @@ export default function DocsPage() {
               {/* Actions */}
               {canEdit && (
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                  <button type="button" onClick={() => router.push(`/helpdesk/knowledge/docs/create?edit=${a.id}`)}
+                  <button type="button" onClick={() => router.push(`/helpdesk/knowledge/docs/create?edit=${a.id}`)} title="Editar"
                     style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.sub }}>
                     <Pencil size={13} />
                   </button>
