@@ -1225,15 +1225,21 @@ export class TicketsService {
     }
     const posts = await this.db.query<any[]>(
       `SELECT kp.id, kp.title, kp.content, kp.tags, kp.is_resolved, kp.view_count,
-              kp.created_at, kp.updated_at,
+              kp.created_at, kp.updated_at, kp.created_by,
               p.first_name || ' ' || p.last_name AS author_name,
               p.avatar_url AS author_avatar,
               (SELECT COUNT(*) FROM tickets.knowledge_replies kr WHERE kr.post_id = kp.id) AS reply_count,
-              (SELECT COUNT(*) FROM tickets.knowledge_votes kv WHERE kv.entity_id = kp.id AND kv.entity_type='post' AND kv.value=1) AS vote_count
+              (SELECT COUNT(*) FROM tickets.knowledge_votes kv WHERE kv.entity_id = kp.id AND kv.entity_type='post' AND kv.value=1) AS vote_count,
+              (SELECT kr2.created_at FROM tickets.knowledge_replies kr2 WHERE kr2.post_id = kp.id ORDER BY kr2.created_at DESC LIMIT 1) AS last_reply_at,
+              (SELECT p2.first_name || ' ' || p2.last_name FROM tickets.knowledge_replies kr2 JOIN users.profiles p2 ON p2.id = kr2.created_by WHERE kr2.post_id = kp.id ORDER BY kr2.created_at DESC LIMIT 1) AS last_reply_author,
+              (SELECT p2.avatar_url FROM tickets.knowledge_replies kr2 JOIN users.profiles p2 ON p2.id = kr2.created_by WHERE kr2.post_id = kp.id ORDER BY kr2.created_at DESC LIMIT 1) AS last_reply_avatar
        FROM   tickets.knowledge_posts kp
        JOIN   users.profiles p ON p.id = kp.created_by
        WHERE  kp.module_id = $1 ${filterClause} ${searchClause}
-       ORDER  BY kp.is_resolved ASC, kp.created_at DESC
+       ORDER  BY kp.is_resolved ASC, COALESCE(
+         (SELECT MAX(kr.created_at) FROM tickets.knowledge_replies kr WHERE kr.post_id = kp.id),
+         kp.created_at
+       ) DESC
        LIMIT  100`,
       params,
     );
