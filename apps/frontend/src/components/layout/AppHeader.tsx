@@ -131,11 +131,11 @@ export function AppHeader({ noSidebar = false }: Props) {
   return (
     <header className={`${styles.header}${noSidebar ? ` ${styles.headerFull}` : ''}`}>
       <div className={styles.inner}>
-        {/* ── Left: brand (static project identity) ── */}
+        {/* ── Left: brand + home nav ── */}
         <div className={styles.left}>
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
             <div className={styles.brandIcon} />
-            <span className={styles.brandName}>Tickets</span>
+            <span className={styles.brandName}>Nexo</span>
           </Link>
         </div>
 

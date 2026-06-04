@@ -1,4 +1,4 @@
-import { Home, BarChart2, Users, Tag, Settings2, Clock, Headset, Inbox, LayoutDashboard, BookOpen } from 'lucide-react';
+import { Home, BarChart2, UserCog, ShieldCheck, Settings2, Clock, Headset, Inbox, LayoutDashboard, BookOpen } from 'lucide-react';
 import type { ModuleNavItem } from '@/types/nav.types';
 
 export const HELPDESK_MODULE_NAME = 'Mesa de Ayuda';
@@ -13,8 +13,8 @@ export function isHelpdeskModule(m: { slug: string; type?: string | null }): boo
 /** Sidebar: management items shown in the left sidebar when inside Helpdesk */
 export const HELPDESK_NAV: ModuleNavItem[] = [
   { key: 'inicio',   label: 'Inicio',          Icon: Home,     href: '/helpdesk'                                        },
-  { key: 'users',    label: 'Usuarios',         Icon: Users,    href: '/helpdesk/users',    permKey: 'helpdesk:users:view'   },
-  { key: 'roles',    label: 'Roles',            Icon: Tag,      href: '/helpdesk/roles',    permKey: 'helpdesk:roles:view'   },
+  { key: 'users',    label: 'Usuarios',         Icon: UserCog,      href: '/helpdesk/users',    permKey: 'helpdesk:users:view'   },
+  { key: 'roles',    label: 'Roles',            Icon: ShieldCheck,  href: '/helpdesk/roles',    permKey: 'helpdesk:roles:view'   },
   { key: 'reports',  label: 'Reportes',         Icon: BarChart2,href: '/helpdesk/reports',  permKey: 'helpdesk:reports:view' },
   { key: 'config',   label: 'Configuración',    Icon: Settings2,href: '/helpdesk/config',   permKey: 'helpdesk:config:view'  },
 ];
@@ -22,6 +22,11 @@ export const HELPDESK_NAV: ModuleNavItem[] = [
 /** Operational header: shown in the horizontal sub-header above content, Helpdesk only.
  *  allowedRoles = module roles that can see this item (superadmin always sees all). */
 export const HELPDESK_OPERATIONAL_NAV: ModuleNavItem[] = [
+  {
+    key: 'inicio', label: 'Inicio', Icon: Home, href: '/helpdesk',
+    allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico'],
+    exact: true,
+  },
   {
     key: 'workspace', label: 'Mi bandeja', Icon: LayoutDashboard, href: '/helpdesk/workspace',
     allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico'],

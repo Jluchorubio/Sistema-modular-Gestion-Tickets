@@ -122,7 +122,14 @@ export function ModuleLayout({
     return (
       <div className={styles.card}>
         {subBar}
-        <div style={{ padding: '20px 28px 28px' }}>{children}</div>
+        <div style={{ padding: '20px 28px 28px' }}>
+          {displayDescription && (
+            <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.5 }}>
+              {displayDescription}
+            </p>
+          )}
+          {children}
+        </div>
       </div>
     );
   }

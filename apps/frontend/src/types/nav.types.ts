@@ -7,6 +7,7 @@ export interface ModuleNavItem {
   href:          string;
   permKey?:      string;
   allowedRoles?: string[];
+  exact?:        boolean;
 }
 
 export interface ModuleNavConfig {

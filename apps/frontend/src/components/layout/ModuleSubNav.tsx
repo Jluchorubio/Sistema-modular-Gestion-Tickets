@@ -42,12 +42,13 @@ export function ModuleSubNav() {
 
   if (!isHelpdesk || visibleItems.length === 0) return null;
 
-  function isActive(href: string) {
-    return pathname === href || pathname.startsWith(href + '/');
+  function isActive(item: ModuleNavItem) {
+    if (item.exact) return pathname === item.href;
+    return pathname === item.href || pathname.startsWith(item.href + '/');
   }
 
   function renderItem(item: ModuleNavItem) {
-    const active = isActive(item.href);
+    const active = isActive(item);
     return (
       <Link
         key={item.key}

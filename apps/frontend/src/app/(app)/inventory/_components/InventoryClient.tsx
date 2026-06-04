@@ -776,6 +776,19 @@ export function InventoryClient() {
     return roles.some(r => (ADMIN_ROLES as string[]).includes(r));
   }, [user, isSuperadmin]);
 
+  /* ── Module admin info (for contact button) ── */
+  const { data: inventoryMembers } = useQuery({
+    queryKey: ['inventory-module-admin', inventoryId],
+    queryFn:  () => usersService.getModuleUsers(inventoryId!),
+    enabled:  !!inventoryId && (isSuperadmin || canEdit),
+    staleTime: 10 * 60_000,
+  });
+  const inventoryAdmin = (inventoryMembers as any[] | undefined)?.find(
+    (m) => m.role_name === 'admin_modulo',
+  ) ?? null;
+  const adminName  = inventoryAdmin ? `${inventoryAdmin.first_name} ${inventoryAdmin.last_name}` : null;
+  const adminEmail = inventoryAdmin?.email ?? null;
+
   const [selectedModule,  setSelectedModule]  = useState(activeModules[0]?.module_id ?? '');
   const [scope,           setScope]           = useState<ScopeKey>('all');
   const [search,          setSearch]          = useState('');
@@ -856,12 +869,27 @@ export function InventoryClient() {
     <ModuleLayout moduleId={inventoryId || selectedModule || undefined} title="Inventario" description="Registro y trazabilidad de activos organizacionales." isSuperadmin={isSuperadmin} hideInfo alwaysOpen>
 
       {/* ── Page header ── */}
-      <div style={{ marginBottom: 20 }}>
-        <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: C.coral, margin: '0 0 3px' }}>
-          Módulo · Inventario
-        </p>
-        <h1 style={{ fontSize: 20, fontWeight: 800, color: C.navy, margin: '0 0 4px', lineHeight: 1.2 }}>Activos operativos</h1>
-        <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>Registro, trazabilidad y control de activos físicos de la organización.</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div>
+          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: C.coral, margin: '0 0 3px' }}>
+            Módulo · Inventario
+          </p>
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: C.navy, margin: '0 0 4px', lineHeight: 1.2 }}>Activos operativos</h1>
+          {adminName && (
+            <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>
+              Administrador responsable: <strong style={{ color: '#334155', fontWeight: 700 }}>{adminName}</strong>
+            </p>
+          )}
+        </div>
+        {adminEmail && (
+          <a
+            href={`mailto:${adminEmail}`}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(255,94,58,0.09)', color: '#ff5e3a', border: '1px solid rgba(255,94,58,0.25)', borderRadius: 10, fontSize: 11.5, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            Contactar administrador
+          </a>
+        )}
       </div>
 
       {/* Module selector */}
