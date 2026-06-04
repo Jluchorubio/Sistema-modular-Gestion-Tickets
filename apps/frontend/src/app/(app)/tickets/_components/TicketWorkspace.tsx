@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Clock, AlertTriangle, CheckCircle2, XCircle,
-  Paperclip, Star,
+  Paperclip, Star, Monitor, ChevronUp,
 } from 'lucide-react';
 import { TicketTimeline } from './TicketTimeline';
 import { TicketSidebar } from './TicketSidebar';
@@ -124,6 +124,9 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     [ticket?.assignments, localGuests],
   );
 
+  /* ── UI state ── */
+  const [descExpanded, setDescExpanded] = useState(false);
+
   /* ── Render ── */
   return (
     <div className={styles.hwPage}>
@@ -160,83 +163,103 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#f8fafc' }}>
 
 
-          {/* HEADER */}
-          <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', height: 52, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          {/* HEADER — sticky, 56px */}
+          <div style={{
+            position: 'sticky', top: 0, zIndex: 20,
+            background: '#fff', borderBottom: '1px solid #e2e8f0',
+            padding: '0 20px', height: 56,
+            display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+          }}>
+            {/* Back */}
             <button type="button" onClick={() => router.push('/helpdesk')}
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 11, fontWeight: 600, color: '#475569', cursor: 'pointer', flexShrink: 0 }}>
               <ArrowLeft size={12} /> Volver
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>
+            {/* Breadcrumb */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>
               <span>Mesa de Ayuda</span>
               <ChevronRight size={10} />
-              <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#ff5e3a' }}>#{ticket.id.slice(0,8).toUpperCase()}</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#ff5e3a', letterSpacing: '.03em' }}>
+                #{ticket.id.slice(0, 8).toUpperCase()}
+              </span>
             </div>
 
-            <p style={{ flex: 1, margin: 0, fontSize: 13, fontWeight: 600, color: '#0e2235', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-              {ticket.title}
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+            {/* State + SLA — centered */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' }}>
               <StateBadge label={ticket.state_label} isFinal={ticket.is_final} />
-              <PriorityBadge priority={ticket.priority} />
+              {ticket.escalated && (
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
+                  ESCALADO
+                </span>
+              )}
               {slaCountdown && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: `${slaColor}15`, color: slaColor, border: `1px solid ${slaColor}30`, display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: `${slaColor}15`, color: slaColor, border: `1px solid ${slaColor}30`, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Clock size={9} /> {slaCountdown}
                 </span>
               )}
             </div>
 
+            {/* Actions dropdown */}
             <PermissionGate perm="helpdesk:tickets:edit">
-            {!ticket.is_final && ticket.transitions.length > 0 && (
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <button type="button" onClick={() => setShowActionsMenu(v => !v)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: showActionsMenu ? '#f1f5f9' : '#fff', fontSize: 12, fontWeight: 700, color: '#0e2235', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Acciones <ChevronDown size={12} />
-                </button>
-                {showActionsMenu && (
-                  <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.1)', zIndex: 50, minWidth: 190, overflow: 'hidden' }}>
-                    {ticket.transitions.map(tr => {
-                      const VBGS: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
-                      const col = VBGS[tr.variant ?? 'default'] ?? '#0e2235';
-                      const isAct = activeTransId === tr.id;
-                      return (
-                        <button key={tr.id} type="button"
-                          onClick={() => { setActiveTransId(isAct ? null : tr.id); setShowActionsMenu(false); }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: isAct ? '#f1f5f9' : 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: col, textAlign: 'left' as const, fontFamily: 'inherit' }}>
-                          {tr.variant === 'success' ? <CheckCircle2 size={13} /> : tr.variant === 'danger' ? <XCircle size={13} /> : <ChevronRight size={13} style={{ color: col }} />}
-                          {tr.to_label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+              {!ticket.is_final && ticket.transitions.length > 0 && (
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <button type="button" onClick={() => setShowActionsMenu(v => !v)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, border: `1px solid ${showActionsMenu ? '#6366f1' : '#e2e8f0'}`, background: showActionsMenu ? '#eef2ff' : '#fff', fontSize: 12, fontWeight: 700, color: showActionsMenu ? '#6366f1' : '#0e2235', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Acciones <ChevronDown size={12} style={{ transform: showActionsMenu ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+                  </button>
+                  {showActionsMenu && (
+                    <>
+                      {/* Backdrop */}
+                      <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onClick={() => setShowActionsMenu(false)} />
+                      <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,.12)', zIndex: 50, minWidth: 200, overflow: 'hidden' }}>
+                        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', padding: '8px 14px 4px', margin: 0 }}>Cambiar estado</p>
+                        {ticket.transitions.map(tr => {
+                          const VBGS: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
+                          const col = VBGS[tr.variant ?? 'default'] ?? '#0e2235';
+                          const isAct = activeTransId === tr.id;
+                          return (
+                            <button key={tr.id} type="button"
+                              onClick={() => { setActiveTransId(isAct ? null : tr.id); setShowActionsMenu(false); }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: isAct ? '#f8fafc' : 'none', border: 'none', borderTop: '1px solid #f1f5f9', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: col, textAlign: 'left', fontFamily: 'inherit' }}>
+                              {tr.variant === 'success' ? <CheckCircle2 size={13} /> : tr.variant === 'danger' ? <XCircle size={13} /> : <ChevronRight size={13} />}
+                              {tr.to_label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </PermissionGate>
           </div>
 
           {/* TRANSITION CONFIRM BAR */}
           <PermissionGate perm="helpdesk:tickets:edit">
-          {activeTransId && (
-            <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <span style={{ fontSize: 11, color: '#475569', fontWeight: 600, flexShrink: 0 }}>Motivo (opcional):</span>
-              <input value={transReason} onChange={e => setTransReason(e.target.value)} placeholder="Describe el cambio de estado..."
-                style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
-              <button type="button" onClick={() => { setActiveTransId(null); setTransReason(''); }}
-                style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
-                Cancelar
-              </button>
-              <button type="button" onClick={() => transMut.mutate({ transId: activeTransId, reason: transReason })} disabled={transMut.isPending}
-                style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: '#6366f1', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, opacity: transMut.isPending ? .7 : 1 }}>
-                <CheckCircle2 size={11} /> {transMut.isPending ? 'Aplicando...' : 'Confirmar'}
-              </button>
-            </div>
-          )}
+            {activeTransId && (
+              <div style={{ background: '#eef2ff', borderBottom: '1px solid #c7d2fe', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                <span style={{ fontSize: 11, color: '#4338ca', fontWeight: 700, flexShrink: 0 }}>Motivo (opcional):</span>
+                <input value={transReason} onChange={e => setTransReason(e.target.value)}
+                  placeholder="Describe el cambio de estado..."
+                  autoFocus
+                  style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
+                <button type="button" onClick={() => { setActiveTransId(null); setTransReason(''); }}
+                  style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#4338ca' }}>
+                  Cancelar
+                </button>
+                <button type="button"
+                  onClick={() => transMut.mutate({ transId: activeTransId, reason: transReason || undefined })}
+                  disabled={transMut.isPending}
+                  style={{ padding: '6px 16px', borderRadius: 7, border: 'none', background: '#6366f1', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, opacity: transMut.isPending ? .7 : 1 }}>
+                  <CheckCircle2 size={11} /> {transMut.isPending ? 'Aplicando...' : 'Confirmar cambio'}
+                </button>
+              </div>
+            )}
           </PermissionGate>
 
           {/* 2-COLUMN BODY */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', flex: 1, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', flex: 1, overflow: 'hidden' }}>
 
             {/* MAIN: banners + timeline + reply */}
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e2e8f0' }}>
@@ -352,53 +375,113 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 </div>
               )}
 
+              {/* TICKET DETAIL SECTION */}
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
+
+                {/* Title */}
+                <h2 style={{ margin: '0 0 10px', fontSize: 17, fontWeight: 800, color: '#0e2235', lineHeight: 1.3 }}>
+                  {ticket.title}
+                </h2>
+
+                {/* Meta chips row */}
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: ticket.description ? 10 : 0 }}>
+                  <PriorityBadge priority={ticket.priority} />
+                  {ticket.category_name && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                      {ticket.category_name}
+                    </span>
+                  )}
+                  {ticket.damage_type_label && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a' }}>
+                      {ticket.damage_type_label}
+                    </span>
+                  )}
+                  {ticket.environment_name && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                      {ticket.environment_name}
+                    </span>
+                  )}
+                  {linkedAssets[0] && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#f5f3ff', color: '#5b21b6', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Monitor size={9} /> {linkedAssets[0].name}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>
+                    Solicitado por <strong style={{ color: '#475569' }}>{ticket.creator_name}</strong> · #{ticket.id.slice(0,8).toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Description (collapsible) */}
+                {ticket.description && (
+                  <div>
+                    <p style={{
+                      margin: 0, fontSize: 12, color: '#475569', lineHeight: 1.6,
+                      overflow: 'hidden',
+                      display: '-webkit-box', WebkitLineClamp: descExpanded ? undefined : 3,
+                      WebkitBoxOrient: 'vertical' as any,
+                    } as React.CSSProperties}>
+                      {ticket.description}
+                    </p>
+                    {ticket.description.length > 180 && (
+                      <button type="button" onClick={() => setDescExpanded(v => !v)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 4, fontSize: 10, fontWeight: 700, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                        {descExpanded ? <><ChevronUp size={10} /> Mostrar menos</> : <><ChevronDown size={10} /> Ver descripción completa</>}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* TIMELINE */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 12px' }}>Actividad</p>
                 <TicketTimeline events={timeline} isLoading={timelineLoading} autoScroll />
               </div>
 
               {/* REPLY BOX */}
-              <div style={{ borderTop: '1px solid #e2e8f0', padding: '12px 20px', flexShrink: 0, background: '#fff' }}>
-                <input ref={fileInputRef} type="file" style={{ display: 'none' }}
-                  accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={handleFileChange} />
-                <PermissionGate perm="helpdesk:comments:add">
+              <PermissionGate perm="helpdesk:comments:add">
                 {!ticket.is_final && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: 7, background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{currentUser?.first_name?.charAt(0).toUpperCase() ?? 'T'}</span>
+                  <div style={{ borderTop: '2px solid #f1f5f9', padding: '14px 20px', flexShrink: 0, background: '#fff' }}>
+                    <input ref={fileInputRef} type="file" style={{ display: 'none' }}
+                      accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      onChange={handleFileChange} />
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      {/* Avatar */}
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{currentUser?.first_name?.charAt(0).toUpperCase() ?? 'T'}</span>
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>Comentario</span>
-                      <select value={commentType} onChange={e => setCommentType(e.target.value as 'public' | 'internal')}
-                        style={{ marginLeft: 'auto', fontSize: 10, padding: '2px 6px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        <option value="public">Publico</option>
-                        <option value="internal">Interno</option>
-                      </select>
-                      <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadMut.isPending}
-                        style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, padding: '3px 8px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        <Paperclip size={10} /> {uploadMut.isPending ? '...' : 'Adjuntar'}
-                      </button>
+                      {/* Input area */}
+                      <div style={{ flex: 1 }}>
+                        <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
+                          placeholder={commentType === 'internal' ? '🔒 Nota interna — visible solo para el equipo técnico...' : 'Escribe tu respuesta al solicitante...'}
+                          rows={replyText ? 3 : 2}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: `1px solid ${commentType === 'internal' ? '#fde68a' : '#e2e8f0'}`, background: commentType === 'internal' ? '#fffbeb' : '#fff', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box', transition: 'border-color .15s, background .15s' }}
+                          onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && replyText.trim()) { e.preventDefault(); addCommentMut.mutate(); } }}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
+                          <select value={commentType} onChange={e => setCommentType(e.target.value as 'public' | 'internal')}
+                            style={{ fontSize: 10, padding: '3px 7px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, color: '#475569' }}>
+                            <option value="public">📢 Público</option>
+                            <option value="internal">🔒 Interno</option>
+                          </select>
+                          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadMut.isPending}
+                            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            <Paperclip size={10} /> {uploadMut.isPending ? 'Subiendo...' : 'Adjuntar'}
+                          </button>
+                          {uploadError && <span style={{ fontSize: 10, color: '#dc2626' }}>{uploadError}</span>}
+                          <div style={{ flex: 1 }} />
+                          <span style={{ fontSize: 9, color: '#94a3b8' }}>Ctrl+Enter para enviar</span>
+                          <button type="button" disabled={!replyText.trim() || addCommentMut.isPending} onClick={() => addCommentMut.mutate()}
+                            style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: replyText.trim() && !addCommentMut.isPending ? '#0e2235' : '#cbd5e1', color: '#fff', fontSize: 11, fontWeight: 700, cursor: replyText.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                            {addCommentMut.isPending ? 'Enviando...' : 'Enviar →'}
+                          </button>
+                        </div>
+                        {addCommentMut.isError && <p style={{ fontSize: 10, color: '#dc2626', margin: '4px 0 0' }}>Error al enviar comentario.</p>}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                      <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
-                        placeholder={commentType === 'internal' ? 'Nota interna (solo equipo tecnico)...' : 'Escribe tu respuesta...'}
-                        rows={2}
-                        style={{ flex: 1, padding: '8px 12px', borderRadius: 9, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none' as const, boxSizing: 'border-box' as const }}
-                        onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && replyText.trim()) { e.preventDefault(); addCommentMut.mutate(); } }}
-                      />
-                      <button type="button" disabled={!replyText.trim() || addCommentMut.isPending} onClick={() => addCommentMut.mutate()}
-                        style={{ padding: '8px 16px', borderRadius: 9, border: 'none', background: replyText.trim() && !addCommentMut.isPending ? '#0e2235' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: replyText.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', flexShrink: 0 }}>
-                        {addCommentMut.isPending ? '...' : 'Enviar'}
-                      </button>
-                    </div>
-                    {(addCommentMut.isError || uploadError) && (
-                      <p style={{ fontSize: 10, color: '#dc2626', margin: '4px 0 0' }}>{uploadError || 'Error al enviar.'}</p>
-                    )}
-                  </>
+                  </div>
                 )}
-                </PermissionGate>
-              </div>
+              </PermissionGate>
             </div>
 
             {/* RIGHT SIDEBAR */}
