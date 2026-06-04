@@ -1,7 +1,7 @@
 /* ── Outer card ─────────────────────────────────────────────── */
 .card {
   background: #ffffff;
-  overflow: hidden;
+  overflow: clip;
   display: flex;
   flex-direction: column;
 }

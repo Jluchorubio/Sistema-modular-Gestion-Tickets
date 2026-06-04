@@ -1455,6 +1455,15 @@
   gap: 20px;
 }
 
+.helpdeskStatsStickyWrap {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #fafbfc;
+  padding-bottom: 4px;
+  margin-bottom: -4px;
+}
+
 .helpdeskStatsGrid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

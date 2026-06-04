@@ -33,15 +33,15 @@ import styles from '../tickets.module.css';
 const PRIORITIES: TicketPriority[] = ['baja', 'media', 'alta', 'critica'];
 const PRIORITY_ORDER: Record<TicketPriority, number> = { critica: 0, alta: 1, media: 2, baja: 3 };
 
-type QuickFilter = 'waiting' | 'assigned' | 'unassigned' | 'approvals' | 'tasks' | 'collaborations';
+type QuickFilter = 'waiting' | 'mine' | 'breached' | 'unassigned' | 'in_espera' | 'approvals';
 
 const STAT_CARDS: { key: QuickFilter; label: string; accent: string; desc: string }[] = [
-  { key: 'waiting',       label: 'Esperándome',    accent: '#ff5e3a', desc: 'Requieren tu acción' },
-  { key: 'assigned',      label: 'Asignados a mí', accent: '#f59e0b', desc: 'En seguimiento'      },
-  { key: 'approvals',     label: 'Aprobaciones',   accent: '#3b82f6', desc: 'Pendientes'           },
-  { key: 'tasks',         label: 'Tareas',          accent: '#fbbf24', desc: 'Por completar'       },
-  { key: 'unassigned',    label: 'Sin asignar',    accent: '#a855f7', desc: 'Sin responsable'     },
-  { key: 'collaborations',label: 'Colaboraciones', accent: '#64748b', desc: 'Participando'        },
+  { key: 'waiting',   label: 'Esperándome', accent: '#ff5e3a', desc: 'Requieren tu acción' },
+  { key: 'mine',      label: 'Mis tickets', accent: '#0e2235', desc: 'A mi cargo'          },
+  { key: 'breached',  label: 'SLA Vencido', accent: '#ef4444', desc: 'Incumplidos'         },
+  { key: 'unassigned',label: 'Sin asignar', accent: '#a855f7', desc: 'Sin responsable'     },
+  { key: 'in_espera', label: 'En espera',   accent: '#f59e0b', desc: 'Esperando respuesta' },
+  { key: 'approvals', label: 'Por aprobar', accent: '#3b82f6', desc: 'Pendientes'          },
 ];
 
 /* ─────────────────── Shared helpers ─────────────────────────────────────── */
@@ -749,9 +749,8 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
   const [priorityFilter,  setPriorityFilter] = useState<TicketPriority | ''>('');
   const [categoryFilter,  setCategoryFilter] = useState('');
   const [assigneeFilter,  setAssigneeFilter] = useState('');
-  const [slaFilter,       setSlaFilter]      = useState<SlaStatus | ''>('');
-  const [reprocesoFilter, setReprocesoFilter] = useState(false);
-  const [showCreate,      setShowCreate]     = useState(false);
+  const [slaFilter,   setSlaFilter]   = useState<SlaStatus | ''>('');
+  const [showCreate,  setShowCreate]  = useState(false);
   const [page,            setPage]           = useState(1);
   const [search,          setSearch]         = useState('');
   const [sortBy,          setSortBy]         = useState('auto');
@@ -760,15 +759,14 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
   const [showFilters,     setShowFilters]    = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['tickets', moduleId, stateFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, reprocesoFilter, page],
+    queryKey: ['tickets', moduleId, stateFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, page],
     queryFn:  () => ticketsService.getAll({
-      module_id:   moduleId || undefined,
-      state_id:    stateFilter    || undefined,
+      module_id:   moduleId    || undefined,
+      state_id:    stateFilter || undefined,
       priority:    priorityFilter || undefined,
       category_id: categoryFilter || undefined,
       assignee_id: assigneeFilter || undefined,
       sla_status:  slaFilter      || undefined,
-      is_reproceso: reprocesoFilter || undefined,
       page,
       limit: 24,
     }),
@@ -810,15 +808,14 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
 
   const { ticketsOld, ticketsToday } = useMemo(() => {
     let list = allTickets;
-    const userName  = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim().toLowerCase();
-    const taskIds   = new Set(myAssignedTickets.filter((t) => t.assignment_role === 'owner' && t.is_pause_state).map((t) => t.id));
-    const collabIds = new Set(myAssignedTickets.filter((t) => t.assignment_role === 'collaborator').map((t) => t.id));
-    if (quickFilter === 'waiting')        list = list.filter((t) => (t.assignee_name ?? '').toLowerCase().includes(userName) && !t.is_final && !t.is_approval_state);
-    if (quickFilter === 'assigned')       list = list.filter((t) => t.assignee_name !== null);
-    if (quickFilter === 'unassigned')     list = list.filter((t) => t.assignee_name === null);
-    if (quickFilter === 'approvals')      list = list.filter((t) => t.is_approval_state && t.created_by === user?.id);
-    if (quickFilter === 'tasks')          list = list.filter((t) => taskIds.has(t.id));
-    if (quickFilter === 'collaborations') list = list.filter((t) => collabIds.has(t.id));
+    const ownerIds = new Set(myAssignedTickets.filter((t) => t.assignment_role === 'owner').map((t) => t.id));
+    const esprIds  = new Set(myAssignedTickets.filter((t) => t.is_pause_state).map((t) => t.id));
+    if (quickFilter === 'waiting')   list = list.filter((t) => ownerIds.has(t.id) && !t.is_final && !t.is_approval_state);
+    if (quickFilter === 'mine')      list = list.filter((t) => ownerIds.has(t.id));
+    if (quickFilter === 'breached')  list = list.filter((t) => t.sla_status === 'breached' && !t.is_final);
+    if (quickFilter === 'unassigned')list = list.filter((t) => t.assignee_name === null && !t.is_final);
+    if (quickFilter === 'in_espera') list = list.filter((t) => esprIds.has(t.id));
+    if (quickFilter === 'approvals') list = list.filter((t) => t.is_approval_state);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((t) => t.title.toLowerCase().includes(q) || t.category_name.toLowerCase().includes(q));
@@ -846,26 +843,14 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
   }, [allTickets, myAssignedTickets, quickFilter, search, sortBy, user?.id, user?.first_name, user?.last_name]);
 
   const statCounts = useMemo(() => {
-    // waiting: assigned to me (owner), active, not in approval state
-    const waiting = myAssignedTickets.filter(
-      (t) => t.assignment_role === 'owner' && !t.is_final && !t.is_approval_state,
-    ).length;
-    // assigned: all my owner assignments
-    const assigned = myAssignedTickets.filter((t) => t.assignment_role === 'owner').length;
-    // approvals: tickets in approval state (resuelto) created by me, pending my validation
-    const approvals = allTickets.filter(
-      (t) => t.is_approval_state && t.created_by === user?.id,
-    ).length;
-    // tasks: my owner tickets currently paused/en_espera (waiting for user response)
-    const tasks = myAssignedTickets.filter(
-      (t) => t.assignment_role === 'owner' && t.is_pause_state,
-    ).length;
-    // unassigned: no owner assigned, not final
-    const unassigned = allTickets.filter((t) => t.assignee_name === null && !t.is_final).length;
-    // collaborations: tickets where I'm a collaborator
-    const collaborations = myAssignedTickets.filter((t) => t.assignment_role === 'collaborator').length;
-    return [waiting, assigned, approvals, tasks, unassigned, collaborations];
-  }, [allTickets, myAssignedTickets, user?.id]);
+    const waiting   = myAssignedTickets.filter((t) => t.assignment_role === 'owner' && !t.is_final && !t.is_approval_state).length;
+    const mine      = myAssignedTickets.filter((t) => t.assignment_role === 'owner').length;
+    const breached  = allTickets.filter((t) => t.sla_status === 'breached' && !t.is_final).length;
+    const unassigned= allTickets.filter((t) => t.assignee_name === null && !t.is_final).length;
+    const inEspera  = myAssignedTickets.filter((t) => t.is_pause_state).length;
+    const approvals = allTickets.filter((t) => t.is_approval_state).length;
+    return [waiting, mine, breached, unassigned, inEspera, approvals];
+  }, [allTickets, myAssignedTickets]);
 
   const filteredTechs = useMemo(() => {
     const list = techs ?? [];
@@ -899,7 +884,7 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
               if (breached === 0 && critical === 0) return null;
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderRadius: 10, background: breached > 0 ? '#fef2f2' : '#fff7ed', border: `1.5px solid ${breached > 0 ? '#fecaca' : '#fed7aa'}`, marginBottom: 4, cursor: 'pointer' }}
-                  onClick={() => { setQuickFilter(null); setSlaFilter('breached'); }}>
+                  onClick={() => setQuickFilter('breached')}>
                   <AlertTriangle size={16} style={{ color: breached > 0 ? '#ef4444' : '#f97316', flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
                     {breached > 0 && (
@@ -918,18 +903,20 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
               );
             })()}
 
-            {/* Stats */}
-            <div className={styles.helpdeskStatsGrid}>
-              {STAT_CARDS.map((card, i) => (
-                <div key={card.key}
-                  className={`${styles.statCard}${quickFilter === card.key ? ` ${styles.statCardActive}` : ''}`}
-                  style={{ '--accent': card.accent } as React.CSSProperties}
-                  onClick={() => toggleQuickFilter(card.key)}>
-                  <p className={styles.statCount}>{statCounts[i]}</p>
-                  <p className={styles.statLabel}>{card.label}</p>
-                  <p className={styles.statDesc}>{card.desc}</p>
-                </div>
-              ))}
+            {/* Stats — sticky */}
+            <div className={styles.helpdeskStatsStickyWrap}>
+              <div className={styles.helpdeskStatsGrid}>
+                {STAT_CARDS.map((card, i) => (
+                  <div key={card.key}
+                    className={`${styles.statCard}${quickFilter === card.key ? ` ${styles.statCardActive}` : ''}`}
+                    style={{ '--accent': card.accent } as React.CSSProperties}
+                    onClick={() => toggleQuickFilter(card.key)}>
+                    <p className={styles.statCount}>{statCounts[i]}</p>
+                    <p className={styles.statLabel}>{card.label}</p>
+                    <p className={styles.statDesc}>{card.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Search + actions row */}
@@ -1244,7 +1231,7 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
 
           {/* Search + filter toggle */}
           {(() => {
-            const activeFilterCount = [priorityFilter, stateFilter, categoryFilter, assigneeFilter, slaFilter, reprocesoFilter].filter(Boolean).length;
+            const activeFilterCount = [priorityFilter, stateFilter, categoryFilter, assigneeFilter, slaFilter].filter(Boolean).length;
             const selStyle: React.CSSProperties = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 8px', fontSize: 11, color: '#475569', fontFamily: 'inherit', background: '#fff', cursor: 'pointer' };
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
@@ -1316,15 +1303,10 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
                       ))}
                     </select>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: reprocesoFilter ? '#ef4444' : '#64748b', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={reprocesoFilter} onChange={(e) => { setReprocesoFilter(e.target.checked); setPage(1); }} style={{ accentColor: '#ef4444' }} />
-                      Reproceso
-                    </label>
-
                     {activeFilterCount > 0 && (
                       <button
                         type="button"
-                        onClick={() => { setPriorityFilter(''); setStateFilter(''); setCategoryFilter(''); setAssigneeFilter(''); setSlaFilter(''); setReprocesoFilter(false); setPage(1); }}
+                        onClick={() => { setPriorityFilter(''); setStateFilter(''); setCategoryFilter(''); setAssigneeFilter(''); setSlaFilter(''); setPage(1); }}
                         style={{ fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit', marginLeft: 'auto' }}
                       >
                         Limpiar filtros
@@ -1356,7 +1338,7 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
           ) : ticketsOld.length === 0 && ticketsToday.length === 0 ? (
             <div className={styles.emptyState}>
               <Ticket size={28} className={styles.emptyIcon} />
-              <p className={styles.emptyText}>{search || quickFilter || priorityFilter || stateFilter || categoryFilter || assigneeFilter || slaFilter || reprocesoFilter ? 'Sin tickets con esos filtros.' : 'No hay tickets activos en este módulo.'}</p>
+              <p className={styles.emptyText}>{search || quickFilter || priorityFilter || stateFilter || categoryFilter || assigneeFilter || slaFilter ? 'Sin tickets con esos filtros.' : 'No hay tickets activos en este módulo.'}</p>
               {canCreate && moduleId && !search && !quickFilter && (
                 <button type="button" className={styles.newTicketBtn} onClick={() => setShowCreate(true)}>
                   <Plus size={13} />Crear primer ticket
