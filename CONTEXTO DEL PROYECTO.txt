@@ -1,5 +1,8 @@
 
 # CONTEXTO DEFINITIVO — ARQUITECTURA GENERAL DEL SISTEMA MODULAR OPERACIONAL
+# NOMBRE DEL SISTEMA: NEXO
+
+---
 
 # VISIÓN GENERAL DEL PROYECTO
 
@@ -47,10 +50,10 @@ Pero la arquitectura debe permitir escalar posteriormente.
 ## Backend
 
 * NestJS
-* PostgreSQL
+* PostgreSQL (Railway)
 * Redis (futuro)
 * Socket.io
-* JWT
+* JWT propio (Supabase fue eliminado — auth completamente migrada a Railway)
 * OAuth Google
 * EventEmitter2
 
@@ -62,6 +65,12 @@ Pero la arquitectura debe permitir escalar posteriormente.
 * Zustand
 * TanStack Query
 * Framer Motion
+
+## Infraestructura
+
+* Base de datos: Railway PostgreSQL
+* Storage: local filesystem (S3 configurado para futuro)
+* Auth: JWT propio con refresh tokens
 
 ---
 
@@ -94,29 +103,34 @@ NO debe sentirse:
 * como un panel saturado
 * como tablas administrativas planas
 
+Paleta de colores del sistema:
+
+* Navy: #0e2235
+* Coral/Acento: #ff5e3a
+* Bordes: #e2e8f0
+* Muted: #94a3b8
+* Fondo: #f8fafc
+
 ---
 
 # ARQUITECTURA MODULAR
 
 Cada módulo es independiente.
 
-Ejemplo:
+Módulos actuales:
 
-* Helpdesk
-* Inventario
-* Gestión Administrativa
-*  
+* Helpdesk (built-in, plantilla base) — IMPLEMENTADO
+* Inventario (built-in) — IMPLEMENTADO
+* Gestión Administrativa (hub global) — PARCIALMENTE IMPLEMENTADO
 
-  Otros módulos futuros
-
-Estos no se toman como modulos:
+Estos NO son módulos sino funcionalidades transversales:
 
 * Calendario
 * Reportes
 
 Cuando se crea un módulo nuevo:
 
-* hereda la plantilla operacional del modulo Helpdesk
+* hereda la plantilla operacional del módulo Helpdesk
 * genera rutas automáticamente
 * genera endpoints
 * genera estructura operacional
@@ -131,11 +145,13 @@ PERO:
 * NO depende del módulo original
 * puede personalizarse completamente
 
+Solo el superadmin puede crear módulos nuevos.
+
 ---
 
 # SISTEMA DE RUTAS
 
-Cada módulo debe tener rutas dinámicas:
+Cada módulo debe tener rutas dinámicas.
 
 Ejemplo:
 
@@ -160,7 +176,7 @@ Las rutas deben ser:
 
 # AUTENTICACIÓN
 
-# LOGIN
+## LOGIN
 
 El login es el punto de entrada principal del sistema.
 
@@ -180,7 +196,12 @@ Los usuarios SOLO son creados por:
 * Superadmin
 * Admin autorizado
 
-Ya se implemento recuperación de contraseña y un apartado que dice "no tienes una cuenta" que al dar click le abre una pestaña de email que le precarga todo un asunto y una plantilla de datos que debe rellenar para que el admin al verlo pueda procesar este nuevo usuario y lo cree
+Está implementado:
+
+* Recuperación de contraseña
+* Link "no tienes cuenta" que precarga email con plantilla de solicitud de acceso al admin
+* TOTP 2FA (Google Authenticator)
+* Google OAuth vinculado
 
 ---
 
@@ -200,18 +221,8 @@ Ejemplo:
 
 Mensajes:
 
-* “Usuario o contraseña incorrectos”
+* "Usuario o contraseña incorrectos"
 * nunca indicar cuál campo falló
-
----
-
-# OAUTH GOOGLE
-
-Debe permitir:
-
-* login rápido
-* vinculación segura
-* sincronización inicial
 
 ---
 
@@ -234,7 +245,7 @@ Ticket2026!
 Debe completar:
 
 * información personal
-* datos organizacionales(dropdown con la informacion de la empresa)
+* datos organizacionales (dropdown con la información de la empresa)
 * configuraciones iniciales
 
 Muchos campos deben ser:
@@ -250,25 +261,6 @@ Departamento:
 * Contabilidad
 
 Estos datos salen del sistema organizacional configurado por Superadmin.
-
----
-
-# CONFIGURACIÓN DE USUARIO
-
-El usuario puede configurar:
-
-* 2FA
-* preferencias
-* seguridad
-* visual
-* experiencia del sistema
-
-Ejemplo:
-
-* tema
-* notificaciones
-* dispositivos activos
-* privacidad
 
 ---
 
@@ -299,116 +291,102 @@ Es:
 
 # ROLES GLOBALES
 
-Roles globales iniciales:
+Roles globales actuales:
 
 * Usuario
 * Superadmin
 
-Posteriormente:
+Roles por módulo (Helpdesk):
 
-* pueden existir más roles globales
+* usuario
+* tecnico
+* jefe_tecnico
+* admin_modulo
+
+---
+
+# SISTEMA DE ROLES Y PERMISOS
+
+El sistema maneja un RBAC (Role Based Access Control) modular y dinámico.
+
+NO es un sistema simple de "admin / usuario".
+
+La arquitectura soporta:
+
+* permisos globales
+* permisos por módulo
+* permisos dinámicos
+* múltiples roles
+* múltiples contextos operativos
+* escalabilidad modular
+
+## Estado actual del RBAC
+
+60 permisos definidos en DB.
+
+PermissionGate implementado en frontend.
+
+Guards en backend: JwtAuthGuard + PermissionGuard + RolesGuard.
+
+El superadmin:
+
+* SIEMPRE tiene acceso total
+* NO necesita asignarse permisos manualmente
+* bypass completo de validaciones RBAC
+
+---
+
+# PERMISOS
+
+Los permisos son estructurados jerárquicamente.
+
+Ejemplo:
+
+```
+tickets
+ ├── view
+ ├── create
+ ├── edit
+ ├── assign
+ ├── close
+ └── delete
+```
+
+REGLA: Activar un permiso padre NO activa automáticamente los hijos.
+
+Cada permiso es independiente.
+
+Los permisos se obtienen desde backend/DB.
+
+NO están hardcodeados en frontend.
+
+---
+
+# MULTIROL
+
+Un usuario puede tener:
+
+* múltiples roles globales
+* múltiples roles por módulo
+
+Ejemplo:
+
+```
+Global:
+- usuario
+
+Helpdesk:
+- tecnico
+
+Inventario:
+- auditor
+```
 
 ---
 
 # DASHBOARD PRINCIPAL
 
-Cuando el usuario entra normalmente:
-
-visualiza el dashboard principal.
-
----
-
-# COMPORTAMIENTO SEGÚN ROL
-
-## Usuario normal
-
-NO ve sidebar global.
-
-Solo puede:
-
-* acceder a módulos permitidos
-* crear tickets
-* usar herramientas permitidas
-
----
-
-## Superadmin
-
-Ve:
-
-* sidebar global
-* administración completa
-* métricas
-* módulos
-* configuraciones
-
----
-
-# SIDEBAR GLOBAL
-
-El sidebar global:
-
-* es persistente
-* colapsable
-* responsive
-* dinámico
-* reutilizable
-* modular
-
-Debe:
-
-* soportar scroll
-* soportar crecimiento futuro
-* agrupar opciones
-* evitar saturación visual
-
----
-
-# COMPORTAMIENTO DEL SIDEBAR
-
-Inspirado parcialmente en:
-
-* Gemini
-* Linear
-
-Cuando está colapsado:
-
-* solo muestra logo
-
-Cuando el usuario pone mouse encima:
-
-* aparece icono expandible
-
-Al expandirse:
-
-* aparece logo + nombre
-
-Debe existir:
-
-* animación suave
-* transición limpia
-
----
-
-# ZONA SUPERIOR DEL SIDEBAR
-
-Contiene:
-
-* logo empresa
-* nombre empresa
-
-Estos datos:
-
-* son dinámicos
-* vienen de configuración global
-* deben actualizarse en tiempo real
-
----
-
-# DASHBOARD — MÓDULOS DISPONIBLES
-
-Ruta:
-`/dashboard`
+Ruta: /dashboard
 
 Visual principal:
 
@@ -422,734 +400,85 @@ Cada card contiene:
 * estado
 * admin responsable
 * métricas rápidas
+* menú contextual de 3 puntos (Editar / Activar-desactivar / Ver configuración / Ver métricas)
 
 ---
 
-# MENÚ CONTEXTUAL EN MÓDULOS
+# SIDEBAR GLOBAL
 
-Todos los módulos:
-
-* incluso los base
-
-Deben tener menú contextual de 3 puntos.
+Visible para superadmin y roles con permisos globales.
 
 Opciones:
 
-* Editar
-* Activar/desactivar
-* Modo mantenimiento
-* Eliminar(no aplica para los default)
-* Ver configuración
-* Ver métricas
-
-Según permisos.
-
----
-
-# SIDEBAR GLOBAL — OPCIONES
-
-## `/dashboard`
-
-Módulos disponibles
-
-## `/reports`
-
-Reportes globales
-
-## `/users`
-
-Usuarios
-
-## `/roles`
-
-Roles y permisos
-
-## `/trash`
-
-Papelera
-
-## `/config`
-
-Configuración global del sistema
-
----
-
-TENER MUY PRESENTE(SOLO EN EL SIDEBAR GLOBAL MANEJADO POR SUPERADMIN O ROL CON PERMISOS):
-
-# SISTEMA DE ROLES Y PERMISOS — CONTEXTO FUNCIONAL Y ARQUITECTÓNICO
-
-El sistema maneja un RBAC (Role Based Access Control) modular y dinámico.
-
-NO es un sistema simple de:
-“admin / usuario”.
-
-La arquitectura está diseñada para soportar:
-
-* permisos globales
-* permisos por módulo
-* permisos dinámicos
-* múltiples roles
-* múltiples contextos operativos
-* escalabilidad modular
-
----
-
-# OBJETIVO DEL SISTEMA DE ROLES
-
-El sistema debe permitir controlar:
-
-* qué puede ver un usuario
-* qué puede crear
-* qué puede editar
-* qué puede eliminar
-* qué módulos puede usar
-* qué acciones administrativas puede ejecutar
-* qué vistas operativas puede visualizar
-
-Todo esto:
-sin hardcodear permisos manualmente en frontend.
-
----
-
-# ESTRUCTURA GENERAL
-
-El sistema maneja:
-
-## 1. Roles globales
-
-Aplican a TODO el sistema.
-
-Ejemplos:
-
-* superadmin
-* usuario
-
-Estos determinan:
-
-* acceso global
-* administración general
-* acceso transversal
-
----
-
-## 2. Roles por módulo
-
-Cada módulo puede tener sus propios roles independientes.
-
-Ejemplo:
-
-Módulo Helpdesk:
-
-* técnico
-* coordinador
-* supervisor
-
-Módulo Inventario:
-
-* almacenista
-* auditor inventario
-
-Módulo Gestión Administrativa:
-
-* aprobador
-* gestor solicitudes
-
-Los roles de un módulo NO afectan automáticamente a otro módulo.
-
----
-
-# SUPERADMIN
-
-El rol superadmin:
-
-* SIEMPRE tiene acceso total
-* NO necesita asignarse permisos manualmente
-* NO depende del árbol de permisos
-* bypass completo de validaciones RBAC
-
-Esto evita:
-
-* bloquear accidentalmente al superadmin
-* perder acceso administrativo crítico
-
-El superadmin puede:
-
-* ver todos los módulos
-* administrar usuarios
-* administrar roles
-* crear módulos
-* editar configuración global
-* editar automatizaciones
-* ver auditorías
-* acceder a todos los endpoints protegidos
-
----
-
-# PERMISOS
-
-Los permisos NO son simples strings sueltos.
-
-El sistema maneja permisos estructurados jerárquicamente.
-
-Ejemplo:
-
-```txt
-tickets
- ├── view
- ├── create
- ├── edit
- ├── assign
- ├── close
- └── delete
-```
-
-o:
-
-```txt
-inventory
- ├── assets.view
- ├── assets.create
- ├── assets.edit
- ├── assets.delete
- ├── qr.generate
- └── reports.view
-```
-
----
-
-# IMPORTANTE — PADRE NO HEREDA HIJOS
-
-Regla arquitectónica IMPORTANTÍSIMA:
-
-Activar un permiso padre
-NO activa automáticamente los hijos.
-
-Ejemplo:
-
-```txt
-tickets
-```
-
-NO concede automáticamente:
-
-```txt
-tickets.delete
-tickets.assign
-tickets.close
-```
-
-Esto es intencional.
-
-Porque en sistemas empresariales:
-las acciones críticas deben concederse explícitamente.
-
----
-
-# HERENCIA VISUAL ≠ HERENCIA REAL
-
-La UI puede mostrar jerarquía visual:
-
-```txt
-Tickets
- ├── Ver
- ├── Crear
- ├── Eliminar
-```
-
-pero internamente:
-cada permiso es independiente.
-
-Esto evita:
-
-* escalaciones accidentales
-* permisos excesivos
-* errores administrativos
-
----
-
-# CREACIÓN DINÁMICA DE PERMISOS
-
-Cuando el superadmin crea un nuevo módulo:
-
-el sistema automáticamente genera:
-
-* namespace del módulo
-* endpoints
-* rutas
-* permisos base
-* roles iniciales opcionales
-
-Ejemplo:
-
-Nuevo módulo:
-
-```txt
-Mantenimiento
-```
-
-Genera automáticamente:
-
-```txt
-maintenance.view
-maintenance.create
-maintenance.edit
-maintenance.delete
-maintenance.config
-maintenance.reports
-```
-
-Y estos aparecen inmediatamente en el módulo de Roles.
-
----
-
-# LOS PERMISOS SON DINÁMICOS
-
-NO quiero permisos hardcodeados en frontend.
-
-Los permisos deben obtenerse desde backend/database.
-
-Porque:
-
-* los módulos son dinámicos
-* los permisos pueden crecer
-* los roles cambian
-* el sistema es escalable
-
-Frontend debe renderizar:
-
-* sidebar
-* botones
-* tabs
-* acciones
-* rutas
-
-según permisos reales del usuario.
-
----
-
-# COMPORTAMIENTO DEL SIDEBAR SEGÚN PERMISOS
-
-El sidebar cambia dinámicamente.
-
-Ejemplo:
-
-Si el usuario NO tiene:
-
-```txt
-reports.view
-```
-
-NO verá:
-
-```txt
-Reportes
-```
-
-Si NO tiene:
-
-```txt
-users.manage
-```
-
-NO verá:
-
-```txt
-Usuarios
-```
-
-Esto aplica tanto:
-
-* globalmente
-* como dentro de módulos
-
----
-
-# PERMISSION GUARDS
-
-Backend:
-
-Todos los endpoints sensibles deben usar:
-
-* JWT Guard
-* Permission Guard
-* Role validation
-* Module access validation
-
-Frontend:
-
-Debe existir:
-
-* PermissionGate
-* PermissionGuard
-* usePermission()
-* useModuleAccess()
-
-Para ocultar:
-
-* vistas
-* botones
-* acciones
-* configuraciones
-
-sin depender solo del backend.
-
----
-
-# MULTIROL
-
-Un usuario puede tener:
-
-* múltiples roles globales
-* múltiples roles por módulo
-
-Ejemplo:
-
-```txt
-Global:
-- usuario
-
-Helpdesk:
-- técnico
-
-Inventario:
-- auditor
-
-Gestión administrativa:
-- aprobador
-```
-
----
-
-# CONTEXTO ACTIVO
-
-Cuando un usuario pertenece a múltiples módulos:
-
-el sistema maneja:
-
-* contexto activo
-* módulo activo
-* permisos activos
-
-Esto afecta:
-
-* calendario
-* tickets visibles
-* dashboards
-* reportes
-* acciones disponibles
-
----
-
-# GESTIÓN VISUAL DE ROLES
-
-El apartado Roles NO debe sentirse técnico.
-
-Debe ser:
-
-* visual
-* organizado
-* escalable
-* fácil de entender
-
----
-
-# ESTRUCTURA VISUAL RECOMENDADA
-
-## Panel izquierdo
-
-Lista:
-
-* roles globales
-* roles módulo
-* búsqueda
-* filtros
-
----
-
-## Panel derecho
-
-Árbol visual de permisos.
-
-Ejemplo:
-
-```txt
-▶ Tickets
-   ☑ Ver
-   ☑ Crear
-   ☑ Editar
-   ☐ Eliminar
-
-▶ Inventario
-   ☑ Ver activos
-   ☑ Generar QR
-   ☐ Eliminar activos
-```
-
----
-
-# UX IMPORTANTE
-
-NO quiero:
-
-* listas infinitas
-* checkboxes desordenados
-* tablas gigantes tipo ERP antiguo
-
-Quiero:
-
-* categorías
-* colapsables
-* búsqueda rápida
-* agrupación por módulo
-* descripción contextual
-* iconografía
-* colores suaves
-* visual moderna tipo:
-
-  * Linear
-  * GitHub
-  * Notion
-  * Vercel
-
----
-
-# VALIDACIONES IMPORTANTES
-
-El sistema debe impedir:
-
-* eliminar el último superadmin
-* quitarse permisos críticos a sí mismo
-* eliminar roles en uso
-* dejar módulos sin administradores
-* conflictos de permisos
-
----
-
-# AUDITORÍA
-
-Todo cambio de permisos debe auditarse.
-
-Ejemplo:
-
-* quién modificó el rol
-* qué permiso agregó
-* qué permiso eliminó
-* fecha
-* IP
-* módulo afectado
-
-Porque:
-los permisos son críticos para seguridad operacional.
-
----
-
-# CACHE Y PERFORMANCE
-
-Los permisos deben cachearse.
-
-Ejemplo:
-Redis.
-
-Porque:
-consultar permisos en cada request sería costoso.
-
-Debe existir:
-
-* invalidación automática
-* refresco tras cambios
-* sincronización en tiempo real
-
----
-
-# OBJETIVO FINAL
-
-El sistema de roles debe sentirse:
-
-* modular
-* profesional
-* escalable
-* seguro
+* /dashboard — Módulos disponibles
+* /reports — Reportes globales
+* /users — Usuarios
+* /roles — Roles y permisos
+* /trash — Papelera
+* /config — Configuración global del sistema
+
+El sidebar global:
+
+* es persistente
+* colapsable
+* responsive
 * dinámico
-* desacoplado
-* enterprise-ready
 
-NO como un panel administrativo básico.
+---
 
-Debe permitir:
+# SIDEBAR MODULAR
 
-* crecimiento futuro
-* nuevos módulos
-* nuevos permisos
-* automatización
-* multirol
-* personalización avanzada
+Cada módulo tiene sidebar propio actualizado desde el global vía props.
 
-sin rehacer arquitectura.
+Contiene:
 
+* logo + nombre empresa
+* nombre módulo
 
----------------
+Opciones sidebar modular:
+
+* Inicio módulo (vista operacional principal)
+* Usuarios del módulo
+* Roles exclusivos del módulo
+* Reportes exclusivos del módulo
+* Configuración del módulo
+
+---
 
 # CONFIGURACIÓN GLOBAL DEL SISTEMA
 
-IMPORTANTE:
 La configuración global SOLO contiene:
 
 * configuraciones transversales
 * configuraciones raíz
 * arquitectura organizacional
 
-NO debe contener:
+Responsabilidades:
 
-* configuraciones operativas modulares
+1. Identidad del sistema (nombre empresa, logo, branding, timezone, idioma)
+2. Estructura organizacional (departamentos, áreas, cargos, nodos, pesos, relaciones)
+3. Automatización global (motor prioridad, score operacional, reglas base)
+4. Seguridad y auditoría (logs, doble validación, cambios críticos)
 
----
-
-# CONFIG GLOBAL — RESPONSABILIDADES
-
-## 1. Identidad del sistema
-
-Ejemplo:
-
-* nombre empresa
-* logo
-* branding(se esta pensando como usar mas adelante en la ux/ui del sistema)
-* timezone
-* idioma
-
----
-
-## 2. Estructura organizacional
-
-Ejemplo:
-
-* departamentos
-* áreas
-* cargos
-* nodos
-* pesos
-* relaciones
-
----
-
-## 3. Automatización global
-
-Ejemplo:
-
-* motor prioridad
-* score operacional
-* reglas base
-
----
-
-## 4. Seguridad y auditoría
-
-Ejemplo:
-
-* logs
-* auditoría
-* doble validación
-* cambios críticos
-
----
-
-# LO QUE NO DEBE ESTAR EN CONFIG GLOBAL
-
-NO:
+Lo que NO debe estar en config global:
 
 * SLA tickets
-* SLA requests
 * tipos daño
 * tipos solicitud
 * roles
 * importar usuarios
 
-Eso pertenece:
-
-* a cada módulo
+Eso pertenece a cada módulo.
 
 ---
 
 # ORGANIGRAMA OPERACIONAL
 
-El organigrama es:
+Es un sistema visual dinámico.
 
-# un sistema visual dinámico.
+Implementado con React Flow.
 
-NO:
-
-* una lista plana
-* cards estáticas
-
-Debe sentirse:
-
-* profesional
-* interactivo
-* vivo
-
-Inspiración:
-
-* Miro
-* React Flow
-* Draw.io
-* Whimsical
-
----
-
-# ESTRUCTURA DEL ORGANIGRAMA
-
-Ejemplo:
-
-Empresa
-└── Departamento
-└── Área
-└── Cargo
-└── Usuarios
-
-Pero debe ser:
-
-# completamente dinámico.
-
----
-
-# TIPOS DE NODOS DINÁMICOS
-
-El sistema debe permitir:
-
-* crear tipos nuevos
-* renombrarlos
-* asignar color
-* asignar icono
-* definir jerarquía
-* definir peso operacional
-
-Ejemplos:
-
-* bloque
-* laboratorio
-* piso
-* cubículo
-* ambiente
-* sección
-
----
-
-# PESOS OPERACIONALES
-
-Cada nodo puede tener peso.
-
-Se utiliza para:
-
-* prioridad automática
-* impacto
-* SLA
-* score operacional
-* automatizaciones
-
----
-
-# VISUAL DEL ORGANIGRAMA
-
-Debe permitir:
+Permite:
 
 * drag and drop
 * zoom
@@ -1158,20 +487,17 @@ Debe permitir:
 * expand/collapse
 * conexiones automáticas
 * edición inline
-* tiempo real
+* soft-delete tipos estructura
 
-Debe poder:
+Los tipos de nodos son dinámicos:
 
-* editarse visualmente
-* editarse por formulario
-
-Ambos deben sincronizarse automáticamente.
+* el admin puede crear tipos nuevos
+* asignar color e icono
+* definir jerarquía y peso operacional
 
 ---
 
 # MOTOR DE PRIORIDAD
-
-El sistema tiene un motor operacional inteligente.
 
 Calcula:
 
@@ -1188,94 +514,7 @@ Basado en:
 * impacto
 * urgencia
 * reglas SLA
-* fecha del ticket 
-
----
-
-# CALENDARIO SLA GLOBAL
-
-El calendario define:
-
-* horario laboral
-* días hábiles
-* feriados
-* disponibilidad operacional
-
-Puede integrarse con:
-
-* API de festivos
-* Nager.Date
-
-Debe:
-
-* impedir tareas en horarios inválidos
-* permitir override por admins
-
----
-
-# AUDITORÍA GLOBAL
-
-Todo cambio crítico debe registrarse.
-
-Ejemplos:
-
-* cambios SLA
-* cambios organizacionales
-* cambios prioridad
-* cambios branding
-* cambios permisos
-
----
-
-# SIDEBAR MODULAR
-
-Cada módulo tiene sidebar "propio" pues este se actualiza del global por medio de props.
-
-Contiene:
-
-* logo + nombre Empresa
-* nombre módulo
-
----
-
-# OPCIONES SIDEBAR MODULAR
-
-## Inicio módulo
-
-Vista operacional principal.
-
----
-
-## Usuarios
-
-Usuarios del módulo.
-
-EXCEPCIÓN:
-
-* Inventario
-* Gestión Administrativa
-
-Estos pueden ver:
-
-* todos los usuarios
-
----
-
-## Roles
-
-Roles exclusivos del módulo.
-
----
-
-## Reportes
-
-Métricas exclusivas del módulo.
-
----
-
-## Configuración módulo
-
-Configuración operacional específica.
+* fecha del ticket
 
 ---
 
@@ -1290,85 +529,23 @@ Cada módulo define:
 * asignación
 * tipos daño
 * catálogos
-
----
-
-# EJEMPLO — HELPDESK
-
-## Asignación tickets
-
-* Manual
-* Round Robin
-* Híbrido
-
----
-
-## Especialización técnicos
-
-Puede:
-
-* usar especialidades
-* usar técnicos generales
-* Hibrida
-
----
-
-## Gestión prioridad
-
-Opciones:
-
-* automática
-* manual
-* híbrida
-
----
-
-## SLA módulo
-
-Aquí:
-
-* se visualizan
-* configuran
-* gestionan
-
----
-
-## Tipos daño
-
-Cada:
-
-* categoría
-* subcategoría
-* tipo daño
-
-Puede tener:
-
-* peso
-* prioridad base
-* reglas
+* sedes
+* calendario operativo
 
 ---
 
 # HEADER GLOBAL
 
-Visible para:
+Visible para todos los usuarios autenticados.
 
-* todos los usuarios autenticados
+Elementos:
 
----
-
-# ELEMENTOS HEADER
-
-* logo sistema(nexo)
+* logo sistema (Nexo)
 * calendario rápido
 * notificaciones
 * avatar usuario
 
----
-
-# DROPDOWN USUARIO
-
-Contiene:
+Dropdown usuario:
 
 * perfil
 * roles
@@ -1380,194 +557,725 @@ Contiene:
 
 ---
 
-# PERFIL USUARIO
+# PAPELERA
 
-Ruta:
-`/profile`
+Ruta: /trash
 
-Inspiración:
+## Reglas
 
-* GitHub
+Soft delete:
+
+* 90 días
+
+Luego:
+
+* Hard delete automático
+
+Para eliminar manualmente antes de los 90 días:
+
+* el usuario debe colocar su contraseña
+* solo superadmin o admin pueden eliminar
+* superadmin: acceso a todo lo global y del admin
+* admin: solo lo del módulo que le corresponde
+* se pueden seleccionar muchos a la vez (bulk)
+
+Antes del hard delete el sistema:
+
+* notifica progresivamente
+* muestra alertas de expiración próxima
+
+## REGLA CRÍTICA — TICKETS
+
+Los tickets NO van a papelera.
+
+Los tickets son registros permanentes del sistema.
+
+NO se eliminan, ni siquiera con soft delete.
+
+En cambio se pueden:
+
+* Cancelar
+* Archivar
+
+Esto preserva:
+
+* trazabilidad
+* SLA histórico
+* métricas
+* historial activos
+* auditoría
+* reportes
 
 ---
 
-# PERFIL — INFORMACIÓN
+# AVATAR Y PERFIL
+
+El avatar:
+
+* NO usa filesystem
+* Se almacena en PostgreSQL como base64/webp
+* Se puede subir, tomar desde cámara, recortar y ajustar
+
+---
+
+---
+
+# MÓDULO HELPDESK — ESTADO ACTUAL COMPLETO
+
+El módulo Helpdesk es el núcleo operacional del sistema.
+
+Es la plantilla arquitectónica base para todos los módulos futuros.
+
+## Estado: ESTRUCTURALMENTE COMPLETO
+
+---
+
+# RUTAS IMPLEMENTADAS
+
+/helpdesk — Portal cliente (usuario) / Dashboard admin
+/helpdesk/workspace — Bandeja de trabajo técnico
+/helpdesk/queue — Cola de trabajo sin asignar
+/helpdesk/technicians — Centro operativo técnicos
+/helpdesk/sla — Dashboard SLA
+/helpdesk/tech/[techId] — Perfil operativo técnico
+/helpdesk/ticket/[ticketId] — Workspace del ticket
+/helpdesk/knowledge — Base de conocimiento
+/helpdesk/reports — Reportes helpdesk
+/helpdesk/users — Usuarios del módulo
+/helpdesk/roles — Roles del módulo
+/helpdesk/config — Configuración del módulo
+/helpdesk/trash — Papelera del módulo
+
+---
+
+# VISTAS POR ROL EN /helpdesk
+
+## Usuario
+
+Ve portal cliente:
+
+* Bienvenida personalizada
+* 4 cards de stats: Abiertos / En proceso / Aprobación / Resueltos
+* Tabla "Mis solicitudes" con badge de estado por ticket
+* Botón CTA "Reportar incidente"
+* Shortcut a Base de conocimiento
+
+NO ve:
+
+* cola técnica
+* métricas internas
+* gestión operacional
+
+---
+
+## Técnico y Jefe Técnico
+
+Son redirigidos automáticamente a /helpdesk/workspace.
+
+---
+
+## Admin módulo y Superadmin
+
+Ven dashboard operacional:
+
+* Banner alerta breaches SLA
+* Lista completa de todos los tickets del módulo
+* Filtros por estado, prioridad, categoría, asignado, SLA
+* Accesos rápidos
+* Sorteo por prioridad y SLA
+
+---
+
+# WORKSPACE DEL TÉCNICO — /helpdesk/workspace
+
+Centro de trabajo del técnico y jefe técnico.
 
 Contiene:
 
-* avatar
-* username
-* email
-* roles
-* ubicación
-* fecha creación
+* Avatar con indicador de disponibilidad
+* Badge de rol
+* Picker de disponibilidad (disponible/ocupado/en_reunión/fuera_horario/ausente/offline)
+* Stats: activos, hoy, pendiente aprobación, vencidos
+* Lista de tickets asignados ordenados por prioridad + SLA
+* Alertas SLA vencido y crítico (<2h)
+* Accesos rápidos: cola, perfil operativo, SLA
 
 ---
 
-# ESTADO ONLINE
+# COLA DE TRABAJO — /helpdesk/queue
 
-Debe usar:
+Tickets sin técnico asignado.
 
-* heartbeat
-* websocket
-* actividad
-* sesiones
+Agrupados por prioridad.
 
-Estados:
+Stats: sin asignar, críticos, SLA en riesgo <4h.
 
-* online
-* offline
-* ausente
+Permisos:
 
-Tiempo real.
+* admin_modulo y jefe_tecnico: pueden tomar tickets
+* tecnico: puede tomar tickets
+* usuario: solo visualiza (modo lectura)
 
 ---
 
-# SESIONES ACTIVAS
+# TÉCNICOS — /helpdesk/technicians
+
+Centro operativo del equipo.
 
 Muestra:
 
-* navegador
-* ubicación aproximada(con mapa)
-* hora acceso
-* dispositivo y tipo de dispositivo
-
----
-
-# ACTIVIDAD OPERACIONAL
-
-Incluye:
-
-* tickets
-* comentarios
-* aprobaciones
-* gestión activos
-
-Se usa principalmente:
-
-* métricas
-* reportes
-* productividad
-
----
-
-# CALENDARIO GLOBAL DEL SISTEMA
-
-El calendario es:
-
-# transversal.
-
-NO es:
-
-* una página simple
-
-Debe integrarse con:
-
-* módulos
-* roles
-* SLA
-* tareas
-* eventos
 * disponibilidad
+* carga de trabajo
+* rating
+* workload bars
+
+Permisos:
+
+* admin_modulo y jefe_tecnico: gestión completa
+* tecnico: lectura (ver compañeros)
+* usuario: no entra
 
 ---
 
-# UBICACIÓN DEL CALENDARIO
+# SLA DASHBOARD — /helpdesk/sla
 
-NO debe estar en sidebar.
+Compliance dashboard.
 
-Debe abrirse desde:
+Muestra: breached / critical / warning / ok / met
 
-* header
-* modal
-* panel lateral
-* quick view
+Tabla de riesgo por ticket.
 
----
+Permisos:
 
-# TIPOS DE EVENTOS
-
-## Personales
-
-Solo visibles para creador.
+* admin_modulo y jefe_tecnico: acceso completo
+* tecnico: solo sus tickets + lectura general
+* usuario: no entra
 
 ---
 
-## Eventos módulo
+# BASE DE CONOCIMIENTO — /helpdesk/knowledge
 
-Según:
+Biblioteca interna de soluciones.
 
-* rol
-* permisos
+Campos por artículo:
+
+* título
+* contenido
+* categoría
+* etiquetas
+* estado (publicado/borrador)
+* contador de vistas
+* autor
+
+Permisos por rol:
+
+* usuario: leer artículos publicados únicamente
+* tecnico: leer artículos publicados únicamente
+* jefe_tecnico: leer + crear + editar + eliminar + ver borradores
+* admin_modulo: CRUD completo + ver borradores
+* superadmin: CRUD completo + ver borradores
 
 ---
 
-## Eventos globales
+# WORKSPACE DEL TICKET — /helpdesk/ticket/[ticketId]
 
-Visibles para:
+El núcleo operacional del módulo.
 
-* usuarios autorizados
+## Estructura visual
+
+Panel izquierdo: información del ticket, estado, prioridad, SLA, activos relacionados, tickets relacionados, reuniones, asignaciones.
+
+Panel central (timeline): feed operacional unificado con 5 fuentes:
+
+* comentarios (públicos e internos)
+* cambios de estado
+* asignaciones
+* adjuntos
+* aprobaciones
+
+Panel de acción:
+
+* Caja de respuesta
+* Adjuntar archivos
+* Invitar técnicos
+* Agendar reunión
+* Transiciones de estado
 
 ---
 
-# VISUAL EVENTOS
+# FLUJO FSM DEL TICKET
 
-Cada evento muestra:
+Estados:
 
-* avatar creador
-* módulo
+* Abierto
+* En espera
+* En proceso
+* Realizado
+* Cerrado
+* Reproceso
+* Rechazado
+* Resuelto
+
+Las transiciones siguen reglas estrictas por rol.
+
+NO se puede saltar arbitrariamente entre estados.
+
+---
+
+# TRANSITION RULES — FSM CON CONTROL DE ROL
+
+La tabla tickets.transitions tiene columna allowed_roles text[].
+
+Esta columna define qué roles pueden ejecutar cada transición.
+
+El backend valida el rol del actor ANTES de aplicar el cambio de estado.
+
+Si el rol no está permitido: ForbiddenException 403.
+
+Superadmin siempre bypassa.
+
+Matriz de roles por transición:
+
+* Tomar ticket (abierto → en_proceso): tecnico, jefe_tecnico, admin_modulo
+* Reanudar (en_espera → en_proceso): tecnico, jefe_tecnico, admin_modulo
+* Solicitar información (en_proceso → en_espera): tecnico, jefe_tecnico, admin_modulo
+* Marcar realizado (en_proceso → realizado): tecnico, jefe_tecnico, admin_modulo
+* Rechazar (en_proceso → rechazado): jefe_tecnico, admin_modulo
+* Marcar resuelto (en_proceso → resuelto): tecnico, jefe_tecnico, admin_modulo
+* Aprobar y cerrar (realizado → cerrado): usuario, jefe_tecnico, admin_modulo
+* Rechazar solución (realizado → reproceso): usuario, jefe_tecnico, admin_modulo
+* Retomar para reproceso (reproceso → en_proceso): tecnico, jefe_tecnico, admin_modulo
+* Cerrar (resuelto → cerrado): jefe_tecnico, admin_modulo
+* Reabrir (resuelto → en_proceso): jefe_tecnico, admin_modulo
+
+---
+
+# VALIDACIÓN DE CIERRE Y CALIFICACIÓN
+
+Cuando el técnico marca el ticket como "Realizado":
+
+* el usuario creador recibe notificación
+* el usuario ve banner de validación con firma digital
+* puede Aprobar (con firma) o Rechazar (con justificación)
+
+Cuando el usuario aprueba:
+
+* el ticket pasa a estado final
+* el sistema muestra banner de calificación (5 estrellas + comentario opcional)
+* la calificación se asocia al técnico asignado (owner)
+
+Cuando el usuario rechaza:
+
+* el ticket va a Reproceso
+* no se solicita calificación
+
+Si el ticket se cierra automáticamente por timeout (sin respuesta):
+
+* NO se solicita calificación
+
+Regla crítica:
+
+* Solo 1 reproceso permitido
+* Si falla el reproceso: escala automáticamente
+
+---
+
+# SLA DEL HELPDESK
+
+El SLA es un motor operacional inteligente.
+
+NO solo mide tiempo.
+
+Controla:
+
 * prioridad
-* estado
-* fecha
-* color contextual
+* orden de atención
+* escalación
+* pausas
+* vencimientos
+* horarios laborales
+* feriados
+
+El reloj SLA:
+
+* inicia cuando el ticket pasa a "En proceso"
+* se pausa automáticamente en "En espera"
+* se reanuda (y extiende el deadline) al salir de En espera
+* se cierra como "met" o "breached" al llegar a estado final
 
 ---
 
-# FILTROS CALENDARIO
+# REUNIONES OPERACIONALES
 
-Debe permitir:
+Dentro del ticket se puede:
 
-* módulo
-* usuario
-* rol
-* prioridad
-* estado
-* fechas
+* crear reunión
+* generar enlace
+* invitar participantes
+* registrar fecha, URL, motivo
+* asociar al historial del ticket
 
----
-
-# MODOS VISUALIZACIÓN
-
-* Día
-* Semana
-* Mes
-* Agenda
-* Timeline
+La reunión queda auditada y visible en el timeline.
 
 ---
 
-# MULTIROL
+# ASIGNACIÓN DE TÉCNICOS
 
-Un usuario puede tener:
+El sistema soporta:
 
-* múltiples módulos
-* múltiples roles
+* Manual
+* Round Robin
+* Especialización por skills/categorías
+* Híbrida
 
-Debe poder:
+La tabla technician_status maneja disponibilidad en tiempo real.
 
-* cambiar contexto
-* cambiar módulo activo
-
-Esto cambia:
-
-* permisos
-* eventos
-* visualización
-* acciones disponibles
+El técnico puede cambiar su disponibilidad desde /helpdesk/workspace o /helpdesk/tech/[id].
 
 ---
 
-# OBJETIVO FINAL DEL SISTEMA
+# REPORTES HELPDESK — /helpdesk/reports
+
+Endpoint: GET /reporting/helpdesk?moduleId=
+
+3 tabs:
+
+## Tab Operación
+
+* 7 KPI cards (total, activos, hoy, semana, mes, reprocesos, tiempo prom. resolución)
+* Trend chart últimos 30 días
+* Barras por categoría (total + activos por categoría)
+
+## Tab Técnicos
+
+Tabla por técnico con:
+
+* tickets asignados
+* tickets resueltos
+* barra de porcentaje de resolución
+* reprocesos
+* tiempo promedio resolución
+* calificación promedio (estrellas + total reseñas)
+
+## Tab SLA
+
+* Ring de cumplimiento (%)
+* Cards: total, sin SLA, en cumplimiento, vencidos
+* Tabla por prioridad (total, vencidos, SLA promedio en horas)
+
+Además: botón exportar CSV.
+
+---
+
+# HISTORIAL DE ASIGNACIONES
+
+El historial de asignaciones de técnicos está disponible en el timeline del ticket.
+
+Cada evento de asignación aparece como evento tipo "assignment" en la timeline.
+
+NO existe tabla separada technician_assignment_log — la información ya está en ticket_assignments.
+
+---
+
+---
+
+# MÓDULO INVENTARIO — ESTADO ACTUAL
+
+Sistema CMDB-style de gestión de activos físicos.
+
+## Estado: IMPLEMENTADO
+
+Ruta base: /inventory
+
+---
+
+# REGISTRO DE ACTIVOS
+
+Ficha CMDB-style con secciones verticales:
+
+* información general
+* specs dinámicas por field_schema de categoría
+* imágenes (hover-delete)
+* historial de tickets
+* historial de custodia
+* QR único
+
+---
+
+# CAMPOS DINÁMICOS POR CATEGORÍA
+
+Cada categoría puede tener specs personalizadas.
+
+Ejemplo:
+
+* Dispositivos: RAM, procesador, serial
+* Libros: autor, editorial, ISBN
+* Mobiliario: material, dimensiones
+
+---
+
+# FUNCIONALIDADES IMPLEMENTADAS
+
+* CRUD completo de activos
+* Generación y escaneo de QR
+* Bulk import desde CSV
+* Jerarquía padre-hijo entre activos
+* Filtros avanzados: categoría, estado, custodia, búsqueda
+* Galería de imágenes con S3/local
+* Custodia: asignación y baja de responsables
+* Integración con tickets: ticket_assets registra asociaciones bidireccionales
+
+---
+
+# INTEGRACIÓN INVENTARIO + HELPDESK
+
+Bidireccional.
+
+Desde el ticket:
+
+* se puede asociar un activo
+* se hereda información técnica del activo
+* se muestra historial previo de tickets del activo
+
+Desde inventario:
+
+* el activo muestra todos los tickets asociados
+* métricas de fallos
+* historial técnico completo
+
+---
+
+---
+
+# CALENDARIO DEL SISTEMA
+
+Transversal a todos los módulos.
+
+Se abre desde el header (no en sidebar).
+
+Implementado con:
+
+* vista mensual custom con grid propio
+* two-panel layout
+* panel derecho con eventos del día
+* audit log de cambios
+* filtros por módulo y tipo de evento
+* hover preview en días con eventos
+
+Paleta: navy #0e2235, coral #ff5e3a.
+
+---
+
+---
+
+# REPORTES GLOBALES
+
+Ruta: /reports
+
+Endpoints disponibles:
+
+* GET /reporting/sla — métricas SLA global
+* GET /reporting/tickets — resumen tickets (totales, por estado, prioridad, tendencia)
+* GET /reporting/inventory — métricas inventario
+* GET /reporting/audit — log de auditoría
+* GET /reporting/helpdesk — métricas específicas helpdesk
+* GET /reporting/export/tickets — exportar CSV
+
+---
+
+---
+
+# NOTIFICACIONES
+
+Sistema de notificaciones in-app implementado con EventEmitter2.
+
+Eventos activos:
+
+* ticket.created
+* ticket.assigned
+* ticket.validation_required
+* ticket.escalated (notifica a jefe_tecnico del módulo)
+* ticket.status_changed
+
+Canales:
+
+* in-app (bell en header)
+* email (SMTP)
+* WhatsApp (futuro)
+
+Migración a RabbitMQ pendiente para escala.
+
+---
+
+---
+
+# ESTADO GENERAL DEL SISTEMA
+
+## Implementado y funcional
+
+* Auth completa (JWT, OAuth Google, TOTP 2FA, recuperación contraseña)
+* Setup Wizard para superadmin
+* Dashboard principal con módulos
+* Sidebar global y modular
+* Sistema de permisos RBAC 60 permisos
+* PermissionGate en frontend
+* Organigrama visual (React Flow)
+* Config global (empresa, sedes, calendario SLA, tipos estructura)
+* Config por módulo (SLA, categorías, tipos daño, asignación)
+* Módulo Helpdesk completo:
+  - Portal usuario (portal cliente con stats)
+  - Workspace técnico con disponibilidad
+  - Cola de trabajo
+  - SLA dashboard
+  - Centro técnicos
+  - Workspace del ticket (timeline unificada, FSM, adjuntos, reuniones, rating)
+  - FSM con transition_rules validados por rol en API
+  - Knowledge base con permisos por rol
+  - Reportes específicos (operación, técnicos, SLA)
+* Módulo Inventario completo (CMDB, QR, bulk import, custodia, integración tickets)
+* Calendario redesign
+* Reportes globales
+* Papelera con soft-delete 90 días
+* Notificaciones in-app + email
+* Sistema online/offline usuarios
+
+## Pendiente / Futuro
+
+* Gestión Administrativa — módulo en construcción
+* Permisos backend por rol dentro del módulo (validación API granular)
+* RabbitMQ para notificaciones a escala
+* Theming real con design tokens (actualmente colores hardcodeados)
+* PWA / app de escritorio
+* WhatsApp notificaciones
+* Websockets tiempo real para estados y comentarios
+* Redis para caché de permisos
+
+---
+
+---
+
+# REGLAS ARQUITECTÓNICAS CRÍTICAS
+
+## Tickets
+
+Los tickets son registros permanentes.
+
+NO se eliminan.
+
+NO van a papelera.
+
+Se Cancelan o Archivan.
+
+## Roles
+
+Los 60 permisos RBAC actuales son intocables.
+
+Nuevos módulos generan sus propios permisos en un namespace propio.
+
+## Módulos
+
+Solo el superadmin puede crear módulos.
+
+Los módulos built-in (Helpdesk, Inventario) no pueden eliminarse.
+
+## Config
+
+/config solo tiene 4 secciones: General, Sedes, SLA-Tickets, Calendario.
+
+Importar usuarios va en /users.
+
+Módulo/users filtra por módulo asignado.
+
+## Sidebar
+
+El sidebar global SOLO para superadmin y roles con permisos globales.
+
+El sidebar modular para roles con acceso al módulo.
+
+Usuarios normales no ven sidebar global.
+
+---
+
+---
+
+# FLUJO DE SOLICITUDES ADMINISTRATIVAS (Gestión Administrativa)
+
+Si la solicitud corresponde a un módulo específico:
+
+→ Va al admin de ese módulo
+
+Si el módulo no tiene admin:
+
+→ Escala automáticamente al superadmin
+
+Los admins pueden:
+
+* escalar solicitudes
+* reenviar al superadmin
+
+Todo mantiene:
+
+* Auditoría
+* Historial
+* Estado
+* Responsable
+
+---
+
+---
+
+# INTEGRACIÓN DE VIDEOLLAMADAS
+
+Dentro del ticket se puede:
+
+* crear reunión
+* generar enlace
+* invitar participantes
+* registrar participación, fecha, duración
+
+Integración actual: Google Meet API + Google Calendar API.
+
+La implementación es modular para permitir reemplazar proveedor posteriormente.
+
+Usos:
+
+* Colaboración entre técnicos
+* Atención directa al usuario (opcional, activable por módulo)
+
+Las reuniones quedan en el timeline del ticket.
+
+---
+
+---
+
+# CLEAN CODE Y ARQUITECTURA
+
+El sistema mantiene:
+
+* Clean Architecture
+* Separación de responsabilidades
+* Reutilización de componentes
+* Tipado fuerte
+* Modularidad real
+* Guards por permisos
+* Componentes desacoplados
+* Queries optimizadas
+* Estados consistentes
+
+Toda nueva funcionalidad debe analizar:
+
+* impacto UX
+* impacto visual
+* impacto arquitectónico
+* escalabilidad
+* coherencia con permisos
+* coherencia multirol
+
+---
+
+---
+
+# OBJETIVO FINAL
 
 Construir una plataforma:
 
@@ -1589,2399 +1297,3 @@ NO se busca:
 Se busca:
 
 # una plataforma operacional inteligente y moderna.
----------------------------------------------------------------------------------------------------
-
-3. HISTORIAL DE TICKETS
-
-Path conceptual:
-
-/profile/tickets
-OBJETIVO
-
-Permitir al usuario revisar TODOS los tickets que ha creado o gestionado.
-
-Sin importar:
-
-módulo
-estado
-fecha
-INFORMACIÓN MOSTRADA
-
-Cada ticket debe mostrar:
-
-ID
-título
-módulo
-prioridad
-estado
-técnico asignado
-fecha creación
-fecha resolución
-SLA
-tiempo restante/resuelto
-FILTROS
-
-Debe permitir filtrar por:
-
-módulo
-prioridad
-estado
-fechas
-técnico
-SLA
-tipo de ticket
-
-UX/UI HISTORIAL
-
-Debe verse:
-
-limpio
-rápido
-tipo timeline profesional
-
-No:
-
-tablas viejas ERP
-grids saturados
-
-
-4. TEMA
-
-Permite cambiar la apariencia visual del sistema.
-
-NO es solo:
-
-dark/light
-
-Es un sistema de theming real.
-
-OPCIONES DE TEMA
-Tema 1 — White Minimal
-
-Inspirado en:
-
-Notion Light
-Linear Light
-Tema 2 — Pure Dark
-
-Inspirado en:
-
-Discord Dark
-GitHub Dark
-Tema 3 — Default Light
-
-Branding oficial claro:
-
-azul oscuro
-naranja neón
-verde neón
-Tema 4 — Default Dark
-
-Tema principal del sistema.
-
-Estilo:
-
-cyber corporate
-tecnológico
-profesional
-
-Con:
-
-fondo azul casi negro
-superficies azul profundo
-acentos naranja neón
-verde neón
-texto claro
-MODO SISTEMA
-
-También debe existir:
-
-Sistema
-
-que detecta automáticamente:
-
-dark/light del sistema operativo
-IMPORTANTE — ARQUITECTURA DE TEMAS
-
-NO usar:
-
-background: #0e2235;
-
-hardcodeado.
-
-Debe funcionar mediante:
-
-DESIGN TOKENS
-
-Ejemplo:
-
---bg-primary
---bg-secondary
---card-bg
---sidebar-bg
---text-primary
---border-color
---accent-primary
-
-Cada tema redefine los tokens.
-
-PERSISTENCIA DEL TEMA
-
-Debe persistirse en:
-
-DB
-localStorage fallback
-
-Sin:
-
-flickering
-flash blanco
-recarga visual
-
-Debe ser:
-
-SSR-safe
-hydration-safe
-5. DESCARGAR APLICACIÓN
-
-Permite instalar el sistema como:
-
-PWA
-app de escritorio futura
-FUNCIONAMIENTO
-
-Si el navegador soporta instalación PWA:
-
-Debe mostrar:
-
-Instalar aplicación
-
-y ejecutar:
-
-beforeinstallprompt
-OBJETIVO
-
-Permitir:
-
-acceso rápido
-experiencia tipo app nativa
-notificaciones push
-funcionamiento más inmersivo
-FUTURO
-
-Más adelante puede incluir:
-
-cliente escritorio Electron/Tauri
-versión móvil
-offline parcial
-sync background
-UX/UI
-
-Debe verse:
-
-elegante
-contextual
-no invasivo
-
-No:
-
-popup molesto
-banners antiguos
-6. CONFIGURACIÓN PERSONAL
-
-Path:
-
-/profile/settings
-
-o:
-
-/settings
-OBJETIVO
-
-Separar completamente:
-
-Configuración DEL SISTEMA
-de
-Configuración DEL USUARIO
-
-IMPORTANTE
-
-Esto NO pertenece a:
-
-/config
-
-Porque:
-
-/config
-
-es configuración operacional global.
-
-Mientras:
-
-/settings
-
-es experiencia personal.
-
-ESTRUCTURA RECOMENDADA
-/settings
-   ├── perfil
-   ├── apariencia
-   ├── accesibilidad
-   ├── notificaciones
-   ├── sesiones
-   └── preferencias
-CONFIGURACIÓN — PERFIL
-
-Permite configurar:
-
-avatar
-bio
-username
-idioma
-timezone
-formatos regionales
-CONFIGURACIÓN — APARIENCIA
-
-Permite:
-
-cambiar tema
-densidad UI
-comportamiento sidebar
-animaciones
-DENSIDAD UI
-
-Opciones:
-
-Compacta
-Normal
-Amplia
-
-Muy usada en:
-
-sistemas empresariales
-dashboards profesionales
-SIDEBAR BEHAVIOR
-
-Opciones:
-
-siempre expandido
-colapsable
-auto-collapse
-ANIMACIONES
-
-Opciones:
-
-completas
-reducidas
-desactivadas
-ACCESIBILIDAD
-
-Debe incluir:
-
-contraste alto
-texto grande
-reducir motion
-focus visible
-navegación teclado
-NOTIFICACIONES
-
-El usuario puede configurar:
-
-notificaciones email
-in-app
-sonidos
-prioridades
-recordatorios calendario
-SESIONES
-
-Permite:
-
-ver dispositivos conectados
-cerrar sesiones
-revisar accesos recientes
-FUTURO — DASHBOARD PERSONALIZABLE
-
-Más adelante:
-
-mover widgets
-favoritos
-layouts guardados
-ocultar módulos
-
-Inspirado en:
-
-Jira
-Notion
-Linear
-UX/UI SETTINGS
-
-Debe sentirse tipo:
-
-Claude
-Linear
-Vercel
-GitHub
-Raycast
-
-NO:
-
-Bootstrap admin
-ERP viejo
-panel técnico clásico
-7. CERRAR SESIÓN
-
-Debe:
-
-invalidar JWT
-invalidar refresh token
-limpiar caches
-limpiar sockets
-limpiar estado local
-SEGURIDAD
-
-Si existen múltiples sesiones:
-
-Debe permitir:
-
-Cerrar sesión en todos los dispositivos
-UX/UI LOGOUT
-
-Debe ser:
-
-rápido
-seguro
-claro
-
-Sin:
-
-recargas extrañas
-loops
-pantallas blancas
-pérdida visual abrupta
-OBJETIVO GENERAL DEL DROPDOWN
-
-El dropdown del usuario NO debe sentirse como:
-
-menú secundario
-lista básica
-panel técnico
-
-Debe sentirse como:
-
-centro personal operativo
-hub de identidad
-experiencia premium
-panel contextual moderno
-
-Con:
-
-transiciones suaves
-estado persistente
-tiempo real
-theming dinámico
-arquitectura desacoplada
-UX profesional SaaS
-
----------------------------------------------------------------------------------------------------
-
-# CONTINUACIÓN — MÓDULO HELPDESK / SISTEMA DE TICKETS OPERACIONAL
-
-# HELPDESK COMO PLANTILLA BASE
-
-El módulo Helpdesk es:
-
-# el núcleo operacional del sistema.
-
-No es únicamente un módulo de tickets.
-
-Es:
-
-* la base arquitectónica
-* la plantilla operacional
-* el modelo reutilizable
-
-para todos los módulos futuros.
-
----
-
-# FUNCIÓN DEL HELPDESK
-
-El módulo debe permitir:
-
-* creación tickets
-* gestión operacional
-* automatización SLA
-* asignación inteligente
-* colaboración técnica
-* trazabilidad completa
-* reuniones operativas
-* auditoría
-* métricas
-* integración con inventario
-
----
-
-# ESTRUCTURA DE RUTAS DEL MÓDULO
-
-El módulo debe utilizar rutas limpias basadas en slug.
-
-Ejemplo:
-
-`/helpdesk`
-
-NO:
-
-* `/tickets`
-* `/module/helpdesk`
-* `/helpdesk/tickets`
-
-El módulo en sí:
-
-# ya representa el sistema operacional completo.
-
----
-
-# RUTAS INTERNAS HELPDESK
-
-## Inicio operacional
-
-`/helpdesk`
-
-Vista principal operacional.
-
----
-
-## Usuarios módulo
-
-`/helpdesk/users`
-
----
-
-## Roles módulo
-
-`/helpdesk/roles`
-
----
-
-## Reportes módulo
-
-`/helpdesk/reports`
-
----
-
-## Configuración módulo
-
-`/helpdesk/config`
-
----
-
-# VISTA PRINCIPAL HELPDESK
-
-La vista principal NO debe sentirse:
-
-* como una tabla CRUD
-* como una lista administrativa
-* como un panel saturado
-
-Debe sentirse:
-
-* operacional
-* dinámica
-* visual
-* moderna
-* enfocada en flujo de trabajo
-
-Inspiraciones:
-
-* Linear
-* Jira moderno
-* ClickUp
-* GitHub Projects
-* Notion boards
-
----
-
-# COMPORTAMIENTO SEGÚN ROL
-
-## Usuario normal
-
-Solo puede:
-
-* crear tickets
-* visualizar tickets propios
-* responder tickets
-* validar solución
-* visualizar historial
-
-NO ve:
-
-* colas técnicas
-* métricas internas
-* gestión operacional
-* configuraciones
-* usuarios módulo
-
----
-
-## Técnico
-
-Visualiza:
-
-* cola operacional
-* tickets asignados
-* reuniones
-* actividad técnica
-* historial dispositivos
-* métricas personales(opcional mediante toggle)
-
----
-
-## Jefe Técnico
-
-Visualiza además:
-
-* métricas equipo
-* carga técnicos
-* SLA
-* escalaciones
-* reasignaciones
-* supervisión operativa
-
----
-
-## Admin módulo
-
-Control total operacional del módulo.
-
----
-
-# VISTA OPERACIONAL DE TICKETS
-
-La vista principal debe dividirse en:
-
-## 1. Panel lateral operativo
-
-Contiene:
-
-* filtros
-* estados
-* búsqueda
-* accesos rápidos
-* vistas guardadas
-
----
-
-## 2. Área central operacional
-
-Contiene:
-
-* columnas tickets
-* listas dinámicas
-* agrupaciones
-* métricas rápidas
-
----
-
-## 3. Panel contextual dinámico
-
-Muestra:
-
-* detalles rápidos
-* actividad
-* SLA
-* usuario
-* dispositivo
-* historial
-
-Sin abandonar la vista principal.
-
----
-
-# ORGANIZACIÓN VISUAL DE TICKETS
-
-Los tickets deben organizarse dinámicamente por:
-
-* día
-* prioridad
-* SLA
-* técnico
-* estado
-
-Ejemplo:
-
-# Tickets pendientes de ayer
-
-* Alta
-* Media
-* Baja
-
-# Tickets del día actual
-
-* Alta
-* Media
-* Baja
-
----
-
-# ESTADOS DEL TICKET
-
-Estados oficiales:
-
-* Abierto
-* En espera
-* En proceso
-* Realizado
-* Cerrado
-* Reproceso
-* Escalado
-
----
-
-# FLUJO FSM DEL TICKET
-
-# 1. Creación
-
-Usuario registra:
-
-* categoría
-* subcategoría
-* descripción
-* evidencias
-* dispositivo asociado(opcional)
-* ubicación operacional
-
-Estado inicial:
-
-`Abierto`
-
----
-
-# 2. Evaluación automática
-
-El sistema calcula:
-
-* prioridad
-* impacto
-* SLA
-* tiempo estimado
-* score operacional
-
-Basado en:
-
-* tipo daño
-* peso organizacional
-* urgencia
-* impacto
-* historial dispositivo
-* reglas módulo
-
----
-
-# 3. Asignación
-
-Métodos:
-
-* manual
-* round robin
-* especialización
-* híbrida
-
-Validaciones:
-
-* disponibilidad
-* carga laboral
-* habilidades
-* horario
-* ausencias
-
----
-
-# 4. Inicio operacional
-
-Cuando técnico revisa:
-
-estado:
-
-`En espera`
-
-Cuando acepta y comienza:
-
-estado:
-
-`En proceso`
-
-Aquí:
-
-# inicia el SLA real.
-
----
-
-# 5. Resolución
-
-Técnico debe:
-
-* documentar solución
-* subir evidencias
-* actualizar actividad
-* registrar tiempo
-* registrar cambios
-
-Luego:
-
-estado:
-
-`Realizado`
-
----
-
-# 6. Validación usuario
-
-Usuario recibe:
-
-* notificación interna
-* email
-* posible WhatsApp
-
-Visualiza:
-
-* solución
-* evidencias
-* historial
-* reuniones
-* firma digital
-
----
-
-# 7. Cierre
-
-Si usuario acepta:
-
-estado:
-
-`Cerrado`
-
----
-
-# 8. Reproceso
-
-Si usuario rechaza:
-
-debe enviar:
-
-* justificación
-* evidencias
-
-Estado:
-
-`Reproceso`
-
----
-
-# REGLA CRÍTICA
-
-Solo puede existir:
-
-# UN reproceso.
-
----
-
-# ESCALAMIENTO
-
-Si vuelve a fallar:
-
-* escala automáticamente
-* jefe técnico interviene
-* prioridad aumenta
-* se reasigna
-
----
-
-# VISUAL DETALLE DEL TICKET
-
-La visual del ticket es:
-
-# el núcleo operacional del módulo.
-
-Debe sentirse:
-
-* moderna
-* colaborativa
-* técnica
-* clara
-* operacional
-
----
-
-# ESTRUCTURA VISUAL DEL TICKET
-
-## Zona superior
-
-Contiene:
-
-* ID ticket
-* estado
-* prioridad
-* SLA
-* usuario creador
-* técnico asignado
-* acciones rápidas
-
----
-
-## Zona central
-
-Se divide en:
-
-### Timeline operacional
-
-Muestra:
-
-* cambios estado
-* comentarios
-* evidencias
-* reuniones
-* actividad
-* logs
-
-Tipo:
-
-* GitHub timeline
-* Linear activity
-* Discord-like operational feed
-
----
-
-### Panel contextual derecho
-
-Muestra:
-
-* dispositivo
-* historial equipo
-* tickets relacionados
-* SLA
-* participantes
-* reuniones
-* métricas rápidas
-
----
-
-# HISTORIAL DEL DISPOSITIVO
-
-Cuando ticket está asociado a dispositivo:
-
-el técnico puede visualizar:
-
-* historial completo
-* daños anteriores
-* tickets previos
-* técnicos anteriores
-* frecuencia fallos
-
----
-
-# TICKETS RELACIONADOS
-
-Si problema coincide con otro:
-
-el sistema puede sugerir:
-
-* tickets similares
-* soluciones anteriores
-* técnicos relacionados
-
----
-
-# COLABORACIÓN TÉCNICA
-
-El ticket permite:
-
-# invitar usuarios.
-
-No solo comentar.
-
----
-
-# TIPOS DE PARTICIPACIÓN
-
-## Trabajo cooperativo
-
-Se forma:
-
-# un equipo operacional.
-
-Todos pueden:
-
-* responder
-* subir evidencias
-* trabajar conjuntamente
-
----
-
-## Supervisión
-
-Usuario invitado:
-
-* observa
-* valida
-* supervisa
-
----
-
-## Resolución avanzada
-
-Para:
-
-* troubleshooting complejo
-* soporte especializado
-
----
-
-# REUNIONES OPERACIONALES
-
-El ticket permite crear reuniones.
-
-Integraciones futuras:
-
-* Google Meet
-* Microsoft Teams
-* Jitsi
-
-La reunión queda:
-
-* registrada
-* auditada
-* asociada ticket
-
----
-
-# VISUAL USUARIO FINAL
-
-El usuario NO visualiza:
-
-* panel técnico
-* métricas internas
-* herramientas administrativas
-
-Solo ve:
-
-* estado
-* timeline
-* evidencias
-* reuniones
-* respuesta técnica
-
----
-
-# INVENTARIO Y HELPDESK
-
-El sistema Helpdesk depende fuertemente de Inventario.
-
-Los tickets pueden asociarse a:
-
-* dispositivos
-* activos
-* usuarios
-* ubicaciones
-
----
-
-# RELACIÓN OPERACIONAL
-
-Inventario proporciona:
-
-* contexto técnico
-* historial activos
-* QR
-* trazabilidad
-* relación usuario-dispositivo
-
-Helpdesk proporciona:
-
-* actividad operacional
-* incidencias
-* mantenimientos
-* fallos
-* soporte
-
----
-
-# MOTOR SLA
-
-El SLA NO es únicamente tiempo.
-
-Es:
-
-# un motor operacional inteligente.
-
-Define:
-
-* prioridad
-* asignación
-* orden cola
-* escalamiento
-* impacto
-* alertas
-
----
-
-# REPORTES HELPDESK
-
-Debe incluir:
-
-* tickets resueltos
-* tiempos SLA
-* rendimiento técnicos
-* reprocesos
-* escalaciones
-* satisfacción usuarios
-* métricas dispositivos
-* carga operacional
-
----
-
-# NOTIFICACIONES
-
-Eventos importantes:
-
-* ticket creado
-* ticket asignado
-* SLA próximo vencer
-* ticket realizado
-* reproceso
-* reunión creada
-* comentario importante
-* escalamiento
-
-Canales:
-
-* in-app
-* email
-* WhatsApp(futuro)
-
----
-
-# WEBSOCKETS / TIEMPO REAL
-
-Debe actualizarse en tiempo real:
-
-* estados
-* comentarios
-* actividad
-* reuniones
-* usuarios online
-* SLA
-* asignaciones
-
----
-
-# AUDITORÍA HELPDESK
-
-Debe registrar:
-
-* cambios estado
-* cambios prioridad
-* reasignaciones
-* reuniones
-* reprocesos
-* cambios SLA
-* acciones administrativas
-
----
-
-# OBJETIVO FINAL HELPDESK
-
-Construir:
-
-# un sistema operacional moderno de soporte empresarial.
-
-No un CRUD de tickets.
-
-Debe sentirse:
-
-* vivo
-* colaborativo
-* inteligente
-* operacional
-* automatizado
-* visualmente moderno
-* escalable
-* desacoplado
-* profesional
-
-Y servir como:
-
-# plantilla arquitectónica para todos los módulos futuros.
-
------------------------------------------------------
-
-# 🎟️ MÓDULO DE MESA DE AYUDA — CONTEXTO FUNCIONAL COMPLETO
-
-El módulo de Mesa de Ayuda es el núcleo operacional del sistema.
-
-NO es únicamente un CRUD de tickets.
-
-Es un sistema inteligente compuesto por:
-
-* motor FSM (flujo de estados)
-* motor SLA dinámico
-* automatización operacional
-* asignación inteligente
-* trazabilidad
-* integración con inventario
-* sistema de priorización
-* validación de resolución
-* auditoría completa
-* métricas operacionales
-
-El módulo está diseñado para funcionar incluso si otros módulos presentan fallos parciales.
-
-Por ejemplo:
-si Inventario deja de funcionar temporalmente,
-Mesa de Ayuda debe seguir operando sin bloquear tickets.
-
-En ese caso:
-el ticket puede trabajar únicamente con:
-
-* código QR
-* identificador manual
-* referencia textual del activo
-
-sin depender obligatoriamente del módulo Inventario.
-
----
-
-# 🎟️ OBJETIVO DEL MÓDULO
-
-Centralizar:
-
-* incidentes
-* daños
-* solicitudes técnicas
-* mantenimientos
-* soporte operativo
-* trazabilidad de atención
-
-Todo bajo:
-
-* automatización
-* SLA
-* control operacional
-* validación real de solución
-
----
-
-# 🧠 NATURALEZA REAL DEL SISTEMA
-
-El sistema realmente funciona como:
-
-* Sistema de tickets avanzado
-* Motor FSM (Finite State Machine)
-* Motor SLA dinámico
-* Sistema de workflows
-* Plataforma modular
-* Sistema de trazabilidad
-* Sistema operativo empresarial
-
-NO es solamente:
-“crear tickets”.
-
----
-
-# 🔄 FLUJO COMPLETO DEL TICKET (FSM)
-
-El ticket funciona mediante estados controlados.
-
-NO se puede saltar arbitrariamente entre estados.
-
-Cada transición:
-
-* valida permisos
-* registra auditoría
-* dispara eventos
-* recalcula SLA
-* actualiza métricas
-* emite notificaciones
-
----
-
-# 🔹 1. CREACIÓN DEL TICKET
-
-El usuario registra:
-
-* categoría
-* subcategoría
-* tipo de daño
-* descripción
-* evidencias
-* ubicación organizacional
-* activo relacionado (opcional)
-* código QR (opcional)
-* prioridad manual (si el módulo lo permite)
-
-La ubicación organizacional depende de la estructura creada por la empresa.
-
-Ejemplos:
-
-* departamento
-* área
-* bloque
-* ambiente
-* laboratorio
-* salón
-* cubículo
-
-Todo esto es dinámico según el organigrama definido por el superadmin.
-
----
-
-# 🟢 ESTADO INICIAL
-
-Todo ticket inicia como:
-
-```txt
-Abierto
-```
-
----
-
-# 🔹 2. MOTOR SLA — CÁLCULO AUTOMÁTICO
-
-Cuando se crea un ticket:
-
-el sistema calcula automáticamente:
-
-* prioridad
-* tiempo estimado
-* tiempo límite SLA
-* impacto operacional
-* orden de atención
-* reglas de escalación
-
----
-
-# 📊 PRIORIDADES
-
-El sistema maneja:
-
-* Baja
-* Media
-* Alta
-* Crítica
-
-La prioridad puede definirse:
-
-## 1. Automática
-
-Basada en:
-
-* categoría
-* tipo de daño
-* impacto
-* urgencia
-* peso organizacional
-* ubicación
-* cargo afectado
-* criticidad del activo
-
----
-
-## 2. Manual
-
-El usuario propone prioridad.
-
-Luego:
-el técnico o coordinador puede:
-
-* aceptarla
-* modificarla
-* recalcularla
-
----
-
-## 3. Híbrida
-
-Combina:
-
-* prioridad sugerida
-* cálculo automático
-
----
-
-# 🧮 MOTOR DE PRIORIDAD
-
-La prioridad NO es estática.
-
-El sistema utiliza un score operacional dinámico.
-
-Ejemplo:
-
-```txt
-Prioridad final =
-peso daño +
-peso ubicación +
-peso cargo +
-urgencia +
-impacto
-```
-
----
-
-# ⚙️ COMPONENTES DEL SLA
-
-El SLA NO solo mide tiempo.
-
-También controla:
-
-* prioridad
-* asignación
-* orden de atención
-* escalación
-* pausas
-* vencimientos
-* horarios laborales
-* feriados
-* métricas
-
----
-
-# 📅 SLA Y CALENDARIO OPERACIONAL
-
-El sistema utiliza:
-
-* horarios laborales
-* días festivos
-* pausas operacionales
-* disponibilidad
-
-Integrado con:
-
-* calendario SLA
-* feriados nacionales (ej: Nager.Date API)
-* configuración empresarial
-
-Ejemplo:
-si un ticket vence fuera de horario laboral:
-el SLA se pausa automáticamente.
-
----
-
-# 🔹 3. ASIGNACIÓN DEL TICKET
-
-El sistema soporta múltiples estrategias.
-
----
-
-# ✔ MÉTODOS DE ASIGNACIÓN
-
-## 🔸 Round Robin
-
-Distribución equitativa secuencial.
-
-Ejemplo:
-
-```txt
-Técnico 1 → Ticket 1
-Técnico 2 → Ticket 2
-Técnico 3 → Ticket 3
-```
-
-Luego:
-reinicia el ciclo.
-
----
-
-## 🔸 Asignación por especialización
-
-Basada en:
-
-* skills
-* categorías
-* subcategorías
-* roles técnicos
-
-Ejemplo:
-
-```txt
-Hardware → técnico hardware
-Software → técnico software
-Redes → técnico redes
-```
-
----
-
-## 🔸 Asignación manual
-
-Realizada por:
-
-* coordinador
-* jefe técnico
-* administrador módulo
-
----
-
-## 🔸 Asignación híbrida/unificada
-
-Combina:
-
-* automática
-* manual
-* especialización
-
-Permite reglas personalizadas. el hibrido permite al admin del modulo o jefe tecnico cuales combinaciones posibles desea
-
----
-
-# ✔ VALIDACIONES ANTES DE ASIGNAR
-
-Antes de asignar:
-el sistema valida:
-
-* disponibilidad
-* carga de trabajo
-* horario laboral
-* ausencias
-* incapacidades
-* vacaciones
-* permisos
-* categorías permitidas
-* máximo tickets simultáneos
-
----
-
-# 🔹 4. COLA DE TRABAJO DEL TÉCNICO
-
-Cada técnico tiene una cola dinámica.
-
-NO es una simple lista.
-
-La cola se organiza automáticamente.
-
----
-
-# 📊 ORDEN DE EJECUCIÓN
-
-## Prioridad operacional:
-
-### Tickets pendientes del día anterior
-
-* Alta
-* Media
-* Baja
-
-### Tickets actuales
-
-* Alta
-* Media
-* Baja
-
-aunque tambien en ves de hacerlo por fechas explicitas de tiempo de trabajo se puede hacer que el admin o jefe tecnico decidan si mejor implementarlo 24 horas, pero se toma en el sla desde que el ticket pasa a en proceso y no cuando esta en espera, para facilitar que porque se creo un dia antes por la noche un ticket entonces al tomar la fecha de creacion en cuenta esta afecte el sla para el tecnico
-
----
-
-# 🔥 REORDENAMIENTO DINÁMICO
-
-La cola cambia automáticamente según:
-
-* SLA próximo a vencer
-* prioridad recalculada
-* escalaciones
-* reprocesos
-* cambios operacionales
-
----
-
-# 🔹 5. EJECUCIÓN DEL TICKET
-
-Durante la atención:
-
-el técnico:
-
-* documenta acciones
-* adjunta evidencias
-* registra solución
-* cambia estados
-* puede pausar trabajo
-* puede solicitar información
-
----
-
-# 🎨 ESTADOS DEL SISTEMA
-
-```txt
-🟢 Abierto
-🟡 En espera
-🔵 En proceso
-🟣 Realizado
-⚪ Cerrado
-🔴 Reproceso
-```
-
----
-
-# 🟡 EN ESPERA
-
-Utilizado cuando:
-
-* falta información
-* depende de terceros
-* requiere aprobación
-* espera repuesto
-* espera respuesta usuario
-
-El SLA puede:
-
-* pausarse
-* extenderse
-* recalcularse
-
-según configuración.
-
----
-
-# 🔵 EN PROCESO
-
-El ticket está siendo trabajado activamente.
-
----
-
-# 🟣 REALIZADO
-
-El técnico indica:
-“la solución fue aplicada”.
-
-PERO:
-el ticket aún NO está cerrado.
-
----
-
-# 🔐 VALIDACIÓN OBLIGATORIA DE CIERRE
-
-Regla crítica del sistema:
-
-Un ticket SOLO se cierra cuando:
-
-* el técnico finaliza
-* el usuario valida la solución
-
----
-
-# ✍️ FIRMA DIGITAL
-
-El usuario valida mediante:
-
-* token temporal
-* firma digital
-* confirmación segura
-
----
-
-# 🔔 NOTIFICACIONES
-
-Cuando el técnico finaliza:
-
-el usuario recibe:
-
-* notificación interna
-* email
-* WhatsApp (opcional)
-
-Incluyendo:
-
-* solución aplicada
-* evidencias
-* resumen técnico
-* token de validación
-
----
-
-# 🔹 ESCENARIOS DE CIERRE
-
-## ✅ APROBACIÓN
-
-El usuario acepta.
-
-Resultado:
-
-```txt
-⚪ Cerrado
-```
-
----
-
-## ⏳ SIN RESPUESTA
-
-Si el usuario no responde:
-
-el sistema puede:
-
-* cerrar automáticamente
-* registrar cierre automático
-* auditar evento
-
-Tiempo configurable.
-
-Por defecto:
-2 días.
-
----
-
-## ❌ RECHAZO
-
-El usuario rechaza la solución.
-
-Debe:
-
-* justificar
-* adjuntar evidencia
-
-Resultado:
-
-```txt
-🔴 Reproceso
-```
-
----
-
-# 🔁 6. REPROCESO
-
-El ticket vuelve al técnico.
-
-La solución anterior:
-
-* se invalida
-* queda auditada
-* se conserva en historial
-
----
-
-# 🔴 REGLA CRÍTICA
-
-Solo se permite:
-
-```txt
-1 reproceso
-```
-
-Esto evita:
-
-* loops infinitos
-* abuso operacional
-* tickets eternos
-
----
-
-# 🔺 7. ESCALAMIENTO
-
-Si vuelve a rechazarse:
-
-el ticket:
-
-* escala automáticamente
-* cambia prioridad
-* puede reasignarse
-* requiere resolución obligatoria
-
----
-
-# 📈 PRIORIDAD MÁXIMA
-
-La prioridad máxima por escalación es:
-
-```txt
-Alta
-```
-
-Nunca:
-
-```txt
-Crítica
-```
-
-Porque:
-crítica queda reservada para eventos realmente críticos.
-
-ADEMAS CABE RECALCAR:
-
-Se pueden hacer "asociaciones/grupos" para hacer un ticket, el que tiene el ticket invita a otro y este decide si participar, existen las llamadas via meet para diferentes casos, llamadas con usuario afectado, con el grupo, con un evaluador etc
-
-en la visual del ticket se observa tanto el documento de toda la info del dispositivo(sacada de inventario+historial de tickets) si tuvo un ticket reciente (ejem:1 mes) y el nuevo ticket conserva categoria etc se puede hacer seguimiento via llamada directamente en caso de que el tecnico lo quiera o requiera, aunque esto ya se observa en el historial de tikets pues se debe documentar muy bien
-
----
-
-# 📦 MÓDULO DE INVENTARIO — CONTEXTO FUNCIONAL COMPLETO
-
-Inventario NO es solamente una lista de activos.
-
-Es un sistema de:
-
-* trazabilidad
-* relación operacional
-* control físico
-* asociación organizacional
-* historial técnico
-* QR inteligente
-* jerarquía de activos
-
----
-
-# 🎯 OBJETIVO DEL INVENTARIO
-
-Controlar:
-
-* activos físicos
-* dispositivos
-* componentes
-* relaciones
-* historial técnico
-* ubicación organizacional
-
----
-
-# 🧾 REGISTRO DE ACTIVOS
-
-Cada activo puede contener:
-
-* nombre
-* descripción
-* categoría
-* subcategoría
-* marca
-* modelo
-* serial
-* estado
-* imágenes
-* ubicación
-* responsable
-* garantías
-* observaciones
-* documentación
-
----
-
-# 📚 INVENTARIO DINÁMICO
-
-El sistema NO debe limitarse solo a dispositivos.
-
-Debe permitir:
-múltiples tipos de inventario.
-
-Ejemplos:
-
-* dispositivos
-* libros
-* mobiliario
-* herramientas
-* laboratorio
-* equipos médicos
-
-Cada categoría:
-puede tener campos personalizados.
-
----
-
-# 🧩 CAMPOS DINÁMICOS
-
-Ejemplo:
-
-Inventario libros:
-
-* autor
-* editorial
-* ISBN
-
-Inventario dispositivos:
-
-* RAM
-* procesador
-* serial
-
-Esto evita:
-estructuras rígidas.
-
----
-
-# 🔳 GENERACIÓN QR
-
-Cada activo genera automáticamente:
-
-```txt
-QR único
-```
-
-Permite:
-
-* identificación rápida
-* impresión
-* escaneo
-* asociación inmediata
-
----
-
-# 🖨️ GESTIÓN MASIVA QR
-
-Debe permitir:
-
-* selección múltiple
-* generación masiva
-* impresión masiva
-* exportación
-
----
-
-# 🔗 RELACIÓN ENTRE ACTIVOS
-
-Los activos pueden relacionarse jerárquicamente.
-
-Ejemplo:
-
-```txt
-Computador
- ├── Mouse
- ├── Teclado
- └── Monitor
-```
-
-Modelo:
-
-```txt
-Activo padre → activos hijos
-```
-
----
-
-# 📜 HISTORIAL OPERACIONAL
-
-Cada activo posee historial completo.
-
-Incluye:
-
-* tickets asociados
-* mantenimientos
-* cambios
-* traslados
-* asignaciones
-* incidentes
-* auditoría
-
----
-
-# 🔍 BÚSQUEDA Y FILTROS
-
-El inventario debe soportar:
-
-* filtros avanzados
-* búsqueda global
-* búsqueda por QR
-* búsqueda por serial
-* búsqueda por usuario
-* búsqueda por ubicación
-* paginación
-* ordenamiento
-
----
-
-# 🔗 INTEGRACIÓN INVENTARIO + TICKETS
-
-La integración es bidireccional.
-
----
-
-# DESDE EL TICKET
-
-Un ticket puede:
-
-* asociarse a un activo
-* heredar información
-* mostrar historial técnico
-
----
-
-# DESDE INVENTARIO
-
-Un activo puede mostrar:
-
-* todos los tickets
-* frecuencia de fallos
-* historial técnico
-* métricas
-* mantenimientos
-
----
-
-# 🧠 TRAZABILIDAD TOTAL
-
-Resultado final:
-
-El sistema puede reconstruir:
-todo el ciclo de vida del activo.
-
----
-
-# ⚙️ PERSONALIZACIÓN DEL SISTEMA
-
-Cada módulo puede configurar dinámicamente:
-
-* categorías
-* subcategorías
-* tipos de daño
-* SLA
-* flujos
-* reglas
-* prioridades
-* roles
-* automatizaciones
-* asignaciones
-* estados
-* campos personalizados
-
-SIN modificar código.
-
----
-
-# 📊 REPORTES Y MÉTRICAS
-
-El sistema debe generar métricas reales.
-
-Ejemplos:
-
-* cumplimiento SLA
-* tickets resueltos
-* rendimiento técnicos
-* activos con más incidencias
-* tiempos promedio
-* reprocesos
-* escalaciones
-* carga operacional
-
----
-
-# 🔐 AUDITORÍA
-
-Toda acción crítica debe auditarse.
-
-Ejemplo:
-
-* cambios estado
-* asignaciones
-* escalaciones
-* cambios SLA
-* reprocesos
-* cierres
-* edición activos
-* eliminación activos
-
----
-
-# 🎯 OBJETIVO FINAL
-
-El sistema debe sentirse:
-
-* enterprise
-* modular
-* inteligente
-* dinámico
-* desacoplado
-* automatizado
-* escalable
-* profesional
-
-NO como:
-un sistema básico de tickets.
-
-Debe funcionar como:
-una plataforma operacional completa.
-
-
---------------------------
-
-## Gestión Administrativa
-
-Path base:
-`/modules/administrative-management`
-
-Módulo unificado de solicitudes internas administrativas.
-
-NO deben existir dos módulos separados tipo:
-
-* Soporte técnico administrativo
-* Gestión administrativa
-
-Todo debe centralizarse aquí.
-
----
-
-# FUNCIONES DE GESTIÓN ADMINISTRATIVA
-
-El usuario podrá solicitar:
-
-* Cambio de rol
-* Acceso a módulos
-* Corrección de información
-* Cambio de sede
-* Reactivación de cuenta
-* Escalamiento
-* Ajuste de permisos
-* Problemas de acceso
-
----
-
-# FLUJO DE SOLICITUDES
-
-## Reglas
-
-Si la solicitud corresponde a un módulo específico:
-
-→ Va al admin de ese módulo
-
-Si el módulo no tiene admin:
-
-→ Escala automáticamente al superadmin
-
-Los admins:
-
-* También pueden escalar solicitudes
-* Pueden reenviar al superadmin
-
-Todo debe mantener:
-
-* Auditoría
-* Historial
-* Estado
-* Responsable
-
-# MÉTRICAS Y REPORTES
-
-Path: `/reports`
-
-## Enfoque
-
-El sistema tendrá dashboards en tiempo real.
-
----
-
-
-# PAPELERA(de pronto cambie)
-
-Path: `/trash`
-
-## Reglas
-
-Soft delete:
-
-* 90 días
-
-Luego:
-
-* Hard delete automático
-
-sino:
-
-* si el usuario elimina antes debe colocar su contraseña 
-(solo superadmin o admin pueden eliminar estos apartados)
-el superadmin todo lo global y lo del admin, el admin solo el del
-modulo que le corresponde, recordar que se pueden seleccionar muchos a la
-vez
-
----
-
-# NOTIFICACIONES DE ELIMINACIÓN
-
-Antes del hard delete:
-
-El sistema debe:
-
-* Notificar progresivamente
-* Mostrar alertas
-* Recordar expiración próxima
-
----
-
-# AVATAR Y PERFIL
-
-El avatar:
-
-* Ya NO usa filesystem
-* Se almacena en PostgreSQL como base64/webp
-* Se puede:
-
-  * subir
-  * tomar desde cámara
-  * recortar/redimensionar
-  * ajustar al circulo del perfil
-
----
-
-# APIs Y DATOS EXTERNOS
-
-## Google Maps
-
-Usado para:
-
-* Sesiones activas
-* Ubicación aproximada
-
----
-
-## APIs de ciudades/departamentos
-
-Usadas para:
-
-* Formularios de perfil
-* Sedes
-* Información organizacional
----
-
-# CLEAN CODE Y ARQUITECTURA
-
-El sistema debe mantener:
-
-* Clean Architecture
-* Separación de responsabilidades
-* Reutilización de componentes
-* Eliminación de duplicados
-* Tipado fuerte
-* Modularidad real
-* Guards por permisos
-* Componentes desacoplados
-* Queries optimizadas
-* Estados consistentes
-
-Toda nueva funcionalidad debe analizar:
-
-* impacto UX
-* impacto visual
-* impacto arquitectónico
-* escalabilidad
-* coherencia con permisos
-* coherencia multirol
-
-# INTEGRACIÓN DE VIDEOLLAMADAS Y COLABORACIÓN EN TICKETS
-
-## Objetivo
-
-El sistema deberá permitir colaboración en tiempo real dentro de los tickets, especialmente en:
-
-* Casos complejos
-* Escalamientos
-* Soporte cooperativo
-* Validaciones técnicas
-* Atención directa al usuario
-
-La funcionalidad debe integrarse principalmente dentro del módulo:
-
-Path:
-`/modules/helpdesk`
-
----
-
-# VIDEOLLAMADAS DENTRO DEL SISTEMA
-
-## Integración prevista
-
-Se planea integrar servicios de videollamada como:
-
-* Google Meet API
-* Google Calendar API
-* Alternativas futuras desacopladas
-
-La implementación debe diseñarse desde el inicio de forma modular para permitir reemplazar el proveedor posteriormente.
-
----
-
-# USOS DE LAS VIDEOLLAMADAS
-
-## 1. Colaboración entre técnicos
-
-Un técnico podrá:
-
-* Solicitar apoyo de otro técnico
-* Crear una videollamada colaborativa
-* Compartir contexto del ticket
-* Resolver incidentes conjuntamente
-
-Especialmente útil para:
-
-* Tickets críticos
-* Casos especializados
-* Reprocesos
-* Escalamientos
-
----
-
-## 2. Atención directa al usuario (evaluación futura)
-
-Opcionalmente, el sistema podrá permitir:
-
-* Videollamadas entre técnico y usuario final
-
-Pero esto debe evaluarse cuidadosamente porque:
-
-* Puede aumentar carga operativa
-* Puede romper flujo asincrónico del sistema
-* No todos los tickets requieren contacto directo
-
-Por ahora, debe diseñarse como:
-
-* Funcionalidad opcional
-* Activable por módulo o política
-* Controlada por permisos
-
----
-
-# FUNCIONAMIENTO ESPERADO
-
-Dentro del ticket se podrá:
-
-* Crear reunión
-* Generar enlace automáticamente
-* Invitar participantes
-* Registrar quién participó
-* Registrar fecha y duración
-* Asociar la reunión al historial operativo del ticket
-
----
-
-# RESTRICCIONES Y PERMISOS
-
-Las videollamadas deberán respetar:
-
-* Roles globales
-* Roles por módulo
-* Permisos específicos
-
-Ejemplo:
-
-* Técnicos pueden iniciar reuniones internas
-* Admins pueden unirse o supervisar
-* Usuarios finales solo pueden entrar si el ticket lo permite
-
----
-
-# TRAZABILIDAD DE VIDEOLLAMADAS
-
-Cada reunión debe registrar:
-
-* Ticket asociado
-* Creador
-* Participantes
-* Fecha
-* Duración
-* Estado
-* Motivo de la llamada
-
-Esto permitirá:
-
-* Auditoría
-* Métricas
-* Productividad
-* Historial operativo
-
----
-
-# CALIFICACIÓN DEL SERVICIO AL CERRAR TICKETS
-
-## Regla obligatoria del cierre
-
-Cuando un ticket finalice y sea validado por el usuario:
-
-El sistema deberá solicitar una evaluación del servicio.
-
----
-
-# OBJETIVO DE LA CALIFICACIÓN
-
-La calificación permitirá medir:
-
-* Calidad de atención
-* Rendimiento técnico
-* Satisfacción del usuario
-* Tiempos de respuesta
-* Eficiencia operativa
-
-Y servirá como base para:
-
-* Métricas
-* Reportes
-* KPIs
-* Rankings internos
-* Evaluaciones operativas
-
----
-
-# INFORMACIÓN DE LA CALIFICACIÓN
-
-El usuario podrá evaluar:
-
-* Atención recibida
-* Claridad de la solución
-* Tiempo de respuesta
-* Calidad técnica
-* Experiencia general
-
----
-
-# SISTEMA DE PUNTUACIÓN
-
-La calificación podrá incluir:
-
-* Escala numérica
-* Estrellas
-* Etiquetas rápidas
-* Comentario opcional
-
-Ejemplo:
-
-* Excelente
-* Buena
-* Regular
-* Mala
-
----
-
-# TRAZABILIDAD DEL TÉCNICO
-
-Cada técnico o responsable tendrá métricas acumuladas relacionadas con:
-
-* Tickets cerrados
-* Tiempo promedio de resolución
-* Reprocesos
-* Escalamientos
-* SLA cumplidos
-* Calificación promedio
-* Satisfacción del usuario
-
----
-
-# INTEGRACIÓN CON REPORTES
-
-Las calificaciones deben integrarse en:
-
-Path:
-`/reports`
-
-Para permitir:
-
-* Comparativas entre técnicos
-* Tendencias de satisfacción
-* Calidad por módulo
-* Indicadores de servicio
-* Rendimiento histórico
-
----
-
-# CONSIDERACIONES IMPORTANTES
-
-La calificación:
-
-* NO debe bloquear el cierre definitivo eternamente
-* Debe tener expiración configurable
-* Debe evitar abuso o spam
-* Debe permitir análisis estadístico posterior
-
-El diseño debe priorizar:
-
-* Simplicidad
-* Rapidez
-* Bajo número de clics
-* UX limpia
-* Métricas reutilizables para analítica futura
