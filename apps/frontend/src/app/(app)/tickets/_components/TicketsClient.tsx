@@ -20,6 +20,8 @@ import {
   type CreateTicketDto, type AssetSearchResult,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
+  TICKET_PRIORITY_ORDER, TICKET_PRIORITIES,
+  TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
 } from '@/services/tickets.service';
 import { systemConfigService, type TicketCategory as DamageCategory, type DamageType } from '@/services/system-config.service';
 import { modulesService } from '@/services/modules.service';
@@ -31,8 +33,8 @@ import type { CurrentUser } from '@/types/user.types';
 import type { ModuleTechnician, TechAvailStatus } from '@/types/module.types';
 import styles from '../tickets.module.css';
 
-const PRIORITIES: TicketPriority[] = ['baja', 'media', 'alta', 'critica'];
-const PRIORITY_ORDER: Record<TicketPriority, number> = { critica: 0, alta: 1, media: 2, baja: 3 };
+const PRIORITIES = TICKET_PRIORITIES;
+const PRIORITY_ORDER = TICKET_PRIORITY_ORDER;
 
 type QuickFilter = 'waiting' | 'mine' | 'breached' | 'unassigned' | 'in_espera' | 'approvals';
 
@@ -96,23 +98,8 @@ function Stars({ rating, size = 13 }: { rating: number; size?: number }) {
 
 /* ─────────────────── Availability constants ─────────────────────────────── */
 
-const AVAIL_COLORS: Record<TechAvailStatus, string> = {
-  disponible:    '#20c933',
-  ocupado:       '#f59e0b',
-  en_reunion:    '#3b82f6',
-  fuera_horario: '#94a3b8',
-  ausente:       '#ef4444',
-  offline:       '#64748b',
-};
-
-const AVAIL_LABELS: Record<TechAvailStatus, string> = {
-  disponible:    'Disponible',
-  ocupado:       'Ocupado',
-  en_reunion:    'En reunión',
-  fuera_horario: 'Fuera de horario',
-  ausente:       'Ausente',
-  offline:       'Offline',
-};
+const AVAIL_COLORS = TECH_AVAIL_COLORS;
+const AVAIL_LABELS = TECH_AVAIL_LABELS;
 
 /* ─────────────────── Create ticket modal ────────────────────────────────── */
 

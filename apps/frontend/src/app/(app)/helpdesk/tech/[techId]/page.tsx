@@ -16,6 +16,7 @@ import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app
 import {
   TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
+  TICKET_PRIORITY_ORDER, TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
 } from '@/services/tickets.service';
 import type { TicketPriority } from '@/services/tickets.service';
 import type { TechAvailStatus } from '@/types/module.types';
@@ -32,15 +33,8 @@ function isToday(dateStr: string) {
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
 }
 
-const AVAIL_COLORS: Record<TechAvailStatus, string> = {
-  disponible: '#20c933', ocupado: '#f59e0b', en_reunion: '#3b82f6',
-  fuera_horario: '#94a3b8', ausente: '#ef4444', offline: '#64748b',
-};
-
-const AVAIL_LABELS: Record<TechAvailStatus, string> = {
-  disponible: 'Disponible', ocupado: 'Ocupado', en_reunion: 'En reunión',
-  fuera_horario: 'Fuera de horario', ausente: 'Ausente', offline: 'Offline',
-};
+const AVAIL_COLORS = TECH_AVAIL_COLORS;
+const AVAIL_LABELS = TECH_AVAIL_LABELS;
 
 function Stars({ rating, size = 13 }: { rating: number; size?: number }) {
   const rounded = Math.round(rating * 2) / 2;
@@ -253,8 +247,7 @@ export default function TechProcessPage() {
 
   const { previous, today } = useMemo(() => {
     const all = assigned ?? [];
-    const PRIORITY_ORDER: Record<string, number> = { critica: 0, alta: 1, media: 2, baja: 3 };
-    const by = (a: any, b: any) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
+    const by = (a: any, b: any) => (TICKET_PRIORITY_ORDER[a.priority as TicketPriority] ?? 9) - (TICKET_PRIORITY_ORDER[b.priority as TicketPriority] ?? 9);
     const prev = all.filter((t) => !isToday(t.created_at)).sort(by);
     const tod  = all.filter((t) =>  isToday(t.created_at)).sort(by);
     return { previous: prev, today: tod };

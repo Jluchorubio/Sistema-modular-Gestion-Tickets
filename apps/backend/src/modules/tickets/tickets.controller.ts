@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { RequestWithUser } from '../../gateway/types';
 import { TicketsService } from './tickets.service';
+import { KnowledgeService } from './knowledge/knowledge.service';
 import { SlaBreachService } from './sla/sla-breach.service';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
@@ -23,6 +24,7 @@ import { CreateKnowledgeArticleDto, UpdateKnowledgeArticleDto } from './dto/know
 export class TicketsController {
   constructor(
     private readonly svc: TicketsService,
+    private readonly knowledge: KnowledgeService,
     private readonly slaBreach: SlaBreachService,
   ) {}
 
@@ -321,7 +323,7 @@ export class TicketsController {
     const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
     const fileUrl = `${backendUrl}/uploads/${name}`;
 
-    return this.svc.createKnowledgeArticle(req.user.sub, {
+    return this.knowledge.createArticle(req.user.sub, {
       module_id:    body.module_id,
       title:        (body.title?.trim() || file.originalname).trim(),
       content:      '',
@@ -343,13 +345,13 @@ export class TicketsController {
     @Query('q')              q?: string,
     @Query('include_drafts') includeDrafts?: string,
   ) {
-    return this.svc.getKnowledgeArticles(moduleId, q, includeDrafts === 'true');
+    return this.knowledge.getArticles(moduleId, q, includeDrafts === 'true');
   }
 
   @Get('knowledge/:id')
   @RequirePermission('helpdesk:tickets:view')
   getKnowledgeArticle(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.getKnowledgeArticle(id);
+    return this.knowledge.getArticle(id);
   }
 
   @Post('knowledge')
@@ -358,7 +360,7 @@ export class TicketsController {
     @Req() req: RequestWithUser,
     @Body() body: CreateKnowledgeArticleDto,
   ) {
-    return this.svc.createKnowledgeArticle(req.user.sub, body);
+    return this.knowledge.createArticle(req.user.sub, body);
   }
 
   @Patch('knowledge/:id')
@@ -368,14 +370,14 @@ export class TicketsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateKnowledgeArticleDto,
   ) {
-    return this.svc.updateKnowledgeArticle(id, req.user.sub, body);
+    return this.knowledge.updateArticle(id, req.user.sub, body);
   }
 
   @Delete('knowledge/:id')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:edit')
   deleteKnowledgeArticle(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.deleteKnowledgeArticle(id);
+    return this.knowledge.deleteArticle(id);
   }
 
   @Post('knowledge/:id/vote')
@@ -386,7 +388,7 @@ export class TicketsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { value: 1 | -1 },
   ) {
-    return this.svc.voteArticle(req.user.sub, id, body.value);
+    return this.knowledge.voteArticle(req.user.sub, id, body.value);
   }
 
   @Post(':id/to-article')
@@ -397,7 +399,7 @@ export class TicketsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { module_id: string; title: string; content: string; category?: string; tags?: string[] },
   ) {
-    return this.svc.convertTicketToArticle(req.user.sub, id, body);
+    return this.knowledge.convertTicketToArticle(req.user.sub, id, body);
   }
 
   /* ── Forum posts ─────────────────────────────────────────────────────── */
@@ -409,13 +411,13 @@ export class TicketsController {
     @Query('q')         q?: string,
     @Query('filter')    filter?: string,
   ) {
-    return this.svc.getKnowledgePosts(moduleId, q, filter);
+    return this.knowledge.getPosts(moduleId, q, filter);
   }
 
   @Get('knowledge-posts/:id')
   @RequirePermission('helpdesk:tickets:view')
   getKnowledgePost(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.getKnowledgePost(id);
+    return this.knowledge.getPost(id);
   }
 
   @Post('knowledge-posts')
@@ -424,7 +426,7 @@ export class TicketsController {
     @Req() req: RequestWithUser,
     @Body() body: { module_id: string; title: string; content: string; tags?: string[] },
   ) {
-    return this.svc.createKnowledgePost(req.user.sub, body);
+    return this.knowledge.createPost(req.user.sub, body);
   }
 
   @Post('knowledge-posts/:id/replies')
@@ -434,7 +436,7 @@ export class TicketsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { content: string },
   ) {
-    return this.svc.createKnowledgeReply(req.user.sub, id, body);
+    return this.knowledge.createReply(req.user.sub, id, body);
   }
 
   @Post('knowledge-posts/:postId/replies/:replyId/accept')
@@ -445,7 +447,7 @@ export class TicketsController {
     @Param('postId',  ParseUUIDPipe) postId: string,
     @Param('replyId', ParseUUIDPipe) replyId: string,
   ) {
-    return this.svc.acceptKnowledgeReply(req.user.sub, postId, replyId);
+    return this.knowledge.acceptReply(req.user.sub, postId, replyId);
   }
 
   @Delete('knowledge-posts/:id')
@@ -455,7 +457,7 @@ export class TicketsController {
     @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.svc.deleteKnowledgePost(req.user.sub, id);
+    return this.knowledge.deletePost(req.user.sub, id);
   }
 
   @Delete('knowledge-posts/:postId/replies/:replyId')
@@ -466,6 +468,6 @@ export class TicketsController {
     @Param('postId',  ParseUUIDPipe) _postId: string,
     @Param('replyId', ParseUUIDPipe) replyId: string,
   ) {
-    return this.svc.deleteKnowledgeReply(req.user.sub, replyId);
+    return this.knowledge.deleteReply(req.user.sub, replyId);
   }
 }

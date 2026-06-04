@@ -12,7 +12,7 @@ import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { usePermission } from '@/hooks/usePermission';
-import { ticketsService, type TicketListItem, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS } from '@/services/tickets.service';
+import { ticketsService, type TicketListItem, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS, TICKET_PRIORITY_ORDER } from '@/services/tickets.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import { fmtDate } from '@/lib/formatters';
 
@@ -26,9 +26,7 @@ const C = {
   bg:     '#f8fafc',
 };
 
-const PRIORITY_ORDER: Record<TicketPriority, number> = {
-  critica: 0, alta: 1, media: 2, baja: 3,
-};
+const PRIORITY_ORDER = TICKET_PRIORITY_ORDER;
 
 const PRIORITY_GROUPS: { priority: TicketPriority; label: string; urgency: string }[] = [
   { priority: 'critica', label: 'Crítica',  urgency: 'Requiere atención inmediata' },

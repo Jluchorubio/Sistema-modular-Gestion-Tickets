@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
+import { TECH_AVAIL_COLORS, TECH_AVAIL_LABELS } from '@/services/tickets.service';
 import { modulesService } from '@/services/modules.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import { MODULE_ROLE_LABELS } from '@/constants/roles';
@@ -24,23 +25,8 @@ const C = {
   bg:     '#f8fafc',
 };
 
-const AVAIL_COLORS: Record<TechAvailStatus, string> = {
-  disponible:    '#20c933',
-  ocupado:       '#f59e0b',
-  en_reunion:    '#3b82f6',
-  fuera_horario: '#94a3b8',
-  ausente:       '#ef4444',
-  offline:       '#64748b',
-};
-
-const AVAIL_LABELS: Record<TechAvailStatus, string> = {
-  disponible:    'Disponible',
-  ocupado:       'Ocupado',
-  en_reunion:    'En reunión',
-  fuera_horario: 'Fuera de horario',
-  ausente:       'Ausente',
-  offline:       'Offline',
-};
+const AVAIL_COLORS = TECH_AVAIL_COLORS;
+const AVAIL_LABELS = TECH_AVAIL_LABELS;
 
 const AVAIL_ORDER: Record<TechAvailStatus, number> = {
   disponible: 0, ocupado: 1, en_reunion: 2,

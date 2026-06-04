@@ -4,6 +4,7 @@ import { TicketsController } from './tickets.controller';
 import { TicketsService } from './tickets.service';
 import { MeetingsController } from './meetings.controller';
 import { MeetingsService } from './meetings.service';
+import { KnowledgeService } from './knowledge/knowledge.service';
 import { SlaService } from './sla/sla.service';
 import { SlaEvaluatorService } from './sla/sla-evaluator.service';
 import { SlaBreachService } from './sla/sla-breach.service';
@@ -17,7 +18,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 @Module({
   imports: [TypeOrmModule.forFeature([]), NotificationsModule],
   controllers: [TicketsController, MeetingsController],
-  providers: [TicketsService, MeetingsService, SlaService, SlaEvaluatorService, SlaBreachService, AutoCloseService, PriorityEngineService, AssignmentService, RoundRobinStrategy, SkillBasedStrategy],
-  exports: [TicketsService, MeetingsService, SlaService, SlaEvaluatorService, PriorityEngineService],
+  providers: [TicketsService, KnowledgeService, MeetingsService, SlaService, SlaEvaluatorService, SlaBreachService, AutoCloseService, PriorityEngineService, AssignmentService, RoundRobinStrategy, SkillBasedStrategy],
+  exports: [TicketsService, KnowledgeService, MeetingsService, SlaService, SlaEvaluatorService, PriorityEngineService],
 })
 export class TicketsModule {}

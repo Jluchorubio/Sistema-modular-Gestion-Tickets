@@ -296,6 +296,33 @@ export const SLA_STATUS_LABELS: Record<SlaStatus, string> = {
   breached: 'Vencido',
 };
 
+export const TICKET_PRIORITY_ORDER: Record<TicketPriority, number> = {
+  critica: 0,
+  alta:    1,
+  media:   2,
+  baja:    3,
+};
+
+export const TICKET_PRIORITIES: TicketPriority[] = ['baja', 'media', 'alta', 'critica'];
+
+export const TECH_AVAIL_COLORS: Record<string, string> = {
+  disponible:    '#20c933',
+  ocupado:       '#f59e0b',
+  en_reunion:    '#3b82f6',
+  fuera_horario: '#94a3b8',
+  ausente:       '#ef4444',
+  offline:       '#64748b',
+};
+
+export const TECH_AVAIL_LABELS: Record<string, string> = {
+  disponible:    'Disponible',
+  ocupado:       'Ocupado',
+  en_reunion:    'En reunión',
+  fuera_horario: 'Fuera de horario',
+  ausente:       'Ausente',
+  offline:       'Offline',
+};
+
 export const ticketsService = {
   async getAll(filter: TicketsFilter = {}): Promise<PaginatedTickets> {
     const params: Record<string, string> = {};

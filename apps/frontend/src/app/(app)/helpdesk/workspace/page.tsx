@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
-import { ticketsService, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS } from '@/services/tickets.service';
+import { ticketsService, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS, TICKET_PRIORITY_ORDER, TECH_AVAIL_COLORS, TECH_AVAIL_LABELS } from '@/services/tickets.service';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
@@ -19,16 +19,10 @@ import type { TechAvailStatus } from '@/types/module.types';
 
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
 
-const AVAIL_COLORS: Record<TechAvailStatus, string> = {
-  disponible: '#20c933', ocupado: '#f59e0b', en_reunion: '#3b82f6',
-  fuera_horario: '#94a3b8', ausente: '#ef4444', offline: '#64748b',
-};
-const AVAIL_LABELS: Record<TechAvailStatus, string> = {
-  disponible: 'Disponible', ocupado: 'Ocupado', en_reunion: 'En reunión',
-  fuera_horario: 'Fuera de horario', ausente: 'Ausente', offline: 'Offline',
-};
+const AVAIL_COLORS = TECH_AVAIL_COLORS;
+const AVAIL_LABELS = TECH_AVAIL_LABELS;
 const AVAIL_OPTIONS = Object.entries(AVAIL_LABELS) as [TechAvailStatus, string][];
-const PRIORITY_ORDER: Record<string, number> = { critica: 0, alta: 1, media: 2, baja: 3 };
+const PRIORITY_ORDER = TICKET_PRIORITY_ORDER;
 
 function isToday(d: string) {
   const dt = new Date(d); const n = new Date();

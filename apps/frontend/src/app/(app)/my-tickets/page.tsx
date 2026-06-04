@@ -5,12 +5,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Clock, Ticket, ArrowLeft, ChevronRight } from 'lucide-react';
 import { usersService } from '@/services/users.service';
-import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS, SLA_STATUS_LABELS } from '@/services/tickets.service';
+import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS, SLA_STATUS_LABELS, TICKET_PRIORITY_ORDER } from '@/services/tickets.service';
 import { fmtRelativeCompact } from '@/lib/formatters';
 
 type Tab = 'created' | 'assigned';
 
-const PRIORITY_ORDER: Record<string, number> = { critica: 0, alta: 1, media: 2, baja: 3 };
+const PRIORITY_ORDER = TICKET_PRIORITY_ORDER;
 
 function ticketHref(moduleSlug: string | null, ticketId: string) {
   if (moduleSlug) return `/${moduleSlug}/ticket/${ticketId}`;
