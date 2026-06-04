@@ -1,8 +1,7 @@
-﻿'use client';
+'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Clock, AlertTriangle, CheckCircle2, XCircle,
   Phone, X, Paperclip, Link2, Search, Unlink, Star, UserX,
@@ -13,19 +12,12 @@ import { useModules } from '@/hooks/useModules';
 import { useAuthStore } from '@/stores/auth.store';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
-  ticketsService,
-  type TicketPriority, type TicketAttachment, type TicketComment,
-  type TicketAsset, type TicketRating, type RateTicketDto,
-  type TicketTimelineEvent,
+  type TicketPriority,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
   ASSET_STATUS_COLORS, ASSET_STATUS_LABELS,
 } from '@/services/tickets.service';
-import { modulesService } from '@/services/modules.service';
-import type { ModuleTechnician } from '@/types/module.types';
 import {
-  meetingsService,
-  type TicketMeeting,
   PROVIDER_LABELS,
   PROVIDER_COLORS,
   STATUS_LABELS,
@@ -34,15 +26,10 @@ import {
 import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import styles from '../tickets.module.css';
+import { useTicketData, type LocalGuest } from './hooks/useTicketData';
+import { useTicketActions } from './hooks/useTicketActions';
 
-interface LocalGuest {
-  id:       string;
-  name:     string;
-  role:     string;
-  isLocal:  boolean;
-}
-
-/* â”€â”€ Badges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Badges ──────────────────────────────────────────────────────────── */
 
 function PriorityBadge({ priority }: { priority: TicketPriority }) {
   const color = TICKET_PRIORITY_COLORS[priority];
@@ -84,382 +71,131 @@ function SlaBadge({ status, deadline }: { status: string | null; deadline: strin
   );
 }
 
-/* â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Main component ─────────────────────────────────────────────────── */
 
 export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const router      = useRouter();
-  const qc          = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
   const { modules } = useModules();
   const helpdeskId  = modules?.find(isHelpdeskModule)?.id;
 
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
 
-  /* â”€â”€ Ticket data â”€â”€ */
-  const { data: ticket, isLoading, isError, error } = useQuery({
-    queryKey: ['ticket-detail', ticketId],
-    queryFn:  () => ticketsService.getOne(ticketId),
-    staleTime: 30_000,
-    retry: 1,
-  });
+  /* ── Data hook ── */
+  const {
+    ticket, isLoading, isError, error,
+    technicians,
+    attachments,
+    existingRating,
+    comments,
+    timeline, timelineLoading,
+    meetings,
+    relations,
+    linkedAssets,
+    slaColor, slaLabel, slaCountdown,
+    ownerAssignment,
+    computeAllGuests,
+    qc,
+  } = useTicketData({ ticketId, helpdeskId });
 
-  /* â”€â”€ Technicians for collaborator selection (no admin permission required) â”€â”€ */
-  const { data: technicians = [] } = useQuery<ModuleTechnician[]>({
-    queryKey: ['module-technicians', helpdeskId],
-    queryFn:  () => modulesService.getModuleTechnicians(helpdeskId!),
-    enabled:  !!helpdeskId,
-    staleTime: 5 * 60_000,
-  });
-
-  /* â”€â”€ Left panel state â”€â”€ */
+  /* ── Left panel state ── */
   const [transReason,     setTransReason]     = useState('');
   const [activeTransId,   setActiveTransId]   = useState<string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [replyText,       setReplyText]       = useState('');
   const [commentType,     setCommentType]     = useState<'public' | 'internal'>('public');
 
-  /* â”€â”€ Validation state â”€â”€ */
+  /* ── Validation state ── */
   const [showRejectForm,  setShowRejectForm]  = useState(false);
   const [rejectReason,    setRejectReason]    = useState('');
   const [isApproving,     setIsApproving]     = useState(false);
   const [isRejecting,     setIsRejecting]     = useState(false);
   const [validationError, setValidationError] = useState('');
 
-  /* â”€â”€ Right panel state â”€â”€ */
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [isCalling,      setIsCalling]      = useState(false);
-  const [scheduledDate,  setScheduledDate]  = useState('');
-  const [scheduledTime,  setScheduledTime]  = useState('10:00');
-  const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'teams' | 'zoom' | 'internal'>('google_meet');
-  const [meetingUrl,      setMeetingUrl]      = useState('');
-  const [meetingReason,   setMeetingReason]   = useState('Asesoramiento técnico');
-  const [localGuests,    setLocalGuests]    = useState<LocalGuest[]>([]);
+  /* ── Right panel state ── */
+  const [selectedUserId,   setSelectedUserId]   = useState('');
+  const [isCalling,        setIsCalling]        = useState(false);
+  const [scheduledDate,    setScheduledDate]    = useState('');
+  const [scheduledTime,    setScheduledTime]    = useState('10:00');
+  const [meetingProvider,  setMeetingProvider]  = useState<'google_meet' | 'teams' | 'zoom' | 'internal'>('google_meet');
+  const [meetingUrl,       setMeetingUrl]       = useState('');
+  const [meetingReason,    setMeetingReason]    = useState('Asesoramiento técnico');
+  const [localGuests,      setLocalGuests]      = useState<LocalGuest[]>([]);
 
-  /* â”€â”€ Attachments â”€â”€ */
+  /* ── Attachments ── */
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState('');
 
-  const { data: attachments = [] } = useQuery<TicketAttachment[]>({
-    queryKey: ['ticket-attachments', ticketId],
-    queryFn:  () => ticketsService.getAttachments(ticketId),
-    staleTime: 60_000,
-  });
+  /* ── Rating state ── */
+  const [ratingScore,     setRatingScore]     = useState(0);
+  const [ratingHover,     setRatingHover]     = useState(0);
+  const [ratingComment,   setRatingComment]   = useState('');
 
-  const uploadMut = useMutation({
-    mutationFn: (file: File) => ticketsService.uploadAttachment(ticketId, file),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] });
-      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-      setUploadError('');
-    },
-    onError: (e: any) => setUploadError(e?.response?.data?.message ?? 'Error al subir archivo.'),
-  });
-
-  const deletAttMut = useMutation({
-    mutationFn: (attId: string) => ticketsService.deleteAttachment(ticketId, attId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] });
-      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-    },
-  });
-
-  /* â”€â”€ Rating â”€â”€ */
-  const [ratingScore, setRatingScore] = useState(0);
-  const [ratingHover, setRatingHover] = useState(0);
-  const [ratingLabel, setRatingLabel] = useState<RateTicketDto['service_label'] | ''>('');
-  const [ratingComment, setRatingComment] = useState('');
-  const [ratingRecommend, setRatingRecommend] = useState<boolean | null>(null);
-
-  const { data: existingRating } = useQuery<TicketRating | null>({
-    queryKey: ['ticket-rating', ticketId],
-    queryFn:  () => ticketsService.getRating(ticketId),
-    enabled:  !!ticket?.is_final,
-    staleTime: Infinity,
-  });
-
-  const rateMut = useMutation({
-    mutationFn: (dto: RateTicketDto) => ticketsService.rate(ticketId, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-rating', ticketId] }),
-  });
-
-  /* â”€â”€ Comments â”€â”€ */
-  const { data: comments = [] } = useQuery<TicketComment[]>({
-    queryKey: ['ticket-comments', ticketId],
-    queryFn:  () => ticketsService.getComments(ticketId),
-    staleTime: 30_000,
-  });
-
-  /* â”€â”€ Timeline unificada â”€â”€ */
-  const { data: timeline = [], isLoading: timelineLoading } = useQuery<TicketTimelineEvent[]>({
-    queryKey: ['ticket-timeline', ticketId],
-    queryFn:  () => ticketsService.getTimeline(ticketId),
-    staleTime: 20_000,
-    refetchInterval: 30_000,
-  });
-
-  const invalidateTimeline = () => qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-
-  const addCommentMut = useMutation({
-    mutationFn: () => ticketsService.addComment(ticketId, replyText.trim(), commentType),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['ticket-comments', ticketId] });
-      invalidateTimeline();
-      setReplyText('');
-    },
-  });
-
-  /* â”€â”€ Meetings â”€â”€ */
-  const { data: meetings = [] } = useQuery<TicketMeeting[]>({
-    queryKey: ['ticket-meetings', ticketId],
-    queryFn:  () => meetingsService.getMeetings(ticketId),
-    staleTime: 30_000,
-  });
-
-  const scheduleMut = useMutation({
-    mutationFn: () => meetingsService.createMeeting(ticketId, {
-      reason:       meetingReason.trim() || 'Reunión de soporte',
-      provider:     meetingProvider,
-      meeting_url:  meetingUrl.trim() || undefined,
-      scheduled_at: new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString(),
-    }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] });
-      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-      setScheduledDate(''); setScheduledTime('10:00');
-      setMeetingUrl(''); setMeetingReason('Asesoramiento técnico');
-    },
-  });
-
-  const cancelMeetMut = useMutation({
-    mutationFn: (meetingId: string) => meetingsService.cancelMeeting(meetingId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] }),
-  });
-
-  /* â”€â”€ Relations â”€â”€ */
-  const { data: relations = [] } = useQuery<{
-    id: string; relation_type: string; notes: string | null; created_at: string;
-    created_by_name: string;
-    related_id: string; related_title: string; related_priority: string;
-    related_created_at: string; related_state_label: string; related_state_name: string;
-    related_is_final: boolean; related_owner_name: string | null;
-    related_description: string | null;
-  }[]>({
-    queryKey: ['ticket-relations', ticketId],
-    queryFn:  () => ticketsService.getRelations(ticketId),
-    staleTime: 60_000,
-  });
-
-  const [relSearch, setRelSearch]           = useState('');
-  const [relType, setRelType]               = useState('related');
-  const [relNotes, setRelNotes]             = useState('');
-  const [relTarget, setRelTarget]           = useState<{ id: string; title: string } | null>(null);
+  /* ── Relations state ── */
+  const [relSearch,       setRelSearch]       = useState('');
+  const [relType,         setRelType]         = useState('related');
+  const [relNotes,        setRelNotes]        = useState('');
+  const [relTarget,       setRelTarget]       = useState<{ id: string; title: string } | null>(null);
   const [relSearchResults, setRelSearchResults] = useState<{ id: string; title: string; priority: string; state_label: string; is_final: boolean }[]>([]);
-  const [relSearching, setRelSearching]     = useState(false);
-  const [showRelForm, setShowRelForm]       = useState(false);
+  const [relSearching,    setRelSearching]    = useState(false);
+  const [showRelForm,     setShowRelForm]     = useState(false);
 
-  const addRelMut = useMutation({
-    mutationFn: () => ticketsService.addRelation(ticketId, {
-      target_ticket_id: relTarget!.id,
-      relation_type:    relType,
-      notes:            relNotes.trim() || undefined,
-    }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['ticket-relations', ticketId] });
-      setRelTarget(null); setRelSearch(''); setRelNotes(''); setRelSearchResults([]);
-      setShowRelForm(false);
-    },
+  /* ── Actions hook ── */
+  const {
+    uploadMut, deletAttMut, rateMut, addCommentMut,
+    scheduleMut, cancelMeetMut, addRelMut, removeRelMut, transMut,
+    handleInstantCall, handleSchedule, removeGuest,
+    handleApprove, handleAcceptAndRate, handleReject,
+    handleRelSearch, handleFileChange,
+  } = useTicketActions({
+    ticketId,
+    helpdeskId,
+    technicians,
+    qc,
+    meetingReason,
+    meetingProvider,
+    meetingUrl,
+    scheduledDate,
+    scheduledTime,
+    setScheduledDate,
+    setScheduledTime,
+    setMeetingUrl,
+    setMeetingReason,
+    replyText,
+    commentType,
+    setReplyText,
+    setActiveTransId,
+    setTransReason,
+    localGuests,
+    setLocalGuests,
+    setUploadError,
+    relTarget,
+    relType,
+    relNotes,
+    setRelTarget,
+    setRelSearch,
+    setRelNotes,
+    setRelSearchResults,
+    setShowRelForm,
+    ratingScore,
+    ratingComment,
+    rejectReason,
+    setIsApproving,
+    setIsRejecting,
+    setValidationError,
+    setShowRejectForm,
+    setRejectReason,
   });
 
-  const removeRelMut = useMutation({
-    mutationFn: (relId: string) => ticketsService.removeRelation(ticketId, relId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-relations', ticketId] }),
-  });
+  /* ── Computed guests ── */
+  const allGuests = useMemo<LocalGuest[]>(
+    () => computeAllGuests(ticket?.assignments, localGuests),
+    [ticket?.assignments, localGuests],
+  );
 
-  async function handleRelSearch(q: string) {
-    setRelSearch(q);
-    setRelTarget(null);
-    if (q.trim().length < 2) { setRelSearchResults([]); return; }
-    setRelSearching(true);
-    try {
-      const res = await ticketsService.searchTickets(q.trim(), ticketId);
-      setRelSearchResults(res);
-    } finally {
-      setRelSearching(false);
-    }
-  }
-
-  /* â”€â”€ Linked assets â”€â”€ */
-  const { data: linkedAssets = [] } = useQuery<TicketAsset[]>({
-    queryKey: ['ticket-assets', ticketId],
-    queryFn:  () => ticketsService.getTicketAssets(ticketId),
-    staleTime: 60_000,
-  });
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { setUploadError('Máximo 10 MB.'); return; }
-    setUploadError('');
-    uploadMut.mutate(file);
-    e.target.value = '';
-  }
-
-  /* â”€â”€ Transition mutation â”€â”€ */
-  const transMut = useMutation({
-    mutationFn: ({ transId, reason }: { transId: string; reason?: string }) =>
-      ticketsService.transition(ticketId, transId, reason || undefined),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['tickets'] });
-      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
-      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-      setActiveTransId(null);
-      setTransReason('');
-    },
-  });
-
-  /* â”€â”€ Collaboration: instant call invite â”€â”€ */
-  async function handleInstantCall() {
-    if (!selectedUserId) return;
-    setIsCalling(true);
-
-    const user = technicians.find((u) => u.id === selectedUserId);
-    if (!user) { setIsCalling(false); return; }
-
-    try {
-      await ticketsService.addAssignment(ticketId, selectedUserId, 'collaborator');
-      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
-      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-    } catch {
-      // ignore — still add to local guest list for UI
-    }
-
-    setTimeout(() => {
-      setIsCalling(false);
-      const name = `${user.first_name} ${user.last_name}`.trim();
-      setLocalGuests((prev) => {
-        if (prev.some((g) => g.id === user.id)) return prev;
-        return [...prev, { id: user.id, name, role: user.role_name, isLocal: true }];
-      });
-    }, 2000);
-  }
-
-  /* â”€â”€ Collaboration: schedule meeting â”€â”€ */
-  function handleSchedule() {
-    if (!scheduledDate || !scheduledTime) return;
-    scheduleMut.mutate();
-  }
-
-  /* â”€â”€ Guest helpers â”€â”€ */
-  function removeGuest(id: string) {
-    setLocalGuests((prev) => prev.filter((g) => g.id !== id));
-  }
-
-  /* â”€â”€ Compute combined guest list â”€â”€ */
-  const allGuests = useMemo<LocalGuest[]>(() => {
-    const fromAssignments: LocalGuest[] = (ticket?.assignments ?? [])
-      .filter((a) => a.is_active)
-      .map((a) => ({ id: a.id, name: a.user_name, role: a.role, isLocal: false }));
-
-    const localIds = new Set(fromAssignments.map((g) => g.id));
-    const merged   = [...fromAssignments];
-    for (const g of localGuests) {
-      if (!localIds.has(g.id)) merged.push(g);
-    }
-    return merged;
-  }, [ticket?.assignments, localGuests]);
-
-  /* â”€â”€ Validation handlers â”€â”€ */
-  async function handleApprove() {
-    setIsApproving(true);
-    setValidationError('');
-    try {
-      await ticketsService.approve(ticketId, '');
-      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
-      qc.invalidateQueries({ queryKey: ['tickets'] });
-      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-    } catch (e: any) {
-      setValidationError(e?.response?.data?.message ?? 'Error al aprobar.');
-    } finally {
-      setIsApproving(false);
-    }
-  }
-
-  async function handleAcceptAndRate() {
-    if (ratingScore === 0) { setValidationError('Selecciona una calificación para aceptar.'); return; }
-    setIsApproving(true);
-    setValidationError('');
-    try {
-      await ticketsService.rate(ticketId, { score_overall: ratingScore, comment: ratingComment || undefined });
-      await ticketsService.approve(ticketId, '');
-      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
-      qc.invalidateQueries({ queryKey: ['tickets'] });
-      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-      qc.invalidateQueries({ queryKey: ['ticket-rating', ticketId] });
-    } catch (e: any) {
-      setValidationError(e?.response?.data?.message ?? 'Error al procesar.');
-    } finally {
-      setIsApproving(false);
-    }
-  }
-
-  async function handleReject() {
-    if (!rejectReason.trim()) { setValidationError('Justificación requerida.'); return; }
-    setIsRejecting(true);
-    setValidationError('');
-    try {
-      const result = await ticketsService.reject(ticketId, rejectReason.trim());
-      qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
-      qc.invalidateQueries({ queryKey: ['tickets'] });
-      qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
-      setShowRejectForm(false);
-      setRejectReason('');
-      if (result.escalated) {
-        alert('Ticket escalado al Jefe Técnico con prioridad Alta.');
-      }
-    } catch (e: any) {
-      setValidationError(e?.response?.data?.message ?? 'Error al rechazar.');
-    } finally {
-      setIsRejecting(false);
-    }
-  }
-
-  /* â”€â”€ SLA helpers â”€â”€ */
-  const slaColor = ticket?.sla_status
-    ? (SLA_STATUS_COLORS[ticket.sla_status as keyof typeof SLA_STATUS_COLORS] ?? '#94A3B8')
-    : '#94A3B8';
-  const slaLabel = ticket?.sla_status
-    ? (SLA_STATUS_LABELS[ticket.sla_status as keyof typeof SLA_STATUS_LABELS] ?? ticket.sla_status)
-    : null;
-
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const slaCountdown = useMemo(() => {
-    const deadline = ticket?.sla_deadline_tracked;
-    const status   = ticket?.sla_status;
-    if (!deadline) return null;
-    if (status === 'met')    return 'SLA cumplido';
-    if (status === 'paused') return 'Pausado';
-    const diffMs = new Date(deadline).getTime() - now;
-    const abs    = Math.abs(diffMs);
-    const h      = Math.floor(abs / 3_600_000);
-    const m      = Math.floor((abs % 3_600_000) / 60_000);
-    const past   = diffMs < 0 || status === 'breached';
-    if (h === 0)   return past ? `Vencido hace ${m}m`       : `Vence en ${m}m`;
-    if (h < 24)    return past ? `Vencido hace ${h}h ${m}m` : `Vence en ${h}h ${m}m`;
-    const d    = Math.floor(h / 24);
-    const remH = h % 24;
-    return past
-      ? `Vencido hace ${d}d ${remH}h`
-      : (remH > 0 ? `Vence en ${d}d ${remH}h` : `Vence en ${d}d`);
-  }, [ticket?.sla_deadline_tracked, ticket?.sla_status, now]);
-
-  const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
-  const VARIANT_BG: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
-  const ownerAssignment = ticket?.assignments?.find(a => a.role === 'owner' && a.is_active);
+  const VARIANT_BG: Record<string, string> = {
+    success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235',
+  };
 
   function SideSection({ label, children }: { label: string; children: React.ReactNode }) {
     return (
@@ -470,7 +206,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     );
   }
 
-  /* â”€â”€ Render â”€â”€ */
+  /* ── Render ── */
   return (
     <div className={styles.hwPage}>
       {isLoading && (
@@ -771,12 +507,12 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               </SideSection>
 
               {/* Historial de técnicos */}
-              {ticket.assignments.filter(a => a.role === 'owner').length > 1 && (
+              {ticket.assignments.filter((a: { role: string }) => a.role === 'owner').length > 1 && (
                 <SideSection label="Historial de técnicos">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {ticket.assignments
-                      .filter(a => a.role === 'owner')
-                      .map(a => (
+                      .filter((a: { role: string }) => a.role === 'owner')
+                      .map((a: { id: string; user_name: string; is_active: boolean; assigned_at: string }) => (
                         <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{ width: 24, height: 24, borderRadius: '50%', background: a.is_active ? '#ff5e3a' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <span style={{ fontSize: 10, fontWeight: 700, color: a.is_active ? '#fff' : '#94a3b8' }}>{a.user_name?.charAt(0).toUpperCase()}</span>
@@ -812,7 +548,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               {!ticket.is_final && ticket.transitions.length > 0 && (
                 <SideSection label="Cambiar estado">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    {ticket.transitions.map(tr => {
+                    {ticket.transitions.map((tr: { id: string; variant?: string; to_label: string }) => {
                       const VBGS: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
                       const bg = VBGS[tr.variant ?? 'default'] ?? '#0e2235';
                       const isAct = activeTransId === tr.id;
@@ -928,7 +664,8 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                   <option value="">Invitar tecnico...</option>
                   {technicians.map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
                 </select>
-                <button type="button" disabled={!selectedUserId || isCalling} onClick={handleInstantCall}
+                <button type="button" disabled={!selectedUserId || isCalling}
+                  onClick={() => handleInstantCall(selectedUserId, setSelectedUserId, setIsCalling)}
                   style={{ display: 'flex', alignItems: 'center', gap: 5, width: '100%', justifyContent: 'center', padding: '6px', borderRadius: 7, border: 'none', background: selectedUserId && !isCalling ? '#0e2235' : '#e2e8f0', color: selectedUserId ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: selectedUserId ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
                   <Phone size={11} /> {isCalling ? 'Invitando...' : 'Invitar'}
                 </button>
