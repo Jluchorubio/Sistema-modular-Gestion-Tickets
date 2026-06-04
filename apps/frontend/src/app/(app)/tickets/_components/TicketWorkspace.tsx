@@ -770,6 +770,30 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 )}
               </SideSection>
 
+              {/* Historial de técnicos */}
+              {ticket.assignments.filter(a => a.role === 'owner').length > 1 && (
+                <SideSection label="Historial de técnicos">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {ticket.assignments
+                      .filter(a => a.role === 'owner')
+                      .map(a => (
+                        <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: a.is_active ? '#ff5e3a' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: a.is_active ? '#fff' : '#94a3b8' }}>{a.user_name?.charAt(0).toUpperCase()}</span>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: a.is_active ? '#0e2235' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.user_name}</p>
+                            <p style={{ margin: 0, fontSize: 9.5, color: '#94a3b8' }}>{fmtRelative(a.assigned_at)}</p>
+                          </div>
+                          {a.is_active && (
+                            <span style={{ fontSize: 8, fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: '#fff5f3', color: '#ff5e3a', border: '1px solid #ffd0c4', flexShrink: 0 }}>ACTUAL</span>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </SideSection>
+              )}
+
               {/* Solicitante */}
               <SideSection label="Solicitante">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
