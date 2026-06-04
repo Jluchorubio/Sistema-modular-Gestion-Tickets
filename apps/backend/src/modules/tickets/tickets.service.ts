@@ -443,7 +443,7 @@ export class TicketsService {
     if (!ticket) throw new NotFoundException('Ticket not found');
 
     const [trans] = await this.db.query<any[]>(
-      `SELECT id, from_state_id, to_state_id
+      `SELECT id, from_state_id, to_state_id, allowed_roles
        FROM   tickets.transitions
        WHERE  id                  = $1
          AND  workflow_version_id = $2
@@ -452,6 +452,27 @@ export class TicketsService {
       [dto.transition_id, ticket.workflow_version_id, ticket.current_state_id],
     );
     if (!trans) throw new BadRequestException('Invalid or unavailable transition.');
+
+    // ── Role-based transition guard ───────────────────────────────────────────
+    if (Array.isArray(trans.allowed_roles) && trans.allowed_roles.length > 0) {
+      const [actor] = await this.db.query<any[]>(
+        `SELECT u.is_superadmin, mr.name AS role_name
+         FROM   users.profiles u
+         LEFT JOIN modules.user_module_roles umr
+               ON umr.user_id = u.id
+              AND umr.module_id = (SELECT module_id FROM tickets.tickets WHERE id = $2)
+              AND umr.is_active = true
+         LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
+         WHERE  u.id = $1
+         LIMIT  1`,
+        [userId, ticketId],
+      );
+      const isSuperadmin = actor?.is_superadmin ?? false;
+      const userRole     = actor?.role_name ?? null;
+      if (!isSuperadmin && (!userRole || !trans.allowed_roles.includes(userRole))) {
+        throw new ForbiddenException(`Tu rol "${userRole ?? 'sin rol'}" no puede ejecutar esta transición.`);
+      }
+    }
 
     // Set session user so fn_ticket_state_history trigger records correct actor
     await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
@@ -1125,7 +1146,7 @@ export class TicketsService {
        WHERE  a.id = $1`,
       [id],
     );
-    if (!article) throw new Error('Article not found');
+    if (!article) throw new NotFoundException('Article not found');
     // Increment view count
     await this.db.query(`UPDATE tickets.knowledge_articles SET view_count = view_count + 1 WHERE id = $1`, [id]).catch(() => {});
     return article;
@@ -1163,7 +1184,7 @@ export class TicketsService {
       `UPDATE tickets.knowledge_articles SET ${fields.join(', ')} WHERE id = $${p} RETURNING id, title, is_published`,
       params,
     );
-    if (!row) throw new Error('Article not found');
+    if (!row) throw new NotFoundException('Article not found');
     return row;
   }
 

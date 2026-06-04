@@ -133,7 +133,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [scheduledTime,  setScheduledTime]  = useState('10:00');
   const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'teams' | 'zoom' | 'internal'>('google_meet');
   const [meetingUrl,      setMeetingUrl]      = useState('');
-  const [meetingReason,   setMeetingReason]   = useState('Asesoramiento tÃ©cnico');
+  const [meetingReason,   setMeetingReason]   = useState('Asesoramiento técnico');
   const [localGuests,    setLocalGuests]    = useState<LocalGuest[]>([]);
 
   /* â”€â”€ Attachments â”€â”€ */
@@ -218,7 +218,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
   const scheduleMut = useMutation({
     mutationFn: () => meetingsService.createMeeting(ticketId, {
-      reason:       meetingReason.trim() || 'ReuniÃ³n de soporte',
+      reason:       meetingReason.trim() || 'Reunión de soporte',
       provider:     meetingProvider,
       meeting_url:  meetingUrl.trim() || undefined,
       scheduled_at: new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString(),
@@ -227,7 +227,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
       qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] });
       qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
       setScheduledDate(''); setScheduledTime('10:00');
-      setMeetingUrl(''); setMeetingReason('Asesoramiento tÃ©cnico');
+      setMeetingUrl(''); setMeetingReason('Asesoramiento técnico');
     },
   });
 
@@ -320,7 +320,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { setUploadError('MÃ¡ximo 10 MB.'); return; }
+    if (file.size > 10 * 1024 * 1024) { setUploadError('Máximo 10 MB.'); return; }
     setUploadError('');
     uploadMut.mutate(file);
     e.target.value = '';
@@ -352,7 +352,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
       qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
       qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
     } catch {
-      // ignore â€” still add to local guest list for UI
+      // ignore — still add to local guest list for UI
     }
 
     setTimeout(() => {
@@ -409,7 +409,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   }
 
   async function handleReject() {
-    if (!rejectReason.trim()) { setValidationError('JustificaciÃ³n requerida.'); return; }
+    if (!rejectReason.trim()) { setValidationError('Justificación requerida.'); return; }
     setIsRejecting(true);
     setValidationError('');
     try {
@@ -420,7 +420,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
       setShowRejectForm(false);
       setRejectReason('');
       if (result.escalated) {
-        alert('Ticket escalado al Jefe TÃ©cnico con prioridad Alta.');
+        alert('Ticket escalado al Jefe Técnico con prioridad Alta.');
       }
     } catch (e: any) {
       setValidationError(e?.response?.data?.message ?? 'Error al rechazar.');
@@ -468,7 +468,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     <div className={styles.hwPage}>
       {isLoading && (
         <div style={{ padding: '80px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>
-          Cargando ticketâ€¦
+          Cargando ticket…
         </div>
       )}
 
@@ -483,7 +483,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               ? 'El ticket no existe o fue eliminado.'
               : (error as any)?.response?.status === 403
               ? 'No tienes permiso para ver este ticket.'
-              : 'Error de conexiÃ³n. Intenta de nuevo.'}
+              : 'Error de conexión. Intenta de nuevo.'}
           </p>
           <button
             type="button"
@@ -559,7 +559,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
             <div style={{ background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               <span style={{ fontSize: 11, color: '#475569', fontWeight: 600 }}>Motivo (opcional):</span>
               <input value={transReason} onChange={e => setTransReason(e.target.value)}
-                placeholder="Describe el cambio de estadoâ€¦"
+                placeholder="Describe el cambio de estado…"
                 style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
               <button type="button" onClick={() => { setActiveTransId(null); setTransReason(''); }}
                 style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
@@ -567,7 +567,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               </button>
               <button type="button" onClick={() => transMut.mutate({ transId: activeTransId, reason: transReason })} disabled={transMut.isPending}
                 style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: '#6366f1', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, opacity: transMut.isPending ? .7 : 1 }}>
-                <CheckCircle2 size={11} /> {transMut.isPending ? 'Aplicandoâ€¦' : 'Confirmar'}
+                <CheckCircle2 size={11} /> {transMut.isPending ? 'Aplicando…' : 'Confirmar'}
               </button>
             </div>
           )}
@@ -621,11 +621,11 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
               {/* Info */}
               <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>InformaciÃ³n</p>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Información</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                   {[
-                    ['MÃ³dulo',     ticket.module_name],
-                    ['CategorÃ­a',  ticket.category_name],
+                    ['Módulo',     ticket.module_name],
+                    ['Categoría',  ticket.category_name],
                     ['Ambiente',   ticket.environment_name],
                     ['Creado',     fmtDate(ticket.created_at)],
                     ['ID interno', '#' + ticket.id.slice(0, 8).toUpperCase()],
@@ -676,7 +676,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                         {ticket.is_final ? 'Final' : 'Actual'}
                       </span>
                     </div>
-                    {/* LÃ­nea vertical */}
+                    {/* Línea vertical */}
                     {ticket.history.map((h, i) => (
                       <div key={h.id} style={{ display: 'flex', gap: 8, paddingLeft: 4, paddingBottom: 8, position: 'relative' }}>
                         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 1, background: '#e2e8f0' }} />
@@ -686,7 +686,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                             <span style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>{h.to_label}</span>
                           </div>
                           <p style={{ fontSize: 9, color: '#94a3b8', margin: '1px 0 0' }}>
-                            {h.actor_name} Â· {fmtDate(h.transitioned_at)}
+                            {h.actor_name} · {fmtDate(h.transitioned_at)}
                           </p>
                         </div>
                       </div>
@@ -736,7 +736,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                     <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 9, padding: '10px 12px' }}>
                       <div style={{ position: 'relative', marginBottom: 6 }}>
                         <Search size={11} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                        <input type="text" placeholder="Buscar ticketâ€¦" value={relSearch} onChange={(e) => handleRelSearch(e.target.value)}
+                        <input type="text" placeholder="Buscar ticket…" value={relSearch} onChange={(e) => handleRelSearch(e.target.value)}
                           style={{ width: '100%', padding: '6px 8px 6px 26px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
                       </div>
                       {relSearchResults.length > 0 && (
@@ -744,7 +744,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                           {relSearchResults.map((r) => (
                             <button key={r.id} type="button" onClick={() => setRelTarget(r)}
                               style={{ fontSize: 11, padding: '5px 8px', borderRadius: 6, border: `1px solid ${relTarget?.id === r.id ? '#6366f1' : '#e2e8f0'}`, background: relTarget?.id === r.id ? '#eef2ff' : '#fff', cursor: 'pointer', textAlign: 'left' as const, fontFamily: 'inherit', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              #{r.id.slice(0, 6)} â€” {r.title}
+                              #{r.id.slice(0, 6)} — {r.title}
                             </button>
                           ))}
                         </div>
@@ -756,7 +756,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                         </button>
                         <button type="button" disabled={!relTarget || addRelMut.isPending} onClick={() => { if (relTarget) { setRelTarget(relTarget); addRelMut.mutate(); } }}
                           style={{ flex: 1, padding: '5px', borderRadius: 6, border: 'none', background: relTarget ? '#6366f1' : '#e2e8f0', color: '#fff', fontSize: 10, fontWeight: 700, cursor: relTarget ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-                          {addRelMut.isPending ? 'â€¦' : 'Vincular'}
+                          {addRelMut.isPending ? '…' : 'Vincular'}
                         </button>
                       </div>
                     </div>
@@ -772,29 +772,29 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               {ticket.state_name === 'realizado' && currentUser?.id === ticket.created_by && (
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', background: '#fffbeb', flexShrink: 0 }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={14} /> ValidaciÃ³n de soluciÃ³n requerida
+                    <CheckCircle2 size={14} /> Validación de solución requerida
                   </p>
                   {!showRejectForm ? (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
-                      <input value={signature} onChange={e => setSignature(e.target.value)} placeholder="Escribe tu nombre como firmaâ€¦"
+                      <input value={signature} onChange={e => setSignature(e.target.value)} placeholder="Escribe tu nombre como firma…"
                         style={{ flex: 1, minWidth: 180, padding: '7px 10px', borderRadius: 7, border: '1px solid #fde68a', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
                       <button type="button" onClick={handleApprove} disabled={isApproving || !signature.trim()}
                         style={{ padding: '7px 14px', borderRadius: 7, border: 'none', background: isApproving || !signature.trim() ? '#94a3b8' : '#22c55e', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {isApproving ? 'â€¦' : 'âœ“ Aprobar'}
+                        {isApproving ? '…' : '✓ Aprobar'}
                       </button>
                       <button type="button" onClick={() => setShowRejectForm(true)}
                         style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        âœ— Rechazar
+                        ✗ Rechazar
                       </button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="JustificaciÃ³n del rechazoâ€¦" rows={2}
+                      <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Justificación del rechazo…" rows={2}
                         style={{ flex: 1, padding: '7px 10px', borderRadius: 7, border: '1px solid #fecaca', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none' }} />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <button type="button" onClick={handleReject} disabled={isRejecting || !rejectReason.trim()}
                           style={{ padding: '7px 12px', borderRadius: 7, border: 'none', background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {isRejecting ? 'â€¦' : 'Confirmar'}
+                          {isRejecting ? '…' : 'Confirmar'}
                         </button>
                         <button type="button" onClick={() => { setShowRejectForm(false); setRejectReason(''); }}
                           style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
@@ -826,12 +826,12 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                     </span>}
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)} placeholder="Comentario opcionalâ€¦" rows={1}
+                    <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)} placeholder="Comentario opcional…" rows={1}
                       style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: '1px solid #fde68a', fontSize: 11, fontFamily: 'inherit', outline: 'none', resize: 'none' }} />
                     <button type="button" disabled={ratingScore === 0 || rateMut.isPending}
                       onClick={() => rateMut.mutate({ score_overall: ratingScore, comment: ratingComment || undefined })}
                       style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: ratingScore > 0 ? '#f59e0b' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: ratingScore > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
-                      {rateMut.isPending ? 'â€¦' : 'Enviar'}
+                      {rateMut.isPending ? '…' : 'Enviar'}
                     </button>
                   </div>
                 </div>
@@ -841,11 +841,11 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               {ticket.is_final && currentUser?.id === ticket.created_by && existingRating && (
                 <div style={{ padding: '10px 20px', borderBottom: '1px solid #e2e8f0', background: '#f0fdf4', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>CalificaciÃ³n enviada â€” {existingRating.score_overall}/5 â­</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>Calificación enviada — {existingRating.score_overall}/5 ⭐</span>
                 </div>
               )}
 
-              {/* Timeline â€” scrollable */}
+              {/* Timeline — scrollable */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
                 <TicketTimeline events={timeline} isLoading={timelineLoading} autoScroll />
               </div>
@@ -865,24 +865,24 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                       <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>Comentario</span>
                       <select value={commentType} onChange={e => setCommentType(e.target.value as 'public' | 'internal')}
                         style={{ marginLeft: 'auto', fontSize: 10, padding: '2px 6px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        <option value="public">PÃºblico</option>
+                        <option value="public">Público</option>
                         <option value="internal">Interno</option>
                       </select>
                       <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadMut.isPending}
                         style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, padding: '3px 8px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        <Paperclip size={10} /> {uploadMut.isPending ? 'â€¦' : 'Adjuntar'}
+                        <Paperclip size={10} /> {uploadMut.isPending ? '…' : 'Adjuntar'}
                       </button>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                       <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
-                        placeholder={commentType === 'internal' ? 'Nota interna (solo el equipo tÃ©cnico)â€¦' : 'Escribe tu respuestaâ€¦'}
+                        placeholder={commentType === 'internal' ? 'Nota interna (solo el equipo técnico)…' : 'Escribe tu respuesta…'}
                         rows={2}
                         style={{ flex: 1, padding: '8px 12px', borderRadius: 9, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' as const }}
                         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && replyText.trim()) { e.preventDefault(); addCommentMut.mutate(); } }}
                       />
                       <button type="button" disabled={!replyText.trim() || addCommentMut.isPending} onClick={() => addCommentMut.mutate()}
                         style={{ padding: '8px 16px', borderRadius: 9, border: 'none', background: replyText.trim() && !addCommentMut.isPending ? '#0e2235' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: replyText.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', flexShrink: 0 }}>
-                        {addCommentMut.isPending ? 'â€¦' : 'Enviar'}
+                        {addCommentMut.isPending ? '…' : 'Enviar'}
                       </button>
                     </div>
                     {addCommentMut.isError && <p style={{ fontSize: 10, color: '#dc2626', margin: '4px 0 0' }}>Error al enviar.</p>}
@@ -926,20 +926,20 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Solicitar colaborador</p>
                 <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)}
                   style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', marginBottom: 6, boxSizing: 'border-box' as const }}>
-                  <option value="">Seleccionar tÃ©cnicoâ€¦</option>
+                  <option value="">Seleccionar técnico…</option>
                   {technicians.map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
                 </select>
                 <button type="button" disabled={!selectedUserId || isCalling} onClick={handleInstantCall}
                   style={{ display: 'flex', alignItems: 'center', gap: 5, width: '100%', justifyContent: 'center', padding: '7px', borderRadius: 8, border: 'none', background: selectedUserId && !isCalling ? '#0e2235' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: selectedUserId ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-                  <Phone size={11} /> {isCalling ? 'Invitandoâ€¦' : 'Invitar'}
+                  <Phone size={11} /> {isCalling ? 'Invitando…' : 'Invitar'}
                 </button>
               </div>
 
               <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: 0 }} />
 
-              {/* ReuniÃ³n */}
+              {/* Reunión */}
               <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Programar reuniÃ³n</p>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Programar reunión</p>
                 <select value={meetingProvider} onChange={e => setMeetingProvider(e.target.value as typeof meetingProvider)}
                   style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', marginBottom: 5, boxSizing: 'border-box' as const }}>
                   <option value="google_meet">Google Meet</option>
@@ -949,7 +949,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 </select>
                 <input value={meetingReason} onChange={e => setMeetingReason(e.target.value)} placeholder="Motivo *"
                   style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', marginBottom: 5, boxSizing: 'border-box' as const, outline: 'none' }} />
-                <input value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} placeholder="URL reuniÃ³n (opcional)"
+                <input value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} placeholder="URL reunión (opcional)"
                   style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', marginBottom: 5, boxSizing: 'border-box' as const, outline: 'none' }} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 6 }}>
                   <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
@@ -961,7 +961,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 </div>
                 <button type="button" disabled={!scheduledDate || !meetingReason.trim() || scheduleMut.isPending} onClick={handleSchedule}
                   style={{ width: '100%', padding: '7px', borderRadius: 8, border: 'none', background: scheduledDate && meetingReason.trim() ? '#ff5e3a' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {scheduleMut.isPending ? 'Programandoâ€¦' : 'Programar'}
+                  {scheduleMut.isPending ? 'Programando…' : 'Programar'}
                 </button>
               </div>
 
@@ -982,15 +982,15 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                           </div>
                           <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 2px' }}>{m.reason}</p>
                           <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>
-                            {dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} Â· {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                            {dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} · {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
                           </p>
                           {m.meeting_url && m.status !== 'cancelled' && (
-                            <a href={m.meeting_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: pc, textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>Unirse â†’</a>
+                            <a href={m.meeting_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: pc, textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>Unirse →</a>
                           )}
                           {m.status === 'scheduled' && (
                             <button type="button" onClick={() => cancelMeetMut.mutate(m.id)} disabled={cancelMeetMut.isPending}
                               style={{ display: 'block', marginTop: 4, fontSize: 9, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                              Cancelar reuniÃ³n
+                              Cancelar reunión
                             </button>
                           )}
                         </div>
@@ -1008,7 +1008,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                   Participantes ({allGuests.length})
                 </p>
                 {allGuests.length === 0 ? (
-                  <p style={{ fontSize: 11, color: '#94a3b8' }}>Sin participantes aÃºn.</p>
+                  <p style={{ fontSize: 11, color: '#94a3b8' }}>Sin participantes aún.</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {allGuests.map(g => (

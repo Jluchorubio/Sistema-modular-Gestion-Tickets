@@ -210,7 +210,7 @@ export default function KnowledgePage() {
     if (!user || !helpdeskId) return null;
     return user.module_roles.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
   }, [user, helpdeskId]);
-  const canEdit = isSuperadmin || moduleRole === 'admin_modulo' || moduleRole === 'jefe_tecnico' || moduleRole === 'tecnico';
+  const canEdit = isSuperadmin || moduleRole === 'admin_modulo' || moduleRole === 'jefe_tecnico';
 
   const [search, setSearch]       = useState('');
   const [catFilter, setCatFilter] = useState('');

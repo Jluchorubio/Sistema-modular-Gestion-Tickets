@@ -781,7 +781,6 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
   const [quickFilter,     setQuickFilter]    = useState<QuickFilter | null>(null);
   const [techSearch,      setTechSearch]     = useState('');
   const [showFilters,     setShowFilters]    = useState(false);
-  const [showTechPanel,   setShowTechPanel]  = useState(true);
 
   const { data, isLoading } = useQuery({
     queryKey: ['tickets', moduleId, stateFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, reprocesoFilter, page],
@@ -1175,100 +1174,6 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
             </div>
           </div>
 
-          {/* Tech panel — collapsible */}
-          <div className={styles.helpdeskTechPanelWrap}>
-            {/* Ribbon toggle tab */}
-            <button
-              type="button"
-              className={styles.helpdeskTechTab}
-              onClick={() => setShowTechPanel((v) => !v)}
-              title={showTechPanel ? 'Ocultar técnicos' : 'Ver técnicos'}
-            >
-              <span className={styles.helpdeskTechTabLabel}>
-                {showTechPanel ? '◂ TÉCNICOS' : 'VER TÉCNICOS ▸'}
-              </span>
-            </button>
-
-            {showTechPanel && (
-              <div className={styles.helpdeskTechPanel}>
-
-                {/* Search técnico */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '8px 12px', boxShadow: '0 1px 2px rgba(15,23,42,.03)' }}>
-                  <Search size={12} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                  <input
-                    type="text"
-                    value={techSearch}
-                    onChange={(e) => setTechSearch(e.target.value)}
-                    placeholder="Buscar técnico..."
-                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, fontFamily: 'inherit', background: 'transparent' }}
-                  />
-                </div>
-
-                {/* Filtros + Mesa de Ayuda badge */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <button type="button" style={{ fontSize: 11, fontWeight: 700, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4, padding: 0 }}>
-                    <Filter size={10} /> FILTROS
-                  </button>
-                  <span style={{ fontSize: 10, background: '#e0f2fe', color: '#0369a1', fontWeight: 800, padding: '3px 12px', borderRadius: 99 }}>
-                    Mesa de Ayuda
-                  </span>
-                </div>
-
-                {/* Técnicos header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: '1px solid #eef2f6' }}>
-                  <span style={{ fontSize: 10, fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '.07em' }}>TÉCNICOS</span>
-                  <span style={{ fontSize: 10, background: '#20c933', color: '#fff', fontWeight: 800, padding: '1px 8px', borderRadius: 4 }}>
-                    {filteredTechs.filter((t) => t.is_available).length}/{filteredTechs.length} disp.
-                  </span>
-                </div>
-
-                {/* Tech cards */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, overflowY: 'auto' }}>
-                  {filteredTechs.length === 0 ? (
-                    <p style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>Sin técnicos asignados</p>
-                  ) : filteredTechs.map((tech) => {
-                    const st = (tech.avail_status ?? 'disponible') as TechAvailStatus;
-                    const c  = AVAIL_COLORS[st] ?? '#94a3b8';
-                    return (
-                      <div key={tech.id}
-                        style={{ background: '#fff', border: '1px solid #eef2f6', borderRadius: 12, padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ position: 'relative', flexShrink: 0 }}>
-                            {tech.avatar_url ? (
-                              <img src={tech.avatar_url} alt={tech.first_name}
-                                style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,.1)' }} />
-                            ) : (
-                              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#0e2235', color: '#fff', fontSize: 12, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,.1)' }}>
-                                {initials(`${tech.first_name} ${tech.last_name}`)}
-                              </div>
-                            )}
-                            <span style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, background: c, border: '2px solid #f8fafc', borderRadius: '50%' }} />
-                          </div>
-                          <div>
-                            <p style={{ margin: '0 0 1px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.2 }}>
-                              {tech.first_name} {tech.last_name}
-                            </p>
-                            {tech.username && (
-                              <p style={{ margin: '0 0 2px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>@{tech.username}</p>
-                            )}
-                            <span style={{ fontSize: 9, color: c, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: c, display: 'inline-block' }} />
-                              {AVAIL_LABELS[st]}
-                            </span>
-                          </div>
-                        </div>
-                        <button type="button"
-                          onClick={() => router.push(`${basePath}/tech/${tech.id}`)}
-                          style={{ fontSize: 9, fontWeight: 900, border: '1px solid #e2e8f0', padding: '5px 9px', borderRadius: 8, background: '#fff', color: '#1e293b', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '.02em', flexShrink: 0 }}>
-                          VER PROCESOS
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
         {showCreate && moduleId && <CreateModal moduleId={moduleId} onClose={() => setShowCreate(false)} />}
       </>
@@ -2024,23 +1929,27 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate, visualVaria
 /* ─────────────────── User view ──────────────────────────────────────────── */
 
 function UserView({ moduleId, basePath, canCreate, visualVariant = 'default' }: { moduleId: string; basePath: string; canCreate: boolean; visualVariant?: 'helpdeskMockup' | 'default' }) {
-  const router              = useRouter();
-  const [showCreate,        setShowCreate]       = useState(false);
-  const [search,            setSearch]           = useState('');
-  const [page,              setPage]             = useState(1);
-  const [showFilters,       setShowFilters]       = useState(false);
-  const [priorityFilter,    setPriorityFilter]   = useState<TicketPriority | ''>('');
+  const router   = useRouter();
+  const { user } = useAuthStore((s) => s);
+
+  const [showCreate,     setShowCreate]     = useState(false);
+  const [search,         setSearch]         = useState('');
+  const [page,           setPage]           = useState(1);
+  const [showFilters,    setShowFilters]    = useState(false);
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
+
+  const limit = visualVariant === 'helpdeskMockup' ? 100 : 20;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['tickets', moduleId, 'mine', page],
-    queryFn:  () => ticketsService.getAll({ module_id: moduleId, mine: true, page, limit: 20 }),
+    queryKey: ['tickets', moduleId, 'mine', page, limit],
+    queryFn:  () => ticketsService.getAll({ module_id: moduleId, mine: true, page, limit }),
     staleTime: 60_000,
     enabled:  !!moduleId,
   });
 
   const tickets    = data?.data  ?? [];
   const total      = data?.total ?? 0;
-  const totalPages = Math.ceil(total / 20);
+  const totalPages = Math.ceil(total / limit);
 
   const filtered = useMemo(() => {
     let list = tickets;
@@ -2061,163 +1970,158 @@ function UserView({ moduleId, basePath, canCreate, visualVariant = 'default' }: 
     return { ticketsOld: old, ticketsToday: today };
   }, [filtered]);
 
+  /* ── Portal stats (helpdeskMockup only) ── */
+  const portalStats = useMemo(() => ({
+    abiertos:   tickets.filter(t => !t.is_final && t.state_name !== 'realizado' && !t.assignee_name).length,
+    enProceso:  tickets.filter(t => !t.is_final && t.state_name !== 'realizado' && !!t.assignee_name).length,
+    aprobacion: tickets.filter(t => t.state_name === 'realizado' && !t.is_final).length,
+    resueltos:  tickets.filter(t => t.is_final).length,
+  }), [tickets]);
+
+  function portalStateBadge(t: TicketListItem): { label: string; bg: string; color: string } {
+    if (t.is_final)                                              return { label: 'Resuelto',    bg: '#dcfce7', color: '#15803d' };
+    if (t.state_name === 'realizado')                            return { label: 'Aprobación',  bg: '#fef9c3', color: '#854d0e' };
+    if (!!t.assignee_name)                                       return { label: 'En proceso',  bg: '#eff6ff', color: '#1d4ed8' };
+    return                                                              { label: 'Abierto',      bg: '#fff7ed', color: '#c2410c' };
+  }
+
   if (visualVariant === 'helpdeskMockup') {
+    const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
+    const firstName = user?.first_name ?? 'Usuario';
+
     return (
       <>
-        <div className={styles.helpdeskAdminShell}>
-          <div className={styles.helpdeskAdminMain}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* Search + actions */}
-            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '10px 14px', borderRadius: 12, border: '1px solid #eef2f6', boxShadow: '0 1px 3px rgba(15,23,42,.04)', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
-                <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar tickets..."
-                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, fontFamily: 'inherit', background: 'transparent', color: '#334155' }} />
+          {/* ── Hero ── */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.12em', margin: '0 0 3px' }}>Portal de Soporte</p>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: C.navy, margin: '0 0 3px' }}>Bienvenido, {firstName}</h1>
+              <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>Gestiona tus solicitudes y encuentra soluciones en nuestra base de conocimiento.</p>
+            </div>
+            {canCreate && moduleId && (
+              <button type="button" onClick={() => setShowCreate(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 10, background: C.coral, color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 14px rgba(255,94,58,.35)', flexShrink: 0 }}>
+                <Plus size={15} /> Reportar incidente
+              </button>
+            )}
+          </div>
+
+          {/* ── Stats cards ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            {[
+              { label: 'Abiertos',      value: portalStats.abiertos,   color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
+              { label: 'En proceso',    value: portalStats.enProceso,   color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+              { label: 'Aprobación',    value: portalStats.aprobacion,  color: '#854d0e', bg: '#fef9c3', border: '#fde68a' },
+              { label: 'Resueltos',     value: portalStats.resueltos,   color: '#15803d', bg: '#dcfce7', border: '#bbf7d0' },
+            ].map(s => (
+              <div key={s.label} style={{ background: s.bg, border: `1.5px solid ${s.border}`, borderRadius: 12, padding: '16px 18px' }}>
+                <p style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 800, color: s.color, lineHeight: 1 }}>{isLoading ? '—' : s.value}</p>
+                <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: s.color, opacity: .75, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                {canCreate && moduleId && (
+            ))}
+          </div>
+
+          {/* ── Mis solicitudes ── */}
+          <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+
+            {/* Table header bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: `1px solid ${C.border}`, gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ margin: '0 0 1px', fontSize: 14, fontWeight: 800, color: C.navy }}>Mis solicitudes</p>
+                <p style={{ margin: 0, fontSize: 11, color: C.muted }}>{isLoading ? '…' : `${total} solicitud${total !== 1 ? 'es' : ''} en total`}</p>
+              </div>
+              {/* Search */}
+              <div style={{ position: 'relative', minWidth: 220 }}>
+                <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar solicitudes…"
+                  style={{ width: '100%', padding: '7px 12px 7px 30px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: C.bg, boxSizing: 'border-box' as const }}
+                />
+              </div>
+            </div>
+
+            {/* Column headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 130px 90px', gap: 12, padding: '9px 18px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+              {['Solicitud', 'Estado', 'Prioridad', 'Técnico asignado', 'Fecha'].map((h, i) => (
+                <span key={i} style={{ fontSize: 9, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
+              ))}
+            </div>
+
+            {/* Rows */}
+            {isLoading ? (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: C.muted, fontSize: 13 }}>Cargando solicitudes…</div>
+            ) : filtered.length === 0 ? (
+              <div style={{ padding: '56px 0', textAlign: 'center' }}>
+                <Ticket size={28} style={{ color: C.border, display: 'block', margin: '0 auto 12px' }} />
+                <p style={{ fontSize: 14, fontWeight: 700, color: C.navy, margin: '0 0 4px' }}>
+                  {tickets.length === 0 ? 'Aún no tienes solicitudes' : 'Sin resultados'}
+                </p>
+                {tickets.length === 0 && canCreate && moduleId && (
                   <button type="button" onClick={() => setShowCreate(true)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: '#ff5e3a', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 3px rgba(255,94,58,.25)' }}>
-                    <Plus size={12} /> Reportar Nuevo Incidente
+                    style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 9, border: 'none', background: C.coral, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <Plus size={12} /> Crear primera solicitud
                   </button>
                 )}
-                <button type="button"
-                  onClick={() => setShowFilters((v) => !v)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: showFilters ? '1px solid #ff5e3a' : '1px solid #e2e8f0', background: showFilters ? '#fff5f0' : '#fff', color: showFilters ? '#ff5e3a' : '#475569', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  <Filter size={10} /> Filtros{priorityFilter ? ' ●' : ''}
-                </button>
+              </div>
+            ) : (
+              filtered.map(t => {
+                const pColor = TICKET_PRIORITY_COLORS[t.priority as TicketPriority] ?? C.muted;
+                const badge  = portalStateBadge(t);
+                return (
+                  <div key={t.id}
+                    onClick={() => router.push(`${basePath}/ticket/${t.id}`)}
+                    style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 130px 90px', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', background: '#fff', transition: 'background .1s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = C.bg; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = '#fff'; }}
+                  >
+                    {/* Título + ID */}
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ margin: '0 0 2px', fontSize: 12.5, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</p>
+                      <p style={{ margin: 0, fontSize: 10, color: C.muted }}>#{t.id.slice(-6).toUpperCase()} · {t.category_name}</p>
+                    </div>
+                    {/* Estado */}
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: badge.bg, color: badge.color, whiteSpace: 'nowrap', display: 'inline-block' }}>
+                      {badge.label}
+                    </span>
+                    {/* Prioridad */}
+                    <span style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                      {TICKET_PRIORITY_LABELS[t.priority as TicketPriority]}
+                    </span>
+                    {/* Técnico */}
+                    <span style={{ fontSize: 11, color: t.assignee_name ? C.navy : C.muted, fontWeight: t.assignee_name ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.assignee_name ?? '— Sin asignar'}
+                    </span>
+                    {/* Fecha */}
+                    <span style={{ fontSize: 10, color: C.muted }}>{fmtRelative(t.created_at)}</span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* ── Base de conocimiento shortcut ── */}
+          <div
+            onClick={() => router.push(`${basePath}/knowledge`)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, background: `linear-gradient(135deg, ${C.navy} 0%, #1a3a55 100%)`, borderRadius: 14, padding: '20px 24px', cursor: 'pointer', flexWrap: 'wrap' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255,255,255,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Search size={20} style={{ color: '#fff' }} />
+              </div>
+              <div>
+                <p style={{ margin: '0 0 3px', fontSize: 14, fontWeight: 800, color: '#fff' }}>Base de conocimiento</p>
+                <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,.6)' }}>Encuentra soluciones y guías antes de crear un ticket nuevo</p>
               </div>
             </div>
-
-            {/* Filter panel */}
-            {showFilters && (
-              <div className={styles.helpdeskFilterPanel}>
-                <div>
-                  <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Prioridad</p>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {PRIORITIES.map((p) => {
-                      const c = TICKET_PRIORITY_COLORS[p];
-                      const active = priorityFilter === p;
-                      return (
-                        <button key={p} type="button"
-                          onClick={() => setPriorityFilter(active ? '' : p)}
-                          style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 99, border: `1px solid ${active ? c : c + '60'}`, background: active ? c : `${c}15`, color: active ? '#fff' : c, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {TICKET_PRIORITY_LABELS[p]}
-                        </button>
-                      );
-                    })}
-                    {priorityFilter && (
-                      <button type="button"
-                        onClick={() => setPriorityFilter('')}
-                        style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 99, border: '1px solid #fee2e2', background: '#fff5f5', color: '#ef4444', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        × Limpiar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Ticket sections */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>MIS TICKETS ACTIVOS</span>
-                <span style={{ fontSize: 10, background: '#f1f5f9', color: '#475569', fontWeight: 800, padding: '2px 8px', borderRadius: 6 }}>Total • {total}</span>
-              </div>
-
-              {isLoading ? (
-                <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>Cargando tickets…</p>
-              ) : (
-                <>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#e53e3e', textTransform: 'uppercase', letterSpacing: '.04em' }}>● ANTERIORES</span>
-                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{ticketsOld.length} tickets</span>
-                    </div>
-                    {ticketsOld.length === 0 ? (
-                      <div style={{ background: '#fff', borderRadius: 16, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets anteriores</div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        {ticketsOld.map((t) => {
-                          const pColor = TICKET_PRIORITY_COLORS[t.priority];
-                          return (
-                            <div key={t.id} className={styles.helpdeskCard}
-                              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                  {t.assignee_name ?? '? Sin asignar'}<ChevronDown size={9} style={{ color: '#94a3b8' }} />
-                                </span>
-                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
-                                  {TICKET_PRIORITY_LABELS[t.priority]}
-                                </span>
-                              </div>
-                              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
-                              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
-                              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {initials(t.creator_name)}
-                                  </div>
-                                  <div>
-                                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
-                                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
-                                  </div>
-                                </div>
-                                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>#{t.id.slice(-6).toUpperCase()}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.04em' }}>● HOY — ACTUALES</span>
-                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{ticketsToday.length} tickets</span>
-                    </div>
-                    {ticketsToday.length === 0 ? (
-                      <div style={{ background: '#fff', borderRadius: 16, padding: '28px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets nuevos hoy</div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        {ticketsToday.map((t) => {
-                          const pColor = TICKET_PRIORITY_COLORS[t.priority];
-                          return (
-                            <div key={t.id} className={styles.helpdeskCard}
-                              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                  {t.assignee_name ?? '? Sin asignar'}<ChevronDown size={9} style={{ color: '#94a3b8' }} />
-                                </span>
-                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
-                                  {TICKET_PRIORITY_LABELS[t.priority]}
-                                </span>
-                              </div>
-                              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
-                              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
-                              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {initials(t.creator_name)}
-                                  </div>
-                                  <div>
-                                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
-                                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
-                                  </div>
-                                </div>
-                                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>#{t.id.slice(-6).toUpperCase()}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, background: C.coral, color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+              Explorar artículos <ChevronRight size={13} />
             </div>
           </div>
+
         </div>
         {showCreate && moduleId && <CreateModal moduleId={moduleId} onClose={() => setShowCreate(false)} />}
       </>

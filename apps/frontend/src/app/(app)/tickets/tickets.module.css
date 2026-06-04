@@ -1551,46 +1551,6 @@
   font-weight: 900;
 }
 
-/* ── Collapsible tech panel wrapper (handles sticky) ── */
-.helpdeskTechPanelWrap {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  align-self: flex-start;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: row;
-}
-
-/* Vertical ribbon tab — always visible */
-.helpdeskTechTab {
-  width: 26px;
-  flex-shrink: 0;
-  background: #f1f5f9;
-  border: none;
-  border-left: 1px solid #eef2f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-family: inherit;
-  padding: 0;
-  transition: background .15s;
-}
-.helpdeskTechTab:hover { background: #e8edf3; }
-
-.helpdeskTechTabLabel {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  transform: rotate(180deg);
-  font-size: 9px;
-  font-weight: 800;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  user-select: none;
-  white-space: nowrap;
-}
 
 .helpdeskTechPanel {
   width: 320px;
@@ -1642,9 +1602,7 @@
 
 @media (max-width: 900px) {
   .helpdeskAdminShell  { flex-direction: column; }
-  .helpdeskTechPanelWrap { position: static; height: auto; }
   .helpdeskTechPanel   { width: 100%; border-left: 0; border-top: 1px solid #eef2f6; height: auto; }
-  .helpdeskTechTab     { display: none; }
 }
 
 @media (max-width: 720px) {
