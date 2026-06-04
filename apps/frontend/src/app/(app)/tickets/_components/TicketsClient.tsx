@@ -1931,18 +1931,18 @@ function UserView({ moduleId, basePath, canCreate, visualVariant = 'default' }: 
 
   /* ── Portal stats (helpdeskMockup only) ── */
   const portalStats = useMemo(() => ({
-    abiertos:   tickets.filter(t => !t.is_final && !t.is_approval_state && !t.assignee_name).length,
-    enProceso:  tickets.filter(t => !t.is_final && !t.is_approval_state && !!t.assignee_name).length,
-    aprobacion: tickets.filter(t => t.is_approval_state).length,
-    resueltos:  tickets.filter(t => t.is_final).length,
+    abiertos:   tickets.filter(t => !t.is_final && !t.is_approval_state && !t.assignee_name && !t.is_pause_state).length,
+    enProceso:  tickets.filter(t => !t.is_final && !t.is_approval_state && !!t.assignee_name && !t.is_pause_state).length,
+    porAceptar: tickets.filter(t => t.is_approval_state).length,
+    cerrados:   tickets.filter(t => t.is_final).length,
   }), [tickets]);
 
-  function portalStateBadge(t: TicketListItem): { label: string; bg: string; color: string } {
-    if (t.is_final)            return { label: 'Cerrado',     bg: '#dcfce7', color: '#15803d' };
-    if (t.is_approval_state)   return { label: 'Aprobación',  bg: '#fef9c3', color: '#854d0e' };
-    if (t.is_pause_state)      return { label: 'En espera',   bg: '#fef3c7', color: '#92400e' };
-    if (!!t.assignee_name)     return { label: 'En proceso',  bg: '#eff6ff', color: '#1d4ed8' };
-    return                            { label: 'Abierto',      bg: '#fff7ed', color: '#c2410c' };
+  function portalStateBadge(t: TicketListItem): { label: string; bg: string; color: string; action?: boolean } {
+    if (t.is_final)          return { label: 'Cerrado',      bg: '#f1f5f9', color: '#64748b' };
+    if (t.is_approval_state) return { label: 'Por aceptar',  bg: '#fff7ed', color: '#c2410c', action: true };
+    if (t.is_pause_state)    return { label: 'En espera',    bg: '#fef3c7', color: '#92400e' };
+    if (!!t.assignee_name)   return { label: 'En proceso',   bg: '#eff6ff', color: '#1d4ed8' };
+    return                          { label: 'Abierto',       bg: '#fff7ed', color: '#c2410c' };
   }
 
   if (visualVariant === 'helpdeskMockup') {
@@ -1971,17 +1971,34 @@ function UserView({ moduleId, basePath, canCreate, visualVariant = 'default' }: 
           {/* ── Stats cards ── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[
-              { label: 'Abiertos',      value: portalStats.abiertos,   color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
-              { label: 'En proceso',    value: portalStats.enProceso,   color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
-              { label: 'Aprobación',    value: portalStats.aprobacion,  color: '#854d0e', bg: '#fef9c3', border: '#fde68a' },
-              { label: 'Resueltos',     value: portalStats.resueltos,   color: '#15803d', bg: '#dcfce7', border: '#bbf7d0' },
+              { label: 'Abiertos',    value: portalStats.abiertos,   color: '#c2410c', bg: '#fff7ed', border: '#fed7aa', action: false },
+              { label: 'En proceso',  value: portalStats.enProceso,   color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe', action: false },
+              { label: 'Por aceptar', value: portalStats.porAceptar,  color: '#ff5e3a', bg: '#fff7ed', border: portalStats.porAceptar > 0 ? '#ff5e3a' : '#fed7aa', action: true  },
+              { label: 'Cerrados',    value: portalStats.cerrados,    color: '#64748b', bg: '#f8fafc', border: '#e2e8f0', action: false },
             ].map(s => (
-              <div key={s.label} style={{ background: s.bg, border: `1.5px solid ${s.border}`, borderRadius: 12, padding: '16px 18px' }}>
+              <div key={s.label} style={{ background: s.bg, border: `1.5px solid ${s.border}`, borderRadius: 12, padding: '16px 18px', position: 'relative' }}>
+                {s.action && s.value > 0 && (
+                  <span style={{ position: 'absolute', top: 10, right: 10, width: 7, height: 7, borderRadius: '50%', background: '#ff5e3a' }} />
+                )}
                 <p style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 800, color: s.color, lineHeight: 1 }}>{isLoading ? '—' : s.value}</p>
-                <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: s.color, opacity: .75, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
+                <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: s.color, opacity: .85, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
+                {s.action && s.value > 0 && (
+                  <p style={{ margin: '4px 0 0', fontSize: 9, color: '#ff5e3a', fontWeight: 700 }}>Requiere tu acción</p>
+                )}
               </div>
             ))}
           </div>
+
+          {/* ── Action banner: tickets por aceptar ── */}
+          {portalStats.porAceptar > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5e3a', flexShrink: 0 }} />
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#c2410c', flex: 1 }}>
+                Tienes {portalStats.porAceptar} solicitud{portalStats.porAceptar > 1 ? 'es' : ''} resuelta{portalStats.porAceptar > 1 ? 's' : ''} esperando tu aceptación o reapertura.
+              </p>
+              <ChevronRight size={14} style={{ color: '#c2410c', flexShrink: 0 }} />
+            </div>
+          )}
 
           {/* ── Mis solicitudes ── */}
           <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
@@ -2006,7 +2023,7 @@ function UserView({ moduleId, basePath, canCreate, visualVariant = 'default' }: 
 
             {/* Column headers */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 130px 90px', gap: 12, padding: '9px 18px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
-              {['Solicitud', 'Estado', 'Prioridad', 'Técnico asignado', 'Fecha'].map((h, i) => (
+              {['Solicitud', 'Estado', 'Prioridad', 'Responsable', 'Fecha'].map((h, i) => (
                 <span key={i} style={{ fontSize: 9, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
               ))}
             </div>
@@ -2034,9 +2051,9 @@ function UserView({ moduleId, basePath, canCreate, visualVariant = 'default' }: 
                 return (
                   <div key={t.id}
                     onClick={() => router.push(`${basePath}/ticket/${t.id}`)}
-                    style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 130px 90px', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', background: '#fff', transition: 'background .1s' }}
+                    style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 130px 90px', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', background: badge.action ? '#fffbf7' : '#fff', transition: 'background .1s', borderLeft: badge.action ? '3px solid #ff5e3a' : '3px solid transparent' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = C.bg; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = '#fff'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = badge.action ? '#fffbf7' : '#fff'; }}
                   >
                     {/* Título + ID */}
                     <div style={{ minWidth: 0 }}>

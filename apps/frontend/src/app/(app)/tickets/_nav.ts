@@ -24,7 +24,7 @@ export const HELPDESK_NAV: ModuleNavItem[] = [
 export const HELPDESK_OPERATIONAL_NAV: ModuleNavItem[] = [
   {
     key: 'inicio', label: 'Inicio', Icon: Home, href: '/helpdesk',
-    allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico'],
+    allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico', 'usuario'],
     exact: true,
   },
   {
@@ -45,6 +45,6 @@ export const HELPDESK_OPERATIONAL_NAV: ModuleNavItem[] = [
   },
   {
     key: 'knowledge', label: 'Conocimiento', Icon: BookOpen, href: '/helpdesk/knowledge',
-    allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico'],
+    allowedRoles: ['admin_modulo', 'jefe_tecnico', 'tecnico', 'usuario'],
   },
 ];
