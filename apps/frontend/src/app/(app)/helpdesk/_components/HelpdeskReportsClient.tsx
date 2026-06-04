@@ -147,7 +147,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                 <KpiCard label="Total tickets"    value={n(kpis?.total)}     sub="histórico"        color={C.navy} />
                 <KpiCard label="Activos"          value={n(kpis?.open)}      sub="en este momento"  color={C.coral} />
                 <KpiCard label="Esta semana"      value={n(kpis?.this_week)} sub="últimos 7 días"   color="#6366f1" />
-                <KpiCard label="Reprocesos"       value={n(kpis?.reprocesos)} sub="total histórico" color={n(kpis?.reprocesos) > 0 ? '#f59e0b' : '#22c55e'} />
+                <KpiCard label="Rechazados"       value={n(kpis?.rechazados)} sub="total histórico" color={n(kpis?.rechazados) > 0 ? '#f59e0b' : '#22c55e'} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                 <KpiCard label="Hoy"              value={n(kpis?.today)}           sub="tickets creados hoy"     color="#0ea5e9" />
@@ -224,7 +224,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                     const resolved  = n(tech.tickets_resolved);
                     const assigned  = n(tech.tickets_assigned);
                     const resolvePct = assigned > 0 ? Math.round((resolved / assigned) * 100) : 0;
-                    const reprocesos = n(tech.reprocesos);
+                    const rechazados = n(tech.rechazados);
                     const avgH = tech.avg_resolution_hours ? Math.round(n(tech.avg_resolution_hours)) : null;
                     const rating = tech.avg_rating ? n(tech.avg_rating) : null;
                     return (
@@ -242,8 +242,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                         <span style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{assigned}</span>
                         {/* Resueltos */}
                         <span style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{resolved}</span>
-                        {/* Reprocesos */}
-                        <span style={{ fontSize: 13, fontWeight: 700, color: reprocesos > 0 ? '#f59e0b' : C.muted }}>{reprocesos}</span>
+                        {/* Rechazados */}
+                        <span style={{ fontSize: 13, fontWeight: 700, color: rechazados > 0 ? '#f59e0b' : C.muted }}>{rechazados}</span>
                         {/* Tiempo prom */}
                         <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, fontFamily: 'monospace' }}>
                           {avgH !== null ? `${avgH}h` : '—'}

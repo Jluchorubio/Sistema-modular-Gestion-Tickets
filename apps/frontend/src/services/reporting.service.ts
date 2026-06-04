@@ -90,7 +90,7 @@ export interface HelpdeskKpis {
   today:                string;
   this_week:            string;
   this_month:           string;
-  reprocesos:           string;
+  rechazados:           string;
   avg_resolution_hours: string | null;
 }
 
@@ -106,7 +106,7 @@ export interface HelpdeskTechnician {
   technician_name:     string;
   tickets_assigned:    string;
   tickets_resolved:    string;
-  reprocesos:          string;
+  rechazados:          string;
   avg_resolution_hours: string | null;
   avg_rating:          string | null;
   total_ratings:       string;

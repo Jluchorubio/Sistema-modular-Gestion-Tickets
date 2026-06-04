@@ -190,7 +190,7 @@ export class ReportingService {
          COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '1 day')          AS today,
          COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '7 days')         AS this_week,
          COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '30 days')        AS this_month,
-         COUNT(*) FILTER (WHERE s.name = 'reproceso')                              AS reprocesos,
+         COUNT(*) FILTER (WHERE s.name = 'rechazado')                              AS rechazados,
          ROUND(AVG(
            EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
          ) FILTER (WHERE s.is_final), 1)                                            AS avg_resolution_hours
@@ -220,7 +220,7 @@ export class ReportingService {
               p.first_name || ' ' || p.last_name AS technician_name,
               COUNT(DISTINCT ta.ticket_id)                                           AS tickets_assigned,
               COUNT(DISTINCT ta.ticket_id) FILTER (WHERE s.is_final)                AS tickets_resolved,
-              COUNT(DISTINCT ta.ticket_id) FILTER (WHERE s.name = 'reproceso')      AS reprocesos,
+              COUNT(DISTINCT ta.ticket_id) FILTER (WHERE s.name = 'rechazado')      AS rechazados,
               ROUND(AVG(
                 EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
               ) FILTER (WHERE s.is_final), 1)                                        AS avg_resolution_hours,

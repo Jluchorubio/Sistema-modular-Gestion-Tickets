@@ -256,7 +256,6 @@ export interface TicketsFilter {
   category_id?: string;
   assignee_id?: string;
   sla_status?:  SlaStatus | '';
-  is_reproceso?: boolean;
   unassigned?:  boolean;
   page?:        number;
   limit?:       number;
@@ -307,7 +306,6 @@ export const ticketsService = {
     if (filter.category_id)           params.category_id = filter.category_id;
     if (filter.assignee_id)           params.assignee_id = filter.assignee_id;
     if (filter.sla_status)            params.sla_status  = filter.sla_status;
-    if (filter.is_reproceso)          params.is_reproceso = 'true';
     if (filter.unassigned)            params.unassigned   = 'true';
     if (filter.page  != null)         params.page        = String(filter.page);
     if (filter.limit != null)         params.limit       = String(filter.limit);

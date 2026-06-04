@@ -73,17 +73,16 @@ export class TicketsService {
   /* ── List ───────────────────────────────────────────────────────────────── */
 
   async findAll(opts: {
-    moduleId?:    string;
-    stateId?:     string;
-    priority?:    string;
-    userId?:      string;
-    categoryId?:  string;
-    assigneeId?:  string;
-    slaStatus?:   string;
-    isReproceso?: boolean;
-    unassigned?:  boolean;
-    page?:        number;
-    limit?:       number;
+    moduleId?:   string;
+    stateId?:    string;
+    priority?:   string;
+    userId?:     string;
+    categoryId?: string;
+    assigneeId?: string;
+    slaStatus?:  string;
+    unassigned?: boolean;
+    page?:       number;
+    limit?:      number;
   }) {
     const page   = Math.max(1, opts.page  ?? 1);
     const limit  = Math.min(200, opts.limit ?? 25);
@@ -114,7 +113,6 @@ export class TicketsService {
       conds.push(`s.is_final = false`);
     }
     if (opts.slaStatus)   { conds.push(`st.status = $${p++}`);             params.push(opts.slaStatus); }
-    if (opts.isReproceso) { conds.push(`s.name = 'reproceso'`); }
 
     const where = conds.length ? conds.join(' AND ') : 'TRUE';
 
@@ -637,7 +635,7 @@ export class TicketsService {
     return { ok: true };
   }
 
-  /* ── Reject ticket → reproceso / escalation ─────────────────────────────── */
+  /* ── Reject ticket → rechazado / escalation ─────────────────────────────── */
 
   async rejectTicket(userId: string, ticketId: string, dto: { reason: string }) {
     const [ticket] = await this.db.query<any[]>(
