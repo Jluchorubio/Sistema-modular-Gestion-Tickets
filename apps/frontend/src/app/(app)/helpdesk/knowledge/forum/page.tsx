@@ -12,6 +12,7 @@ import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app
 import { KnowledgeNav } from '../_components/KnowledgeNav';
 import { forumService, type ForumPost } from '../_lib/knowledge.service';
 import { fmtDate } from '@/lib/formatters';
+import { ADMIN_ROLES } from '@/constants/roles';
 
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
 
@@ -35,7 +36,7 @@ export default function ForumPage() {
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
 
   const moduleRole = user?.module_roles?.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
-  const canModerate = isSuperadmin || moduleRole === 'admin_modulo' || moduleRole === 'jefe_tecnico';
+  const canModerate = isSuperadmin || ADMIN_ROLES.includes(moduleRole as any);
   const canPost     = !!moduleRole || isSuperadmin;
 
   const [filter,      setFilter]      = useState<'all' | 'resolved' | 'unresolved'>('all');

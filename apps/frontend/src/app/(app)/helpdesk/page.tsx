@@ -4,8 +4,9 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useHelpdeskRole } from '@/hooks/useHelpdeskRole';
 import { TicketsClient } from '@/app/(app)/tickets/_components/TicketsClient';
+import { TECH_ROLES } from '@/constants/roles';
 
-const REDIRECT_TO_WORKSPACE = ['jefe_tecnico', 'tecnico'];
+const REDIRECT_TO_WORKSPACE = TECH_ROLES;
 
 export default function HelpdeskPage() {
   const router = useRouter();
