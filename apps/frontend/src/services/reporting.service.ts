@@ -83,6 +83,43 @@ export interface InventorySummary {
   by_category: InventoryByCategory[];
 }
 
+export interface HelpdeskKpis {
+  total:                string;
+  open:                 string;
+  closed:               string;
+  today:                string;
+  this_week:            string;
+  this_month:           string;
+  reprocesos:           string;
+  avg_resolution_hours: string | null;
+}
+
+export interface HelpdeskByCategory {
+  category_name: string;
+  total:         string;
+  closed:        string;
+  open:          string;
+}
+
+export interface HelpdeskTechnician {
+  technician_id:       string;
+  technician_name:     string;
+  tickets_assigned:    string;
+  tickets_resolved:    string;
+  reprocesos:          string;
+  avg_resolution_hours: string | null;
+  avg_rating:          string | null;
+  total_ratings:       string;
+}
+
+export interface HelpdeskMetrics {
+  kpis:           HelpdeskKpis;
+  by_category:    HelpdeskByCategory[];
+  by_technician:  HelpdeskTechnician[];
+  sla:            SlaMetrics;
+  daily_trend:    DailyTrend[];
+}
+
 export const reportingService = {
   async getSlaMetrics(moduleId?: string): Promise<SlaMetrics> {
     const params: Record<string, string> = {};
@@ -109,6 +146,11 @@ export const reportingService = {
     const params: Record<string, string | number> = { limit };
     if (entityType) params.entity_type = entityType;
     const { data } = await api.get('/reporting/audit', { params });
+    return data;
+  },
+
+  async getHelpdeskMetrics(moduleId: string): Promise<HelpdeskMetrics> {
+    const { data } = await api.get('/reporting/helpdesk', { params: { moduleId } });
     return data;
   },
 

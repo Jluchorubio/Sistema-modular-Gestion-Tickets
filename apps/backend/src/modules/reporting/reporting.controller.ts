@@ -51,6 +51,14 @@ export class ReportingController {
     return this.service.auditLog(limit ? Math.min(parseInt(limit, 10), 200) : 50, entityType);
   }
 
+  @Get('helpdesk')
+  @RequirePermission('helpdesk:reports:view')
+  @ApiOperation({ summary: 'Métricas específicas de Helpdesk: KPIs, técnicos, categorías, SLA.' })
+  @ApiQuery({ name: 'moduleId', required: true })
+  helpdeskMetrics(@Query('moduleId') moduleId: string) {
+    return this.service.helpdeskMetrics(moduleId);
+  }
+
   @Get('export/tickets')
   @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Exportar tickets a CSV (máx 5000 filas).' })

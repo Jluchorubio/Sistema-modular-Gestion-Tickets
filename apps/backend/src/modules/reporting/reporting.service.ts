@@ -178,4 +178,75 @@ export class ReportingService {
 
     return { totals, by_state: byState, by_priority: byPriority, daily_trend: trend };
   }
+
+  async helpdeskMetrics(moduleId: string) {
+    const p = [moduleId];
+
+    const [kpis] = await this.db.query<any[]>(
+      `SELECT
+         COUNT(*)                                                                   AS total,
+         COUNT(*) FILTER (WHERE NOT s.is_final)                                    AS open,
+         COUNT(*) FILTER (WHERE s.is_final)                                        AS closed,
+         COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '1 day')          AS today,
+         COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '7 days')         AS this_week,
+         COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '30 days')        AS this_month,
+         COUNT(*) FILTER (WHERE s.name = 'reproceso')                              AS reprocesos,
+         ROUND(AVG(
+           EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
+         ) FILTER (WHERE s.is_final), 1)                                            AS avg_resolution_hours
+       FROM tickets.tickets t
+       JOIN tickets.states s ON s.id = t.current_state_id
+       WHERE t.module_id = $1`,
+      p,
+    );
+
+    const byCategory = await this.db.query<any[]>(
+      `SELECT c.name AS category_name,
+              COUNT(*)                               AS total,
+              COUNT(*) FILTER (WHERE s.is_final)     AS closed,
+              COUNT(*) FILTER (WHERE NOT s.is_final) AS open
+       FROM   tickets.tickets t
+       JOIN   modules.categories c ON c.id = t.category_id
+       JOIN   tickets.states     s ON s.id = t.current_state_id
+       WHERE  t.module_id = $1
+       GROUP  BY c.name
+       ORDER  BY total DESC
+       LIMIT  15`,
+      p,
+    );
+
+    const byTechnician = await this.db.query<any[]>(
+      `SELECT p.id AS technician_id,
+              p.first_name || ' ' || p.last_name AS technician_name,
+              COUNT(DISTINCT ta.ticket_id)                                           AS tickets_assigned,
+              COUNT(DISTINCT ta.ticket_id) FILTER (WHERE s.is_final)                AS tickets_resolved,
+              COUNT(DISTINCT ta.ticket_id) FILTER (WHERE s.name = 'reproceso')      AS reprocesos,
+              ROUND(AVG(
+                EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
+              ) FILTER (WHERE s.is_final), 1)                                        AS avg_resolution_hours,
+              ROUND(AVG(r.score_overall), 1)                                         AS avg_rating,
+              COUNT(r.id)                                                             AS total_ratings
+       FROM   tickets.ticket_assignments ta
+       JOIN   tickets.tickets    t  ON t.id  = ta.ticket_id AND t.module_id = $1
+       JOIN   tickets.states     s  ON s.id  = t.current_state_id
+       JOIN   users.profiles     p  ON p.id  = ta.user_id
+       LEFT JOIN tickets.ticket_ratings r ON r.ticket_id = ta.ticket_id AND r.technician_id = ta.user_id
+       WHERE  ta.role = 'owner'
+       GROUP  BY p.id, p.first_name, p.last_name
+       ORDER  BY tickets_resolved DESC, tickets_assigned DESC
+       LIMIT  20`,
+      p,
+    );
+
+    const sla = await this.slaMetrics(moduleId);
+    const trend = await this.db.query<any[]>(
+      `SELECT date_trunc('day', t.created_at)::date AS day, COUNT(*) AS created
+       FROM   tickets.tickets t
+       WHERE  t.module_id = $1 AND t.created_at >= now() - INTERVAL '30 days'
+       GROUP  BY 1 ORDER BY 1`,
+      p,
+    );
+
+    return { kpis, by_category: byCategory, by_technician: byTechnician, sla, daily_trend: trend };
+  }
 }
