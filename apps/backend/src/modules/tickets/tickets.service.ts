@@ -1192,4 +1192,139 @@ export class TicketsService {
     await this.db.query(`DELETE FROM tickets.knowledge_articles WHERE id = $1`, [id]);
     return { ok: true };
   }
+
+  async voteArticle(userId: string, articleId: string, value: 1 | -1) {
+    await this.db.query(
+      `INSERT INTO tickets.knowledge_votes (user_id, entity_id, entity_type, value)
+       VALUES ($1, $2, 'article', $3)
+       ON CONFLICT (user_id, entity_id, entity_type) DO UPDATE SET value = $3`,
+      [userId, articleId, value],
+    );
+    const [row] = await this.db.query<any[]>(
+      `UPDATE tickets.knowledge_articles
+       SET helpful_count     = (SELECT COUNT(*) FROM tickets.knowledge_votes WHERE entity_id=$1 AND entity_type='article' AND value=1),
+           not_helpful_count = (SELECT COUNT(*) FROM tickets.knowledge_votes WHERE entity_id=$1 AND entity_type='article' AND value=-1)
+       WHERE id = $1
+       RETURNING helpful_count, not_helpful_count`,
+      [articleId],
+    );
+    return row;
+  }
+
+  /* ── Forum posts ─────────────────────────────────────────────────────────── */
+
+  async getKnowledgePosts(moduleId: string, q?: string, filter?: string) {
+    const params: any[] = [moduleId];
+    let filterClause = '';
+    if (filter === 'resolved')   filterClause = 'AND kp.is_resolved = true';
+    if (filter === 'unresolved') filterClause = 'AND kp.is_resolved = false';
+    let searchClause = '';
+    if (q?.trim() && q.trim().length >= 2) {
+      params.push(`%${q.trim()}%`);
+      searchClause = `AND (kp.title ILIKE $${params.length} OR kp.content ILIKE $${params.length})`;
+    }
+    const posts = await this.db.query<any[]>(
+      `SELECT kp.id, kp.title, kp.content, kp.tags, kp.is_resolved, kp.view_count,
+              kp.created_at, kp.updated_at,
+              p.first_name || ' ' || p.last_name AS author_name,
+              p.avatar_url AS author_avatar,
+              (SELECT COUNT(*) FROM tickets.knowledge_replies kr WHERE kr.post_id = kp.id) AS reply_count,
+              (SELECT COUNT(*) FROM tickets.knowledge_votes kv WHERE kv.entity_id = kp.id AND kv.entity_type='post' AND kv.value=1) AS vote_count
+       FROM   tickets.knowledge_posts kp
+       JOIN   users.profiles p ON p.id = kp.created_by
+       WHERE  kp.module_id = $1 ${filterClause} ${searchClause}
+       ORDER  BY kp.is_resolved ASC, kp.created_at DESC
+       LIMIT  100`,
+      params,
+    );
+    return posts;
+  }
+
+  async getKnowledgePost(id: string) {
+    const [post] = await this.db.query<any[]>(
+      `SELECT kp.*,
+              p.first_name || ' ' || p.last_name AS author_name,
+              p.avatar_url AS author_avatar
+       FROM   tickets.knowledge_posts kp
+       JOIN   users.profiles p ON p.id = kp.created_by
+       WHERE  kp.id = $1`,
+      [id],
+    );
+    if (!post) throw new NotFoundException('Post not found');
+    await this.db.query(`UPDATE tickets.knowledge_posts SET view_count = view_count + 1 WHERE id = $1`, [id]).catch(() => {});
+
+    const replies = await this.db.query<any[]>(
+      `SELECT kr.*,
+              p.first_name || ' ' || p.last_name AS author_name,
+              p.avatar_url AS author_avatar,
+              (SELECT COUNT(*) FROM tickets.knowledge_votes kv WHERE kv.entity_id = kr.id AND kv.entity_type='reply' AND kv.value=1) AS vote_count
+       FROM   tickets.knowledge_replies kr
+       JOIN   users.profiles p ON p.id = kr.created_by
+       WHERE  kr.post_id = $1
+       ORDER  BY kr.is_accepted DESC, kr.created_at ASC`,
+      [id],
+    );
+    return { ...post, replies };
+  }
+
+  async createKnowledgePost(userId: string, dto: { module_id: string; title: string; content: string; tags?: string[] }) {
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.knowledge_posts (module_id, title, content, tags, created_by)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, title, created_at`,
+      [dto.module_id, dto.title.trim(), dto.content.trim(), dto.tags ?? [], userId],
+    );
+    return row;
+  }
+
+  async createKnowledgeReply(userId: string, postId: string, dto: { content: string }) {
+    const [post] = await this.db.query<any[]>(`SELECT id FROM tickets.knowledge_posts WHERE id = $1`, [postId]);
+    if (!post) throw new NotFoundException('Post not found');
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.knowledge_replies (post_id, content, created_by)
+       VALUES ($1, $2, $3)
+       RETURNING id, content, created_at`,
+      [postId, dto.content.trim(), userId],
+    );
+    return row;
+  }
+
+  async acceptKnowledgeReply(userId: string, postId: string, replyId: string) {
+    const [post] = await this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_posts WHERE id = $1`, [postId]);
+    if (!post) throw new NotFoundException('Post not found');
+    if (post.created_by !== userId) throw new ForbiddenException('Solo el autor del post puede aceptar una respuesta.');
+    await this.db.query(`UPDATE tickets.knowledge_replies SET is_accepted = false WHERE post_id = $1`, [postId]);
+    await this.db.query(`UPDATE tickets.knowledge_replies SET is_accepted = true  WHERE id = $1`, [replyId]);
+    await this.db.query(`UPDATE tickets.knowledge_posts    SET is_resolved = true  WHERE id = $1`, [postId]);
+    return { ok: true };
+  }
+
+  async deleteKnowledgePost(userId: string, postId: string, isSuperadmin: boolean) {
+    const [post] = await this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_posts WHERE id = $1`, [postId]);
+    if (!post) throw new NotFoundException('Post not found');
+    if (!isSuperadmin && post.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar este post.');
+    await this.db.query(`DELETE FROM tickets.knowledge_posts WHERE id = $1`, [postId]);
+    return { ok: true };
+  }
+
+  async deleteKnowledgeReply(userId: string, replyId: string, isSuperadmin: boolean) {
+    const [reply] = await this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_replies WHERE id = $1`, [replyId]);
+    if (!reply) throw new NotFoundException('Reply not found');
+    if (!isSuperadmin && reply.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar esta respuesta.');
+    await this.db.query(`DELETE FROM tickets.knowledge_replies WHERE id = $1`, [replyId]);
+    return { ok: true };
+  }
+
+  async convertTicketToArticle(userId: string, ticketId: string, dto: { module_id: string; title: string; content: string; category?: string; tags?: string[] }) {
+    const [ticket] = await this.db.query<any[]>(`SELECT id, title FROM tickets.tickets WHERE id = $1`, [ticketId]);
+    if (!ticket) throw new NotFoundException('Ticket not found');
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.knowledge_articles
+         (module_id, title, content, category, tags, ticket_id, is_published, status, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, true, 'published', $7)
+       RETURNING id, title, created_at`,
+      [dto.module_id, dto.title.trim(), dto.content.trim(), dto.category ?? null, dto.tags ?? [], ticketId, userId],
+    );
+    return row;
+  }
 }

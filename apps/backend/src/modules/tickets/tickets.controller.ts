@@ -334,4 +334,91 @@ export class TicketsController {
   deleteKnowledgeArticle(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.deleteKnowledgeArticle(id);
   }
+
+  @Post('knowledge/:id/vote')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  voteArticle(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { value: 1 | -1 },
+  ) {
+    return this.svc.voteArticle(req.user.sub, id, body.value);
+  }
+
+  @Post(':id/to-article')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:edit')
+  convertTicketToArticle(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { module_id: string; title: string; content: string; category?: string; tags?: string[] },
+  ) {
+    return this.svc.convertTicketToArticle(req.user.sub, id, body);
+  }
+
+  /* ── Forum posts ─────────────────────────────────────────────────────── */
+
+  @Get('knowledge-posts')
+  @RequirePermission('helpdesk:tickets:view')
+  getKnowledgePosts(
+    @Query('module_id') moduleId: string,
+    @Query('q')         q?: string,
+    @Query('filter')    filter?: string,
+  ) {
+    return this.svc.getKnowledgePosts(moduleId, q, filter);
+  }
+
+  @Get('knowledge-posts/:id')
+  @RequirePermission('helpdesk:tickets:view')
+  getKnowledgePost(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.getKnowledgePost(id);
+  }
+
+  @Post('knowledge-posts')
+  @RequirePermission('helpdesk:tickets:view')
+  createKnowledgePost(@Req() req: any, @Body() body: { module_id: string; title: string; content: string; tags?: string[] }) {
+    return this.svc.createKnowledgePost(req.user.sub, body);
+  }
+
+  @Post('knowledge-posts/:id/replies')
+  @RequirePermission('helpdesk:tickets:view')
+  createReply(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { content: string },
+  ) {
+    return this.svc.createKnowledgeReply(req.user.sub, id, body);
+  }
+
+  @Post('knowledge-posts/:postId/replies/:replyId/accept')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  acceptReply(
+    @Req() req: any,
+    @Param('postId',  ParseUUIDPipe) postId: string,
+    @Param('replyId', ParseUUIDPipe) replyId: string,
+  ) {
+    return this.svc.acceptKnowledgeReply(req.user.sub, postId, replyId);
+  }
+
+  @Delete('knowledge-posts/:id')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  deleteKnowledgePost(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    const isSuperadmin = req.user?.is_superadmin ?? false;
+    return this.svc.deleteKnowledgePost(req.user.sub, id, isSuperadmin);
+  }
+
+  @Delete('knowledge-posts/:postId/replies/:replyId')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  deleteReply(
+    @Req() req: any,
+    @Param('postId',  ParseUUIDPipe) _postId: string,
+    @Param('replyId', ParseUUIDPipe) replyId: string,
+  ) {
+    const isSuperadmin = req.user?.is_superadmin ?? false;
+    return this.svc.deleteKnowledgeReply(req.user.sub, replyId, isSuperadmin);
+  }
 }
