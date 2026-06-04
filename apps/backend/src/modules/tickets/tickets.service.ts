@@ -51,7 +51,7 @@ export class TicketsService {
 
     const [states, transitions] = await Promise.all([
       this.db.query<any[]>(
-        `SELECT id, name, label, is_initial, is_final
+        `SELECT id, name, label, is_initial, is_final, is_pause_state, is_approval_state
          FROM   tickets.states
          WHERE  workflow_version_id = $1 AND is_active = true
          ORDER  BY is_initial DESC, name`,
@@ -59,7 +59,9 @@ export class TicketsService {
       ),
       this.db.query<any[]>(
         `SELECT tr.id, tr.name, tr.from_state_id, tr.to_state_id,
-                ts2.label AS to_label, ts2.name AS to_name
+                ts2.label AS to_label, ts2.name AS to_name,
+                COALESCE(tr.variant, 'default') AS variant,
+                COALESCE(tr.allowed_roles, '{}') AS allowed_roles
          FROM   tickets.transitions tr
          JOIN   tickets.states ts2 ON ts2.id = tr.to_state_id
          WHERE  tr.workflow_version_id = $1 AND tr.is_active = true`,

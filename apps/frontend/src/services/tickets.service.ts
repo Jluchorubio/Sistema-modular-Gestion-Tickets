@@ -18,13 +18,13 @@ export interface TicketEnvironment {
 }
 
 export interface TicketState {
-  id:                 string;
-  name:               string;
-  label:              string;
-  is_initial:         boolean;
-  is_final:           boolean;
-  is_pause_state?:    boolean;
-  is_approval_state?: boolean;
+  id:               string;
+  name:             string;
+  label:            string;
+  is_initial:       boolean;
+  is_final:         boolean;
+  is_pause_state:   boolean;
+  is_approval_state: boolean;
 }
 
 export interface TicketTransition {
