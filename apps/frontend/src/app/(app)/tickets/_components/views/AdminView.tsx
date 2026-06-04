@@ -6,13 +6,14 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Plus, Search, Filter, ChevronDown, Ticket, Users,
   Home, ArrowLeftRight, Layers, Settings, ShieldCheck, AlertTriangle,
+  ChevronRight, Clock,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   ticketsService,
   type TicketListItem, type TicketPriority, type SlaStatus,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
-  SLA_STATUS_LABELS,
+  SLA_STATUS_LABELS, SLA_STATUS_COLORS,
   TICKET_PRIORITY_ORDER, TICKET_PRIORITIES,
 } from '@/services/tickets.service';
 import { modulesService } from '@/services/modules.service';
@@ -157,39 +158,76 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
   function toggleQuickFilter(key: QuickFilter) { setQuickFilter((p) => p === key ? null : key); }
   const isHelpdeskMockup = visualVariant === 'helpdeskMockup';
 
-  function renderHDCardGrid(tickets: TicketListItem[]) {
+  /* ── Compact ticket list row ─────────────────────────────────────── */
+  function renderTicketList(tickets: TicketListItem[], emptyMsg: string) {
+    if (tickets.length === 0) {
+      return (
+        <div style={{ background: '#fff', borderRadius: 10, padding: '20px', textAlign: 'center', border: '1px solid #f1f5f9', color: '#94a3b8', fontSize: 12 }}>
+          {emptyMsg}
+        </div>
+      );
+    }
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        {tickets.map(t => {
-          const pColor = TICKET_PRIORITY_COLORS[t.priority];
+      <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+        {tickets.map((t, idx) => {
+          const pColor  = TICKET_PRIORITY_COLORS[t.priority];
+          const slaC    = t.sla_status ? (SLA_STATUS_COLORS[t.sla_status] ?? '#94a3b8') : null;
+          const slaL    = t.sla_status ? (SLA_STATUS_LABELS[t.sla_status] ?? null) : null;
+          const breached = t.sla_status === 'breached';
           return (
-            <div key={t.id} className={styles.helpdeskCard}
-              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  {t.assignee_name ?? '? Sin asignar'}
-                  <ChevronDown size={9} style={{ color: '#94a3b8' }} />
-                </span>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
-                  {TICKET_PRIORITY_LABELS[t.priority]}
-                </span>
+            <div key={t.id}
+              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '4px 1fr auto auto auto auto',
+                alignItems: 'center', gap: 12,
+                padding: '11px 14px',
+                borderTop: idx > 0 ? '1px solid #f1f5f9' : 'none',
+                cursor: 'pointer', background: breached ? '#fff5f5' : '#fff',
+                transition: 'background .1s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = breached ? '#fee2e2' : '#f8fafc')}
+              onMouseLeave={e => (e.currentTarget.style.background = breached ? '#fff5f5' : '#fff')}
+            >
+              {/* Priority strip */}
+              <div style={{ height: 32, borderRadius: 2, background: pColor, flexShrink: 0 }} />
+
+              {/* Title + meta */}
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0e2235', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {t.title}
+                </p>
+                <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {t.category_name}{t.environment_name ? ` · ${t.environment_name}` : ''} · {fmtRelative(t.created_at)}
+                </p>
               </div>
-              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
-              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
-              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {initials(t.creator_name)}
-                  </div>
-                  <div>
-                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
-                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
-                  </div>
+
+              {/* Assignee */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: t.assignee_name ? '#0e2235' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: t.assignee_name ? '#fff' : '#94a3b8' }}>
+                    {t.assignee_name ? initials(t.assignee_name) : '?'}
+                  </span>
                 </div>
-                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>
-                  #{t.id.slice(-6).toUpperCase()}
+                <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {t.assignee_name ?? 'Sin asignar'}
                 </span>
               </div>
+
+              {/* State badge */}
+              <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: t.is_final ? '#f0fdf4' : '#eef2ff', color: t.is_final ? '#16a34a' : '#4338ca', border: `1px solid ${t.is_final ? '#bbf7d0' : '#c7d2fe'}`, flexShrink: 0 }}>
+                {t.state_label}
+              </span>
+
+              {/* SLA badge */}
+              {slaC && slaL && (
+                <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: `${slaC}15`, color: slaC, border: `1px solid ${slaC}30`, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                  <Clock size={8} />{slaL}
+                </span>
+              )}
+
+              {/* Arrow */}
+              <ChevronRight size={13} style={{ color: '#cbd5e1', flexShrink: 0 }} />
             </div>
           );
         })}
@@ -199,11 +237,20 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
 
   /* ── Helpdesk mockup view ────────────────────────────────────────── */
   if (isHelpdeskMockup) {
-    /* ── Admin bandeja ── */
+    /* Quick metrics computed from existing data — no extra API calls */
+    const activeCount    = allTickets.filter(t => !t.is_final).length;
+    const breachedCount  = allTickets.filter(t => t.sla_status === 'breached' && !t.is_final).length;
+    const compliancePct  = activeCount > 0 ? Math.round(((activeCount - breachedCount) / activeCount) * 100) : 100;
+    const byPriorityStats = PRIORITIES.slice().reverse().map(p => ({
+      p, count: allTickets.filter(t => t.priority === p && !t.is_final).length, color: TICKET_PRIORITY_COLORS[p],
+    }));
+    const topTechs = (techs ?? [])
+      .map(t => ({ ...t, cnt: allTickets.filter(tk => tk.assignee_name === `${t.first_name} ${t.last_name}`).length }))
+      .sort((a, b) => b.cnt - a.cnt).slice(0, 5);
 
     return (
       <>
-        <div className={styles.helpdeskAdminShell}>
+        <div className={styles.helpdeskAdminShell} style={{ alignItems: 'flex-start' }}>
 
           {/* Main content */}
           <div className={styles.helpdeskAdminMain}>
@@ -350,54 +397,133 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </div>
             )}
 
-            {/* Ticket sections */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>BANDEJA DE CASOS ACTIVOS</span>
+            {/* Ticket list — compact rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Header row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em' }}>Bandeja activa</span>
                 <span style={{ fontSize: 10, background: '#f1f5f9', color: '#475569', fontWeight: 800, padding: '2px 8px', borderRadius: 6 }}>
-                  Consola Global • {total}
+                  {total} tickets
                 </span>
               </div>
 
               {isLoading ? (
-                <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>Cargando tickets…</p>
+                <div style={{ background: '#fff', borderRadius: 10, padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: 12, border: '1px solid #e2e8f0' }}>
+                  Cargando tickets…
+                </div>
+              ) : ticketsOld.length === 0 && ticketsToday.length === 0 ? (
+                <div style={{ background: '#fff', borderRadius: 10, padding: '32px', textAlign: 'center', border: '1px solid #e2e8f0', color: '#94a3b8' }}>
+                  <Ticket size={24} style={{ marginBottom: 8, opacity: .5 }} />
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
+                    {quickFilter || search ? 'Sin tickets con esos filtros.' : 'No hay tickets activos.'}
+                  </p>
+                  {canCreate && moduleId && !quickFilter && !search && (
+                    <button type="button" onClick={() => setShowCreate(true)}
+                      style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, background: '#ff5e3a', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      <Plus size={12} /> Crear primer ticket
+                    </button>
+                  )}
+                </div>
               ) : (
                 <>
-                  {/* Anteriores / vencidos */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#e53e3e', textTransform: 'uppercase', letterSpacing: '.04em' }}>● ANTERIORES — VENCIDOS / ALTA PRIORIDAD</span>
-                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{ticketsOld.length} tickets</span>
-                    </div>
-                    {ticketsOld.length === 0 ? (
-                      <div style={{ background: '#fff', borderRadius: 16, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>
-                        Sin tickets anteriores
+                  {ticketsOld.length > 0 && (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />
+                        <span style={{ fontSize: 9, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '.07em' }}>Anteriores · Alta prioridad</span>
+                        <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsOld.length}</span>
                       </div>
-                    ) : renderHDCardGrid(ticketsOld)}
-                  </div>
+                      {renderTicketList(ticketsOld, 'Sin tickets anteriores')}
+                    </div>
+                  )}
 
-                  {/* Hoy / actuales */}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.04em' }}>● HOY — ACTUALES</span>
-                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{ticketsToday.length} tickets</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', display: 'inline-block', flexShrink: 0 }} />
+                      <span style={{ fontSize: 9, fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '.07em' }}>Hoy · Nuevos</span>
+                      <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsToday.length}</span>
                     </div>
-                    {ticketsToday.length === 0 ? (
-                      <div style={{ background: '#fff', borderRadius: 16, padding: '28px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>
-                        Sin tickets nuevos hoy
-                      </div>
-                    ) : renderHDCardGrid(ticketsToday)}
+                    {renderTicketList(ticketsToday, 'Sin tickets nuevos hoy')}
                   </div>
                 </>
               )}
+            </div>
+          </div>
 
-              {/* Footer note */}
-              <div style={{ textAlign: 'center', paddingBottom: 8, flexShrink: 0 }}>
-                <p style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: 0 }}>
-                  ☉ TODOS LOS TICKETS DE ESTE MÓDULO (SOLO ACCESIBLE PARA ADMIN, SUPERADMIN Y JEFE TÉCNICO)
-                </p>
+          {/* RIGHT METRICS PANEL */}
+          <div style={{ width: 252, flexShrink: 0, padding: '24px 16px 40px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', borderLeft: '1px solid #e2e8f0', background: '#fff' }}>
+
+            {/* SLA compliance */}
+            <div>
+              <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>SLA Compliance</p>
+              <div style={{ position: 'relative', height: 6, borderRadius: 3, background: '#f1f5f9', overflow: 'hidden', marginBottom: 6 }}>
+                <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${compliancePct}%`, borderRadius: 3, background: compliancePct >= 80 ? '#22c55e' : compliancePct >= 60 ? '#f59e0b' : '#ef4444' }} />
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 22, fontWeight: 900, color: compliancePct >= 80 ? '#16a34a' : compliancePct >= 60 ? '#d97706' : '#dc2626' }}>{compliancePct}%</span>
+                {breachedCount > 0 && (
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', background: '#fee2e2', padding: '1px 7px', borderRadius: 99 }}>
+                    {breachedCount} vencidos
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* By priority */}
+            <div>
+              <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Por prioridad (activos)</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {byPriorityStats.map(({ p, count, color }) => (
+                  <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: '#334155', fontWeight: 600, flex: 1 }}>{TICKET_PRIORITY_LABELS[p]}</span>
+                    <div style={{ position: 'relative', height: 4, width: 60, borderRadius: 2, background: '#f1f5f9', overflow: 'hidden', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${activeCount > 0 ? Math.round((count / activeCount) * 100) : 0}%`, borderRadius: 2, background: color }} />
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#0e2235', minWidth: 18, textAlign: 'right' }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top technicians */}
+            {topTechs.length > 0 && (
+              <div>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Técnicos activos</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {topTechs.map(t => (
+                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, color: '#fff' }}>{t.first_name?.[0]}{t.last_name?.[0]}</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.first_name} {t.last_name}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: t.avail_status === 'disponible' ? '#22c55e' : t.avail_status === 'ocupado' ? '#f59e0b' : '#94a3b8', flexShrink: 0 }} />
+                          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600 }}>{t.cnt} tickets</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quick actions */}
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 6px' }}>Acciones</p>
+              <button type="button" onClick={() => router.push(`${basePath}/queue`)}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                <Ticket size={11} style={{ color: '#ff5e3a', flexShrink: 0 }} /> Cola sin asignar
+              </button>
+              <button type="button" onClick={() => router.push(`${basePath}/sla`)}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                <Clock size={11} style={{ color: '#6366f1', flexShrink: 0 }} /> Monitor SLA
+              </button>
+              <button type="button" onClick={() => router.push(`${basePath}/technicians`)}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                <Users size={11} style={{ color: '#0e2235', flexShrink: 0 }} /> Técnicos
+              </button>
             </div>
           </div>
 
