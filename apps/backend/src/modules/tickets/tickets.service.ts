@@ -842,6 +842,30 @@ export class TicketsService {
 
          UNION ALL
 
+         /* ── Desasignaciones (owner transferido o quitado) ── */
+         SELECT ta.id,
+                'unassignment'    AS event_type,
+                ta.role::text     AS subtype,
+                ta.assigned_by    AS user_id,
+                pa.first_name || ' ' || pa.last_name AS user_name,
+                pa.avatar_url,
+                NULL              AS content,
+                jsonb_build_object(
+                  'assignee_name',   pu.first_name || ' ' || pu.last_name,
+                  'assignee_id',     ta.user_id,
+                  'role',            ta.role,
+                  'duration_hours',  ROUND(EXTRACT(EPOCH FROM (ta.unassigned_at - ta.assigned_at)) / 3600, 1)
+                ) AS metadata,
+                ta.unassigned_at  AS created_at
+         FROM   tickets.ticket_assignments ta
+         JOIN   users.profiles pa ON pa.id = ta.assigned_by
+         JOIN   users.profiles pu ON pu.id = ta.user_id
+         WHERE  ta.ticket_id = $1
+           AND  ta.unassigned_at IS NOT NULL
+           AND  ta.role = 'owner'
+
+         UNION ALL
+
          /* ── Aprobaciones / rechazos ── */
          SELECT ap.id,
                 'approval'             AS event_type,

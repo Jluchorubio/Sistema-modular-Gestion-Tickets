@@ -182,7 +182,7 @@ export class ReportingService {
   async helpdeskMetrics(moduleId: string) {
     const p = [moduleId];
 
-    const [kpis, byPriority, firstResponse] = await Promise.all([
+    const [kpis, byPriority, firstResponse, reopenCount] = await Promise.all([
       this.db.query<any[]>(
         `SELECT
            COUNT(*)                                                                   AS total,
@@ -236,11 +236,23 @@ export class ReportingService {
          WHERE t.module_id = $1`,
         p,
       ),
+      this.db.query<{ cnt: string }[]>(
+        `SELECT COUNT(DISTINCT tsh.ticket_id) AS cnt
+         FROM   tickets.ticket_state_history tsh
+         JOIN   tickets.tickets t  ON t.id  = tsh.ticket_id AND t.module_id = $1
+         JOIN   tickets.states  fs ON fs.id = tsh.from_state_id
+         JOIN   tickets.states  ts ON ts.id = tsh.to_state_id
+         WHERE  (fs.is_final = true OR fs.is_approval_state = true)
+           AND  ts.is_final = false
+           AND  ts.is_approval_state = false`,
+        p,
+      ),
     ]);
 
     const enrichedKpis = {
       ...kpis[0],
       avg_first_response_hours: firstResponse[0]?.avg_first_response_hours ?? null,
+      reopen_count: reopenCount[0]?.cnt ?? '0',
     };
 
     const byCategory = await this.db.query<any[]>(
@@ -267,6 +279,9 @@ export class ReportingService {
               ROUND(AVG(
                 EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
               ) FILTER (WHERE s.is_final), 1)                                        AS avg_resolution_hours,
+              ROUND(AVG(
+                EXTRACT(EPOCH FROM (COALESCE(ta.unassigned_at, now()) - ta.assigned_at)) / 3600
+              ), 1)                                                                   AS avg_assignment_hours,
               ROUND(AVG(r.score_overall), 1)                                         AS avg_rating,
               COUNT(r.id)                                                             AS total_ratings
        FROM   tickets.ticket_assignments ta

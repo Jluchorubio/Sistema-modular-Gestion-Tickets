@@ -95,6 +95,7 @@ export interface HelpdeskKpis {
   avg_open_age_hours:       string | null;
   avg_first_response_hours: string | null;
   breach_active:            string;
+  reopen_count:             string;
 }
 
 export interface HelpdeskByPriority {
@@ -116,9 +117,10 @@ export interface HelpdeskTechnician {
   technician_id:       string;
   technician_name:     string;
   tickets_assigned:    string;
-  tickets_resolved:    string;
-  rechazados:          string;
-  avg_resolution_hours: string | null;
+  tickets_resolved:      string;
+  rechazados:            string;
+  avg_resolution_hours:  string | null;
+  avg_assignment_hours:  string | null;
   avg_rating:          string | null;
   total_ratings:       string;
 }
