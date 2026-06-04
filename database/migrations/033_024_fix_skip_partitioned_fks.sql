@@ -1,0 +1,22 @@
+-- =============================================================================
+-- Migration 033: Fix migration 024 — skip FKs that reference partitioned table
+-- =============================================================================
+-- tickets.tickets is a partitioned table (relkind='p', PK: id + created_at).
+-- PostgreSQL does not allow FK references to a single column of a composite PK
+-- on a partitioned table. The 3 FKs below are intentionally skipped.
+-- Integrity for these relationships is enforced at application level.
+--
+-- SKIPPED (partitioned table, PK = id + created_at):
+--   • fk_ticket_sla_tracking_ticket_id  (ticket_sla_tracking → tickets)
+--   • fk_ticket_assignments_ticket_id   (ticket_assignments → tickets)
+--   • fk_ticket_assets_ticket_id        (inventory.ticket_assets → tickets)
+--
+-- ALREADY APPLIED (non-partitioned targets, applied via PENDING_RAILWAY_024):
+--   • fk_ticket_assignments_user_id     ✅
+--   • fk_ticket_assets_asset_id         ✅
+--   • fk_asset_assignments_user_id      ✅
+-- =============================================================================
+
+-- No-op: this migration documents the intentional skip.
+-- All actionable FKs from 024 were applied successfully.
+SELECT 'Migration 033: partition FK skip documented — no action needed' AS status;
