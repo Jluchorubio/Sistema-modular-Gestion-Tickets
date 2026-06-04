@@ -182,23 +182,66 @@ export class ReportingService {
   async helpdeskMetrics(moduleId: string) {
     const p = [moduleId];
 
-    const [kpis] = await this.db.query<any[]>(
-      `SELECT
-         COUNT(*)                                                                   AS total,
-         COUNT(*) FILTER (WHERE NOT s.is_final)                                    AS open,
-         COUNT(*) FILTER (WHERE s.is_final)                                        AS closed,
-         COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '1 day')          AS today,
-         COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '7 days')         AS this_week,
-         COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '30 days')        AS this_month,
-         COUNT(*) FILTER (WHERE s.name = 'rechazado')                              AS rechazados,
-         ROUND(AVG(
-           EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
-         ) FILTER (WHERE s.is_final), 1)                                            AS avg_resolution_hours
-       FROM tickets.tickets t
-       JOIN tickets.states s ON s.id = t.current_state_id
-       WHERE t.module_id = $1`,
-      p,
-    );
+    const [kpis, byPriority, firstResponse] = await Promise.all([
+      this.db.query<any[]>(
+        `SELECT
+           COUNT(*)                                                                   AS total,
+           COUNT(*) FILTER (WHERE NOT s.is_final)                                    AS open,
+           COUNT(*) FILTER (WHERE s.is_final)                                        AS closed,
+           COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '1 day')          AS today,
+           COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '7 days')         AS this_week,
+           COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '30 days')        AS this_month,
+           COUNT(*) FILTER (WHERE s.name = 'rechazado')                              AS rechazados,
+           ROUND(AVG(
+             EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
+           ) FILTER (WHERE s.is_final), 1)                                            AS avg_resolution_hours,
+           ROUND(AVG(
+             EXTRACT(EPOCH FROM (now() - t.created_at)) / 3600
+           ) FILTER (WHERE NOT s.is_final), 1)                                        AS avg_open_age_hours,
+           COUNT(*) FILTER (WHERE st.status = 'breached' AND NOT s.is_final)          AS breach_active
+         FROM tickets.tickets t
+         JOIN tickets.states s ON s.id = t.current_state_id
+         LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
+         WHERE t.module_id = $1`,
+        p,
+      ),
+      this.db.query<any[]>(
+        `SELECT
+           t.priority,
+           COUNT(*)                                                      AS total,
+           COUNT(*) FILTER (WHERE NOT s.is_final)                        AS open,
+           COUNT(*) FILTER (WHERE s.is_final)                            AS closed,
+           COUNT(*) FILTER (WHERE st.status = 'breached')                AS breached
+         FROM tickets.tickets t
+         JOIN tickets.states s ON s.id = t.current_state_id
+         LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
+         WHERE t.module_id = $1
+         GROUP BY t.priority
+         ORDER BY CASE t.priority
+           WHEN 'critica' THEN 1 WHEN 'alta' THEN 2
+           WHEN 'media' THEN 3 WHEN 'baja' THEN 4 ELSE 5 END`,
+        p,
+      ),
+      this.db.query<any[]>(
+        `SELECT ROUND(AVG(
+           EXTRACT(EPOCH FROM (ta.assigned_at - t.created_at)) / 3600
+         ), 1) AS avg_first_response_hours
+         FROM tickets.tickets t
+         JOIN (
+           SELECT DISTINCT ON (ticket_id) ticket_id, assigned_at
+           FROM   tickets.ticket_assignments
+           WHERE  role = 'owner'
+           ORDER  BY ticket_id, assigned_at ASC
+         ) ta ON ta.ticket_id = t.id
+         WHERE t.module_id = $1`,
+        p,
+      ),
+    ]);
+
+    const enrichedKpis = {
+      ...kpis[0],
+      avg_first_response_hours: firstResponse[0]?.avg_first_response_hours ?? null,
+    };
 
     const byCategory = await this.db.query<any[]>(
       `SELECT c.name AS category_name,
@@ -247,6 +290,6 @@ export class ReportingService {
       p,
     );
 
-    return { kpis, by_category: byCategory, by_technician: byTechnician, sla, daily_trend: trend };
+    return { kpis: enrichedKpis, by_category: byCategory, by_priority: byPriority, by_technician: byTechnician, sla, daily_trend: trend };
   }
 }

@@ -120,7 +120,9 @@ export class MeetingsService {
     return row;
   }
 
-  async getCalendarMeetings(userId: string, isSuperadmin: boolean, moduleId?: string) {
+  async getCalendarMeetings(userId: string, moduleId?: string) {
+    const [actor] = await this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]);
+    const isSuperadmin: boolean = actor?.is_superadmin ?? false;
     const conditions: string[] = [`tm.status IN ('scheduled','active')`];
     const values: any[] = [];
     let idx = 1;

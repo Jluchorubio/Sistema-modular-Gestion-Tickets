@@ -84,14 +84,25 @@ export interface InventorySummary {
 }
 
 export interface HelpdeskKpis {
-  total:                string;
-  open:                 string;
-  closed:               string;
-  today:                string;
-  this_week:            string;
-  this_month:           string;
-  rechazados:           string;
-  avg_resolution_hours: string | null;
+  total:                    string;
+  open:                     string;
+  closed:                   string;
+  today:                    string;
+  this_week:                string;
+  this_month:               string;
+  rechazados:               string;
+  avg_resolution_hours:     string | null;
+  avg_open_age_hours:       string | null;
+  avg_first_response_hours: string | null;
+  breach_active:            string;
+}
+
+export interface HelpdeskByPriority {
+  priority: string;
+  total:    string;
+  open:     string;
+  closed:   string;
+  breached: string;
 }
 
 export interface HelpdeskByCategory {
@@ -113,11 +124,12 @@ export interface HelpdeskTechnician {
 }
 
 export interface HelpdeskMetrics {
-  kpis:           HelpdeskKpis;
-  by_category:    HelpdeskByCategory[];
-  by_technician:  HelpdeskTechnician[];
-  sla:            SlaMetrics;
-  daily_trend:    DailyTrend[];
+  kpis:            HelpdeskKpis;
+  by_category:     HelpdeskByCategory[];
+  by_priority:     HelpdeskByPriority[];
+  by_technician:   HelpdeskTechnician[];
+  sla:             SlaMetrics;
+  daily_trend:     DailyTrend[];
 }
 
 export const reportingService = {

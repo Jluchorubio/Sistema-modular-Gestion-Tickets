@@ -511,63 +511,78 @@ export class TicketsService {
       }
     }
 
-    // Set session user so fn_ticket_state_history trigger records correct actor
-    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
+    // ── Atomic write: state update + SLA clock in one transaction ────────────
+    const qr = this.db.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    let toState: any;
+    try {
+      // set_config local=true so trigger fn_ticket_state_history records actor
+      await qr.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
 
-    await this.db.query(
-      `UPDATE tickets.tickets SET current_state_id = $1 WHERE id = $2`,
-      [trans.to_state_id, ticketId],
-    );
+      await qr.query(
+        `UPDATE tickets.tickets SET current_state_id = $1 WHERE id = $2`,
+        [trans.to_state_id, ticketId],
+      );
 
-    const [toState] = await this.db.query<any[]>(
-      `SELECT is_final, name, label, is_pause_state, is_approval_state FROM tickets.states WHERE id = $1`,
-      [trans.to_state_id],
-    );
+      [toState] = await qr.query<any[]>(
+        `SELECT is_final, name, label, is_pause_state, is_approval_state FROM tickets.states WHERE id = $1`,
+        [trans.to_state_id],
+      );
 
-    // ── SLA clock management ──────────────────────────────────────────────────
-    // 1. If tracking was paused (leaving EN_ESPERA), resume it first by extending
-    //    deadline_at by the elapsed pause duration, whatever the destination state.
-    await this.db.query(
-      `UPDATE tickets.ticket_sla_tracking
-       SET deadline_at           = deadline_at + (now() - paused_at),
-           total_paused_seconds  = total_paused_seconds
-                                   + EXTRACT(EPOCH FROM (now() - paused_at))::int,
-           paused_at             = NULL,
-           status                = 'active',
-           updated_at            = now()
-       WHERE ticket_id = $1 AND status = 'paused'`,
-      [ticketId],
-    );
-
-    // 2. Final state → mark met or breached (after any resume above)
-    if (toState?.is_final) {
-      await this.db.query(
+      // 1. Resume SLA if leaving a paused state (en_espera)
+      await qr.query(
         `UPDATE tickets.ticket_sla_tracking
-         SET status      = CASE WHEN deadline_at < now() THEN 'breached' ELSE 'met' END,
-             breached_at = CASE WHEN deadline_at < now() THEN now() ELSE NULL END,
-             updated_at  = now()
-         WHERE ticket_id = $1 AND status = 'active'`,
+         SET deadline_at          = deadline_at + (now() - paused_at),
+             total_paused_seconds = total_paused_seconds
+                                    + EXTRACT(EPOCH FROM (now() - paused_at))::int,
+             paused_at            = NULL,
+             status               = 'active',
+             updated_at           = now()
+         WHERE ticket_id = $1 AND status = 'paused'`,
         [ticketId],
       );
-    }
-    // 3. Entering is_pause_state → pause the SLA clock
-    else if (toState?.is_pause_state) {
-      await this.db.query(
-        `UPDATE tickets.ticket_sla_tracking
-         SET status     = 'paused',
-             paused_at  = now(),
-             updated_at = now()
-         WHERE ticket_id = $1 AND status = 'active'`,
-        [ticketId],
-      );
+
+      // 2. Final state → mark met or breached
+      if (toState?.is_final) {
+        await qr.query(
+          `UPDATE tickets.ticket_sla_tracking
+           SET status      = CASE WHEN deadline_at < now() THEN 'breached' ELSE 'met' END,
+               breached_at = CASE WHEN deadline_at < now() THEN now() ELSE NULL END,
+               updated_at  = now()
+           WHERE ticket_id = $1 AND status = 'active'`,
+          [ticketId],
+        );
+      // 3. Entering pause state → pause SLA clock
+      } else if (toState?.is_pause_state) {
+        await qr.query(
+          `UPDATE tickets.ticket_sla_tracking
+           SET status     = 'paused',
+               paused_at  = now(),
+               updated_at = now()
+           WHERE ticket_id = $1 AND status = 'active'`,
+          [ticketId],
+        );
+      }
+
+      // 4. Approval state → generate approval token (DB function, must be in txn)
+      if (toState?.is_approval_state) {
+        await qr.query(
+          `SELECT tickets.generate_approval_token($1, $2, 48)`,
+          [ticketId, ticket.created_by],
+        );
+      }
+
+      await qr.commitTransaction();
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.release();
     }
 
-    // Entering is_approval_state → generate approval token, notify creator
+    // Emit events after commit — side effects outside the transaction
     if (toState?.is_approval_state) {
-      await this.db.query(
-        `SELECT tickets.generate_approval_token($1, $2, 48)`,
-        [ticketId, ticket.created_by],
-      );
       this.events.emit('ticket.validation_required', {
         ticketId,
         title:     ticket.title,
