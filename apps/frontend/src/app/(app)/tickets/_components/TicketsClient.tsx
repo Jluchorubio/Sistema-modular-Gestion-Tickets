@@ -25,6 +25,7 @@ import { systemConfigService, type TicketCategory as DamageCategory, type Damage
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
+import { usePermission } from '@/hooks/usePermission';
 import { MODULE_ROLE_LABELS } from '@/constants/roles';
 import type { CurrentUser } from '@/types/user.types';
 import type { ModuleTechnician, TechAvailStatus } from '@/types/module.types';
@@ -2179,7 +2180,7 @@ export function TicketsClient({
   const isAdminView = isSuperadmin || moduleRole === 'admin_modulo' || moduleRole === 'jefe_tecnico';
   const isTechView  = !isAdminView && moduleRole === 'tecnico';
 
-  const canCreate = isSuperadmin || !!moduleRole;
+  const canCreate = usePermission('helpdesk:tickets:create');
 
   const layoutTitle = isForced ? (forcedModuleName ?? '') : 'Mesa de Ayuda';
   const layoutDesc  = isForced

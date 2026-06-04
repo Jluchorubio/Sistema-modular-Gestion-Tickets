@@ -563,6 +563,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
           </div>
 
           {/* TRANSITION CONFIRM BAR */}
+          <PermissionGate perm="helpdesk:tickets:edit">
           {activeTransId && (
             <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               <span style={{ fontSize: 11, color: '#475569', fontWeight: 600, flexShrink: 0 }}>Motivo (opcional):</span>
@@ -578,6 +579,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               </button>
             </div>
           )}
+          </PermissionGate>
 
           {/* 2-COLUMN BODY */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', flex: 1, overflow: 'hidden' }}>

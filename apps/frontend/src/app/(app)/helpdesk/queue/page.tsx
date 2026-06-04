@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
+import { usePermission } from '@/hooks/usePermission';
 import { ticketsService, type TicketListItem, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS } from '@/services/tickets.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import { fmtDate } from '@/lib/formatters';
@@ -226,9 +227,7 @@ export default function QueuePage() {
     if (!user || !helpdeskId) return null;
     return user.module_roles.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
   }, [user, helpdeskId]);
-  const isTech   = moduleRole === 'tecnico';
-  const isAdmin  = isSuperadmin || moduleRole === 'admin_modulo' || moduleRole === 'jefe_tecnico';
-  const canTake  = isTech || isAdmin;
+  const canTake  = usePermission('helpdesk:tickets:assign');
 
   const { data: res, isLoading, refetch } = useQuery({
     queryKey:  ['queue-unassigned', helpdeskId],
