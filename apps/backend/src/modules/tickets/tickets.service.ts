@@ -1355,18 +1355,24 @@ export class TicketsService {
     return { ok: true };
   }
 
-  async deleteKnowledgePost(userId: string, postId: string, isSuperadmin: boolean) {
-    const [post] = await this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_posts WHERE id = $1`, [postId]);
+  async deleteKnowledgePost(userId: string, postId: string) {
+    const [[post], [actor]] = await Promise.all([
+      this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_posts WHERE id = $1`, [postId]),
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+    ]);
     if (!post) throw new NotFoundException('Post not found');
-    if (!isSuperadmin && post.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar este post.');
+    if (!actor?.is_superadmin && post.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar este post.');
     await this.db.query(`DELETE FROM tickets.knowledge_posts WHERE id = $1`, [postId]);
     return { ok: true };
   }
 
-  async deleteKnowledgeReply(userId: string, replyId: string, isSuperadmin: boolean) {
-    const [reply] = await this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_replies WHERE id = $1`, [replyId]);
+  async deleteKnowledgeReply(userId: string, replyId: string) {
+    const [[reply], [actor]] = await Promise.all([
+      this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_replies WHERE id = $1`, [replyId]),
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+    ]);
     if (!reply) throw new NotFoundException('Reply not found');
-    if (!isSuperadmin && reply.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar esta respuesta.');
+    if (!actor?.is_superadmin && reply.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar esta respuesta.');
     await this.db.query(`DELETE FROM tickets.knowledge_replies WHERE id = $1`, [replyId]);
     return { ok: true };
   }

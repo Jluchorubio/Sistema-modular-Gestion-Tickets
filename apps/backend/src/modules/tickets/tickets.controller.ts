@@ -7,12 +7,14 @@ import { memoryStorage } from 'multer';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
+import { RequestWithUser } from '../../gateway/types';
 import { TicketsService } from './tickets.service';
 import { SlaBreachService } from './sla/sla-breach.service';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { TransitionTicketDto } from './dto/transition-ticket.dto';
+import { CreateKnowledgeArticleDto, UpdateKnowledgeArticleDto } from './dto/knowledge-article.dto';
 
 @ApiTags('tickets')
 @ApiBearerAuth()
@@ -68,48 +70,48 @@ export class TicketsController {
   @Get()
   @RequirePermission('helpdesk:tickets:view')
   findAll(
-    @Req() req: any,
-    @Query('module_id')    moduleId?:   string,
-    @Query('state_id')     stateId?:    string,
-    @Query('priority')     priority?:   string,
-    @Query('mine')         mine?:       string,
-    @Query('category_id')  categoryId?: string,
-    @Query('assignee_id')  assigneeId?: string,
-    @Query('sla_status')   slaStatus?:  string,
-    @Query('unassigned')   unassigned?: string,
-    @Query('page')         page?:       string,
-    @Query('limit')        limit?:      string,
+    @Req() req: RequestWithUser,
+    @Query('module_id')   moduleId?:   string,
+    @Query('state_id')    stateId?:    string,
+    @Query('priority')    priority?:   string,
+    @Query('mine')        mine?:       string,
+    @Query('category_id') categoryId?: string,
+    @Query('assignee_id') assigneeId?: string,
+    @Query('sla_status')  slaStatus?:  string,
+    @Query('unassigned')  unassigned?: string,
+    @Query('page')        page?:       string,
+    @Query('limit')       limit?:      string,
   ) {
     return this.svc.findAll({
       moduleId,
       stateId,
       priority,
-      userId:       mine === 'true' ? req.user.sub : undefined,
+      userId:     mine === 'true' ? req.user.sub : undefined,
       categoryId,
       assigneeId,
       slaStatus,
-      unassigned:   unassigned  === 'true',
-      page:         page  ? parseInt(page,  10) : undefined,
-      limit:        limit ? parseInt(limit, 10) : undefined,
+      unassigned: unassigned === 'true',
+      page:       page  ? parseInt(page,  10) : undefined,
+      limit:      limit ? parseInt(limit, 10) : undefined,
     });
   }
 
   @Get(':id')
   @RequirePermission('helpdesk:tickets:view')
-  findOne(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Req() req: RequestWithUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.svc.findOne(id, req.user.sub);
   }
 
   @Post()
   @RequirePermission('helpdesk:tickets:create')
-  create(@Req() req: any, @Body() dto: CreateTicketDto) {
+  create(@Req() req: RequestWithUser, @Body() dto: CreateTicketDto) {
     return this.svc.create(req.user.sub, dto);
   }
 
   @Patch(':id/transition')
   @RequirePermission('helpdesk:tickets:edit')
   transition(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: TransitionTicketDto,
   ) {
@@ -120,7 +122,7 @@ export class TicketsController {
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:edit')
   approve(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { signature?: string },
   ) {
@@ -131,7 +133,7 @@ export class TicketsController {
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:edit')
   reject(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { reason: string },
   ) {
@@ -150,7 +152,7 @@ export class TicketsController {
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:view')
   rateTicket(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: {
       score_overall:              number;
@@ -186,7 +188,7 @@ export class TicketsController {
   @Post(':id/attachments')
   @RequirePermission('helpdesk:tickets:edit')
   addAttachment(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: {
       original_name: string;
@@ -203,7 +205,7 @@ export class TicketsController {
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:delete')
   deleteAttachment(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
   ) {
@@ -221,7 +223,7 @@ export class TicketsController {
   @Post(':id/comments')
   @RequirePermission('helpdesk:comments:add')
   addComment(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { content: string; comment_type?: string },
   ) {
@@ -265,7 +267,7 @@ export class TicketsController {
   @Post(':id/relations')
   @RequirePermission('helpdesk:tickets:edit')
   addRelation(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { target_ticket_id: string; relation_type: string; notes?: string },
   ) {
@@ -287,7 +289,7 @@ export class TicketsController {
   @Post(':id/assignments')
   @RequirePermission('helpdesk:tickets:assign')
   addAssignment(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { user_id: string; role: string },
   ) {
@@ -304,7 +306,7 @@ export class TicketsController {
     limits: { fileSize: 50 * 1024 * 1024 },
   }))
   async uploadKnowledgeDoc(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @UploadedFile() file: Express.Multer.File,
     @Body() body: { module_id: string; title?: string; category?: string; tags?: string },
   ) {
@@ -320,26 +322,26 @@ export class TicketsController {
     const fileUrl = `${backendUrl}/uploads/${name}`;
 
     return this.svc.createKnowledgeArticle(req.user.sub, {
-      module_id:  body.module_id,
-      title:      (body.title?.trim() || file.originalname).trim(),
-      content:    '',
-      category:   body.category?.trim() || undefined,
-      tags:       body.tags ? body.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+      module_id:    body.module_id,
+      title:        (body.title?.trim() || file.originalname).trim(),
+      content:      '',
+      category:     body.category?.trim() || undefined,
+      tags:         body.tags ? body.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
       is_published: true,
-      doc_type:   'file',
-      file_url:   fileUrl,
-      file_name:  file.originalname,
-      file_size:  file.size,
-      file_mime:  file.mimetype,
+      doc_type:     'file',
+      file_url:     fileUrl,
+      file_name:    file.originalname,
+      file_size:    file.size,
+      file_mime:    file.mimetype,
     });
   }
 
   @Get('knowledge')
   @RequirePermission('helpdesk:tickets:view')
   getKnowledgeArticles(
-    @Query('module_id')       moduleId: string,
-    @Query('q')               q?: string,
-    @Query('include_drafts')  includeDrafts?: string,
+    @Query('module_id')      moduleId: string,
+    @Query('q')              q?: string,
+    @Query('include_drafts') includeDrafts?: string,
   ) {
     return this.svc.getKnowledgeArticles(moduleId, q, includeDrafts === 'true');
   }
@@ -352,16 +354,19 @@ export class TicketsController {
 
   @Post('knowledge')
   @RequirePermission('helpdesk:tickets:create')
-  createKnowledgeArticle(@Req() req: any, @Body() body: any) {
+  createKnowledgeArticle(
+    @Req() req: RequestWithUser,
+    @Body() body: CreateKnowledgeArticleDto,
+  ) {
     return this.svc.createKnowledgeArticle(req.user.sub, body);
   }
 
   @Patch('knowledge/:id')
   @RequirePermission('helpdesk:tickets:edit')
   updateKnowledgeArticle(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: any,
+    @Body() body: UpdateKnowledgeArticleDto,
   ) {
     return this.svc.updateKnowledgeArticle(id, req.user.sub, body);
   }
@@ -377,7 +382,7 @@ export class TicketsController {
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:view')
   voteArticle(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { value: 1 | -1 },
   ) {
@@ -388,7 +393,7 @@ export class TicketsController {
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:edit')
   convertTicketToArticle(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { module_id: string; title: string; content: string; category?: string; tags?: string[] },
   ) {
@@ -415,14 +420,17 @@ export class TicketsController {
 
   @Post('knowledge-posts')
   @RequirePermission('helpdesk:tickets:view')
-  createKnowledgePost(@Req() req: any, @Body() body: { module_id: string; title: string; content: string; tags?: string[] }) {
+  createKnowledgePost(
+    @Req() req: RequestWithUser,
+    @Body() body: { module_id: string; title: string; content: string; tags?: string[] },
+  ) {
     return this.svc.createKnowledgePost(req.user.sub, body);
   }
 
   @Post('knowledge-posts/:id/replies')
   @RequirePermission('helpdesk:tickets:view')
   createReply(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { content: string },
   ) {
@@ -433,7 +441,7 @@ export class TicketsController {
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:view')
   acceptReply(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('postId',  ParseUUIDPipe) postId: string,
     @Param('replyId', ParseUUIDPipe) replyId: string,
   ) {
@@ -443,20 +451,21 @@ export class TicketsController {
   @Delete('knowledge-posts/:id')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:view')
-  deleteKnowledgePost(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
-    const isSuperadmin = req.user?.is_superadmin ?? false;
-    return this.svc.deleteKnowledgePost(req.user.sub, id, isSuperadmin);
+  deleteKnowledgePost(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.svc.deleteKnowledgePost(req.user.sub, id);
   }
 
   @Delete('knowledge-posts/:postId/replies/:replyId')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:view')
   deleteReply(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('postId',  ParseUUIDPipe) _postId: string,
     @Param('replyId', ParseUUIDPipe) replyId: string,
   ) {
-    const isSuperadmin = req.user?.is_superadmin ?? false;
-    return this.svc.deleteKnowledgeReply(req.user.sub, replyId, isSuperadmin);
+    return this.svc.deleteKnowledgeReply(req.user.sub, replyId);
   }
 }
