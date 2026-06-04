@@ -4,9 +4,8 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, ChevronRight, Clock, AlertTriangle, CheckCircle2,
-  Users, Phone, CalendarDays, X, Paperclip, ScrollText,
-  Upload, FileText, ImageIcon, Trash2, HardDrive, History, Link2, Search, Unlink, Star,
+  ArrowLeft, ChevronRight, ChevronDown, Clock, AlertTriangle, CheckCircle2, XCircle,
+  Phone, X, Paperclip, Link2, Search, Unlink, Star, UserX,
 } from 'lucide-react';
 import { TicketTimeline } from './TicketTimeline';
 import { useModuleNav } from '@/hooks/useModuleNav';
@@ -16,11 +15,11 @@ import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
   ticketsService,
   type TicketPriority, type TicketAttachment, type TicketComment,
-  type TicketAsset, type AssetHistoryEntry, type TicketRating, type RateTicketDto,
+  type TicketAsset, type TicketRating, type RateTicketDto,
   type TicketTimelineEvent,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
-  ASSET_STATUS_COLORS, ASSET_STATUS_LABELS, ASSET_ACTION_LABELS,
+  ASSET_STATUS_COLORS, ASSET_STATUS_LABELS,
 } from '@/services/tickets.service';
 import { modulesService } from '@/services/modules.service';
 import type { ModuleTechnician } from '@/types/module.types';
@@ -113,10 +112,11 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   });
 
   /* â”€â”€ Left panel state â”€â”€ */
-  const [transReason,   setTransReason]   = useState('');
-  const [activeTransId, setActiveTransId] = useState<string | null>(null);
-  const [replyText,     setReplyText]     = useState('');
-  const [commentType,   setCommentType]   = useState<'public' | 'internal'>('public');
+  const [transReason,     setTransReason]     = useState('');
+  const [activeTransId,   setActiveTransId]   = useState<string | null>(null);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [replyText,       setReplyText]       = useState('');
+  const [commentType,     setCommentType]     = useState<'public' | 'internal'>('public');
 
   /* â”€â”€ Validation state â”€â”€ */
   const [signature,       setSignature]       = useState('');
@@ -296,27 +296,6 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     staleTime: 60_000,
   });
 
-  const [expandedAssetId, setExpandedAssetId] = useState<string | null>(null);
-  const [assetTab, setAssetTab] = useState<'history' | 'tickets'>('history');
-
-  const { data: assetHistory = [], isFetching: historyFetching } = useQuery<AssetHistoryEntry[]>({
-    queryKey: ['asset-history', ticketId, expandedAssetId],
-    queryFn:  () => ticketsService.getAssetHistory(ticketId, expandedAssetId!),
-    enabled:  !!expandedAssetId && assetTab === 'history',
-    staleTime: 120_000,
-  });
-
-  const { data: assetPrevTickets = [], isFetching: prevTicketsFetching } = useQuery<{
-    id: string; title: string; priority: string; created_at: string; updated_at: string;
-    state_label: string; state_name: string; is_final: boolean;
-    creator_name: string; owner_name: string | null;
-  }[]>({
-    queryKey: ['asset-prev-tickets', ticketId, expandedAssetId],
-    queryFn:  () => ticketsService.getAssetPrevTickets(ticketId, expandedAssetId!),
-    enabled:  !!expandedAssetId && assetTab === 'tickets',
-    staleTime: 120_000,
-  });
-
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -463,6 +442,19 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
       : (remH > 0 ? `Vence en ${d}d ${remH}h` : `Vence en ${d}d`);
   }, [ticket?.sla_deadline_tracked, ticket?.sla_status, now]);
 
+  const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
+  const VARIANT_BG: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
+  const ownerAssignment = ticket?.assignments?.find((a: any) => a.role === 'owner' && a.is_active);
+
+  function SideSection({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+      <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
+        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '.08em', margin: '0 0 10px' }}>{label}</p>
+        {children}
+      </div>
+    );
+  }
+
   /* â”€â”€ Render â”€â”€ */
   return (
     <div className={styles.hwPage}>
@@ -496,74 +488,70 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
       )}
 
       {ticket && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', background: '#f8fafc' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#f8fafc' }}>
 
-          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STICKY HEADER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-          <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+
+          {/* HEADER */}
+          <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', height: 52, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <button type="button" onClick={() => router.push('/helpdesk')}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 11, fontWeight: 600, color: '#475569', cursor: 'pointer', flexShrink: 0 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 11, fontWeight: 600, color: '#475569', cursor: 'pointer', flexShrink: 0 }}>
               <ArrowLeft size={12} /> Volver
             </button>
 
-            {/* Breadcrumb */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>
               <span>Mesa de Ayuda</span>
-              <ChevronRight size={11} />
-              <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#ff5e3a' }}>#{ticket.id.slice(0, 8).toUpperCase()}</span>
+              <ChevronRight size={10} />
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#ff5e3a' }}>#{ticket.id.slice(0,8).toUpperCase()}</span>
             </div>
 
-            {/* Title */}
-            <p style={{ flex: 1, margin: 0, fontSize: 13, fontWeight: 700, color: '#0e2235', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ flex: 1, margin: 0, fontSize: 13, fontWeight: 600, color: '#0e2235', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
               {ticket.title}
             </p>
 
-            {/* State + Priority + SLA */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 9px', borderRadius: 6, background: ticket.is_final ? '#f0fdf4' : '#eff6ff', color: ticket.is_final ? '#16a34a' : '#1d4ed8', border: `1px solid ${ticket.is_final ? '#bbf7d0' : '#bfdbfe'}` }}>
-                {ticket.state_label}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+              <StateBadge label={ticket.state_label} isFinal={ticket.is_final} />
               <PriorityBadge priority={ticket.priority} />
               {slaCountdown && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: `${slaColor}15`, color: slaColor, border: `1px solid ${slaColor}30` }}>
-                  {slaCountdown}
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: `${slaColor}15`, color: slaColor, border: `1px solid ${slaColor}30`, display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <Clock size={9} /> {slaCountdown}
                 </span>
               )}
             </div>
 
-            {/* Quick transition buttons — variant-driven, no keyword matching */}
             <PermissionGate perm="helpdesk:tickets:edit">
             {!ticket.is_final && ticket.transitions.length > 0 && (
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                {ticket.transitions.slice(0, 3).map((tr) => {
-                  const VARIANT_BG: Record<string, string> = {
-                    success: '#059669',
-                    primary: '#ff5e3a',
-                    danger:  '#ef4444',
-                    warning: '#f59e0b',
-                    default: '#0e2235',
-                  };
-                  const bg = VARIANT_BG[tr.variant ?? 'default'] ?? '#0e2235';
-                  const isActive = activeTransId === tr.id;
-                  return (
-                    <button key={tr.id} type="button"
-                      onClick={() => setActiveTransId(isActive ? null : tr.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: 'none', background: isActive ? '#475569' : bg, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      {tr.variant === 'success' ? <CheckCircle2 size={11} /> : <ChevronRight size={11} />}
-                      {tr.to_label}
-                    </button>
-                  );
-                })}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <button type="button" onClick={() => setShowActionsMenu(v => !v)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: showActionsMenu ? '#f1f5f9' : '#fff', fontSize: 12, fontWeight: 700, color: '#0e2235', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Acciones <ChevronDown size={12} />
+                </button>
+                {showActionsMenu && (
+                  <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.1)', zIndex: 50, minWidth: 190, overflow: 'hidden' }}>
+                    {ticket.transitions.map(tr => {
+                      const VBGS: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
+                      const col = VBGS[tr.variant ?? 'default'] ?? '#0e2235';
+                      const isAct = activeTransId === tr.id;
+                      return (
+                        <button key={tr.id} type="button"
+                          onClick={() => { setActiveTransId(isAct ? null : tr.id); setShowActionsMenu(false); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: isAct ? '#f1f5f9' : 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: col, textAlign: 'left' as const, fontFamily: 'inherit' }}>
+                          {tr.variant === 'success' ? <CheckCircle2 size={13} /> : tr.variant === 'danger' ? <XCircle size={13} /> : <ChevronRight size={13} style={{ color: col }} />}
+                          {tr.to_label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
             </PermissionGate>
           </div>
 
-          {/* Transition confirm bar */}
+          {/* TRANSITION CONFIRM BAR */}
           {activeTransId && (
-            <div style={{ background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <span style={{ fontSize: 11, color: '#475569', fontWeight: 600 }}>Motivo (opcional):</span>
-              <input value={transReason} onChange={e => setTransReason(e.target.value)}
-                placeholder="Describe el cambio de estado…"
+            <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <span style={{ fontSize: 11, color: '#475569', fontWeight: 600, flexShrink: 0 }}>Motivo (opcional):</span>
+              <input value={transReason} onChange={e => setTransReason(e.target.value)} placeholder="Describe el cambio de estado..."
                 style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
               <button type="button" onClick={() => { setActiveTransId(null); setTransReason(''); }}
                 style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
@@ -571,234 +559,44 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               </button>
               <button type="button" onClick={() => transMut.mutate({ transId: activeTransId, reason: transReason })} disabled={transMut.isPending}
                 style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: '#6366f1', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, opacity: transMut.isPending ? .7 : 1 }}>
-                <CheckCircle2 size={11} /> {transMut.isPending ? 'Aplicando…' : 'Confirmar'}
+                <CheckCircle2 size={11} /> {transMut.isPending ? 'Aplicando...' : 'Confirmar'}
               </button>
             </div>
           )}
 
-          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• 3-COLUMN BODY â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-          <div style={{ display: 'grid', gridTemplateColumns: '272px 1fr 256px', flex: 1, overflow: 'hidden' }}>
+          {/* 2-COLUMN BODY */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', flex: 1, overflow: 'hidden' }}>
 
-            {/* â•â•â•â• LEFT PANEL â•â•â•â• */}
-            <div style={{ borderRight: '1px solid #e2e8f0', overflowY: 'auto', padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 18, background: '#fff' }}>
-
-              {/* Solicitante */}
-              <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Solicitante</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{ticket.creator_name?.charAt(0).toUpperCase()}</span>
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{ticket.creator_name}</p>
-                    <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Solicitante</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Activo asociado */}
-              {linkedAssets.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Activo asociado</p>
-                  {linkedAssets.map((asset) => {
-                    const sColor = ASSET_STATUS_COLORS[asset.status] ?? '#94a3b8';
-                    return (
-                      <div key={asset.id} style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: 9, border: '1px solid #e2e8f0' }}>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.name}</p>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${sColor}18`, color: sColor, border: `1px solid ${sColor}30` }}>
-                            {ASSET_STATUS_LABELS[asset.status] ?? asset.status}
-                          </span>
-                          <button type="button" onClick={() => router.push('/inventory/' + asset.id)}
-                            style={{ fontSize: 10, fontWeight: 700, color: '#ff5e3a', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
-                            Ver activo <ChevronRight size={10} />
-                          </button>
-                        </div>
-                        {asset.assigned_to_name && (
-                          <p style={{ fontSize: 10, color: '#94a3b8', margin: '4px 0 0' }}>Custodio: {asset.assigned_to_name}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Info */}
-              <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Información</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  {[
-                    ['Módulo',     ticket.module_name],
-                    ['Categoría',  ticket.category_name],
-                    ['Ambiente',   ticket.environment_name],
-                    ['Creado',     fmtDate(ticket.created_at)],
-                    ['ID interno', '#' + ticket.id.slice(0, 8).toUpperCase()],
-                    ...((ticket as any).damage_type_label ? [['Tipo daño', (ticket as any).damage_type_label]] : []),
-                    ...(ticket.reprocess_count > 0 ? [['Reproces.', `${ticket.reprocess_count} vez${ticket.reprocess_count > 1 ? 'es' : ''}`]] : []),
-                  ].map(([lbl, val]) => val ? (
-                    <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                      <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, flexShrink: 0 }}>{lbl}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{val}</span>
-                    </div>
-                  ) : null)}
-                </div>
-              </div>
-
-              {/* SLA */}
-              <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>SLA</p>
-                {ticket.sla_deadline_tracked ? (
-                  <div style={{ padding: '10px 12px', background: `${slaColor}08`, borderRadius: 9, border: `1px solid ${slaColor}25` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 10, color: '#64748b' }}>Deadline</span>
-                      {slaLabel && <SlaBadge status={ticket.sla_status} deadline={ticket.sla_deadline_tracked} />}
-                    </div>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 4px' }}>{fmtDate(ticket.sla_deadline_tracked)}</p>
-                    {slaCountdown && <p style={{ fontSize: 13, fontWeight: 800, color: slaColor, margin: 0 }}>{slaCountdown}</p>}
-                  </div>
-                ) : (
-                  <p style={{ fontSize: 11, color: '#94a3b8' }}>Sin SLA configurado</p>
-                )}
-                {ticket.escalated && ticket.escalation_note?.startsWith('Auto-escalado') && (
-                  <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', gap: 6 }}>
-                    <AlertTriangle size={12} style={{ color: '#ea580c', flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ fontSize: 10, color: '#9a3412', margin: 0, lineHeight: 1.4 }}>Auto-escalado por recurrencia</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Historial estados (vertical) */}
-              {ticket.history.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Historial de estados</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                    {/* Estado actual */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <div style={{ width: 9, height: 9, borderRadius: '50%', background: ticket.is_final ? '#22c55e' : '#6366f1', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#0e2235' }}>{ticket.state_label}</span>
-                      <span style={{ fontSize: 9, fontWeight: 600, color: ticket.is_final ? '#22c55e' : '#6366f1', background: ticket.is_final ? '#f0fdf4' : '#eef2ff', padding: '1px 6px', borderRadius: 4, border: `1px solid ${ticket.is_final ? '#bbf7d0' : '#c7d2fe'}` }}>
-                        {ticket.is_final ? 'Final' : 'Actual'}
-                      </span>
-                    </div>
-                    {/* Línea vertical */}
-                    {ticket.history.map((h, i) => (
-                      <div key={h.id} style={{ display: 'flex', gap: 8, paddingLeft: 4, paddingBottom: 8, position: 'relative' }}>
-                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 1, background: '#e2e8f0' }} />
-                        <div style={{ width: 9, height: 9, borderRadius: '50%', border: '2px solid #e2e8f0', background: '#fff', flexShrink: 0, marginTop: 2, zIndex: 1 }} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>{h.to_label}</span>
-                          </div>
-                          <p style={{ fontSize: 9, color: '#94a3b8', margin: '1px 0 0' }}>
-                            {h.actor_name} · {fmtDate(h.transitioned_at)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tickets relacionados */}
-              {relations.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>
-                    Relacionados ({relations.length})
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    {relations.map((r) => (
-                      <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 11, fontWeight: 600, color: '#0e2235', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.related_title ?? r.id.slice(0, 8)}</p>
-                          <p style={{ fontSize: 9, color: '#94a3b8', margin: '1px 0 0' }}>{r.relation_type}</p>
-                        </div>
-                        <button type="button" onClick={() => router.push('/helpdesk/ticket/' + r.related_id)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, display: 'flex', alignItems: 'center' }}>
-                          <ChevronRight size={12} />
-                        </button>
-                        {!ticket.is_final && (
-                          <button type="button" onClick={() => removeRelMut.mutate(r.id)} disabled={removeRelMut.isPending}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', padding: 0, display: 'flex', alignItems: 'center' }}>
-                            <Unlink size={11} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Link related ticket form */}
-              {!ticket.is_final && (
-                <div>
-                  {!showRelForm ? (
-                    <button type="button" onClick={() => setShowRelForm(true)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: '#64748b', background: 'none', border: '1px dashed #e2e8f0', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', fontFamily: 'inherit', width: '100%', justifyContent: 'center' }}>
-                      <Link2 size={10} /> Vincular ticket relacionado
-                    </button>
-                  ) : (
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 9, padding: '10px 12px' }}>
-                      <div style={{ position: 'relative', marginBottom: 6 }}>
-                        <Search size={11} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                        <input type="text" placeholder="Buscar ticket…" value={relSearch} onChange={(e) => handleRelSearch(e.target.value)}
-                          style={{ width: '100%', padding: '6px 8px 6px 26px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
-                      </div>
-                      {relSearchResults.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
-                          {relSearchResults.map((r) => (
-                            <button key={r.id} type="button" onClick={() => setRelTarget(r)}
-                              style={{ fontSize: 11, padding: '5px 8px', borderRadius: 6, border: `1px solid ${relTarget?.id === r.id ? '#6366f1' : '#e2e8f0'}`, background: relTarget?.id === r.id ? '#eef2ff' : '#fff', cursor: 'pointer', textAlign: 'left' as const, fontFamily: 'inherit', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              #{r.id.slice(0, 6)} — {r.title}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', gap: 5 }}>
-                        <button type="button" onClick={() => { setShowRelForm(false); setRelSearch(''); setRelTarget(null); setRelSearchResults([]); }}
-                          style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
-                          Cancelar
-                        </button>
-                        <button type="button" disabled={!relTarget || addRelMut.isPending} onClick={() => { if (relTarget) { setRelTarget(relTarget); addRelMut.mutate(); } }}
-                          style={{ flex: 1, padding: '5px', borderRadius: 6, border: 'none', background: relTarget ? '#6366f1' : '#e2e8f0', color: '#fff', fontSize: 10, fontWeight: 700, cursor: relTarget ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-                          {addRelMut.isPending ? '…' : 'Vincular'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* â•â•â•â• CENTER PANEL â•â•â•â• */}
-            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* MAIN: banners + timeline + reply */}
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e2e8f0' }}>
 
               {/* Validation banner */}
               {ticket.is_approval_state && currentUser?.id === ticket.created_by && (
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', background: '#fffbeb', flexShrink: 0 }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={14} /> Validación de solución requerida
+                    <CheckCircle2 size={14} /> Validacion de solucion requerida
                   </p>
                   {!showRejectForm ? (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
-                      <input value={signature} onChange={e => setSignature(e.target.value)} placeholder="Escribe tu nombre como firma…"
+                      <input value={signature} onChange={e => setSignature(e.target.value)} placeholder="Escribe tu nombre como firma..."
                         style={{ flex: 1, minWidth: 180, padding: '7px 10px', borderRadius: 7, border: '1px solid #fde68a', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
                       <button type="button" onClick={handleApprove} disabled={isApproving || !signature.trim()}
                         style={{ padding: '7px 14px', borderRadius: 7, border: 'none', background: isApproving || !signature.trim() ? '#94a3b8' : '#22c55e', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {isApproving ? '…' : '✓ Aprobar'}
+                        {isApproving ? '...' : 'Aprobar'}
                       </button>
                       <button type="button" onClick={() => setShowRejectForm(true)}
                         style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        ✗ Rechazar
+                        Reabrir
                       </button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Justificación del rechazo…" rows={2}
-                        style={{ flex: 1, padding: '7px 10px', borderRadius: 7, border: '1px solid #fecaca', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none' }} />
+                      <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo de reapertura..." rows={2}
+                        style={{ flex: 1, padding: '7px 10px', borderRadius: 7, border: '1px solid #fecaca', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none' as const }} />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <button type="button" onClick={handleReject} disabled={isRejecting || !rejectReason.trim()}
                           style={{ padding: '7px 12px', borderRadius: 7, border: 'none', background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {isRejecting ? '…' : 'Confirmar'}
+                          {isRejecting ? '...' : 'Confirmar'}
                         </button>
                         <button type="button" onClick={() => { setShowRejectForm(false); setRejectReason(''); }}
                           style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
@@ -825,36 +623,34 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                         <Star size={20} fill={(ratingHover || ratingScore) >= s ? '#f59e0b' : 'none'} stroke={(ratingHover || ratingScore) >= s ? '#f59e0b' : '#d1d5db'} />
                       </button>
                     ))}
-                    {ratingScore > 0 && <span style={{ fontSize: 11, color: '#92400e', alignSelf: 'center', marginLeft: 4, fontWeight: 600 }}>
-                      {['','Muy malo','Malo','Regular','Bueno','Excelente'][ratingScore]}
-                    </span>}
+                    {ratingScore > 0 && <span style={{ fontSize: 11, color: '#92400e', alignSelf: 'center', marginLeft: 4, fontWeight: 600 }}>{['','Muy malo','Malo','Regular','Bueno','Excelente'][ratingScore]}</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)} placeholder="Comentario opcional…" rows={1}
-                      style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: '1px solid #fde68a', fontSize: 11, fontFamily: 'inherit', outline: 'none', resize: 'none' }} />
+                    <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)} placeholder="Comentario opcional..." rows={1}
+                      style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: '1px solid #fde68a', fontSize: 11, fontFamily: 'inherit', outline: 'none', resize: 'none' as const }} />
                     <button type="button" disabled={ratingScore === 0 || rateMut.isPending}
                       onClick={() => rateMut.mutate({ score_overall: ratingScore, comment: ratingComment || undefined })}
                       style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: ratingScore > 0 ? '#f59e0b' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: ratingScore > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
-                      {rateMut.isPending ? '…' : 'Enviar'}
+                      {rateMut.isPending ? '...' : 'Enviar'}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Rating already submitted */}
+              {/* Rating submitted */}
               {ticket.is_final && currentUser?.id === ticket.created_by && existingRating && (
                 <div style={{ padding: '10px 20px', borderBottom: '1px solid #e2e8f0', background: '#f0fdf4', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>Calificación enviada — {existingRating.score_overall}/5 ⭐</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>Calificacion enviada - {existingRating.score_overall}/5</span>
                 </div>
               )}
 
-              {/* Timeline — scrollable */}
+              {/* TIMELINE */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
                 <TicketTimeline events={timeline} isLoading={timelineLoading} autoScroll />
               </div>
 
-              {/* Reply box */}
+              {/* REPLY BOX */}
               <div style={{ borderTop: '1px solid #e2e8f0', padding: '12px 20px', flexShrink: 0, background: '#fff' }}>
                 <input ref={fileInputRef} type="file" style={{ display: 'none' }}
                   accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -869,158 +665,172 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                       <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>Comentario</span>
                       <select value={commentType} onChange={e => setCommentType(e.target.value as 'public' | 'internal')}
                         style={{ marginLeft: 'auto', fontSize: 10, padding: '2px 6px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        <option value="public">Público</option>
+                        <option value="public">Publico</option>
                         <option value="internal">Interno</option>
                       </select>
                       <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadMut.isPending}
                         style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, padding: '3px 8px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        <Paperclip size={10} /> {uploadMut.isPending ? '…' : 'Adjuntar'}
+                        <Paperclip size={10} /> {uploadMut.isPending ? '...' : 'Adjuntar'}
                       </button>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                       <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
-                        placeholder={commentType === 'internal' ? 'Nota interna (solo el equipo técnico)…' : 'Escribe tu respuesta…'}
+                        placeholder={commentType === 'internal' ? 'Nota interna (solo equipo tecnico)...' : 'Escribe tu respuesta...'}
                         rows={2}
-                        style={{ flex: 1, padding: '8px 12px', borderRadius: 9, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' as const }}
+                        style={{ flex: 1, padding: '8px 12px', borderRadius: 9, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none' as const, boxSizing: 'border-box' as const }}
                         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && replyText.trim()) { e.preventDefault(); addCommentMut.mutate(); } }}
                       />
                       <button type="button" disabled={!replyText.trim() || addCommentMut.isPending} onClick={() => addCommentMut.mutate()}
                         style={{ padding: '8px 16px', borderRadius: 9, border: 'none', background: replyText.trim() && !addCommentMut.isPending ? '#0e2235' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: replyText.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', flexShrink: 0 }}>
-                        {addCommentMut.isPending ? '…' : 'Enviar'}
+                        {addCommentMut.isPending ? '...' : 'Enviar'}
                       </button>
                     </div>
-                    {addCommentMut.isError && <p style={{ fontSize: 10, color: '#dc2626', margin: '4px 0 0' }}>Error al enviar.</p>}
-                    {uploadError && <p style={{ fontSize: 10, color: '#dc2626', margin: '4px 0 0' }}>{uploadError}</p>}
+                    {(addCommentMut.isError || uploadError) && (
+                      <p style={{ fontSize: 10, color: '#dc2626', margin: '4px 0 0' }}>{uploadError || 'Error al enviar.'}</p>
+                    )}
                   </>
                 )}
                 </PermissionGate>
               </div>
             </div>
 
-            {/* â•â•â•â• RIGHT PANEL â•â•â•â• */}
-            <div style={{ borderLeft: '1px solid #e2e8f0', overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 16, background: '#fff' }}>
+            {/* RIGHT SIDEBAR */}
+            <div style={{ overflowY: 'auto', background: '#fff' }}>
 
-              {/* Transitions */}
+              {/* Asignado a */}
+              <SideSection label="Asignado a">
+                {ownerAssignment ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#ff5e3a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{(ownerAssignment as any).user_name?.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{(ownerAssignment as any).user_name}</p>
+                      <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Tecnico asignado</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <UserX size={13} style={{ color: '#94a3b8' }} />
+                    <span style={{ fontSize: 12, color: '#94a3b8' }}>Sin asignar</span>
+                  </div>
+                )}
+              </SideSection>
+
+              {/* Solicitante */}
+              <SideSection label="Solicitante">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{ticket.creator_name?.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{ticket.creator_name}</p>
+                    <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Solicitante</p>
+                  </div>
+                </div>
+              </SideSection>
+
+              {/* Cambiar estado */}
               <PermissionGate perm="helpdesk:tickets:edit">
               {!ticket.is_final && ticket.transitions.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Cambiar estado</p>
+                <SideSection label="Cambiar estado">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    {ticket.transitions.map((tr) => {
-                      const VARIANT_BG: Record<string, string> = {
-                        success: '#059669', primary: '#ff5e3a',
-                        danger: '#ef4444', warning: '#f59e0b', default: '#0e2235',
-                      };
-                      const bg = VARIANT_BG[tr.variant ?? 'default'] ?? '#0e2235';
+                    {ticket.transitions.map(tr => {
+                      const VBGS: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
+                      const bg = VBGS[tr.variant ?? 'default'] ?? '#0e2235';
+                      const isAct = activeTransId === tr.id;
                       return (
                         <button key={tr.id} type="button"
-                          onClick={() => setActiveTransId(activeTransId === tr.id ? null : tr.id)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: 'none', background: activeTransId === tr.id ? '#475569' : bg, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
-                          {tr.variant === 'success' ? <CheckCircle2 size={12} /> : <ChevronRight size={12} />}
+                          onClick={() => setActiveTransId(isAct ? null : tr.id)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 7, border: 'none', background: isAct ? '#475569' : bg, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
+                          {tr.variant === 'success' ? <CheckCircle2 size={12} /> : tr.variant === 'danger' ? <XCircle size={12} /> : <ChevronRight size={12} />}
                           {tr.to_label}
                         </button>
                       );
                     })}
                   </div>
-                </div>
+                </SideSection>
               )}
               </PermissionGate>
 
-              {/* Colaborador */}
-              <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Solicitar colaborador</p>
-                <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)}
-                  style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', marginBottom: 6, boxSizing: 'border-box' as const }}>
-                  <option value="">Seleccionar técnico…</option>
-                  {technicians.map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
-                </select>
-                <button type="button" disabled={!selectedUserId || isCalling} onClick={handleInstantCall}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, width: '100%', justifyContent: 'center', padding: '7px', borderRadius: 8, border: 'none', background: selectedUserId && !isCalling ? '#0e2235' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: selectedUserId ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-                  <Phone size={11} /> {isCalling ? 'Invitando…' : 'Invitar'}
-                </button>
-              </div>
-
-              <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: 0 }} />
-
-              {/* Reunión */}
-              <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Programar reunión</p>
-                <select value={meetingProvider} onChange={e => setMeetingProvider(e.target.value as typeof meetingProvider)}
-                  style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', marginBottom: 5, boxSizing: 'border-box' as const }}>
-                  <option value="google_meet">Google Meet</option>
-                  <option value="teams">Microsoft Teams</option>
-                  <option value="zoom">Zoom</option>
-                  <option value="internal">Enlace interno</option>
-                </select>
-                <input value={meetingReason} onChange={e => setMeetingReason(e.target.value)} placeholder="Motivo *"
-                  style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', marginBottom: 5, boxSizing: 'border-box' as const, outline: 'none' }} />
-                <input value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} placeholder="URL reunión (opcional)"
-                  style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', marginBottom: 5, boxSizing: 'border-box' as const, outline: 'none' }} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 6 }}>
-                  <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
-                    style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', outline: 'none' }} />
-                  <select value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
-                    style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', outline: 'none', background: '#fff' }}>
-                    {['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => <option key={t}>{t}</option>)}
-                  </select>
+              {/* Detalles */}
+              <SideSection label="Detalles">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {([
+                    ['Modulo',    ticket.module_name],
+                    ['Categoria', ticket.category_name],
+                    ['Tipo dano', (ticket as any).damage_type_label],
+                    ['Prioridad', ticket.priority],
+                    ['Urgencia',  ticket.urgency],
+                    ['Impacto',   ticket.impact],
+                    ['Creado',    fmtDate(ticket.created_at)],
+                    ['ID',        '#' + ticket.id.slice(0, 8).toUpperCase()],
+                    ...(ticket.reprocess_count > 0 ? [['Reaperturas', String(ticket.reprocess_count)]] : []),
+                  ] as [string, string | null | undefined][]).map(([lbl, val]) => val ? (
+                    <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, flexShrink: 0 }}>{lbl}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', textAlign: 'right' as const, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{val}</span>
+                    </div>
+                  ) : null)}
                 </div>
-                <button type="button" disabled={!scheduledDate || !meetingReason.trim() || scheduleMut.isPending} onClick={handleSchedule}
-                  style={{ width: '100%', padding: '7px', borderRadius: 8, border: 'none', background: scheduledDate && meetingReason.trim() ? '#ff5e3a' : '#94a3b8', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {scheduleMut.isPending ? 'Programando…' : 'Programar'}
-                </button>
-              </div>
+              </SideSection>
 
-              {/* Meetings list */}
-              {meetings.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Reuniones ({meetings.length})</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    {meetings.map(m => {
-                      const pc = PROVIDER_COLORS[m.provider] ?? '#64748b';
-                      const sc = STATUS_COLORS[m.status] ?? '#64748b';
-                      const dt = new Date(m.scheduled_at);
-                      return (
-                        <div key={m.id} style={{ padding: '9px 11px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', opacity: m.status === 'cancelled' ? .5 : 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                            <span style={{ fontSize: 9, fontWeight: 700, color: pc, textTransform: 'uppercase' }}>{PROVIDER_LABELS[m.provider]}</span>
-                            <span style={{ fontSize: 9, fontWeight: 600, color: sc }}>{STATUS_LABELS[m.status]}</span>
-                          </div>
-                          <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 2px' }}>{m.reason}</p>
-                          <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>
-                            {dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} · {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          {m.meeting_url && m.status !== 'cancelled' && (
-                            <a href={m.meeting_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: pc, textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>Unirse →</a>
-                          )}
-                          {m.status === 'scheduled' && (
-                            <button type="button" onClick={() => cancelMeetMut.mutate(m.id)} disabled={cancelMeetMut.isPending}
-                              style={{ display: 'block', marginTop: 4, fontSize: 9, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                              Cancelar reunión
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
+              {/* SLA */}
+              <SideSection label="SLA">
+                {ticket.sla_deadline_tracked ? (
+                  <div style={{ padding: '10px 11px', background: `${slaColor}08`, borderRadius: 8, border: `1px solid ${slaColor}25` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                      <span style={{ fontSize: 10, color: '#64748b' }}>Deadline</span>
+                      {slaLabel && <SlaBadge status={ticket.sla_status} deadline={ticket.sla_deadline_tracked} />}
+                    </div>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 3px' }}>{fmtDate(ticket.sla_deadline_tracked)}</p>
+                    {slaCountdown && <p style={{ fontSize: 13, fontWeight: 800, color: slaColor, margin: 0 }}>{slaCountdown}</p>}
                   </div>
-                </div>
+                ) : (
+                  <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Sin SLA configurado</p>
+                )}
+                {ticket.escalated && ticket.escalation_note?.startsWith('Auto-escalado') && (
+                  <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 7, background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', gap: 6 }}>
+                    <AlertTriangle size={11} style={{ color: '#ea580c', flexShrink: 0, marginTop: 1 }} />
+                    <p style={{ fontSize: 10, color: '#9a3412', margin: 0, lineHeight: 1.4 }}>Auto-escalado por recurrencia</p>
+                  </div>
+                )}
+              </SideSection>
+
+              {/* Activo */}
+              {linkedAssets.length > 0 && (
+                <SideSection label={`Activo (${linkedAssets.length})`}>
+                  {linkedAssets.map(asset => {
+                    const sc = ASSET_STATUS_COLORS[asset.status] ?? '#94a3b8';
+                    return (
+                      <div key={asset.id} style={{ padding: '9px 11px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 6 }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: '0 0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.name}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${sc}18`, color: sc, border: `1px solid ${sc}30` }}>
+                            {ASSET_STATUS_LABELS[asset.status] ?? asset.status}
+                          </span>
+                          <button type="button" onClick={() => router.push('/inventory/' + asset.id)}
+                            style={{ fontSize: 10, fontWeight: 700, color: '#ff5e3a', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
+                            Ver <ChevronRight size={10} />
+                          </button>
+                        </div>
+                        {asset.assigned_to_name && (
+                          <p style={{ fontSize: 10, color: '#94a3b8', margin: '4px 0 0' }}>Custodio: {asset.assigned_to_name}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </SideSection>
               )}
 
-              <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: 0 }} />
-
-              {/* Participants */}
-              <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>
-                  Participantes ({allGuests.length})
-                </p>
-                {allGuests.length === 0 ? (
-                  <p style={{ fontSize: 11, color: '#94a3b8' }}>Sin participantes aún.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {/* Participantes */}
+              <SideSection label={`Participantes (${allGuests.length})`}>
+                {allGuests.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 10 }}>
                     {allGuests.map(g => (
                       <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
+                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: '#fff' }}>{g.name.charAt(0).toUpperCase()}</span>
-                          <span style={{ position: 'absolute', bottom: 0, right: 0, width: 7, height: 7, background: '#22c55e', borderRadius: '50%', border: '1.5px solid #fff' }} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</p>
@@ -1028,7 +838,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                         </div>
                         {g.isLocal && (
                           <button type="button" onClick={() => removeGuest(g.id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', padding: 0, display: 'flex' }}>
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', padding: 0 }}>
                             <X size={11} />
                           </button>
                         )}
@@ -1036,7 +846,132 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                     ))}
                   </div>
                 )}
-              </div>
+                <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)}
+                  style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', marginBottom: 6, boxSizing: 'border-box' as const }}>
+                  <option value="">Invitar tecnico...</option>
+                  {technicians.map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
+                </select>
+                <button type="button" disabled={!selectedUserId || isCalling} onClick={handleInstantCall}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, width: '100%', justifyContent: 'center', padding: '6px', borderRadius: 7, border: 'none', background: selectedUserId && !isCalling ? '#0e2235' : '#e2e8f0', color: selectedUserId ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: selectedUserId ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                  <Phone size={11} /> {isCalling ? 'Invitando...' : 'Invitar'}
+                </button>
+              </SideSection>
+
+              {/* Reuniones */}
+              <SideSection label={meetings.length > 0 ? `Reuniones (${meetings.length})` : 'Reuniones'}>
+                {meetings.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 10 }}>
+                    {meetings.map(m => {
+                      const pc = PROVIDER_COLORS[m.provider] ?? '#64748b';
+                      const sc2 = STATUS_COLORS[m.status] ?? '#64748b';
+                      const dt = new Date(m.scheduled_at);
+                      return (
+                        <div key={m.id} style={{ padding: '8px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0', opacity: m.status === 'cancelled' ? .5 : 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: pc, textTransform: 'uppercase' as const }}>{PROVIDER_LABELS[m.provider]}</span>
+                            <span style={{ fontSize: 9, fontWeight: 600, color: sc2 }}>{STATUS_LABELS[m.status]}</span>
+                          </div>
+                          <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 1px' }}>{m.reason}</p>
+                          <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>{dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} - {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</p>
+                          {m.meeting_url && m.status !== 'cancelled' && <a href={m.meeting_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: pc, textDecoration: 'none', display: 'inline-block', marginTop: 2 }}>Unirse</a>}
+                          {m.status === 'scheduled' && (
+                            <button type="button" onClick={() => cancelMeetMut.mutate(m.id)} disabled={cancelMeetMut.isPending}
+                              style={{ display: 'block', marginTop: 3, fontSize: 9, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <select value={meetingProvider} onChange={e => setMeetingProvider(e.target.value as typeof meetingProvider)}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', background: '#fff', boxSizing: 'border-box' as const }}>
+                    <option value="google_meet">Google Meet</option>
+                    <option value="teams">Microsoft Teams</option>
+                    <option value="zoom">Zoom</option>
+                    <option value="internal">Enlace interno</option>
+                  </select>
+                  <input value={meetingReason} onChange={e => setMeetingReason(e.target.value)} placeholder="Motivo *"
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', boxSizing: 'border-box' as const, outline: 'none' }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                    <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
+                      style={{ padding: '5px 6px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', outline: 'none' }} />
+                    <select value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
+                      style={{ padding: '5px 6px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', outline: 'none', background: '#fff' }}>
+                      {['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => <option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <button type="button" disabled={!scheduledDate || !meetingReason.trim() || scheduleMut.isPending} onClick={() => scheduleMut.mutate()}
+                    style={{ width: '100%', padding: '6px', borderRadius: 7, border: 'none', background: scheduledDate && meetingReason.trim() ? '#ff5e3a' : '#e2e8f0', color: scheduledDate && meetingReason.trim() ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {scheduleMut.isPending ? 'Programando...' : 'Programar reunion'}
+                  </button>
+                </div>
+              </SideSection>
+
+              {/* Relacionados */}
+              {(relations.length > 0 || !ticket.is_final) && (
+                <SideSection label={relations.length > 0 ? `Relacionados (${relations.length})` : 'Relacionados'}>
+                  {relations.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
+                      {relations.map(r => (
+                        <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 9px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 11, fontWeight: 600, color: '#0e2235', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.related_title ?? r.id.slice(0,8)}</p>
+                            <p style={{ fontSize: 9, color: '#94a3b8', margin: '1px 0 0' }}>{r.relation_type}</p>
+                          </div>
+                          <button type="button" onClick={() => router.push('/helpdesk/ticket/' + r.related_id)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}>
+                            <ChevronRight size={11} />
+                          </button>
+                          {!ticket.is_final && (
+                            <button type="button" onClick={() => removeRelMut.mutate(r.id)} disabled={removeRelMut.isPending}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', padding: 0 }}>
+                              <Unlink size={10} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!ticket.is_final && !showRelForm && (
+                    <button type="button" onClick={() => setShowRelForm(true)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: '#64748b', background: 'none', border: '1px dashed #e2e8f0', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'inherit', width: '100%', justifyContent: 'center' }}>
+                      <Link2 size={10} /> Vincular ticket
+                    </button>
+                  )}
+                  {!ticket.is_final && showRelForm && (
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 11px' }}>
+                      <div style={{ position: 'relative', marginBottom: 5 }}>
+                        <Search size={10} style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                        <input type="text" placeholder="Buscar ticket..." value={relSearch} onChange={e => handleRelSearch(e.target.value)}
+                          style={{ width: '100%', padding: '5px 7px 5px 22px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 10, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
+                      </div>
+                      {relSearchResults.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 5 }}>
+                          {relSearchResults.map(r => (
+                            <button key={r.id} type="button" onClick={() => setRelTarget(r)}
+                              style={{ fontSize: 10, padding: '4px 7px', borderRadius: 5, border: `1px solid ${relTarget?.id === r.id ? '#6366f1' : '#e2e8f0'}`, background: relTarget?.id === r.id ? '#eef2ff' : '#fff', cursor: 'pointer', textAlign: 'left' as const, fontFamily: 'inherit', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              #{r.id.slice(0,6)} - {r.title}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button type="button" onClick={() => { setShowRelForm(false); setRelSearch(''); setRelTarget(null); setRelSearchResults([]); }}
+                          style={{ flex: 1, padding: '5px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#fff', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
+                          Cancelar
+                        </button>
+                        <button type="button" disabled={!relTarget || addRelMut.isPending} onClick={() => { if (relTarget) addRelMut.mutate(); }}
+                          style={{ flex: 1, padding: '5px', borderRadius: 5, border: 'none', background: relTarget ? '#6366f1' : '#e2e8f0', color: '#fff', fontSize: 10, fontWeight: 700, cursor: relTarget ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                          {addRelMut.isPending ? '...' : 'Vincular'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </SideSection>
+              )}
 
             </div>
           </div>
