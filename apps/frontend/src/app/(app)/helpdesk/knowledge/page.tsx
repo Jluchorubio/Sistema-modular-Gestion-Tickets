@@ -13,7 +13,7 @@ export default function KnowledgePage() {
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
 
   useEffect(() => {
-    router.replace('/helpdesk/knowledge/forum');
+    router.replace('/helpdesk/knowledge/docs');
   }, [router]);
 
   return null;

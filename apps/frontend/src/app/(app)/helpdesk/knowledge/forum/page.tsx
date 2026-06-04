@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Star, MoreVertical, Trash2, CheckCircle2 } from 'lucide-react';
+import { Star, MoreVertical, Trash2, CheckCircle2, X } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
@@ -43,6 +43,13 @@ export default function ForumPage() {
   const [subscribed,  setSubscribed]  = useState<Set<string>>(new Set());
   const [menuOpen,    setMenuOpen]    = useState<string | null>(null);
 
+  /* inline create */
+  const [showCreate,  setShowCreate]  = useState(false);
+  const [newTitle,    setNewTitle]    = useState('');
+  const [newContent,  setNewContent]  = useState('');
+  const [newTags,     setNewTags]     = useState('');
+  const [createErr,   setCreateErr]   = useState('');
+
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['knowledge-posts', helpdeskId, filter],
     queryFn:  () => forumService.getPosts(helpdeskId!, undefined, filter !== 'all' ? filter : undefined),
@@ -53,6 +60,22 @@ export default function ForumPage() {
   const delMut = useMutation({
     mutationFn: (id: string) => forumService.deletePost(id),
     onSuccess:  () => { qc.invalidateQueries({ queryKey: ['knowledge-posts', helpdeskId] }); setMenuOpen(null); },
+  });
+
+  const createMut = useMutation({
+    mutationFn: () => forumService.createPost({
+      module_id: helpdeskId!,
+      title:   newTitle.trim(),
+      content: newContent.trim(),
+      tags:    newTags.split(',').map(t => t.trim()).filter(Boolean),
+    }),
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ['knowledge-posts', helpdeskId] });
+      setShowCreate(false);
+      setNewTitle(''); setNewContent(''); setNewTags(''); setCreateErr('');
+      router.push(`/helpdesk/knowledge/forum/${data.id}`);
+    },
+    onError: (e: any) => setCreateErr(e?.response?.data?.message ?? 'Error al publicar.'),
   });
 
   function toggleStar(id: string) {
@@ -81,13 +104,57 @@ export default function ForumPage() {
             </button>
           ))}
           {canPost && (
-            <button type="button" onClick={() => router.push('/helpdesk/knowledge/forum/create')}
-              style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: C.coral, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-              + Nuevo debate
+            <button type="button" onClick={() => setShowCreate(v => !v)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, border: `1.5px solid ${showCreate ? C.coral : 'transparent'}`, background: showCreate ? `${C.coral}10` : C.coral, color: showCreate ? C.coral : '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}>
+              {showCreate ? <><X size={13} /> Cancelar</> : <>+ Nuevo debate</>}
             </button>
           )}
         </div>
       </div>
+
+      {/* ── Inline create form ── */}
+      {showCreate && (
+        <div style={{ background: '#fff', border: `1.5px solid ${C.coral}40`, borderRadius: 12, padding: '20px 24px', marginBottom: 16, boxShadow: '0 2px 12px rgba(255,94,58,.08)' }}>
+          <p style={{ fontSize: 11, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 14px' }}>Nuevo debate</p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Asunto */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4 }}>Asunto <span style={{ color: C.coral }}>*</span></label>
+              <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Título del debate…" autoFocus
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
+            </div>
+
+            {/* Mensaje */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4 }}>Mensaje <span style={{ color: C.coral }}>*</span></label>
+              <textarea value={newContent} onChange={e => setNewContent(e.target.value)} placeholder="Describe el problema, pregunta o tema…" rows={4}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical' as const, boxSizing: 'border-box' as const }} />
+            </div>
+
+            {/* Tags (optional) */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4 }}>Etiquetas <span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}>(opcional, separadas por comas)</span></label>
+              <input value={newTags} onChange={e => setNewTags(e.target.value)} placeholder="wifi, impresora, correo…"
+                style={{ width: '100%', padding: '7px 12px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
+            </div>
+
+            {createErr && <p style={{ fontSize: 11, color: '#dc2626', margin: 0 }}>{createErr}</p>}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" disabled={!newTitle.trim() || !newContent.trim() || createMut.isPending || !helpdeskId}
+                onClick={() => createMut.mutate()}
+                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: newTitle.trim() && newContent.trim() ? C.coral : '#94a3b8', color: '#fff', fontSize: 12, fontWeight: 700, cursor: newTitle.trim() && newContent.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                {createMut.isPending ? 'Publicando…' : 'Publicar debate'}
+              </button>
+              <button type="button" onClick={() => { setShowCreate(false); setNewTitle(''); setNewContent(''); setNewTags(''); setCreateErr(''); }}
+                style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>

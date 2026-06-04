@@ -7,8 +7,8 @@ import { MessageSquare, BookOpen } from 'lucide-react';
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8' };
 
 const NAV = [
-  { href: '/helpdesk/knowledge/forum', label: 'Foro técnico',    Icon: MessageSquare },
   { href: '/helpdesk/knowledge/docs',  label: 'Base documental', Icon: BookOpen      },
+  { href: '/helpdesk/knowledge/forum', label: 'Foro técnico',    Icon: MessageSquare },
 ];
 
 export function KnowledgeNav() {
