@@ -68,6 +68,7 @@ export interface TicketCategory {
   icon:        string | null;
   color:       string | null;
   sort_order:  number;
+  is_active?:  boolean;
 }
 
 export interface DamageType {
@@ -248,12 +249,20 @@ export const systemConfigService = {
   /* ── Ticket categories (public read) ── */
   getTicketCategories: () =>
     api.get<TicketCategory[]>(`${BASE}/ticket-categories`).then(r => r.data),
+  getTicketCategoriesAll: () =>
+    api.get<TicketCategory[]>(`${BASE}/ticket-categories/all`).then(r => r.data),
+  createTicketCategory: (dto: { label: string; description?: string }) =>
+    api.post<TicketCategory>(`${BASE}/ticket-categories`, dto).then(r => r.data),
 
   /* ── Damage types (public read, filterable by category_id) ── */
   getDamageTypes: (categoryId?: string) =>
     api.get<DamageType[]>(`${BASE}/damage-types`, { params: categoryId ? { category_id: categoryId } : {} }).then(r => r.data),
+  getDamageTypesAdmin: () =>
+    api.get<DamageType[]>(`${BASE}/damage-types/admin`).then(r => r.data),
   updateDamageType: (id: string, dto: { is_active?: boolean; weight?: number; label?: string }, auth?: CriticalAuthData) =>
     api.patch<DamageType>(`${BASE}/damage-types/${id}`, dto, { headers: criticalHeaders(auth) }).then(r => r.data),
+  createDamageType: (dto: { category_id: string; label: string; default_priority: string; weight: number; description?: string }) =>
+    api.post<DamageType>(`${BASE}/damage-types`, dto).then(r => r.data),
 
   /* ── Business hours ── */
   getBusinessHours: (moduleId?: string) =>

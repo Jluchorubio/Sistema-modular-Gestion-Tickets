@@ -120,7 +120,6 @@ function CreateModal({ moduleId, onClose }: { moduleId: string; onClose: () => v
 
   /* ── Data loaders ── */
   const { data: moduleCategories }  = useQuery({ queryKey: ['ticket-module-categories', moduleId],  queryFn: () => ticketsService.getCategories(moduleId),              staleTime: 5 * 60_000 });
-  const { data: environments }      = useQuery({ queryKey: ['ticket-environments', moduleId],        queryFn: () => ticketsService.getEnvironments(moduleId),            staleTime: 5 * 60_000 });
   const { data: damageCategories }  = useQuery({ queryKey: ['damage-categories'],                   queryFn: () => systemConfigService.getTicketCategories(),           staleTime: 10 * 60_000 });
 
   /* ── Form state ── */
@@ -193,7 +192,6 @@ function CreateModal({ moduleId, onClose }: { moduleId: string; onClose: () => v
     e.preventDefault();
     if (!form.title?.trim())  { setError('Título requerido.'); return; }
     if (!form.category_id)    { setError('Categoría requerida.'); return; }
-    if (!form.environment_id) { setError('Ambiente requerido.'); return; }
     if (selectedDamageType?.is_other && !form.custom_damage_description?.trim()) {
       setError('Describe el tipo de daño personalizado.'); return;
     }
@@ -236,21 +234,12 @@ function CreateModal({ moduleId, onClose }: { moduleId: string; onClose: () => v
             <label style={lbl}>Descripción</label>
             <textarea value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Detalles adicionales…" rows={3} style={{ ...inp, resize: 'vertical' }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={lbl}>Categoría del módulo *</label>
-              <select value={form.category_id ?? ''} onChange={(e) => set('category_id', e.target.value)} style={inp}>
-                <option value="">Seleccionar…</option>
-                {(moduleCategories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={lbl}>Ambiente *</label>
-              <select value={form.environment_id ?? ''} onChange={(e) => set('environment_id', e.target.value)} style={inp}>
-                <option value="">Seleccionar…</option>
-                {(environments ?? []).map((e) => <option key={e.id} value={e.id}>{e.name}{e.location_name ? ` — ${e.location_name}` : ''}</option>)}
-              </select>
-            </div>
+          <div>
+            <label style={lbl}>Categoría del módulo *</label>
+            <select value={form.category_id ?? ''} onChange={(e) => set('category_id', e.target.value)} style={inp}>
+              <option value="">Seleccionar…</option>
+              {(moduleCategories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
           </div>
 
           {/* ── Damage type section ── */}

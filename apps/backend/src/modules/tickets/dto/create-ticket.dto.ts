@@ -7,9 +7,9 @@ const URGENCIES  = ['baja', 'media', 'alta'] as const;
 const IMPACTS    = ['bajo', 'medio', 'alto'] as const;
 
 export class CreateTicketDto {
-  @IsUUID()           module_id:      string;
-  @IsUUID()           category_id:    string;
-  @IsUUID()           environment_id: string;
+  @IsUUID()             module_id:       string;
+  @IsUUID()             category_id:     string;
+  @IsOptional() @IsUUID() environment_id?: string;
 
   @IsString()
   @MaxLength(200)     title:          string;

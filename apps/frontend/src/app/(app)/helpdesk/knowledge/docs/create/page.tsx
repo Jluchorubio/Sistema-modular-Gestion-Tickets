@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
-import { Upload, FileText, File, X, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, FileText, File, X, AlertCircle, ChevronDown, ChevronUp, Image, Film } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
@@ -16,23 +16,16 @@ const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b
 
 const CATEGORIES = ['Hardware', 'Software', 'Red y Conectividad', 'Acceso y Cuentas', 'Impresoras y Periféricos', 'General'];
 
-const FILE_ICONS: Record<string, string> = {
-  'application/pdf': '📄',
-  'application/msword': '📝',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
-  'application/vnd.ms-excel': '📊',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
-  'application/vnd.ms-powerpoint': '📋',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📋',
-  'text/plain': '📃',
-  'application/zip': '🗜️',
-};
-
-function getFileIcon(mime: string): string {
-  if (FILE_ICONS[mime]) return FILE_ICONS[mime];
-  if (mime.startsWith('image/')) return '🖼️';
-  if (mime.startsWith('video/')) return '🎬';
-  return '📁';
+function getFileIcon(mime: string, size = 28): React.ReactNode {
+  if (mime === 'application/pdf') return <FileText size={size} style={{ color: '#ef4444' }} />;
+  if (mime.includes('msword') || mime.includes('wordprocessingml')) return <FileText size={size} style={{ color: '#1d4ed8' }} />;
+  if (mime.includes('excel') || mime.includes('spreadsheetml')) return <FileText size={size} style={{ color: '#16a34a' }} />;
+  if (mime.includes('powerpoint') || mime.includes('presentationml')) return <FileText size={size} style={{ color: '#ea580c' }} />;
+  if (mime === 'text/plain') return <FileText size={size} style={{ color: '#64748b' }} />;
+  if (mime === 'application/zip') return <File size={size} style={{ color: '#64748b' }} />;
+  if (mime.startsWith('image/')) return <Image size={size} style={{ color: '#7c3aed' }} />;
+  if (mime.startsWith('video/')) return <Film size={size} style={{ color: '#0ea5e9' }} />;
+  return <File size={size} style={{ color: '#94a3b8' }} />;
 }
 
 function fmtSize(bytes: number): string {
@@ -140,7 +133,7 @@ export default function DocsCreatePage() {
           ) : (
             /* File selected */
             <div style={{ margin: '24px', borderRadius: 12, border: `1.5px solid #bbf7d0`, background: '#f0fdf4', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ fontSize: 36, flexShrink: 0 }}>{getFileIcon(file.type)}</div>
+              <div style={{ flexShrink: 0 }}>{getFileIcon(file.type, 36)}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: '0 0 3px', fontSize: 14, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</p>
                 <p style={{ margin: 0, fontSize: 11, color: C.sub }}>{fmtSize(file.size)} · {file.type || 'archivo'}</p>

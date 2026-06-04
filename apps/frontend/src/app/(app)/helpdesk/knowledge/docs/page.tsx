@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Plus, Search, Eye, ChevronRight, Pencil, Trash2, ThumbsUp, Download } from 'lucide-react';
+import { BookOpen, Plus, Search, Eye, ChevronRight, Pencil, Trash2, ThumbsUp, Download, FileText, File, Image, Film } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
@@ -15,23 +15,18 @@ import { fmtDate } from '@/lib/formatters';
 
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
 
-const FILE_ICONS: Record<string, string> = {
-  'application/pdf': '📄',
-  'application/msword': '📝',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
-  'application/vnd.ms-excel': '📊',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
-  'application/vnd.ms-powerpoint': '📋',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📋',
-  'text/plain': '📃',
-  'application/zip': '🗜️',
-};
-function getFileIcon(mime?: string | null): string {
-  if (!mime) return '📁';
-  if (FILE_ICONS[mime]) return FILE_ICONS[mime];
-  if (mime.startsWith('image/')) return '🖼️';
-  if (mime.startsWith('video/')) return '🎬';
-  return '📁';
+function getFileIcon(mime?: string | null, size = 18): React.ReactNode {
+  const s = { color: C.coral };
+  if (!mime) return <File size={size} style={s} />;
+  if (mime === 'application/pdf') return <FileText size={size} style={{ color: '#ef4444' }} />;
+  if (mime.includes('msword') || mime.includes('wordprocessingml')) return <FileText size={size} style={{ color: '#1d4ed8' }} />;
+  if (mime.includes('excel') || mime.includes('spreadsheetml')) return <FileText size={size} style={{ color: '#16a34a' }} />;
+  if (mime.includes('powerpoint') || mime.includes('presentationml')) return <FileText size={size} style={{ color: '#ea580c' }} />;
+  if (mime === 'text/plain') return <FileText size={size} style={{ color: '#64748b' }} />;
+  if (mime === 'application/zip') return <File size={size} style={{ color: '#64748b' }} />;
+  if (mime.startsWith('image/')) return <Image size={size} style={{ color: '#7c3aed' }} />;
+  if (mime.startsWith('video/')) return <Film size={size} style={{ color: '#0ea5e9' }} />;
+  return <File size={size} style={s} />;
 }
 function fmtSize(bytes?: number | null): string {
   if (!bytes) return '';
@@ -137,7 +132,7 @@ export default function DocsPage() {
               {/* Icon */}
               <div style={{ width: 44, height: 44, borderRadius: 10, background: `${C.coral}10`, border: `1px solid ${C.coral}25`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {(a as any).doc_type === 'file'
-                  ? <span style={{ fontSize: 22 }}>{getFileIcon((a as any).file_mime)}</span>
+                  ? getFileIcon((a as any).file_mime, 18)
                   : <BookOpen size={18} style={{ color: C.coral }} />}
               </div>
               {/* Content */}

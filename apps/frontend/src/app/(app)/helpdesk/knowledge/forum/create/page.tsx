@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
-import { AlertCircle, Paperclip, X, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  AlertCircle, Paperclip, X, ChevronDown, ChevronUp,
+  Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Link, Settings2, Smile, Image, Mic, Video, FileText, ChevronsUpDown, Type,
+  type LucideIcon,
+} from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
@@ -107,17 +112,35 @@ export default function ForumCreatePage() {
           <div style={FIELD_WRAP}>
             {/* Toolbar hint */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '6px 8px', background: '#f8fafc', border: `1px solid ${C.border}`, borderBottom: 'none', borderRadius: '7px 7px 0 0', flexWrap: 'wrap' }}>
-              {['↕', 'A▾', 'B', 'I', '≡', '≡', '≡', '≡', '🔗', '⚙'].map((t, i) => (
-                <button key={i} type="button"
-                  style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', fontSize: 12, color: C.sub, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', fontWeight: 700 }}>
-                  {t}
+              {([
+                [ChevronsUpDown, 'Tamaño'],
+                [Type,           'Fuente'],
+                [Bold,           'Negrita'],
+                [Italic,         'Cursiva'],
+                [AlignLeft,      'Izquierda'],
+                [AlignCenter,    'Centro'],
+                [AlignRight,     'Derecha'],
+                [AlignJustify,   'Justificar'],
+                [Link,           'Enlace'],
+                [Settings2,      'Opciones'],
+              ] as [LucideIcon, string][]).map(([Icon, title], i) => (
+                <button key={i} type="button" title={title}
+                  style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', color: C.sub, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={13} />
                 </button>
               ))}
               <span style={{ width: 1, height: 20, background: C.border, margin: '0 4px' }} />
-              {['😊', '🖼', '📎', '🎤', '🎥', '📋'].map((t, i) => (
-                <button key={i} type="button"
-                  style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {t}
+              {([
+                [Smile,    'Emoji'],
+                [Image,    'Imagen'],
+                [Paperclip,'Adjunto'],
+                [Mic,      'Audio'],
+                [Video,    'Video'],
+                [FileText, 'Archivo'],
+              ] as [LucideIcon, string][]).map(([Icon, title], i) => (
+                <button key={i} type="button" title={title}
+                  style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', color: C.sub, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={13} />
                 </button>
               ))}
             </div>

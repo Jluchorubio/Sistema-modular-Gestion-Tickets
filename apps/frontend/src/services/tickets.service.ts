@@ -226,7 +226,7 @@ export interface AssetSearchResult {
 export interface CreateTicketDto {
   module_id:                  string;
   category_id:                string;
-  environment_id:             string;
+  environment_id?:            string;
   title:                      string;
   description?:               string;
   damage_type_id?:            string;

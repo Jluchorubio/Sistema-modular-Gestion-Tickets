@@ -170,6 +170,38 @@ export class PreviewPriorityDto {
   impact?: string;
 }
 
+export class CreateTicketCategoryDto {
+  @ApiProperty() @IsString() @MinLength(2) @MaxLength(100)
+  label: string;
+
+  @ApiPropertyOptional() @IsString() @IsOptional()
+  description?: string;
+
+  @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional()
+  sort_order?: number;
+}
+
+export class CreateDamageTypeDto {
+  @ApiProperty() @IsString()
+  category_id: string;
+
+  @ApiProperty() @IsString() @MinLength(2) @MaxLength(150)
+  label: string;
+
+  @ApiProperty({ enum: ['baja', 'media', 'alta', 'critica'] })
+  @IsIn(['baja', 'media', 'alta', 'critica'])
+  default_priority: string;
+
+  @ApiProperty({ minimum: 1, maximum: 10 }) @IsInt() @Min(1)
+  weight: number;
+
+  @ApiPropertyOptional() @IsString() @IsOptional()
+  description?: string;
+
+  @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional()
+  sort_order?: number;
+}
+
 export class UpdateRequestTypeDto {
   @ApiPropertyOptional() @IsString() @IsOptional() @MinLength(2) @MaxLength(100)
   label?: string;

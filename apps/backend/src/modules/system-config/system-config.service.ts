@@ -10,6 +10,7 @@ import {
 import {
   UpdateSlaRuleDto, UpdateCompanyDto,
   UpdateDamageTypeDto, UpsertBusinessHourDto, CreateHolidayDto,
+  CreateTicketCategoryDto, CreateDamageTypeDto,
 } from './dto/config.dto';
 import { BulkImportUsersDto } from './dto/bulk-import.dto';
 
@@ -305,7 +306,67 @@ export class SystemConfigService {
     );
   }
 
+  async getTicketCategoriesAll() {
+    return this.db.query<any[]>(
+      `SELECT id, slug, label, description, icon, color, sort_order, is_active
+       FROM config.ticket_categories
+       ORDER BY sort_order`,
+    );
+  }
+
+  async createTicketCategory(dto: CreateTicketCategoryDto) {
+    const slug = dto.label.toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const existing = await this.db.query<any[]>(
+      `SELECT id FROM config.ticket_categories WHERE slug = $1`,
+      [slug],
+    );
+    if (existing.length > 0) throw new BadRequestException(`Ya existe una categoría con ese nombre`);
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO config.ticket_categories (slug, label, description, sort_order, is_active)
+       VALUES ($1, $2, $3,
+         COALESCE($4, (SELECT COALESCE(MAX(sort_order), 0) + 10 FROM config.ticket_categories)),
+         TRUE)
+       RETURNING *`,
+      [slug, dto.label.trim(), dto.description ?? null, dto.sort_order ?? null],
+    );
+    await this.cache.delByPrefix('sys:ticket-categories');
+    await this.cache.delByPrefix('sys:damage-types:');
+    return row;
+  }
+
   /* ── Damage types (lectura pública, filtrable por category_id) ────── */
+
+  async getDamageTypesAdmin() {
+    return this.db.query<any[]>(
+      `SELECT dt.id, dt.category_id, tc.slug AS category_slug, tc.label AS category_label,
+              dt.slug, dt.label, dt.description,
+              dt.default_priority, dt.weight, dt.allow_freetext, dt.is_other, dt.is_active, dt.sort_order
+       FROM tickets.damage_types dt
+       JOIN config.ticket_categories tc ON tc.id = dt.category_id
+       ORDER BY tc.sort_order, dt.sort_order`,
+    );
+  }
+
+  async createDamageType(dto: CreateDamageTypeDto) {
+    const slug = dto.label.toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO tickets.damage_types
+         (category_id, slug, label, description, default_priority, weight, sort_order, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6,
+         COALESCE($7, (SELECT COALESCE(MAX(sort_order), 0) + 10
+                       FROM tickets.damage_types WHERE category_id = $1)),
+         TRUE)
+       RETURNING *`,
+      [dto.category_id, slug, dto.label.trim(), dto.description ?? null,
+       dto.default_priority, dto.weight, dto.sort_order ?? null],
+    );
+    await this.cache.delByPrefix('sys:damage-types:');
+    return row;
+  }
 
   async getDamageTypes(categoryId?: string) {
     const key = `sys:damage-types:${categoryId ?? 'all'}`;

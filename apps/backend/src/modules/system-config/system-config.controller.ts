@@ -22,6 +22,7 @@ import {
   UpdateDamageTypeDto, UpsertBusinessHourDto, CreateHolidayDto,
   CreateTicketSlaRuleDto, UpdateTicketSlaRuleDto, CreateTicketSlaConditionDto,
   UpdatePriorityFormulaDto, PreviewPriorityDto,
+  CreateTicketCategoryDto, CreateDamageTypeDto,
 } from './dto/config.dto';
 import { PriorityEngineService } from '../tickets/priority/priority-engine.service';
 import { BulkImportUsersDto } from './dto/bulk-import.dto';
@@ -55,10 +56,36 @@ export class SystemConfigController {
   @ApiOperation({ summary: 'Categorías de tickets (Hardware, Software, Red…). Todos los usuarios.' })
   getTicketCategories() { return this.svc.getTicketCategories(); }
 
+  @Get('ticket-categories/all')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @ApiOperation({ summary: 'Todas las categorías (incluyendo inactivas). Solo superadmin.' })
+  getTicketCategoriesAll() { return this.svc.getTicketCategoriesAll(); }
+
+  @Post('ticket-categories')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Crear categoría de ticket.' })
+  createTicketCategory(@Body() dto: CreateTicketCategoryDto) {
+    return this.svc.createTicketCategory(dto);
+  }
+
+  @Get('damage-types/admin')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @ApiOperation({ summary: 'Todos los tipos de daño incluyendo inactivos. Solo superadmin.' })
+  getDamageTypesAdmin() { return this.svc.getDamageTypesAdmin(); }
+
   @Get('damage-types')
   @ApiOperation({ summary: 'Tipos de daño. Filtro ?category_id=uuid para una categoría.' })
   getDamageTypes(@Query('category_id') categoryId?: string) {
     return this.svc.getDamageTypes(categoryId);
+  }
+
+  @Post('damage-types')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Crear tipo de daño.' })
+  createDamageType(@Body() dto: CreateDamageTypeDto) {
+    return this.svc.createDamageType(dto);
   }
 
   /* ── Superadmin-only endpoints ── */

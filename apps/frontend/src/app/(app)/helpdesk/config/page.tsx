@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Settings, Shield, Wrench, CalendarClock, MapPin, type LucideIcon } from 'lucide-react';
+import { Settings, Shield, Wrench, CalendarClock, type LucideIcon } from 'lucide-react';
 import { useModules }    from '@/hooks/useModules';
 import { useModuleNav }  from '@/hooks/useModuleNav';
 import { useAuthStore }  from '@/stores/auth.store';
@@ -10,16 +10,15 @@ import { ModuleConfigClient }   from '@/components/modules/ModuleConfigClient';
 import { SlaTicketsTab }        from '@/components/config/SlaTicketsTab';
 import { DamageTypesTab }       from '@/components/config/DamageTypesTab';
 import { ModuleCalendarioTab }  from '@/components/config/ModuleCalendarioTab';
-import { LocationsTab }         from '@/components/config/LocationsTab';
+
 import { Spinner }              from '@/components/ui/Spinner';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import styles from '@/app/(app)/requests/config/config.module.css';
 
-type Tab = 'general' | 'sedes' | 'sla-tickets' | 'daños' | 'calendario';
+type Tab = 'general' | 'sla-tickets' | 'daños' | 'calendario';
 
 const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
   { key: 'general',     label: 'General',        Icon: Settings     },
-  { key: 'sedes',       label: 'Sedes',          Icon: MapPin       },
   { key: 'sla-tickets', label: 'SLA Tickets',    Icon: Shield       },
   { key: 'daños',       label: 'Tipos de Daño',  Icon: Wrench       },
   { key: 'calendario',  label: 'Calendario',     Icon: CalendarClock },
@@ -53,7 +52,7 @@ export default function HelpdeskConfigPage() {
 
         <div className={styles.header}>
           <h1 className={styles.title}>Configuración — Helpdesk</h1>
-          <p className={styles.subtitle}>Comportamiento operativo, sedes, SLA y tipos de daño del módulo Helpdesk.</p>
+          <p className={styles.subtitle}>Comportamiento operativo, SLA y tipos de daño del módulo Helpdesk.</p>
         </div>
 
         <div className={styles.tabBar}>
@@ -78,7 +77,6 @@ export default function HelpdeskConfigPage() {
               isAdminModulo={isAdminModulo}
             />
           )}
-          {tab === 'sedes'       && <LocationsTab  moduleId={helpdeskRef.id} />}
           {tab === 'sla-tickets' && <SlaTicketsTab moduleId={helpdeskRef.id} />}
           {tab === 'daños'       && <DamageTypesTab />}
           {tab === 'calendario'  && <ModuleCalendarioTab moduleId={helpdeskRef.id} />}

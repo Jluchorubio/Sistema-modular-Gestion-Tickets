@@ -240,7 +240,6 @@ export class SlaEvaluatorService {
     businessHours: BusinessHour[],
     holidays:      Set<string>,
   ): Date {
-    // Build a fast lookup: day_of_week → { start_ms, end_ms } relative to day start
     const dayMap = new Map<number, { startMs: number; endMs: number }>();
     for (const bh of businessHours) {
       dayMap.set(bh.day_of_week, {
@@ -250,46 +249,36 @@ export class SlaEvaluatorService {
     }
 
     let cursor = new Date(start);
-    let remaining = hoursRemaining * 3600_000; // ms
+    let remaining = hoursRemaining * 3600_000;
 
     let safeguard = 0;
     while (remaining > 0 && safeguard < 400) {
       safeguard++;
 
-      const dow = cursor.getDay();
+      // Use UTC methods to avoid local-timezone day shifting
+      const dow     = cursor.getUTCDay();
       const dateStr = this.toDateStr(cursor);
 
-      // Skip holidays and non-business days
       if (holidays.has(dateStr) || !dayMap.has(dow)) {
         cursor = this.nextDayStart(cursor, dayMap);
         continue;
       }
 
       const { startMs, endMs } = dayMap.get(dow)!;
-      const dayStart = this.dayStartOf(cursor);
-      const bStart = new Date(dayStart.getTime() + startMs);
-      const bEnd   = new Date(dayStart.getTime() + endMs);
+      const dayStart = this.utcDayStart(cursor);
+      const bStart   = new Date(dayStart.getTime() + startMs);
+      const bEnd     = new Date(dayStart.getTime() + endMs);
 
-      // If cursor is before business start → jump to business start
-      if (cursor < bStart) {
-        cursor = bStart;
-        continue;
-      }
+      if (cursor < bStart) { cursor = bStart; continue; }
+      if (cursor >= bEnd)  { cursor = this.nextDayStart(cursor, dayMap); continue; }
 
-      // If cursor is at/past business end → jump to next business day start
-      if (cursor >= bEnd) {
-        cursor = this.nextDayStart(cursor, dayMap);
-        continue;
-      }
-
-      // Cursor is inside business window: consume as much as possible
-      const available = bEnd.getTime() - cursor.getTime(); // ms available today
+      const available = bEnd.getTime() - cursor.getTime();
       if (remaining <= available) {
-        cursor = new Date(cursor.getTime() + remaining);
+        cursor    = new Date(cursor.getTime() + remaining);
         remaining = 0;
       } else {
         remaining -= available;
-        cursor = this.nextDayStart(cursor, dayMap);
+        cursor     = this.nextDayStart(cursor, dayMap);
       }
     }
 
@@ -297,37 +286,31 @@ export class SlaEvaluatorService {
   }
 
   private nextDayStart(from: Date, dayMap: Map<number, { startMs: number; endMs: number }>): Date {
-    // Advance to start of next day that has business hours defined
-    let next = this.dayStartOf(from);
-    next = new Date(next.getTime() + 86_400_000); // +1 day
+    let next = this.utcDayStart(from);
+    next = new Date(next.getTime() + 86_400_000);
 
-    // Find next day with business hours (max 7 attempts = one week)
     for (let i = 0; i < 7; i++) {
-      if (dayMap.has(next.getDay())) {
-        const { startMs } = dayMap.get(next.getDay())!;
+      if (dayMap.has(next.getUTCDay())) {
+        const { startMs } = dayMap.get(next.getUTCDay())!;
         return new Date(next.getTime() + startMs);
       }
       next = new Date(next.getTime() + 86_400_000);
     }
 
-    // If somehow no business days in a week, just add 1 day raw
     return new Date(from.getTime() + 86_400_000);
   }
 
-  private dayStartOf(d: Date): Date {
-    const s = new Date(d);
-    s.setHours(0, 0, 0, 0);
-    return s;
+  private utcDayStart(d: Date): Date {
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   }
 
   private timeToMs(t: string): number {
-    // "07:00" or "17:30:00"
     const [h, m, s] = t.split(':').map(Number);
     return ((h * 60 + m) * 60 + (s ?? 0)) * 1000;
   }
 
   private toDateStr(d: Date): string {
-    return d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    return d.toISOString().slice(0, 10);
   }
 
   /* ── DB loaders ───────────────────────────────────────────────────────── */

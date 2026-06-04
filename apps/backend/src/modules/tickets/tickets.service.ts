@@ -278,7 +278,7 @@ export class TicketsService {
   async create(userId: string, dto: {
     module_id:                 string;
     category_id:               string;
-    environment_id:            string;
+    environment_id?:           string;
     title:                     string;
     description?:              string;
     damage_type_id?:           string;
@@ -351,35 +351,35 @@ export class TicketsService {
     // Set session user for audit triggers
     await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
 
+    const envCol    = dto.environment_id ? ', environment_id' : '';
+    const envPlaceholder = dto.environment_id ? ', $4' : '';
+    const baseParams: any[] = [
+      dto.module_id, wf.id, initialState.id,
+      ...(dto.environment_id ? [dto.environment_id] : []),
+      dto.category_id, userId,
+      finalPriority, dto.urgency ?? 'media', dto.impact ?? 'medio',
+      slaPolicy.id, slaResult.deadline,
+      dto.damage_type_id           ?? null,
+      dto.custom_damage_description ?? null,
+      dto.asset_id                  ?? null,
+      dto.title.trim(),
+      dto.description?.trim()       ?? null,
+    ];
+    const p = dto.environment_id ? { cat: 5, by: 6, pri: 7, urg: 8, imp: 9, slaP: 10, slaDl: 11, dtId: 12, dtDesc: 13, asId: 14, tit: 15, desc: 16 }
+                                 : { cat: 4, by: 5, pri: 6, urg: 7, imp: 8, slaP: 9, slaDl: 10, dtId: 11, dtDesc: 12, asId: 13, tit: 14, desc: 15 };
+
     const [ticket] = await this.db.query<any[]>(
       `INSERT INTO tickets.tickets (
-         module_id, workflow_version_id, current_state_id,
-         environment_id, category_id, created_by,
+         module_id, workflow_version_id, current_state_id
+         ${envCol}, category_id, created_by,
          priority, urgency, impact,
          sla_policy_id, sla_deadline,
          damage_type_id, custom_damage_description,
          asset_id,
          title, description
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       ) VALUES ($1,$2,$3${envPlaceholder},$${p.cat},$${p.by},$${p.pri},$${p.urg},$${p.imp},$${p.slaP},$${p.slaDl},$${p.dtId},$${p.dtDesc},$${p.asId},$${p.tit},$${p.desc})
        RETURNING id, title, priority, urgency, impact, sla_deadline, damage_type_id, asset_id, created_at`,
-      [
-        dto.module_id,
-        wf.id,
-        initialState.id,
-        dto.environment_id,
-        dto.category_id,
-        userId,
-        finalPriority,
-        dto.urgency ?? 'media',
-        dto.impact  ?? 'medio',
-        slaPolicy.id,
-        slaResult.deadline,
-        dto.damage_type_id           ?? null,
-        dto.custom_damage_description ?? null,
-        dto.asset_id                  ?? null,
-        dto.title.trim(),
-        dto.description?.trim() ?? null,
-      ],
+      baseParams,
     );
 
     // Write SLA tracking record

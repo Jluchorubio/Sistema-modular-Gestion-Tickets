@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Download, Trash2, Eye, Calendar, User, Tag, FileText } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, Eye, Calendar, User, Tag, FileText, File, Image, Film } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
@@ -14,24 +14,18 @@ import { fmtDate } from '@/lib/formatters';
 
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
 
-const FILE_ICONS: Record<string, string> = {
-  'application/pdf': '📄',
-  'application/msword': '📝',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
-  'application/vnd.ms-excel': '📊',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
-  'application/vnd.ms-powerpoint': '📋',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📋',
-  'text/plain': '📃',
-  'application/zip': '🗜️',
-};
-
-function getFileIcon(mime?: string | null): string {
-  if (!mime) return '📁';
-  if (FILE_ICONS[mime]) return FILE_ICONS[mime];
-  if (mime.startsWith('image/')) return '🖼️';
-  if (mime.startsWith('video/')) return '🎬';
-  return '📁';
+function getFileIcon(mime?: string | null, size = 24): React.ReactNode {
+  const s = { color: C.coral };
+  if (!mime) return <File size={size} style={s} />;
+  if (mime === 'application/pdf') return <FileText size={size} style={{ color: '#ef4444' }} />;
+  if (mime.includes('msword') || mime.includes('wordprocessingml')) return <FileText size={size} style={{ color: '#1d4ed8' }} />;
+  if (mime.includes('excel') || mime.includes('spreadsheetml')) return <FileText size={size} style={{ color: '#16a34a' }} />;
+  if (mime.includes('powerpoint') || mime.includes('presentationml')) return <FileText size={size} style={{ color: '#ea580c' }} />;
+  if (mime === 'text/plain') return <FileText size={size} style={{ color: '#64748b' }} />;
+  if (mime === 'application/zip') return <File size={size} style={{ color: '#64748b' }} />;
+  if (mime.startsWith('image/')) return <Image size={size} style={{ color: '#7c3aed' }} />;
+  if (mime.startsWith('video/')) return <Film size={size} style={{ color: '#0ea5e9' }} />;
+  return <File size={size} style={s} />;
 }
 
 function fmtSize(bytes?: number | null): string {
@@ -129,7 +123,7 @@ export default function DocDetailPage() {
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
             {/* File type icon */}
             <div style={{ width: 64, height: 64, borderRadius: 14, background: `${C.coral}10`, border: `1.5px solid ${C.coral}25`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, gap: 2 }}>
-              <span style={{ fontSize: 28 }}>{getFileIcon(article.file_mime)}</span>
+              {getFileIcon(article.file_mime, 28)}
               {ext && <span style={{ fontSize: 8, fontWeight: 800, color: C.coral, letterSpacing: '.06em' }}>{ext}</span>}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -202,7 +196,7 @@ export default function DocDetailPage() {
             ) : (
               /* Non-previewable file */
               <div style={{ textAlign: 'center', padding: '48px 24px', background: C.bg, borderRadius: 12, border: `1px dashed ${C.border}` }}>
-                <span style={{ fontSize: 56, display: 'block', marginBottom: 16 }}>{getFileIcon(article.file_mime)}</span>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>{getFileIcon(article.file_mime, 56)}</div>
                 <p style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: '0 0 6px' }}>{article.file_name}</p>
                 <p style={{ fontSize: 12, color: C.muted, margin: '0 0 20px' }}>
                   {fmtSize(article.file_size)} · {article.file_mime || ext}
