@@ -862,6 +862,46 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
   function toggleQuickFilter(key: QuickFilter) { setQuickFilter((p) => p === key ? null : key); }
   const isHelpdeskMockup = visualVariant === 'helpdeskMockup';
 
+  function renderHDCardGrid(tickets: TicketListItem[]) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        {tickets.map(t => {
+          const pColor = TICKET_PRIORITY_COLORS[t.priority];
+          return (
+            <div key={t.id} className={styles.helpdeskCard}
+              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {t.assignee_name ?? '? Sin asignar'}
+                  <ChevronDown size={9} style={{ color: '#94a3b8' }} />
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
+                  {TICKET_PRIORITY_LABELS[t.priority]}
+                </span>
+              </div>
+              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
+              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
+              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {initials(t.creator_name)}
+                  </div>
+                  <div>
+                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
+                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
+                  </div>
+                </div>
+                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>
+                  #{t.id.slice(-6).toUpperCase()}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   /* ── Helpdesk mockup view ────────────────────────────────────────── */
   if (isHelpdeskMockup) {
     /* ── Admin bandeja ── */
@@ -1039,43 +1079,7 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
                       <div style={{ background: '#fff', borderRadius: 16, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>
                         Sin tickets anteriores
                       </div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        {ticketsOld.map((t) => {
-                          const pColor = TICKET_PRIORITY_COLORS[t.priority];
-                          return (
-                            <div key={t.id} className={styles.helpdeskCard}
-                              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                  {t.assignee_name ?? '? Sin asignar'}
-                                  <ChevronDown size={9} style={{ color: '#94a3b8' }} />
-                                </span>
-                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
-                                  {TICKET_PRIORITY_LABELS[t.priority]}
-                                </span>
-                              </div>
-                              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
-                              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
-                              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {initials(t.creator_name)}
-                                  </div>
-                                  <div>
-                                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
-                                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
-                                  </div>
-                                </div>
-                                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>
-                                  #{t.id.slice(-6).toUpperCase()}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    ) : renderHDCardGrid(ticketsOld)}
                   </div>
 
                   {/* Hoy / actuales */}
@@ -1088,43 +1092,7 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
                       <div style={{ background: '#fff', borderRadius: 16, padding: '28px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>
                         Sin tickets nuevos hoy
                       </div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        {ticketsToday.map((t) => {
-                          const pColor = TICKET_PRIORITY_COLORS[t.priority];
-                          return (
-                            <div key={t.id} className={styles.helpdeskCard}
-                              onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                  {t.assignee_name ?? '? Sin asignar'}
-                                  <ChevronDown size={9} style={{ color: '#94a3b8' }} />
-                                </span>
-                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
-                                  {TICKET_PRIORITY_LABELS[t.priority]}
-                                </span>
-                              </div>
-                              <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
-                              <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
-                              <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {initials(t.creator_name)}
-                                  </div>
-                                  <div>
-                                    <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
-                                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
-                                  </div>
-                                </div>
-                                <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>
-                                  #{t.id.slice(-6).toUpperCase()}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    ) : renderHDCardGrid(ticketsToday)}
                   </div>
                 </>
               )}
@@ -1561,10 +1529,10 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate, visualVaria
 
             {/* SLA urgency summary */}
             {(() => {
-              const breached  = (assigned ?? []).filter((t) => (t as any).sla_status === 'breached').length;
-              const critical  = (assigned ?? []).filter((t) => {
+              const breached  = (assigned ?? []).filter(t => t.sla_status === 'breached').length;
+              const critical  = (assigned ?? []).filter(t => {
                 const h = t.sla_deadline_tracked ? (new Date(t.sla_deadline_tracked).getTime() - Date.now()) / 3_600_000 : null;
-                return (t as any).sla_status === 'active' && h !== null && h < 2;
+                return t.sla_status === 'active' && h !== null && h < 2;
               }).length;
               const color = breached > 0 ? '#ef4444' : critical > 0 ? '#f97316' : '#22c55e';
               const label = breached > 0 ? `${breached} vencido${breached > 1 ? 's' : ''}` : critical > 0 ? `${critical} crítico${critical > 1 ? 's' : ''}` : 'SLA al día';
@@ -1634,10 +1602,10 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate, visualVaria
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     {previous.map((t) => {
                       const pColor   = TICKET_PRIORITY_COLORS[t.priority as TicketPriority] ?? '#94a3b8';
-                      const slaSt    = (t as any).sla_status as string | null;
+                      const slaSt    = t.sla_status;
                       const slaColor = slaSt ? (SLA_STATUS_COLORS[slaSt as keyof typeof SLA_STATUS_COLORS] ?? null) : null;
                       const slaLabel = slaSt ? (SLA_STATUS_LABELS[slaSt as keyof typeof SLA_STATUS_LABELS] ?? null) : null;
-                      const isBreached = (t as any).sla_status === 'breached';
+                      const isBreached = t.sla_status === 'breached';
                       return (
                         <div key={t.id} className={styles.helpdeskCard}
                           style={isBreached ? { borderColor: '#fecaca', background: '#fff5f5' } : undefined}

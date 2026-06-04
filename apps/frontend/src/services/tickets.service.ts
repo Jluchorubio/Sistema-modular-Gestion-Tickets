@@ -127,16 +127,21 @@ export interface TicketHistoryEntry {
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 
 export interface TicketDetail extends TicketListItem {
-  description:          string | null;
-  workflow_version_id:  string;
-  reprocess_count:      number;
-  escalated:            boolean;
-  escalation_note:      string | null;
-  approval_status:      ApprovalStatus | null;
-  approval_expires_at:  string | null;
-  assignments:          TicketAssignment[];
-  history:              TicketHistoryEntry[];
-  transitions:          TicketTransition[];
+  description:               string | null;
+  workflow_version_id:       string;
+  reprocess_count:           number;
+  escalated:                 boolean;
+  escalation_note:           string | null;
+  approval_status:           ApprovalStatus | null;
+  approval_expires_at:       string | null;
+  damage_type_label:         string | null;
+  damage_type_slug:          string | null;
+  damage_category_label:     string | null;
+  damage_category_slug:      string | null;
+  custom_damage_description: string | null;
+  assignments:               TicketAssignment[];
+  history:                   TicketHistoryEntry[];
+  transitions:               TicketTransition[];
 }
 
 export interface TicketAsset {

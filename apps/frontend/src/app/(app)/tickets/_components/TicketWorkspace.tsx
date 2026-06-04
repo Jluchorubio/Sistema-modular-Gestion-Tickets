@@ -459,7 +459,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
   const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
   const VARIANT_BG: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
-  const ownerAssignment = ticket?.assignments?.find((a: any) => a.role === 'owner' && a.is_active);
+  const ownerAssignment = ticket?.assignments?.find(a => a.role === 'owner' && a.is_active);
 
   function SideSection({ label, children }: { label: string; children: React.ReactNode }) {
     return (
@@ -753,11 +753,11 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 {ownerAssignment ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                     <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#ff5e3a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{(ownerAssignment as any).user_name?.charAt(0).toUpperCase()}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{ownerAssignment.user_name?.charAt(0).toUpperCase()}</span>
                     </div>
                     <div>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{(ownerAssignment as any).user_name}</p>
-                      <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Tecnico asignado</p>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{ownerAssignment.user_name}</p>
+                      <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Técnico asignado</p>
                     </div>
                   </div>
                 ) : (
@@ -808,9 +808,9 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               <SideSection label="Detalles">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {([
-                    ['Modulo',    ticket.module_name],
-                    ['Categoria', ticket.category_name],
-                    ['Tipo dano', (ticket as any).damage_type_label],
+                    ['Módulo',      ticket.module_name],
+                    ['Categoría',   ticket.category_name],
+                    ['Tipo de daño', ticket.damage_type_label],
                     ['Prioridad', ticket.priority],
                     ['Urgencia',  ticket.urgency],
                     ['Impacto',   ticket.impact],
