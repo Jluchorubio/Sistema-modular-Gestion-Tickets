@@ -97,7 +97,7 @@ export default function WorkspacePage() {
     pending:   assigned.filter(t => !t.is_final).length,
     breached:  assigned.filter(t => (t as any).sla_status === 'breached').length,
     critical:  assigned.filter(t => { const h = hoursLeft((t as any).sla_deadline_tracked ?? null); return (t as any).sla_status === 'active' && h !== null && h < 2; }).length,
-    realizado: assigned.filter(t => t.state_name === 'realizado').length,
+    pending_approval: assigned.filter(t => t.is_approval_state).length,
     today:     assigned.filter(t => isToday(t.created_at)).length,
   }), [assigned]);
 
@@ -158,7 +158,7 @@ export default function WorkspacePage() {
           {[
             { label: 'Activos',    value: stats.pending,   color: C.coral },
             { label: 'Hoy',        value: stats.today,     color: '#6366f1' },
-            { label: 'Aprobación', value: stats.realizado, color: '#f59e0b' },
+            { label: 'Aprobación', value: stats.pending_approval, color: '#f59e0b' },
             ...(stats.breached > 0 ? [{ label: 'Vencidos', value: stats.breached, color: '#ef4444' }] : []),
           ].map(s => (
             <div key={s.label} style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', textAlign: 'center', minWidth: 72 }}>

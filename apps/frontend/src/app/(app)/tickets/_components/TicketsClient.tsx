@@ -823,12 +823,12 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
   const { ticketsOld, ticketsToday } = useMemo(() => {
     let list = allTickets;
     const userName  = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim().toLowerCase();
-    const taskIds   = new Set(myAssignedTickets.filter((t) => t.assignment_role === 'owner'      && t.state_name === 'reproceso').map((t) => t.id));
+    const taskIds   = new Set(myAssignedTickets.filter((t) => t.assignment_role === 'owner' && t.is_pause_state).map((t) => t.id));
     const collabIds = new Set(myAssignedTickets.filter((t) => t.assignment_role === 'collaborator').map((t) => t.id));
-    if (quickFilter === 'waiting')        list = list.filter((t) => (t.assignee_name ?? '').toLowerCase().includes(userName) && !t.is_final && t.state_name !== 'realizado');
+    if (quickFilter === 'waiting')        list = list.filter((t) => (t.assignee_name ?? '').toLowerCase().includes(userName) && !t.is_final && !t.is_approval_state);
     if (quickFilter === 'assigned')       list = list.filter((t) => t.assignee_name !== null);
     if (quickFilter === 'unassigned')     list = list.filter((t) => t.assignee_name === null);
-    if (quickFilter === 'approvals')      list = list.filter((t) => t.state_name === 'realizado' && t.created_by === user?.id);
+    if (quickFilter === 'approvals')      list = list.filter((t) => t.is_approval_state && t.created_by === user?.id);
     if (quickFilter === 'tasks')          list = list.filter((t) => taskIds.has(t.id));
     if (quickFilter === 'collaborations') list = list.filter((t) => collabIds.has(t.id));
     if (search.trim()) {
@@ -858,19 +858,19 @@ function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }:
   }, [allTickets, myAssignedTickets, quickFilter, search, sortBy, user?.id, user?.first_name, user?.last_name]);
 
   const statCounts = useMemo(() => {
-    // waiting: assigned to me (owner), active, not waiting requester validation
+    // waiting: assigned to me (owner), active, not in approval state
     const waiting = myAssignedTickets.filter(
-      (t) => t.assignment_role === 'owner' && !t.is_final && t.state_name !== 'realizado',
+      (t) => t.assignment_role === 'owner' && !t.is_final && !t.is_approval_state,
     ).length;
     // assigned: all my owner assignments
     const assigned = myAssignedTickets.filter((t) => t.assignment_role === 'owner').length;
-    // approvals: tickets in "realizado" created by me, pending my validation
+    // approvals: tickets in approval state (resuelto) created by me, pending my validation
     const approvals = allTickets.filter(
-      (t) => t.state_name === 'realizado' && t.created_by === user?.id,
+      (t) => t.is_approval_state && t.created_by === user?.id,
     ).length;
-    // tasks: my owner tickets currently in "reproceso" (need rework)
+    // tasks: my owner tickets currently paused/en_espera (waiting for user response)
     const tasks = myAssignedTickets.filter(
-      (t) => t.assignment_role === 'owner' && t.state_name === 'reproceso',
+      (t) => t.assignment_role === 'owner' && t.is_pause_state,
     ).length;
     // unassigned: no owner assigned, not final
     const unassigned = allTickets.filter((t) => t.assignee_name === null && !t.is_final).length;
@@ -1571,8 +1571,8 @@ function TechView({ user, moduleId, basePath, moduleRole, canCreate, visualVaria
     return [
       { label: 'Pendientes', value: all.filter((t) => !t.is_final).length,                   accent: '#ff5e3a' },
       { label: 'En proceso', value: all.filter((t) => t.state_name === 'en_proceso').length,  accent: '#3b82f6' },
-      { label: 'Realizados', value: all.filter((t) => t.state_name === 'realizado').length,   accent: '#20c933' },
-      { label: 'Reproceso',  value: all.filter((t) => t.state_name === 'reproceso').length,   accent: '#f59e0b' },
+      { label: 'Resueltos',  value: all.filter((t) => t.is_approval_state).length,            accent: '#20c933' },
+      { label: 'En espera',  value: all.filter((t) => t.is_pause_state).length,               accent: '#f59e0b' },
       { label: 'Cerrados',   value: all.filter((t) => t.is_final).length,                    accent: '#64748b' },
       { label: 'Tareas',     value: all.filter((t) => t.assignment_role === 'owner').length,  accent: '#a855f7' },
     ];
@@ -1961,17 +1961,18 @@ function UserView({ moduleId, basePath, canCreate, visualVariant = 'default' }: 
 
   /* ── Portal stats (helpdeskMockup only) ── */
   const portalStats = useMemo(() => ({
-    abiertos:   tickets.filter(t => !t.is_final && t.state_name !== 'realizado' && !t.assignee_name).length,
-    enProceso:  tickets.filter(t => !t.is_final && t.state_name !== 'realizado' && !!t.assignee_name).length,
-    aprobacion: tickets.filter(t => t.state_name === 'realizado' && !t.is_final).length,
+    abiertos:   tickets.filter(t => !t.is_final && !t.is_approval_state && !t.assignee_name).length,
+    enProceso:  tickets.filter(t => !t.is_final && !t.is_approval_state && !!t.assignee_name).length,
+    aprobacion: tickets.filter(t => t.is_approval_state).length,
     resueltos:  tickets.filter(t => t.is_final).length,
   }), [tickets]);
 
   function portalStateBadge(t: TicketListItem): { label: string; bg: string; color: string } {
-    if (t.is_final)                                              return { label: 'Resuelto',    bg: '#dcfce7', color: '#15803d' };
-    if (t.state_name === 'realizado')                            return { label: 'Aprobación',  bg: '#fef9c3', color: '#854d0e' };
-    if (!!t.assignee_name)                                       return { label: 'En proceso',  bg: '#eff6ff', color: '#1d4ed8' };
-    return                                                              { label: 'Abierto',      bg: '#fff7ed', color: '#c2410c' };
+    if (t.is_final)            return { label: 'Cerrado',     bg: '#dcfce7', color: '#15803d' };
+    if (t.is_approval_state)   return { label: 'Aprobación',  bg: '#fef9c3', color: '#854d0e' };
+    if (t.is_pause_state)      return { label: 'En espera',   bg: '#fef3c7', color: '#92400e' };
+    if (!!t.assignee_name)     return { label: 'En proceso',  bg: '#eff6ff', color: '#1d4ed8' };
+    return                            { label: 'Abierto',      bg: '#fff7ed', color: '#c2410c' };
   }
 
   if (visualVariant === 'helpdeskMockup') {

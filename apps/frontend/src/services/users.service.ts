@@ -207,7 +207,8 @@ export const usersService = {
     module_id: string; module_name: string; module_slug: string | null;
     category_name: string | null; environment_name: string | null;
     current_state_id: string;
-    state_label: string; state_name: string; is_final: boolean;
+    state_label: string; state_name: string;
+    is_final: boolean; is_pause_state: boolean; is_approval_state: boolean;
     created_by: string; creator_name: string;
     sla_status: string | null; sla_deadline_tracked: string | null;
     assignment_role: string;
@@ -224,7 +225,8 @@ export const usersService = {
     module_id: string; module_name: string; module_slug: string | null;
     category_name: string | null; environment_name: string | null;
     current_state_id: string;
-    state_label: string; state_name: string; is_final: boolean;
+    state_label: string; state_name: string;
+    is_final: boolean; is_pause_state: boolean; is_approval_state: boolean;
     created_by: string; creator_name: string;
     sla_status: string | null; sla_deadline_tracked: string | null;
     assignment_role: string;

@@ -134,9 +134,11 @@ export class TicketsService {
               t.category_id,    c.name  AS category_name,
               t.environment_id, e.name  AS environment_name,
               t.current_state_id,
-              s.name  AS state_name,
-              s.label AS state_label,
+              s.name             AS state_name,
+              s.label            AS state_label,
               s.is_final,
+              s.is_pause_state,
+              s.is_approval_state,
               t.created_by,
               up.first_name || ' ' || up.last_name AS creator_name,
               (SELECT u2.first_name || ' ' || u2.last_name
@@ -181,9 +183,11 @@ export class TicketsService {
               t.custom_damage_description,
               t.workflow_version_id,
               t.current_state_id,
-              s.name  AS state_name,
-              s.label AS state_label,
+              s.name             AS state_name,
+              s.label            AS state_label,
               s.is_final,
+              s.is_pause_state,
+              s.is_approval_state,
               t.created_by,
               up.first_name || ' ' || up.last_name AS creator_name,
               t.reprocess_count,
@@ -236,6 +240,7 @@ export class TicketsService {
       ),
       this.db.query<any[]>(
         `SELECT tr.id, tr.name, tr.from_state_id, tr.to_state_id,
+                tr.variant,
                 ts2.label AS to_label,
                 ts2.name  AS to_name
          FROM   tickets.transitions tr
@@ -483,7 +488,7 @@ export class TicketsService {
     );
 
     const [toState] = await this.db.query<any[]>(
-      `SELECT is_final, name, label FROM tickets.states WHERE id = $1`,
+      `SELECT is_final, name, label, is_pause_state, is_approval_state FROM tickets.states WHERE id = $1`,
       [trans.to_state_id],
     );
 
@@ -513,8 +518,8 @@ export class TicketsService {
         [ticketId],
       );
     }
-    // 3. Entering EN_ESPERA → pause the SLA clock
-    else if (toState?.name === 'en_espera') {
+    // 3. Entering is_pause_state → pause the SLA clock
+    else if (toState?.is_pause_state) {
       await this.db.query(
         `UPDATE tickets.ticket_sla_tracking
          SET status     = 'paused',
@@ -525,8 +530,8 @@ export class TicketsService {
       );
     }
 
-    // Auto-generate approval token when reaching "realizado" state
-    if (toState?.name === 'realizado') {
+    // Entering is_approval_state → generate approval token, notify creator
+    if (toState?.is_approval_state) {
       await this.db.query(
         `SELECT tickets.generate_approval_token($1, $2, 48)`,
         [ticketId, ticket.created_by],
@@ -537,7 +542,6 @@ export class TicketsService {
         createdBy: ticket.created_by,
       });
     } else if (!toState?.is_final) {
-      // Notify creator of state change (skip final states — handled by approval flow)
       this.events.emit('ticket.state_changed', {
         ticketId,
         title:     ticket.title,
@@ -554,21 +558,22 @@ export class TicketsService {
 
   async approveTicket(userId: string, ticketId: string, dto: { signature?: string }) {
     const [ticket] = await this.db.query<any[]>(
-      `SELECT t.id, t.created_by, t.workflow_version_id, t.current_state_id, s.name AS state_name
+      `SELECT t.id, t.created_by, t.workflow_version_id, t.current_state_id, s.is_approval_state
        FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
        WHERE  t.id = $1`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
-    if (ticket.state_name !== 'realizado') throw new BadRequestException('El ticket no está pendiente de validación.');
-    if (ticket.created_by !== userId)      throw new ForbiddenException('Solo el solicitante puede validar este ticket.');
+    if (!ticket.is_approval_state) throw new BadRequestException('El ticket no está pendiente de validación.');
+    if (ticket.created_by !== userId) throw new ForbiddenException('Solo el solicitante puede validar este ticket.');
 
     const [trans] = await this.db.query<any[]>(
       `SELECT tr.id, tr.to_state_id
        FROM   tickets.transitions tr
        JOIN   tickets.states ts2 ON ts2.id = tr.to_state_id
        WHERE  tr.workflow_version_id = $1 AND tr.from_state_id = $2
-         AND  ts2.name = 'cerrado' AND tr.is_active = true`,
+         AND  ts2.is_final = true AND tr.is_active = true
+       LIMIT 1`,
       [ticket.workflow_version_id, ticket.current_state_id],
     );
     if (!trans) throw new BadRequestException('No hay transición de cierre disponible.');
@@ -605,46 +610,41 @@ export class TicketsService {
   async rejectTicket(userId: string, ticketId: string, dto: { reason: string }) {
     const [ticket] = await this.db.query<any[]>(
       `SELECT t.id, t.created_by, t.workflow_version_id, t.current_state_id,
-              t.reprocess_count, t.module_id, t.priority, s.name AS state_name
+              t.reprocess_count, t.module_id, t.priority, s.is_approval_state
        FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
        WHERE  t.id = $1`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
-    if (ticket.state_name !== 'realizado') throw new BadRequestException('El ticket no está pendiente de validación.');
-    if (ticket.created_by !== userId)      throw new ForbiddenException('Solo el solicitante puede validar este ticket.');
-    if (ticket.reprocess_count >= 5)       throw new BadRequestException('El ticket alcanzó el límite máximo de reproces (5). No puede ser devuelto nuevamente.');
-
-    const [cfg] = await this.db.query<any[]>(
-      `SELECT (value::jsonb->>'reproceso_max')::int AS reproceso_max
-       FROM   config.module_settings
-       WHERE  module_id = $1 AND key = 'ticket_flow' AND is_active = true`,
-      [ticket.module_id],
-    );
-    const reproceso_max = cfg?.reproceso_max ?? 1;
+    if (!ticket.is_approval_state)     throw new BadRequestException('El ticket no está pendiente de validación.');
+    if (ticket.created_by !== userId)  throw new ForbiddenException('Solo el solicitante puede validar este ticket.');
+    if (ticket.reprocess_count >= 5)   throw new BadRequestException('Límite de reaperturas alcanzado (5). Contacta a soporte.');
 
     const [trans] = await this.db.query<any[]>(
       `SELECT tr.id, tr.to_state_id
        FROM   tickets.transitions tr
        JOIN   tickets.states ts2 ON ts2.id = tr.to_state_id
        WHERE  tr.workflow_version_id = $1 AND tr.from_state_id = $2
-         AND  ts2.name = 'reproceso' AND tr.is_active = true`,
+         AND  ts2.is_final = false AND ts2.is_pause_state = false
+         AND  ts2.is_approval_state = false AND tr.is_active = true
+       LIMIT 1`,
       [ticket.workflow_version_id, ticket.current_state_id],
     );
-    if (!trans) throw new BadRequestException('No hay transición de reproceso disponible.');
+    if (!trans) throw new BadRequestException('No hay transición de reapertura disponible.');
 
     await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
 
-    const isEscalation = ticket.reprocess_count >= reproceso_max;
-    const newPriority  = isEscalation && ticket.priority !== 'critica' ? 'alta' : ticket.priority;
+    const reopenCount = (ticket.reprocess_count ?? 0) + 1;
+    const shouldEscalate = reopenCount >= 3 && ticket.priority !== 'critica';
+    const newPriority    = shouldEscalate ? 'alta' : ticket.priority;
 
     await this.db.query(
       `UPDATE tickets.tickets
        SET current_state_id = $1,
-           reprocess_count  = reprocess_count + 1,
-           priority         = $2
-       WHERE id = $3`,
-      [trans.to_state_id, newPriority, ticketId],
+           reprocess_count  = $2,
+           priority         = $3
+       WHERE id = $4`,
+      [trans.to_state_id, reopenCount, newPriority, ticketId],
     );
 
     await this.db.query(
@@ -652,29 +652,15 @@ export class TicketsService {
       [ticketId],
     );
 
-    if (isEscalation) {
-      const [jefe] = await this.db.query<any[]>(
-        `SELECT umr.user_id
-         FROM   users.user_module_roles umr
-         JOIN   modules.roles r ON r.id = umr.role_id
-         WHERE  umr.module_id = $1 AND r.name = 'jefe_tecnico' AND umr.status = 'active'
-         LIMIT  1`,
-        [ticket.module_id],
-      );
-      if (jefe) {
-        await this.db.query(
-          `UPDATE tickets.ticket_assignments SET is_active = false WHERE ticket_id = $1 AND role = 'owner'`,
-          [ticketId],
-        );
-        await this.db.query(
-          `INSERT INTO tickets.ticket_assignments (ticket_id, user_id, role, assigned_by, is_active)
-           VALUES ($1, $2, 'owner', $3, true)`,
-          [ticketId, jefe.user_id, userId],
-        );
-      }
-    }
+    this.events.emit('ticket.state_changed', {
+      ticketId,
+      title:     ticket.id,
+      createdBy: ticket.created_by,
+      toLabel:   'En proceso',
+      actorId:   userId,
+    });
 
-    return { ok: true, escalated: isEscalation };
+    return { ok: true, escalated: shouldEscalate };
   }
 
   /* ── Attachments ────────────────────────────────────────────────────────── */

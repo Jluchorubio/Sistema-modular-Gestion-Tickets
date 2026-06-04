@@ -530,21 +530,25 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               )}
             </div>
 
-            {/* Quick transition buttons in header */}
+            {/* Quick transition buttons — variant-driven, no keyword matching */}
             <PermissionGate perm="helpdesk:tickets:edit">
-            {!ticket.is_final && ticket.state_name !== 'realizado' && ticket.transitions.length > 0 && (
+            {!ticket.is_final && ticket.transitions.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                 {ticket.transitions.slice(0, 3).map((tr) => {
-                  const lbl    = tr.to_name.toLowerCase();
-                  const isDone = lbl.includes('realiz') || lbl.includes('complet') || lbl.includes('resuel');
-                  const isTake = lbl.includes('proceso') || lbl.includes('tomar') || lbl.includes('inici') || lbl.includes('asign');
-                  const bg     = isDone ? '#6366f1' : isTake ? '#ff5e3a' : '#0e2235';
+                  const VARIANT_BG: Record<string, string> = {
+                    success: '#059669',
+                    primary: '#ff5e3a',
+                    danger:  '#ef4444',
+                    warning: '#f59e0b',
+                    default: '#0e2235',
+                  };
+                  const bg = VARIANT_BG[tr.variant ?? 'default'] ?? '#0e2235';
                   const isActive = activeTransId === tr.id;
                   return (
                     <button key={tr.id} type="button"
                       onClick={() => setActiveTransId(isActive ? null : tr.id)}
                       style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: 'none', background: isActive ? '#475569' : bg, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      {isDone ? <CheckCircle2 size={11} /> : <ChevronRight size={11} />}
+                      {tr.variant === 'success' ? <CheckCircle2 size={11} /> : <ChevronRight size={11} />}
                       {tr.to_label}
                     </button>
                   );
@@ -769,7 +773,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
               {/* Validation banner */}
-              {ticket.state_name === 'realizado' && currentUser?.id === ticket.created_by && (
+              {ticket.is_approval_state && currentUser?.id === ticket.created_by && (
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', background: '#fffbeb', flexShrink: 0 }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <CheckCircle2 size={14} /> Validación de solución requerida
@@ -898,20 +902,21 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
               {/* Transitions */}
               <PermissionGate perm="helpdesk:tickets:edit">
-              {!ticket.is_final && ticket.state_name !== 'realizado' && ticket.transitions.length > 0 && (
+              {!ticket.is_final && ticket.transitions.length > 0 && (
                 <div>
                   <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 8px' }}>Cambiar estado</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                     {ticket.transitions.map((tr) => {
-                      const lbl    = tr.to_name.toLowerCase();
-                      const isDone = lbl.includes('realiz') || lbl.includes('complet') || lbl.includes('resuel');
-                      const isTake = lbl.includes('proceso') || lbl.includes('tomar') || lbl.includes('asign');
-                      const bg     = isDone ? '#6366f1' : isTake ? '#ff5e3a' : '#0e2235';
+                      const VARIANT_BG: Record<string, string> = {
+                        success: '#059669', primary: '#ff5e3a',
+                        danger: '#ef4444', warning: '#f59e0b', default: '#0e2235',
+                      };
+                      const bg = VARIANT_BG[tr.variant ?? 'default'] ?? '#0e2235';
                       return (
                         <button key={tr.id} type="button"
                           onClick={() => setActiveTransId(activeTransId === tr.id ? null : tr.id)}
                           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: 'none', background: activeTransId === tr.id ? '#475569' : bg, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
-                          {isDone ? <CheckCircle2 size={12} /> : <ChevronRight size={12} />}
+                          {tr.variant === 'success' ? <CheckCircle2 size={12} /> : <ChevronRight size={12} />}
                           {tr.to_label}
                         </button>
                       );

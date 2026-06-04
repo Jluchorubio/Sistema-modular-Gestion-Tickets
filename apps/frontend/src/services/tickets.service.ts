@@ -18,11 +18,13 @@ export interface TicketEnvironment {
 }
 
 export interface TicketState {
-  id:         string;
-  name:       string;
-  label:      string;
-  is_initial: boolean;
-  is_final:   boolean;
+  id:                 string;
+  name:               string;
+  label:              string;
+  is_initial:         boolean;
+  is_final:           boolean;
+  is_pause_state?:    boolean;
+  is_approval_state?: boolean;
 }
 
 export interface TicketTransition {
@@ -32,6 +34,7 @@ export interface TicketTransition {
   to_state_id:   string;
   to_label:      string;
   to_name:       string;
+  variant:       'primary' | 'success' | 'danger' | 'warning' | 'default';
 }
 
 export interface TicketModuleWorkflow {
@@ -59,6 +62,8 @@ export interface TicketListItem {
   state_name:           string;
   state_label:          string;
   is_final:             boolean;
+  is_pause_state:       boolean;
+  is_approval_state:    boolean;
   created_by:           string;
   creator_name:         string;
   assignee_name:        string | null;

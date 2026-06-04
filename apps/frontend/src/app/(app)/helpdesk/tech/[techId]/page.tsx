@@ -261,8 +261,8 @@ export default function TechProcessPage() {
   }, [assigned]);
 
   const all = assigned ?? [];
-  const approvalCount      = all.filter((t) => t.state_name === 'realizado' && t.assignment_role === 'owner').length;
-  const reprocesoCount     = all.filter((t) => t.state_name === 'reproceso').length;
+  const approvalCount      = all.filter((t) => t.is_approval_state && t.assignment_role === 'owner').length;
+  const pausedCount        = all.filter((t) => t.is_pause_state).length;
   const collaborationCount = all.filter((t) => t.assignment_role === 'collaborator').length;
 
   if (modulesLoading || techsLoading) return <Spinner />;
@@ -289,7 +289,7 @@ export default function TechProcessPage() {
     { label: 'Asignados',      value: all.length,         fg: '#1d4ed8', bg: '#eff6ff'  },
     { label: 'Aprobaciones',   value: approvalCount,      fg: '#64748b', bg: '#fafafa'  },
     { label: 'Hoy',            value: today.length,       fg: '#4338ca', bg: '#eef2ff'  },
-    { label: 'Reproceso',      value: reprocesoCount,     fg: '#b45309', bg: '#fffbeb'  },
+    { label: 'En espera',      value: pausedCount,        fg: '#b45309', bg: '#fffbeb'  },
     { label: 'Colaboraciones', value: collaborationCount, fg: '#64748b', bg: '#fafafa'  },
   ];
 
