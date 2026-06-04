@@ -829,18 +829,34 @@ export class TicketsService {
   }
 
   async addComment(userId: string, ticketId: string, dto: { content: string; comment_type?: string }) {
-    const [ticket] = await this.db.query<any[]>(
-      `SELECT id FROM tickets.tickets WHERE id = $1`,
+    const [ticket] = await this.db.query<{ id: string; title: string; created_by: string }[]>(
+      `SELECT id, title, created_by FROM tickets.tickets WHERE id = $1`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
 
+    const commentType = dto.comment_type ?? 'public';
     const [row] = await this.db.query<any[]>(
       `INSERT INTO tickets.ticket_comments (ticket_id, user_id, comment_type, content)
        VALUES ($1, $2, $3, $4)
        RETURNING id, comment_type, content, created_at`,
-      [ticketId, userId, dto.comment_type ?? 'public', dto.content.trim()],
+      [ticketId, userId, commentType, dto.content.trim()],
     );
+
+    if (commentType === 'public' && userId !== ticket.created_by) {
+      const [author] = await this.db.query<{ full_name: string }[]>(
+        `SELECT first_name || ' ' || last_name AS full_name FROM users.profiles WHERE id = $1`,
+        [userId],
+      );
+      this.events.emit('ticket.comment_added', {
+        ticketId:   ticketId,
+        title:      ticket.title,
+        createdBy:  ticket.created_by,
+        authorName: author?.full_name ?? 'Técnico',
+        actorId:    userId,
+      });
+    }
+
     return row;
   }
 

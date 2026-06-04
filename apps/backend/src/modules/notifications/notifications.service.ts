@@ -170,6 +170,25 @@ export class NotificationsService {
     });
   }
 
+  @OnEvent('ticket.comment_added')
+  async onCommentAdded(ev: {
+    ticketId:   string;
+    title:      string;
+    createdBy:  string;
+    authorName: string;
+    actorId:    string;
+  }) {
+    if (ev.actorId === ev.createdBy) return;
+    await this.notifyUser({
+      userId:    ev.createdBy,
+      eventType: 'ticket.comment_added',
+      subject:   `Respuesta en tu ticket: ${ev.title}`,
+      body:      `${ev.authorName} respondió a tu ticket "${ev.title}". Revisa la actualización.`,
+      channels:  ['in_app'],
+      meta:      { ticketId: ev.ticketId },
+    });
+  }
+
   @OnEvent('meeting.scheduled')
   async onMeetingScheduled(ev: {
     meetingId:      string;
