@@ -376,7 +376,13 @@ export class ProfileService {
                 up.first_name || ' ' || up.last_name AS creator_name,
                 st.status      AS sla_status,
                 st.deadline_at AS sla_deadline_tracked,
-                ta.role        AS assignment_role
+                ta.role        AS assignment_role,
+                (SELECT tsh.transition_reason
+                 FROM   tickets.ticket_state_history tsh
+                 WHERE  tsh.ticket_id = t.id
+                   AND  tsh.transition_reason IS NOT NULL
+                 ORDER  BY tsh.transitioned_at DESC
+                 LIMIT  1) AS last_transition_reason
          FROM   tickets.tickets t
          JOIN   modules.modules m  ON m.id  = t.module_id
          LEFT JOIN modules.categories c ON c.id = t.category_id
@@ -428,7 +434,13 @@ export class ProfileService {
                 up.first_name || ' ' || up.last_name AS creator_name,
                 st.status      AS sla_status,
                 st.deadline_at AS sla_deadline_tracked,
-                ta.role        AS assignment_role
+                ta.role        AS assignment_role,
+                (SELECT tsh.transition_reason
+                 FROM   tickets.ticket_state_history tsh
+                 WHERE  tsh.ticket_id = t.id
+                   AND  tsh.transition_reason IS NOT NULL
+                 ORDER  BY tsh.transitioned_at DESC
+                 LIMIT  1) AS last_transition_reason
          FROM   tickets.tickets t
          JOIN   modules.modules m  ON m.id  = t.module_id
          LEFT JOIN modules.categories c ON c.id = t.category_id

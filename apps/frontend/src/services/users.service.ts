@@ -212,6 +212,7 @@ export const usersService = {
     created_by: string; creator_name: string;
     sla_status: string | null; sla_deadline_tracked: string | null;
     assignment_role: string;
+    last_transition_reason: string | null;
   }[]> {
     const params: Record<string, string> = { limit: String(limit) };
     if (moduleId) params.module_id = moduleId;
@@ -230,6 +231,7 @@ export const usersService = {
     created_by: string; creator_name: string;
     sla_status: string | null; sla_deadline_tracked: string | null;
     assignment_role: string;
+    last_transition_reason: string | null;
   }[]> {
     const params: Record<string, string> = { limit: String(limit) };
     if (moduleId) params.module_id = moduleId;

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AvailabilityDto } from './dto/availability.dto';
 import { SelfAvailabilityDto } from './dto/self-availability.dto';
 import { AddSkillDto } from './dto/add-skill.dto';
@@ -24,7 +25,10 @@ const REASON_TO_STATUS: Record<string, string> = {
 export class SkillService {
   private readonly logger = new Logger(SkillService.name);
 
-  constructor(@InjectDataSource() private readonly db: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly db: DataSource,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   // ─── Disponibilidad ──────────────────────────────────────────────────────────
 
@@ -134,6 +138,13 @@ export class SkillService {
          updated_at       = now()`,
       [userId, dto.module_id, is_available, dto.status, dto.unavailable_to ?? null, dto.notes ?? null],
     );
+
+    this.eventEmitter.emit('tech.availability.changed', {
+      userId,
+      moduleId:    dto.module_id,
+      status:      dto.status,
+      isAvailable: is_available,
+    });
 
     return this.getAvailability(userId);
   }

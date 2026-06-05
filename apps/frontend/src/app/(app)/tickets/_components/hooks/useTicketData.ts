@@ -16,6 +16,7 @@ import {
 import { modulesService } from '@/services/modules.service';
 import { meetingsService, type TicketMeeting } from '@/services/meetings.service';
 import type { ModuleTechnician } from '@/types/module.types';
+import { useTicketRealtime } from './useTicketRealtime';
 
 export interface LocalGuest {
   id:      string;
@@ -31,6 +32,9 @@ interface UseTicketDataProps {
 
 export function useTicketData({ ticketId, helpdeskId }: UseTicketDataProps) {
   const qc = useQueryClient();
+
+  /* ── Realtime — join ticket room, listen for push events ── */
+  useTicketRealtime(ticketId);
 
   /* ── Ticket detail ── */
   const {

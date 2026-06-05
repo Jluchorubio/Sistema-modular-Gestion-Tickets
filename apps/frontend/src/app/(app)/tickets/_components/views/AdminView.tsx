@@ -199,6 +199,9 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 </p>
                 <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {t.category_name}{t.environment_name ? ` · ${t.environment_name}` : ''} · {fmtRelative(t.created_at)}
+                  {t.is_pause_state && t.last_transition_reason && (
+                    <span style={{ marginLeft: 6, color: '#92400e', fontWeight: 600 }}>⏸ {t.last_transition_reason}</span>
+                  )}
                 </p>
               </div>
 

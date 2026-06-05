@@ -13,6 +13,7 @@ import { TECH_AVAIL_COLORS, TECH_AVAIL_LABELS } from '@/services/tickets.service
 import { modulesService } from '@/services/modules.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import { MODULE_ROLE_LABELS } from '@/constants/roles';
+import { fmtRelativeCompact } from '@/lib/formatters';
 import type { ModuleTechnician, TechAvailStatus } from '@/types/module.types';
 
 /* ── Design tokens ── */
@@ -112,9 +113,16 @@ function TechCard({ tech, basePath }: { tech: ModuleTechnician; basePath: string
           <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {fullName}
           </p>
-          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${ac}18`, color: ac, border: `1px solid ${ac}35` }}>
-            {AVAIL_LABELS[tech.avail_status ?? 'offline']}
-          </span>
+          <div>
+            <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${ac}18`, color: ac, border: `1px solid ${ac}35` }}>
+              {AVAIL_LABELS[tech.avail_status ?? 'offline']}
+            </span>
+            {tech.avail_status === 'offline' && tech.last_seen_at && (
+              <p style={{ margin: '3px 0 0', fontSize: 9, color: C.muted }}>
+                visto {fmtRelativeCompact(tech.last_seen_at)}
+              </p>
+            )}
+          </div>
         </div>
         <ChevronRight size={14} style={{ color: C.muted, flexShrink: 0 }} />
       </div>

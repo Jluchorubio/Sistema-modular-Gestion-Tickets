@@ -103,6 +103,9 @@ export function TicketCard({ ticket, onClick }: { ticket: TicketListItem; onClic
         <PriorityBadge priority={ticket.priority} />
       </div>
       <h3 className={styles.cardTitle}>{ticket.title}</h3>
+      {ticket.is_pause_state && ticket.last_transition_reason && (
+        <p style={{ margin: '2px 0 0', fontSize: 10, color: '#92400e', fontWeight: 600 }}>⏸ {ticket.last_transition_reason}</p>
+      )}
       <div className={styles.cardBreadcrumb}>
         <Ticket size={10} /><span>{ticket.category_name}</span>
         {ticket.environment_name && (<><span className={styles.breadcrumbSep}>›</span><span>{ticket.environment_name}</span></>)}

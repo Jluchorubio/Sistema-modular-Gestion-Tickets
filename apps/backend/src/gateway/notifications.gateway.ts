@@ -3,6 +3,9 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
+  MessageBody,
+  ConnectedSocket,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -19,6 +22,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
   private readonly logger = new Logger(NotificationsGateway.name);
   private readonly connectedUsers = new Set<string>();
+  private readonly lastSeenAt     = new Map<string, string>();
 
   constructor(
     private readonly jwt: JwtService,
@@ -49,8 +53,48 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     const userId = (client.data as Record<string, unknown>).userId as string | undefined;
     if (!userId) return;
     this.logger.debug(`WS disconnected: ${userId}`);
+    const lastSeen = new Date().toISOString();
     this.connectedUsers.delete(userId);
-    this.server.emit('presence:change', { userId, connected: false });
+    this.lastSeenAt.set(userId, lastSeen);
+    this.server.emit('presence:change', { userId, connected: false, lastSeenAt: lastSeen });
+  }
+
+  /* ── Ticket rooms ── */
+
+  @SubscribeMessage('join:ticket')
+  handleJoinTicket(@ConnectedSocket() client: Socket, @MessageBody() ticketId: string) {
+    client.join(`ticket:${ticketId}`);
+  }
+
+  @SubscribeMessage('leave:ticket')
+  handleLeaveTicket(@ConnectedSocket() client: Socket, @MessageBody() ticketId: string) {
+    client.leave(`ticket:${ticketId}`);
+  }
+
+  /* ── Tech availability ── */
+
+  @OnEvent('tech.availability.changed')
+  handleTechAvailabilityChanged(payload: { userId: string; moduleId: string; status: string; isAvailable: boolean }) {
+    this.broadcastAll('tech:status_changed', payload);
+  }
+
+  /* ── Ticket events → broadcast to room ── */
+
+  @OnEvent('ticket.state_changed')
+  handleTicketStateChanged(payload: { ticketId: string; [key: string]: unknown }) {
+    this.server?.to(`ticket:${payload.ticketId}`).emit('ticket:state_changed', payload);
+    this.broadcastAll('ticket:queue_updated', { ticketId: payload.ticketId });
+  }
+
+  @OnEvent('ticket.comment_added')
+  handleTicketCommentAdded(payload: { ticketId: string; [key: string]: unknown }) {
+    this.server?.to(`ticket:${payload.ticketId}`).emit('ticket:comment_added', payload);
+  }
+
+  @OnEvent('ticket.assigned')
+  handleTicketAssigned(payload: { ticketId: string; [key: string]: unknown }) {
+    this.server?.to(`ticket:${payload.ticketId}`).emit('ticket:assigned', payload);
+    this.broadcastAll('ticket:queue_updated', { ticketId: payload.ticketId });
   }
 
   sendToUser(userId: string, event: string, data: unknown): void {

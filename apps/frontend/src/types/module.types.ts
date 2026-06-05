@@ -75,6 +75,7 @@ export interface ModuleTechnician {
   is_available:   boolean;
   avail_status:   TechAvailStatus;
   unavailable_to: string | null;
+  last_seen_at?:  string | null;
 }
 
 export interface ModuleMember {

@@ -65,6 +65,7 @@ export default function WorkspacePage() {
 
   const [showAvailPicker, setShowAvailPicker] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<TechAvailStatus>(myAvailStatus);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'approval' | 'breached'>('all');
 
   const availMut = useMutation({
     mutationFn: (status: TechAvailStatus) => usersService.setMyAvailability({ module_id: helpdeskId!, status }),
@@ -96,19 +97,19 @@ export default function WorkspacePage() {
   }), [assigned]);
 
   /* Sort: priority → SLA urgency */
-  const sorted = useMemo(() =>
-    [...assigned]
-      .filter(t => !t.is_final)
-      .sort((a, b) => {
-        const po = ((PRIORITY_ORDER as Record<string, number>)[a.priority] ?? 9) - ((PRIORITY_ORDER as Record<string, number>)[b.priority] ?? 9);
-        if (po !== 0) return po;
-        const ha = hoursLeft((a as any).sla_deadline_tracked ?? null);
-        const hb = hoursLeft((b as any).sla_deadline_tracked ?? null);
-        if (ha !== null && hb !== null) return ha - hb;
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      }),
-    [assigned],
-  );
+  const sorted = useMemo(() => {
+    let list = [...assigned].filter(t => !t.is_final);
+    if (activeFilter === 'approval') list = list.filter(t => t.is_approval_state);
+    if (activeFilter === 'breached') list = list.filter(t => (t as any).sla_status === 'breached');
+    return list.sort((a, b) => {
+      const po = ((PRIORITY_ORDER as Record<string, number>)[a.priority] ?? 9) - ((PRIORITY_ORDER as Record<string, number>)[b.priority] ?? 9);
+      if (po !== 0) return po;
+      const ha = hoursLeft((a as any).sla_deadline_tracked ?? null);
+      const hb = hoursLeft((b as any).sla_deadline_tracked ?? null);
+      if (ha !== null && hb !== null) return ha - hb;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+  }, [assigned, activeFilter]);
 
   const acColor = AVAIL_COLORS[myAvailStatus];
 
@@ -150,16 +151,19 @@ export default function WorkspacePage() {
         {/* Stat pills */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[
-            { label: 'Activos',    value: stats.pending,   color: C.coral },
-            { label: 'Hoy',        value: stats.today,     color: '#6366f1' },
-            { label: 'Aprobación', value: stats.pending_approval, color: '#f59e0b' },
-            ...(stats.breached > 0 ? [{ label: 'Vencidos', value: stats.breached, color: '#ef4444' }] : []),
-          ].map(s => (
-            <div key={s.label} style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', textAlign: 'center', minWidth: 72 }}>
-              <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</p>
-              <p style={{ margin: '2px 0 0', fontSize: 9, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
-            </div>
-          ))}
+            { label: 'Activos',    value: stats.pending,          color: C.coral,    filter: 'all'      as const },
+            { label: 'Aprobación', value: stats.pending_approval, color: '#f59e0b',  filter: 'approval' as const },
+            ...(stats.breached > 0 ? [{ label: 'Vencidos', value: stats.breached, color: '#ef4444', filter: 'breached' as const }] : []),
+          ].map(s => {
+            const isActive = activeFilter === s.filter;
+            return (
+              <button key={s.label} type="button" onClick={() => setActiveFilter(isActive ? 'all' : s.filter)}
+                style={{ background: isActive ? `${s.color}12` : '#fff', border: `1.5px solid ${isActive ? s.color : C.border}`, borderRadius: 10, padding: '8px 14px', textAlign: 'center', minWidth: 72, cursor: 'pointer', fontFamily: 'inherit', transition: 'border-color .15s, background .15s' }}>
+                <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 9, fontWeight: 700, color: isActive ? s.color : C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -234,7 +238,12 @@ export default function WorkspacePage() {
               >
                 <div style={{ minWidth: 0 }}>
                   <p style={{ margin: '0 0 2px', fontSize: 12.5, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</p>
-                  <p style={{ margin: 0, fontSize: 9.5, color: C.muted }}>#{t.id.slice(-6).toUpperCase()} · {t.creator_name} · <span style={{ color: isBreached ? '#ef4444' : isCrit ? '#f97316' : C.muted }}>{t.state_name}</span></p>
+                  <p style={{ margin: 0, fontSize: 9.5, color: C.muted }}>
+                    #{t.id.slice(-6).toUpperCase()} · {t.creator_name} · <span style={{ color: isBreached ? '#ef4444' : isCrit ? '#f97316' : C.muted }}>{t.state_name}</span>
+                    {t.is_pause_state && t.last_transition_reason && (
+                      <span style={{ marginLeft: 6, color: '#92400e', fontWeight: 600 }}>⏸ {t.last_transition_reason}</span>
+                    )}
+                  </p>
                 </div>
                 <span style={{ fontSize: 10, color: C.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.category_name}</span>
                 <span style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
