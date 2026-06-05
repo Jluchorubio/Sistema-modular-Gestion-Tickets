@@ -510,4 +510,30 @@ export const ticketsService = {
     const { data } = await api.post(`/tickets/${ticketId}/assignments`, { user_id: userId, role });
     return data;
   },
+
+  async getAssignmentHistory(
+    userId: string,
+    moduleId?: string,
+    limit = 50,
+  ): Promise<{
+    assignment_id:  string;
+    role:           string;
+    is_active:      boolean;
+    assigned_at:    string;
+    unassigned_at:  string | null;
+    ticket_id:      string;
+    title:          string;
+    priority:       TicketPriority;
+    reprocess_count: number;
+    state_label:    string;
+    state_name:     string;
+    is_final:       boolean;
+    category_name:  string | null;
+    hours_held:     number;
+  }[]> {
+    const params: Record<string, string> = { user_id: userId, limit: String(limit) };
+    if (moduleId) params.module_id = moduleId;
+    const { data } = await api.get('/tickets/assignments/history', { params });
+    return data;
+  },
 };

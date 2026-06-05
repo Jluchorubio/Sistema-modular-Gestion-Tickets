@@ -294,6 +294,16 @@ export class TicketsController {
     return this.svc.addAssignment(req.user.sub, id, body);
   }
 
+  @Get('assignments/history')
+  @RequirePermission('helpdesk:tickets:view')
+  getAssignmentHistory(
+    @Query('user_id')   userId:    string,
+    @Query('module_id') moduleId?: string,
+    @Query('limit')     limit?:    string,
+  ) {
+    return this.svc.getAssignmentHistory(userId, moduleId, limit ? parseInt(limit, 10) : 50);
+  }
+
   /* ── Knowledge Base ─────────────────────────────────────────────────────── */
 
   @Post('knowledge/upload-doc')

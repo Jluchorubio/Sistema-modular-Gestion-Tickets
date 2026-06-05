@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Star, Ticket, Clock, ChevronDown,
+  ArrowLeft, Star, Ticket, Clock, ChevronDown, History,
 } from 'lucide-react';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
@@ -17,6 +17,7 @@ import {
   TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
   TICKET_PRIORITY_ORDER, TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
+  ticketsService,
 } from '@/services/tickets.service';
 import type { TicketPriority } from '@/services/tickets.service';
 import type { TechAvailStatus } from '@/types/module.types';
@@ -243,6 +244,13 @@ export default function TechProcessPage() {
     queryFn:  () => usersService.getUserAssignedTickets(techId, helpdeskId, 100),
     enabled:  !!techId && !!helpdeskId,
     staleTime: 60_000,
+  });
+
+  const { data: assignmentHistory = [] } = useQuery({
+    queryKey: ['tech-assignment-history', techId, helpdeskId],
+    queryFn:  () => ticketsService.getAssignmentHistory(techId, helpdeskId, 30),
+    enabled:  !!techId && !!helpdeskId,
+    staleTime: 120_000,
   });
 
   const { previous, today } = useMemo(() => {
@@ -521,6 +529,81 @@ export default function TechProcessPage() {
               </div>
             );
           })()}
+
+          {/* Assignment history */}
+          <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
+              <History size={12} style={{ color: '#0e2235' }} />
+              <p style={{ margin: 0, fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+                Historial de asignaciones
+              </p>
+            </div>
+
+            {assignmentHistory.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', textAlign: 'center', padding: '8px 0' }}>
+                Sin historial
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {assignmentHistory.map(a => {
+                  const pColor = TICKET_PRIORITY_COLORS[a.priority as TicketPriority] ?? '#94a3b8';
+                  const hoursHeld = typeof a.hours_held === 'number' ? a.hours_held : parseFloat(String(a.hours_held ?? 0));
+                  const durLabel  = hoursHeld < 1
+                    ? `${Math.round(hoursHeld * 60)}min`
+                    : hoursHeld < 24
+                    ? `${hoursHeld.toFixed(1)}h`
+                    : `${(hoursHeld / 24).toFixed(1)}d`;
+
+                  return (
+                    <div
+                      key={a.assignment_id}
+                      onClick={() => router.push(`${basePath}/ticket/${a.ticket_id}`)}
+                      style={{
+                        display: 'flex', flexDirection: 'column', gap: 3,
+                        padding: '8px 10px', borderRadius: 8,
+                        border: `1px solid ${a.is_active ? '#bfdbfe' : '#e2e8f0'}`,
+                        background: a.is_active ? '#eff6ff' : '#fafafa',
+                        cursor: 'pointer',
+                        borderLeft: `3px solid ${pColor}`,
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = a.is_active ? '#dbeafe' : '#f1f5f9'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = a.is_active ? '#eff6ff' : '#fafafa'; }}
+                    >
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {a.title}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                          background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30` }}>
+                          {TICKET_PRIORITY_LABELS[a.priority as TicketPriority]}
+                        </span>
+                        {a.is_final ? (
+                          <span style={{ fontSize: 9, fontWeight: 700, color: '#22c55e', background: '#f0fdf4', padding: '1px 6px', borderRadius: 99, border: '1px solid #bbf7d0' }}>
+                            ✓ {a.state_label}
+                          </span>
+                        ) : a.is_active ? (
+                          <span style={{ fontSize: 9, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', padding: '1px 6px', borderRadius: 99, border: '1px solid #bfdbfe' }}>
+                            {a.state_label}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 9, color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: 99, border: '1px solid #e2e8f0' }}>
+                            {a.state_label}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 9, color: '#94a3b8', marginLeft: 'auto' }}>
+                          <Clock size={8} style={{ display: 'inline', marginRight: 2, verticalAlign: 'middle' }} />
+                          {durLabel}
+                        </span>
+                      </div>
+                      {a.category_name && (
+                        <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>{a.category_name}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

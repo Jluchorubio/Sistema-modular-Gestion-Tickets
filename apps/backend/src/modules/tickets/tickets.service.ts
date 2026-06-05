@@ -1245,4 +1245,35 @@ export class TicketsService {
     return row ?? null;
   }
 
+  /* ── Assignment history for a technician ── */
+  async getAssignmentHistory(userId: string, moduleId?: string, limit = 50) {
+    return this.db.query<any[]>(
+      `SELECT
+         ta.id               AS assignment_id,
+         ta.role,
+         ta.is_active,
+         ta.assigned_at,
+         ta.unassigned_at,
+         t.id                AS ticket_id,
+         t.title,
+         t.priority,
+         t.reprocess_count,
+         s.label             AS state_label,
+         s.name              AS state_name,
+         s.is_final,
+         c.name              AS category_name,
+         EXTRACT(EPOCH FROM COALESCE(ta.unassigned_at, now()) - ta.assigned_at) / 3600 AS hours_held
+       FROM   tickets.ticket_assignments ta
+       JOIN   tickets.tickets  t ON t.id  = ta.ticket_id
+       JOIN   tickets.states   s ON s.id  = t.current_state_id
+       LEFT JOIN modules.categories c ON c.id = t.category_id
+       WHERE  ta.user_id = $1
+         AND  ta.role    = 'owner'
+         AND  ($2::uuid IS NULL OR t.module_id = $2::uuid)
+       ORDER BY ta.assigned_at DESC
+       LIMIT  $3`,
+      [userId, moduleId ?? null, limit],
+    );
+  }
+
 }
