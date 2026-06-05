@@ -3,16 +3,13 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, X, Ticket, BarChart2, Clock, ChevronDown } from 'lucide-react';
+import { Plus, X, Ticket, BarChart2, Clock } from 'lucide-react';
 import {
   type TicketPriority,
-  TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
-  SLA_STATUS_COLORS, SLA_STATUS_LABELS,
   TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
   TICKET_PRIORITY_ORDER,
 } from '@/services/tickets.service';
 import { usersService } from '@/services/users.service';
-import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import { MODULE_ROLE_LABELS } from '@/constants/roles';
 import type { CurrentUser } from '@/types/user.types';
 import type { TechAvailStatus } from '@/types/module.types';
@@ -170,94 +167,30 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {/* ANTERIORES */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#e53e3e', textTransform: 'uppercase', letterSpacing: '.04em' }}>● ANTERIORES — VENCIDOS / ALTA PRIORIDAD</span>
-                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{previous.length} tickets</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#ff5e3a', textTransform: 'uppercase', letterSpacing: '.07em' }}>Anteriores · pendientes</span>
+                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{previous.length} ticket{previous.length !== 1 ? 's' : ''}</span>
                 </div>
                 {previous.length === 0 ? (
-                  <div style={{ background: '#fff', borderRadius: 16, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets anteriores</div>
+                  <div style={{ background: '#f8fafc', borderRadius: 10, padding: '20px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets anteriores</div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                    {previous.map((t) => {
-                      const pColor   = TICKET_PRIORITY_COLORS[t.priority as TicketPriority] ?? '#94a3b8';
-                      const slaSt    = t.sla_status;
-                      const slaColor = slaSt ? (SLA_STATUS_COLORS[slaSt as keyof typeof SLA_STATUS_COLORS] ?? null) : null;
-                      const slaLabel = slaSt ? (SLA_STATUS_LABELS[slaSt as keyof typeof SLA_STATUS_LABELS] ?? null) : null;
-                      const isBreached = t.sla_status === 'breached';
-                      return (
-                        <div key={t.id} className={styles.helpdeskCard}
-                          style={isBreached ? { borderColor: '#fecaca', background: '#fff5f5' } : undefined}
-                          onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                            <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              {t.creator_name ?? '?'}<ChevronDown size={9} style={{ color: '#94a3b8' }} />
-                            </span>
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
-                              {TICKET_PRIORITY_LABELS[t.priority as TicketPriority] ?? t.priority}
-                            </span>
-                          </div>
-                          <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
-                          <p style={{ margin: '0 0 10px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
-                          {slaColor && slaLabel && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 5, background: `${slaColor}15`, color: slaColor, border: `1px solid ${slaColor}30`, marginBottom: 10 }}>
-                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: slaColor }} />{slaLabel}
-                            </span>
-                          )}
-                          <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initials(t.creator_name)}</div>
-                              <div>
-                                <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
-                                <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
-                              </div>
-                            </div>
-                            <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>#{t.id.slice(-6).toUpperCase()}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {previous.map((t) => <TechQueueItem key={t.id} ticket={t} basePath={basePath} />)}
                   </div>
                 )}
               </div>
 
               {/* HOY */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.04em' }}>● HOY — ACTUALES</span>
-                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{today.length} tickets</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.07em' }}>Hoy · actuales</span>
+                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{today.length} ticket{today.length !== 1 ? 's' : ''}</span>
                 </div>
                 {today.length === 0 ? (
-                  <div style={{ background: '#fff', borderRadius: 16, padding: '28px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets nuevos hoy</div>
+                  <div style={{ background: '#f8fafc', borderRadius: 10, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets nuevos hoy</div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                    {today.map((t) => {
-                      const pColor = TICKET_PRIORITY_COLORS[t.priority as TicketPriority] ?? '#94a3b8';
-                      return (
-                        <div key={t.id} className={styles.helpdeskCard}
-                          onClick={() => router.push(`${basePath}/ticket/${t.id}`)}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                            <span style={{ fontSize: 11, background: '#f1f5f9', color: '#334155', fontWeight: 700, padding: '3px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              {t.creator_name ?? '?'}<ChevronDown size={9} style={{ color: '#94a3b8' }} />
-                            </span>
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}40` }}>
-                              {TICKET_PRIORITY_LABELS[t.priority as TicketPriority] ?? t.priority}
-                            </span>
-                          </div>
-                          <h4 style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#0e2235', lineHeight: 1.3 }}>{t.title}</h4>
-                          <p style={{ margin: '0 0 14px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.category_name}{t.environment_name ? ` • ${t.environment_name}` : ''}</p>
-                          <div style={{ borderTop: '1px solid #eef2f6', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(14,34,53,.1)', color: '#0e2235', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initials(t.creator_name)}</div>
-                              <div>
-                                <p style={{ margin: '0 0 1px', fontSize: 10, fontWeight: 800, color: '#0e2235' }}>{t.creator_name}</p>
-                                <p style={{ margin: 0, fontSize: 9, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{fmtRelative(t.created_at)}</p>
-                              </div>
-                            </div>
-                            <span style={{ fontSize: 10, background: '#0f172a', color: '#fff', fontWeight: 900, padding: '3px 9px', borderRadius: 6 }}>#{t.id.slice(-6).toUpperCase()}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {today.map((t) => <TechQueueItem key={t.id} ticket={t} basePath={basePath} />)}
                   </div>
                 )}
               </div>
