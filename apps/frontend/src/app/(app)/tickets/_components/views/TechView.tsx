@@ -16,7 +16,7 @@ import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import { MODULE_ROLE_LABELS } from '@/constants/roles';
 import type { CurrentUser } from '@/types/user.types';
 import type { TechAvailStatus } from '@/types/module.types';
-import styles from '../tickets.module.css';
+import styles from '../../tickets.module.css';
 import { isToday, initials, Stars, type AssignedTicket } from './shared';
 import { TechQueueItem, AvailabilityWidget } from './TechPanels';
 import { CreateDrawer } from './CreateDrawer';

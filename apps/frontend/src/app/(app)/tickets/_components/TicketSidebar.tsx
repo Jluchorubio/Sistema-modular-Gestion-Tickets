@@ -42,9 +42,9 @@ export interface TicketSidebarProps {
   ticketId: string;
   ticket: {
     id: string; module_name: string; category_name: string | null;
-    damage_type_label?: string; priority: TicketPriority; urgency: string;
+    damage_type_label?: string | null; priority: TicketPriority; urgency: string;
     impact: string; created_at: string; reprocess_count: number;
-    is_final: boolean; escalated?: boolean; escalation_note?: string;
+    is_final: boolean; escalated?: boolean; escalation_note?: string | null;
     sla_deadline_tracked?: string | null; sla_status?: string | null;
     creator_name: string;
     assignments: { id: string; user_name: string; role: string; is_active: boolean; assigned_at: string }[];

@@ -100,7 +100,7 @@ export default function WorkspacePage() {
     [...assigned]
       .filter(t => !t.is_final)
       .sort((a, b) => {
-        const po = (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
+        const po = ((PRIORITY_ORDER as Record<string, number>)[a.priority] ?? 9) - ((PRIORITY_ORDER as Record<string, number>)[b.priority] ?? 9);
         if (po !== 0) return po;
         const ha = hoursLeft((a as any).sla_deadline_tracked ?? null);
         const hb = hoursLeft((b as any).sla_deadline_tracked ?? null);

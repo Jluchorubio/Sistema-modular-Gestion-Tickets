@@ -144,14 +144,14 @@ export default function MyTicketsPage() {
 
   const sortedCreated = useMemo(
     () => [...(created ?? [])].sort((a, b) =>
-      (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9),
+      ((PRIORITY_ORDER as Record<string, number>)[a.priority] ?? 9) - ((PRIORITY_ORDER as Record<string, number>)[b.priority] ?? 9),
     ),
     [created],
   );
 
   const sortedAssigned = useMemo(
     () => [...(assigned ?? [])].sort((a, b) =>
-      (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9),
+      ((PRIORITY_ORDER as Record<string, number>)[a.priority] ?? 9) - ((PRIORITY_ORDER as Record<string, number>)[b.priority] ?? 9),
     ),
     [assigned],
   );

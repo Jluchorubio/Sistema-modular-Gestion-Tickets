@@ -19,7 +19,7 @@ import {
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
-import styles from '../tickets.module.css';
+import styles from '../../tickets.module.css';
 import { STAT_CARDS, isToday, initials, TicketCard, type QuickFilter } from './shared';
 import { TechCard } from './TechPanels';
 import { CreateDrawer } from './CreateDrawer';

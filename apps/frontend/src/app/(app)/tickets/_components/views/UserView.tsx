@@ -11,7 +11,7 @@ import {
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS, SLA_STATUS_COLORS,
 } from '@/services/tickets.service';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
-import styles from '../tickets.module.css';
+import styles from '../../tickets.module.css';
 import { isToday, TicketCard } from './shared';
 import { CreateDrawer } from './CreateDrawer';
 
