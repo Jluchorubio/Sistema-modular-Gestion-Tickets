@@ -16,7 +16,7 @@ import { Roles } from '../../gateway/decorators/roles.decorator';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { TransitionTicketDto } from './dto/transition-ticket.dto';
 import { CreateKnowledgeArticleDto, UpdateKnowledgeArticleDto } from './dto/knowledge-article.dto';
-import { AddCommentDto, AddAttachmentDto, ApproveTicketDto, RejectTicketDto, AddAssignmentDto, AddRelationDto } from './dto/ticket-actions.dto';
+import { AddCommentDto, AddAttachmentDto, ApproveTicketDto, RejectTicketDto, AddAssignmentDto, AddRelationDto, RateTicketDto } from './dto/ticket-actions.dto';
 
 @ApiTags('tickets')
 @ApiBearerAuth()
@@ -157,17 +157,7 @@ export class TicketsController {
   rateTicket(
     @Req() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: {
-      score_overall:              number;
-      score_attention?:           number;
-      score_clarity?:             number;
-      score_response_time?:       number;
-      score_quality?:             number;
-      service_label?:             string;
-      comment?:                   string;
-      would_recommend?:           boolean;
-      resolved_on_first_attempt?: boolean;
-    },
+    @Body() body: RateTicketDto,
   ) {
     return this.svc.rateTicket(req.user.sub, id, body);
   }
@@ -310,7 +300,12 @@ export class TicketsController {
     if (!file) throw new Error('No file uploaded');
     const path = require('path');
     const fs   = require('fs');
-    const ext  = path.extname(file.originalname);
+    const ALLOWED_EXTS  = ['.pdf','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.txt','.csv','.zip','.png','.jpg','.jpeg','.gif','.webp'];
+    const ALLOWED_MIMES = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation','text/plain','text/csv','application/zip','application/x-zip-compressed','image/png','image/jpeg','image/gif','image/webp'];
+    const ext  = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTS.includes(ext) || !ALLOWED_MIMES.includes(file.mimetype)) {
+      throw new Error('Tipo de archivo no permitido.');
+    }
     const name = `knowledge-${Date.now()}${ext}`;
     const uploadsDir = process.env.STORAGE_PATH ?? './uploads';
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });

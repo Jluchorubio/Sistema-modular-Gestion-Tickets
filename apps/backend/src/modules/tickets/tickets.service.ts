@@ -878,7 +878,7 @@ export class TicketsService {
                 COALESCE(ap.approved_at, ap.created_at) AS created_at
          FROM   tickets.ticket_approvals ap
          JOIN   users.profiles p ON p.id = ap.user_id
-         WHERE  ap.ticket_id = $1 AND ap.status::text != 'pending'
+         WHERE  ap.ticket_id = $1
        ) timeline
        ORDER BY created_at ASC`,
       [ticketId],
@@ -1038,7 +1038,7 @@ export class TicketsService {
   }
 
   async addTicketRelation(actorId: string, ticketId: string, dto: { target_ticket_id: string; relation_type: string; notes?: string }) {
-    const valid = ['related', 'duplicate', 'blocks', 'caused_by'];
+    const valid = ['duplicado', 'relacionado', 'bloquea', 'bloqueado_por'];
     if (!valid.includes(dto.relation_type)) {
       throw new BadRequestException(`Tipo de relación inválido: ${dto.relation_type}`);
     }
@@ -1138,12 +1138,6 @@ export class TicketsService {
       throw new BadRequestException('Solo se puede calificar cuando el ticket está resuelto o cerrado.');
     if (ticket.created_by !== userId) throw new ForbiddenException('Solo el solicitante puede calificar este ticket.');
 
-    const [existing] = await this.db.query<any[]>(
-      `SELECT id FROM tickets.ticket_ratings WHERE ticket_id = $1`,
-      [ticketId],
-    );
-    if (existing) throw new BadRequestException('Este ticket ya fue calificado.');
-
     const [owner] = await this.db.query<{ user_id: string }[]>(
       `SELECT user_id FROM tickets.ticket_assignments
        WHERE ticket_id = $1 AND role = 'owner'
@@ -1152,6 +1146,7 @@ export class TicketsService {
     );
     if (!owner) throw new BadRequestException('El ticket no tiene técnico asignado.');
 
+    // ON CONFLICT eliminates the select-then-insert race condition
     const [rating] = await this.db.query<any[]>(
       `INSERT INTO tickets.ticket_ratings
          (ticket_id, rated_by, technician_id,
@@ -1159,20 +1154,22 @@ export class TicketsService {
           service_label, comment, would_recommend, resolved_on_first_attempt,
           expires_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now() + INTERVAL '7 days')
+       ON CONFLICT (ticket_id) DO NOTHING
        RETURNING *`,
       [
         ticketId, userId, owner.user_id,
         dto.score_overall,
-        dto.score_attention          ?? null,
-        dto.score_clarity            ?? null,
-        dto.score_response_time      ?? null,
-        dto.score_quality            ?? null,
-        dto.service_label            ?? null,
-        dto.comment?.trim()          ?? null,
-        dto.would_recommend          ?? null,
+        dto.score_attention           ?? null,
+        dto.score_clarity             ?? null,
+        dto.score_response_time       ?? null,
+        dto.score_quality             ?? null,
+        dto.service_label             ?? null,
+        dto.comment?.trim()           ?? null,
+        dto.would_recommend           ?? null,
         dto.resolved_on_first_attempt ?? null,
       ],
     );
+    if (!rating) throw new BadRequestException('Este ticket ya fue calificado.');
     return rating;
   }
 
