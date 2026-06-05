@@ -427,16 +427,10 @@ export default function TechProcessPage() {
           ) : (
             <>
               {previous.length > 0 && (
-                <div style={{ border: '1.5px solid #0e2235', borderRadius: 12, padding: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0e2235', paddingBottom: 8, marginBottom: 12 }}>
-                    <span style={{ fontWeight: 800, fontSize: 9, background: '#0e2235', color: '#fff', padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase' }}>ANTERIORES</span>
-                    <span style={{ fontWeight: 800, fontSize: 11, color: '#ff5e3a', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ width: 6, height: 6, background: '#ff5e3a', borderRadius: '50%', display: 'inline-block' }} />
-                      VENCIDOS / ALTA PRIORIDAD
-                    </span>
-                  </div>
-                  <div style={{ background: '#fff5f4', border: '1px dashed #ffb3a0', borderRadius: 8, padding: '10px 12px', fontSize: 10.5, fontWeight: 700, color: '#7f1d1d', marginBottom: 12, lineHeight: 1.5 }}>
-                    🤖 ORGANIZACIÓN AUTOMÁTICA: Primero tickets antiguos/urgentes para mitigar retrasos en SLA.
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#ff5e3a', textTransform: 'uppercase', letterSpacing: '.07em' }}>Anteriores · pendientes</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{previous.length} ticket{previous.length !== 1 ? 's' : ''}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {previous.map((t) => <QueueRow key={t.id} ticket={t} basePath={basePath} />)}
@@ -444,16 +438,10 @@ export default function TechProcessPage() {
                 </div>
               )}
 
-              <div style={{ border: '1.5px solid #0e2235', borderRadius: 12, padding: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0e2235', paddingBottom: 8, marginBottom: 12 }}>
-                  <span style={{ fontWeight: 800, fontSize: 9, background: '#0e2235', color: '#fff', padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase' }}>HOY</span>
-                  <span style={{ fontWeight: 800, fontSize: 11, color: '#3b82f6', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 6, height: 6, background: '#3b82f6', borderRadius: '50%', display: 'inline-block' }} />
-                    ACTUALES
-                  </span>
-                </div>
-                <div style={{ background: '#eff6ff', border: '1px dashed #93c5fd', borderRadius: 8, padding: '10px 12px', fontSize: 10.5, fontWeight: 700, color: '#1e3a5f', marginBottom: 12, lineHeight: 1.5 }}>
-                  ↓ REORGANIZACIÓN MANUAL: Re-categoriza tickets de hoy según carga de incidentes críticos.
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.07em' }}>Hoy · actuales</span>
+                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{today.length} ticket{today.length !== 1 ? 's' : ''}</span>
                 </div>
                 {today.length === 0 ? (
                   <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: '16px 0' }}>Sin tickets asignados para hoy</p>
@@ -474,53 +462,66 @@ export default function TechProcessPage() {
           )}
         </div>
 
-        {/* Right: metrics (300px) */}
-        <div style={{ width: 300, flexShrink: 0, padding: '24px 20px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+        {/* Right: metrics (280px) */}
+        <div style={{ width: 280, flexShrink: 0, padding: '24px 20px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
 
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-            <p style={{ fontSize: 10, fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '.05em', margin: '0 0 4px' }}>
-              🔗 Análisis en Tiempo Real
-            </p>
-            <span style={{ fontSize: 9.5, color: '#1e40af', fontWeight: 600 }}>
-              Hoja de operaciones activa del técnico seleccionado.
-            </span>
-          </div>
-
-          <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 14, boxShadow: '0 1px 4px rgba(0,0,0,.04)' }}>
-            <span style={{ fontWeight: 800, fontSize: 10, color: '#6366f1', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
-              📈 Rendimiento Técnico
-            </span>
-            <p style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8', lineHeight: 1.55, margin: '0 0 10px', textTransform: 'uppercase' }}>
-              Métricas de resolución de incidencias y puntuación de clientes.
-            </p>
-            <div style={{ width: '100%', background: '#e2e8f0', height: 8, borderRadius: 99, overflow: 'hidden' }}>
-              <div style={{ background: '#6366f1', height: '100%', width: `${perfPct}%`, borderRadius: 99, transition: 'width .4s' }} />
+          {/* Rating */}
+          <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
+            <p style={{ margin: '0 0 10px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Valoración media</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              <p style={{ margin: 0, fontSize: 34, fontWeight: 800, color: '#f59e0b', lineHeight: 1 }}>{avgRating.toFixed(1)}</p>
+              <Stars rating={avgRating} size={15} />
             </div>
-            <span style={{ fontSize: 10, fontWeight: 800, color: '#6366f1', marginTop: 5, display: 'block' }}>{perfPct}%</span>
-          </div>
-
-          <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 14, boxShadow: '0 1px 4px rgba(0,0,0,.04)' }}>
-            <span style={{ fontWeight: 800, fontSize: 10, color: '#059669', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
-              🕐 Carga Actual
-            </span>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#059669', background: '#ecfdf5', padding: '2px 10px', borderRadius: 6, border: '1px solid #a7f3d0' }}>
-                {tech.active_tickets ?? 0} activos
-              </span>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#6366f1', background: '#eef2ff', padding: '2px 10px', borderRadius: 6, border: '1px solid #c7d2fe' }}>
-                {all.length} asignados
-              </span>
+            <div style={{ background: '#e2e8f0', height: 5, borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ background: '#f59e0b', height: '100%', width: `${perfPct}%`, borderRadius: 99, transition: 'width .4s' }} />
             </div>
           </div>
 
-          <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: 16, textAlign: 'center', marginTop: 'auto' }}>
-            <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: '#334155', margin: '0 0 6px' }}>
-              ⏱ Módulos Futuros
-            </p>
-            <p style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', margin: 0 }}>
-              Historial completo, tiempos de respuesta promedio, KPIs avanzados
-            </p>
+          {/* Carga actual */}
+          <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
+            <p style={{ margin: '0 0 10px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Carga actual</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {[
+                { label: 'Activos',    value: tech.active_tickets ?? 0, color: '#0e2235' },
+                { label: 'Asignados', value: all.length,                color: '#6366f1' },
+                { label: 'Hoy',        value: today.length,             color: '#ff5e3a' },
+                { label: 'Anteriores', value: previous.length,          color: '#f59e0b' },
+              ].map((s) => (
+                <div key={s.label} style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 12px', border: '1px solid #f1f5f9' }}>
+                  <p style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</p>
+                  <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.04em' }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* SLA resumen */}
+          {(() => {
+            const breached = (all as any[]).filter(t => t.sla_status === 'breached').length;
+            const critical = (all as any[]).filter(t => {
+              const h = t.sla_deadline_tracked ? (new Date(t.sla_deadline_tracked).getTime() - Date.now()) / 3_600_000 : null;
+              return t.sla_status === 'active' && h !== null && h < 2;
+            }).length;
+            const met = (all as any[]).filter(t => t.sla_status === 'met').length;
+            const slaColor = breached > 0 ? '#ef4444' : critical > 0 ? '#f97316' : '#22c55e';
+            const slaLabel = breached > 0 ? `${breached} vencido${breached > 1 ? 's' : ''}` : critical > 0 ? `${critical} crítico${critical > 1 ? 's' : ''}` : 'SLA al día';
+            return (
+              <div style={{ background: '#fff', border: `1.5px solid ${slaColor}28`, borderRadius: 12, padding: '16px 18px' }}>
+                <p style={{ margin: '0 0 10px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Estado SLA</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: slaColor, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, fontWeight: 800, color: slaColor }}>{slaLabel}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                  {breached > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#fee2e2', color: '#ef4444' }}>{breached} vencido{breached > 1 ? 's' : ''}</span>}
+                  {critical > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#fff7ed', color: '#f97316' }}>{critical} crítico{critical > 1 ? 's' : ''}</span>}
+                  {met > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#f0fdf4', color: '#22c55e' }}>{met} cumplido{met > 1 ? 's' : ''}</span>}
+                  {breached === 0 && critical === 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#f0fdf4', color: '#22c55e' }}>Todos en tiempo</span>}
+                </div>
+              </div>
+            );
+          })()}
+
         </div>
       </div>
     </div>
