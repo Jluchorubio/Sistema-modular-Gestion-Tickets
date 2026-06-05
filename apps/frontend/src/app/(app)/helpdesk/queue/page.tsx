@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Inbox, AlertTriangle, Clock, Search, UserPlus, ChevronRight, CheckCircle2,
+  Inbox, AlertTriangle, Clock, Search, UserPlus, ChevronRight, CheckCircle2, ChevronDown,
 } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
@@ -12,8 +12,10 @@ import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { usePermission } from '@/hooks/usePermission';
-import { ticketsService, type TicketListItem, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS, TICKET_PRIORITY_ORDER } from '@/services/tickets.service';
+import { ticketsService, type TicketListItem, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS, TICKET_PRIORITY_ORDER, TECH_AVAIL_COLORS, TECH_AVAIL_LABELS } from '@/services/tickets.service';
+import { modulesService } from '@/services/modules.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
+import type { ModuleTechnician, TechAvailStatus } from '@/types/module.types';
 import { fmtDate } from '@/lib/formatters';
 
 /* ── Design tokens ── */
@@ -47,17 +49,105 @@ function fmtHours(h: number): string {
   return `${(h / 24).toFixed(1)}d`;
 }
 
+const AVAIL_ORDER: Record<string, number> = {
+  disponible: 0, ocupado: 1, en_reunion: 2, ausente: 3, fuera_horario: 4, offline: 5,
+};
+
+/* ── Tech assign inline dropdown ── */
+function TechAssignDropdown({
+  techs, isAssigning, onAssign,
+}: {
+  techs: ModuleTechnician[];
+  isAssigning: boolean;
+  onAssign: (techId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onOut(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onOut);
+    return () => document.removeEventListener('mousedown', onOut);
+  }, []);
+
+  const sorted = useMemo(() =>
+    [...techs].sort((a, b) => (AVAIL_ORDER[a.avail_status] ?? 9) - (AVAIL_ORDER[b.avail_status] ?? 9)),
+    [techs],
+  );
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        disabled={isAssigning}
+        onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          padding: '6px 10px', borderRadius: 7,
+          border: `1px solid ${C.border}`, background: open ? C.bg : '#fff',
+          color: C.sub, fontSize: 10, fontWeight: 700,
+          cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+        }}
+      >
+        <UserPlus size={10} /> Asignar <ChevronDown size={9} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', right: 0, zIndex: 60,
+          background: '#fff', border: `1px solid ${C.border}`, borderRadius: 8,
+          boxShadow: '0 8px 24px rgba(14,34,53,.12)', marginTop: 3,
+          minWidth: 210, maxHeight: 240, overflowY: 'auto',
+        }}>
+          {sorted.map(t => {
+            const ac = TECH_AVAIL_COLORS[t.avail_status ?? 'offline'];
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setOpen(false); onAssign(t.id); }}
+                style={{
+                  width: '100%', padding: '7px 11px', border: 'none',
+                  background: 'transparent', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  fontFamily: 'inherit', textAlign: 'left',
+                  opacity: t.avail_status === 'offline' ? .55 : 1,
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = C.bg; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+              >
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: ac, flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 11, color: '#334155' }}>{t.first_name} {t.last_name}</span>
+                <span style={{ fontSize: 9, color: ac, fontWeight: 600 }}>{TECH_AVAIL_LABELS[t.avail_status as TechAvailStatus]}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── TicketRow ── */
 function TicketRow({
   ticket,
   canTake,
   isTaking,
   onTake,
+  techs,
+  isAssigning,
+  onAssignTo,
+  canAssignOthers,
 }: {
   ticket: TicketListItem;
   canTake: boolean;
   isTaking: boolean;
   onTake: (id: string) => void;
+  techs: ModuleTechnician[];
+  isAssigning: boolean;
+  onAssignTo: (ticketId: string, techId: string) => void;
+  canAssignOthers: boolean;
 }) {
   const router    = useRouter();
   const pColor    = TICKET_PRIORITY_COLORS[ticket.priority] ?? C.muted;
@@ -70,7 +160,7 @@ function TicketRow({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 130px 90px 80px 90px',
+        gridTemplateColumns: '1fr 130px 90px 80px auto',
         alignItems: 'center',
         gap: 12,
         padding: '12px 16px',
@@ -113,39 +203,49 @@ function TicketRow({
         <span style={{ fontSize: 10, color: C.muted }}>—</span>
       )}
 
-      {/* Take button */}
-      {canTake ? (
-        <button
-          type="button"
-          disabled={isTaking}
-          onClick={(e) => { e.stopPropagation(); onTake(ticket.id); }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '6px 10px', borderRadius: 7,
-            border: 'none', background: isTaking ? C.muted : C.navy,
-            color: '#fff', fontSize: 10, fontWeight: 700,
-            cursor: isTaking ? 'wait' : 'pointer', fontFamily: 'inherit',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <UserPlus size={10} />
-          {isTaking ? '…' : 'Tomar'}
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); router.push(`/helpdesk/ticket/${ticket.id}`); }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            padding: '6px 10px', borderRadius: 7,
-            border: `1px solid ${C.border}`, background: '#fff',
-            color: C.sub, fontSize: 10, fontWeight: 700,
-            cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-          }}
-        >
-          Ver <ChevronRight size={10} />
-        </button>
-      )}
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+        {canTake && (
+          <button
+            type="button"
+            disabled={isTaking}
+            onClick={(e) => { e.stopPropagation(); onTake(ticket.id); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '6px 10px', borderRadius: 7,
+              border: 'none', background: isTaking ? C.muted : C.navy,
+              color: '#fff', fontSize: 10, fontWeight: 700,
+              cursor: isTaking ? 'wait' : 'pointer', fontFamily: 'inherit',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <UserPlus size={10} />
+            {isTaking ? '…' : 'Tomar'}
+          </button>
+        )}
+        {canAssignOthers && (
+          <TechAssignDropdown
+            techs={techs}
+            isAssigning={isAssigning}
+            onAssign={(techId) => onAssignTo(ticket.id, techId)}
+          />
+        )}
+        {!canTake && !canAssignOthers && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); router.push(`/helpdesk/ticket/${ticket.id}`); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '6px 10px', borderRadius: 7,
+              border: `1px solid ${C.border}`, background: '#fff',
+              color: C.sub, fontSize: 10, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+            }}
+          >
+            Ver <ChevronRight size={10} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -157,12 +257,20 @@ function PriorityGroup({
   canTake,
   takingId,
   onTake,
+  techs,
+  assigningId,
+  onAssignTo,
+  canAssignOthers,
 }: {
   group: typeof PRIORITY_GROUPS[0];
   tickets: TicketListItem[];
   canTake: boolean;
   takingId: string | null;
   onTake: (id: string) => void;
+  techs: ModuleTechnician[];
+  assigningId: string | null;
+  onAssignTo: (ticketId: string, techId: string) => void;
+  canAssignOthers: boolean;
 }) {
   const pColor = TICKET_PRIORITY_COLORS[group.priority];
   if (tickets.length === 0) return null;
@@ -182,7 +290,7 @@ function PriorityGroup({
       </div>
 
       {/* Table header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 90px 80px 90px', gap: 12, padding: '8px 16px', background: C.bg, border: `1px solid ${C.border}`, borderBottom: 'none', borderTop: 'none' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 90px 80px auto', gap: 12, padding: '8px 16px', background: C.bg, border: `1px solid ${C.border}`, borderBottom: 'none', borderTop: 'none' }}>
         {['Ticket', 'Sede/Ambiente', 'Prioridad', 'SLA', 'Acción'].map((h, i) => (
           <span key={i} style={{ fontSize: 9, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
         ))}
@@ -197,6 +305,10 @@ function PriorityGroup({
             canTake={canTake}
             isTaking={takingId === t.id}
             onTake={onTake}
+            techs={techs}
+            isAssigning={assigningId === t.id}
+            onAssignTo={onAssignTo}
+            canAssignOthers={canAssignOthers}
           />
         ))}
       </div>
@@ -217,15 +329,27 @@ export default function QueuePage() {
   const helpdeskId   = modules?.find(isHelpdeskModule)?.id;
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
 
-  const [search,    setSearch]    = useState('');
-  const [takingId,  setTakingId]  = useState<string | null>(null);
+  const [search,          setSearch]          = useState('');
+  const [filterCategory,  setFilterCategory]  = useState<string | null>(null);
+  const [filterSla,       setFilterSla]       = useState<string | null>(null);
+  const [takingId,        setTakingId]        = useState<string | null>(null);
+  const [assigningId,     setAssigningId]     = useState<string | null>(null);
+  const [toast,           setToast]           = useState<string | null>(null);
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showToast(msg: string) {
+    if (toastRef.current) clearTimeout(toastRef.current);
+    setToast(msg);
+    toastRef.current = setTimeout(() => setToast(null), 3000);
+  }
 
   /* Role check */
   const moduleRole = useMemo(() => {
     if (!user || !helpdeskId) return null;
     return user.module_roles.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
   }, [user, helpdeskId]);
-  const canTake  = usePermission('helpdesk:tickets:assign');
+  const canTake         = usePermission('helpdesk:tickets:assign');
+  const canAssignOthers = isSuperadmin || moduleRole === 'admin_modulo' || moduleRole === 'jefe_tecnico';
 
   const { data: res, isLoading, refetch } = useQuery({
     queryKey:  ['queue-unassigned', helpdeskId],
@@ -235,7 +359,27 @@ export default function QueuePage() {
     refetchInterval: 60_000,
   });
 
+  const { data: techs = [] } = useQuery<ModuleTechnician[]>({
+    queryKey: ['module-technicians', helpdeskId],
+    queryFn:  () => modulesService.getModuleTechnicians(helpdeskId!),
+    enabled:  !!helpdeskId && canAssignOthers,
+    staleTime: 60_000,
+    refetchInterval: 30_000,
+  });
+
   const allTickets = res?.data ?? [];
+
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const t of allTickets) {
+      if (t.category_name && !seen.has(t.category_name)) {
+        seen.add(t.category_name);
+        out.push(t.category_name);
+      }
+    }
+    return out.sort();
+  }, [allTickets]);
 
   const filtered = useMemo(() => {
     let list = allTickets;
@@ -248,6 +392,22 @@ export default function QueuePage() {
         (t.creator_name ?? '').toLowerCase().includes(q),
       );
     }
+    if (filterCategory) {
+      list = list.filter(t => t.category_name === filterCategory);
+    }
+    if (filterSla === 'breached') {
+      list = list.filter(t => t.sla_status === 'breached');
+    } else if (filterSla === 'risk') {
+      list = list.filter(t => {
+        const h = hoursLeft(t.sla_deadline_tracked ?? t.sla_deadline);
+        return t.sla_status === 'active' && h !== null && h < 4;
+      });
+    } else if (filterSla === 'ok') {
+      list = list.filter(t => {
+        const h = hoursLeft(t.sla_deadline_tracked ?? t.sla_deadline);
+        return t.sla_status === 'active' && (h === null || h >= 4);
+      });
+    }
     return list.sort((a, b) => {
       const po = (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
       if (po !== 0) return po;
@@ -256,7 +416,7 @@ export default function QueuePage() {
       if (ha !== null && hb !== null) return ha - hb;
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-  }, [allTickets, search]);
+  }, [allTickets, search, filterCategory, filterSla]);
 
   const grouped = useMemo(() =>
     PRIORITY_GROUPS.map(g => ({
@@ -272,11 +432,13 @@ export default function QueuePage() {
       if (!user) throw new Error('No user');
       return ticketsService.addAssignment(ticketId, user.id, 'owner');
     },
-    onSuccess: () => {
+    onSuccess: (_, ticketId) => {
       qc.invalidateQueries({ queryKey: ['queue-unassigned', helpdeskId] });
       qc.invalidateQueries({ queryKey: ['tickets'] });
       qc.invalidateQueries({ queryKey: ['my-assigned-tickets', helpdeskId] });
       setTakingId(null);
+      showToast('Ticket tomado — redirigiendo…');
+      router.push('/helpdesk/ticket/' + ticketId);
     },
     onError: () => setTakingId(null),
   });
@@ -284,6 +446,26 @@ export default function QueuePage() {
   function handleTake(ticketId: string) {
     setTakingId(ticketId);
     takeMut.mutate(ticketId);
+  }
+
+  /* Assign to specific tech */
+  const assignMut = useMutation({
+    mutationFn: async ({ ticketId, techId }: { ticketId: string; techId: string }) =>
+      ticketsService.addAssignment(ticketId, techId, 'owner'),
+    onSuccess: (_, { ticketId, techId }) => {
+      qc.invalidateQueries({ queryKey: ['queue-unassigned', helpdeskId] });
+      qc.invalidateQueries({ queryKey: ['my-assigned-tickets', helpdeskId] });
+      const techName = techs.find(t => t.id === techId);
+      const name = techName ? `${techName.first_name} ${techName.last_name}` : 'el técnico';
+      showToast(`Ticket asignado a ${name}`);
+      setAssigningId(null);
+    },
+    onError: () => setAssigningId(null),
+  });
+
+  function handleAssignTo(ticketId: string, techId: string) {
+    setAssigningId(ticketId);
+    assignMut.mutate({ ticketId, techId });
   }
 
   if (!allowed) return null;
@@ -329,7 +511,7 @@ export default function QueuePage() {
       </div>
 
       {/* Search */}
-      <div style={{ position: 'relative', marginBottom: 18 }}>
+      <div style={{ position: 'relative', marginBottom: 10 }}>
         <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
         <input
           value={search}
@@ -338,6 +520,67 @@ export default function QueuePage() {
           style={{ width: '100%', padding: '9px 12px 9px 30px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#fff', boxSizing: 'border-box' as const }}
         />
       </div>
+
+      {/* Filters */}
+      {(categories.length > 0 || true) && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18, alignItems: 'center' }}>
+          {/* SLA chips */}
+          {[
+            { key: 'breached', label: 'SLA Vencido', color: '#ef4444' },
+            { key: 'risk',     label: 'SLA Riesgo',  color: '#f97316' },
+            { key: 'ok',       label: 'SLA OK',      color: '#22c55e' },
+          ].map(f => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilterSla(filterSla === f.key ? null : f.key)}
+              style={{
+                padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 700,
+                border: `1px solid ${filterSla === f.key ? f.color : `${f.color}44`}`,
+                background: filterSla === f.key ? `${f.color}18` : '#fff',
+                color: filterSla === f.key ? f.color : C.muted,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
+
+          {/* Category separator */}
+          {categories.length > 0 && (
+            <span style={{ width: 1, height: 16, background: C.border, margin: '0 4px', flexShrink: 0 }} />
+          )}
+
+          {/* Category chips */}
+          {categories.map(cat => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setFilterCategory(filterCategory === cat ? null : cat)}
+              style={{
+                padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 700,
+                border: `1px solid ${filterCategory === cat ? C.navy : C.border}`,
+                background: filterCategory === cat ? C.navy : '#fff',
+                color: filterCategory === cat ? '#fff' : C.sub,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+
+          {/* Clear all */}
+          {(filterCategory || filterSla) && (
+            <button
+              type="button"
+              onClick={() => { setFilterCategory(null); setFilterSla(null); }}
+              style={{ padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 700, border: `1px solid ${C.border}`, background: '#fff', color: C.muted, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              ✕ Limpiar
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Content */}
       {isLoading ? (
@@ -370,9 +613,27 @@ export default function QueuePage() {
               canTake={canTake}
               takingId={takingId}
               onTake={handleTake}
+              techs={techs}
+              assigningId={assigningId}
+              onAssignTo={handleAssignTo}
+              canAssignOthers={canAssignOthers}
             />
           ))}
         </>
+      )}
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          background: '#0e2235', color: '#fff', padding: '10px 18px',
+          borderRadius: 10, fontSize: 12, fontWeight: 700,
+          boxShadow: '0 4px 20px rgba(0,0,0,.2)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          pointerEvents: 'none',
+        }}>
+          <CheckCircle2 size={14} style={{ color: '#22c55e', flexShrink: 0 }} />
+          {toast}
+        </div>
       )}
     </ModuleLayout>
   );

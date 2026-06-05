@@ -75,10 +75,6 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     qc,
   } = useTicketData({ ticketId, helpdeskId });
 
-  /* ── Header / transition bar state ── */
-  const [transReason,     setTransReason]     = useState('');
-  const [activeTransId,   setActiveTransId]   = useState<string | null>(null);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   /* ── Left panel state ── */
   const [replyText,       setReplyText]       = useState('');
@@ -90,6 +86,11 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [isApproving,     setIsApproving]     = useState(false);
   const [isRejecting,     setIsRejecting]     = useState(false);
   const [validationError, setValidationError] = useState('');
+
+  /* ── Force-reopen state ── */
+  const [showReopenForm,  setShowReopenForm]  = useState(false);
+  const [reopenReason,    setReopenReason]    = useState('');
+  const [isReopening,     setIsReopening]     = useState(false);
 
   /* ── Guests (shared: instant call lives in sidebar, allGuests used here) ── */
   const [localGuests, setLocalGuests] = useState<LocalGuest[]>([]);
@@ -193,6 +194,16 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                   ESCALADO
                 </span>
               )}
+              {(ticket.reprocess_count ?? 0) > 0 && (
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #e9d5ff' }}>
+                  REINCIDENTE ×{ticket.reprocess_count}
+                </span>
+              )}
+              {ticket.is_pause_state && ticket.history[0]?.transition_reason && (
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  ⏸ {ticket.history[0].transition_reason}
+                </span>
+              )}
               {slaCountdown && (
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: `${slaColor}15`, color: slaColor, border: `1px solid ${slaColor}30`, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Clock size={9} /> {slaCountdown}
@@ -200,69 +211,71 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               )}
             </div>
 
-            {/* Actions dropdown */}
-            <PermissionGate perm="helpdesk:tickets:edit">
-              {!ticket.is_final && ticket.transitions.length > 0 && (
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <button type="button" onClick={() => setShowActionsMenu(v => !v)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, border: `1px solid ${showActionsMenu ? '#6366f1' : '#e2e8f0'}`, background: showActionsMenu ? '#eef2ff' : '#fff', fontSize: 12, fontWeight: 700, color: showActionsMenu ? '#6366f1' : '#0e2235', cursor: 'pointer', fontFamily: 'inherit' }}>
-                    Acciones <ChevronDown size={12} style={{ transform: showActionsMenu ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
-                  </button>
-                  {showActionsMenu && (
-                    <>
-                      {/* Backdrop */}
-                      <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onClick={() => setShowActionsMenu(false)} />
-                      <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,.12)', zIndex: 50, minWidth: 200, overflow: 'hidden' }}>
-                        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', padding: '8px 14px 4px', margin: 0 }}>Cambiar estado</p>
-                        {ticket.transitions.map(tr => {
-                          const VBGS: Record<string, string> = { success: '#059669', primary: '#ff5e3a', danger: '#ef4444', warning: '#f59e0b', default: '#0e2235' };
-                          const col = VBGS[tr.variant ?? 'default'] ?? '#0e2235';
-                          const isAct = activeTransId === tr.id;
-                          return (
-                            <button key={tr.id} type="button"
-                              onClick={() => { setActiveTransId(isAct ? null : tr.id); setShowActionsMenu(false); }}
-                              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: isAct ? '#f8fafc' : 'none', border: 'none', borderTop: '1px solid #f1f5f9', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: col, textAlign: 'left', fontFamily: 'inherit' }}>
-                              {tr.variant === 'success' ? <CheckCircle2 size={13} /> : tr.variant === 'danger' ? <XCircle size={13} /> : <ChevronRight size={13} />}
-                              {tr.to_label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </PermissionGate>
           </div>
 
-          {/* TRANSITION CONFIRM BAR */}
-          <PermissionGate perm="helpdesk:tickets:edit">
-            {activeTransId && (
-              <div style={{ background: '#eef2ff', borderBottom: '1px solid #c7d2fe', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                <span style={{ fontSize: 11, color: '#4338ca', fontWeight: 700, flexShrink: 0 }}>Motivo (opcional):</span>
-                <input value={transReason} onChange={e => setTransReason(e.target.value)}
-                  placeholder="Describe el cambio de estado..."
-                  autoFocus
-                  style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
-                <button type="button" onClick={() => { setActiveTransId(null); setTransReason(''); }}
-                  style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#4338ca' }}>
-                  Cancelar
-                </button>
-                <button type="button"
-                  onClick={() => transMut.mutate({ transId: activeTransId, reason: transReason || undefined })}
-                  disabled={transMut.isPending}
-                  style={{ padding: '6px 16px', borderRadius: 7, border: 'none', background: '#6366f1', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, opacity: transMut.isPending ? .7 : 1 }}>
-                  <CheckCircle2 size={11} /> {transMut.isPending ? 'Aplicando...' : 'Confirmar cambio'}
-                </button>
-              </div>
-            )}
-          </PermissionGate>
 
           {/* 2-COLUMN BODY */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', flex: 1, overflow: 'hidden' }}>
 
             {/* MAIN: banners + timeline + reply */}
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e2e8f0' }}>
+
+              {/* TICKET DETAIL SECTION */}
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
+
+                {/* Title */}
+                <h2 style={{ margin: '0 0 10px', fontSize: 17, fontWeight: 800, color: '#0e2235', lineHeight: 1.3 }}>
+                  {ticket.title}
+                </h2>
+
+                {/* Meta chips row */}
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: ticket.description ? 10 : 0 }}>
+                  <PriorityBadge priority={ticket.priority} />
+                  {ticket.category_name && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                      {ticket.category_name}
+                    </span>
+                  )}
+                  {ticket.damage_type_label && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a' }}>
+                      {ticket.damage_type_label}
+                    </span>
+                  )}
+                  {ticket.environment_name && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                      {ticket.environment_name}
+                    </span>
+                  )}
+                  {linkedAssets[0] && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#f5f3ff', color: '#5b21b6', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Monitor size={9} /> {linkedAssets[0].name}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>
+                    Solicitado por <strong style={{ color: '#475569' }}>{ticket.creator_name}</strong> · #{ticket.id.slice(0,8).toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Description (collapsible) */}
+                {ticket.description && (
+                  <div>
+                    <p style={{
+                      margin: 0, fontSize: 12, color: '#475569', lineHeight: 1.6,
+                      overflow: 'hidden',
+                      display: '-webkit-box', WebkitLineClamp: descExpanded ? undefined : 3,
+                      WebkitBoxOrient: 'vertical' as any,
+                    } as React.CSSProperties}>
+                      {ticket.description}
+                    </p>
+                    {ticket.description.length > 180 && (
+                      <button type="button" onClick={() => setDescExpanded(v => !v)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 4, fontSize: 10, fontWeight: 700, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                        {descExpanded ? <><ChevronUp size={10} /> Mostrar menos</> : <><ChevronDown size={10} /> Ver descripción completa</>}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Rating + acceptance banner */}
               {ticket.is_approval_state && currentUser?.id === ticket.created_by && (
@@ -375,62 +388,73 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 </div>
               )}
 
-              {/* TICKET DETAIL SECTION */}
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
-
-                {/* Title */}
-                <h2 style={{ margin: '0 0 10px', fontSize: 17, fontWeight: 800, color: '#0e2235', lineHeight: 1.3 }}>
-                  {ticket.title}
-                </h2>
-
-                {/* Meta chips row */}
-                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: ticket.description ? 10 : 0 }}>
-                  <PriorityBadge priority={ticket.priority} />
-                  {ticket.category_name && (
-                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
-                      {ticket.category_name}
-                    </span>
-                  )}
-                  {ticket.damage_type_label && (
-                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a' }}>
-                      {ticket.damage_type_label}
-                    </span>
-                  )}
-                  {ticket.environment_name && (
-                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
-                      {ticket.environment_name}
-                    </span>
-                  )}
-                  {linkedAssets[0] && (
-                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#f5f3ff', color: '#5b21b6', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Monitor size={9} /> {linkedAssets[0].name}
-                    </span>
-                  )}
-                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>
-                    Solicitado por <strong style={{ color: '#475569' }}>{ticket.creator_name}</strong> · #{ticket.id.slice(0,8).toUpperCase()}
-                  </span>
-                </div>
-
-                {/* Description (collapsible) */}
-                {ticket.description && (
-                  <div>
-                    <p style={{
-                      margin: 0, fontSize: 12, color: '#475569', lineHeight: 1.6,
-                      overflow: 'hidden',
-                      display: '-webkit-box', WebkitLineClamp: descExpanded ? undefined : 3,
-                      WebkitBoxOrient: 'vertical' as any,
-                    } as React.CSSProperties}>
-                      {ticket.description}
-                    </p>
-                    {ticket.description.length > 180 && (
-                      <button type="button" onClick={() => setDescExpanded(v => !v)}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 4, fontSize: 10, fontWeight: 700, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                        {descExpanded ? <><ChevronUp size={10} /> Mostrar menos</> : <><ChevronDown size={10} /> Ver descripción completa</>}
-                      </button>
+              {/* Force-reopen (admin/jefe) — solo cuando is_final */}
+              {ticket.is_final && (
+                <PermissionGate perm="helpdesk:tickets:edit">
+                  <div style={{ padding: '12px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', flexShrink: 0 }}>
+                    {!showReopenForm ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <XCircle size={13} style={{ color: '#64748b', flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, color: '#64748b', flex: 1 }}>Ticket cerrado. Puedes reabrirlo si fue resuelto incorrectamente.</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowReopenForm(true)}
+                          style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                        >
+                          Reabrir
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: '0 0 8px' }}>Motivo de reapertura</p>
+                        {(ticket.reprocess_count ?? 0) >= 3 && (
+                          <p style={{ margin: '0 0 7px', fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>
+                            ⚠ Reapertura #{(ticket.reprocess_count ?? 0) + 1} — la prioridad se elevará a Alta automáticamente.
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <textarea
+                            value={reopenReason}
+                            onChange={e => setReopenReason(e.target.value)}
+                            placeholder="Describe por qué se reabre este ticket…"
+                            rows={2}
+                            style={{ flex: 1, padding: '7px 10px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none' }}
+                          />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            <button
+                              type="button"
+                              disabled={isReopening || !reopenReason.trim()}
+                              onClick={async () => {
+                                if (!reopenReason.trim()) return;
+                                setIsReopening(true);
+                                try {
+                                  await ticketsService.forceReopen(ticketId, reopenReason);
+                                  qc.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
+                                  qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
+                                  setShowReopenForm(false);
+                                  setReopenReason('');
+                                } finally {
+                                  setIsReopening(false);
+                                }
+                              }}
+                              style={{ padding: '7px 12px', borderRadius: 7, border: 'none', background: isReopening || !reopenReason.trim() ? '#94a3b8' : '#0e2235', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                            >
+                              {isReopening ? '…' : 'Confirmar'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setShowReopenForm(false); setReopenReason(''); }}
+                              style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+                </PermissionGate>
+              )}
 
               {/* TIMELINE */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>

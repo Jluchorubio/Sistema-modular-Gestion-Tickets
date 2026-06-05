@@ -143,6 +143,17 @@ export class TicketsController {
     return this.svc.rejectTicket(req.user.sub, id, body);
   }
 
+  @Post(':id/force-reopen')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:edit')
+  forceReopen(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { reason: string },
+  ) {
+    return this.svc.forceReopenTicket(req.user.sub, id, body);
+  }
+
   /* ── Rating ─────────────────────────────────────────────────────────── */
 
   @Get(':id/rating')

@@ -28,14 +28,15 @@ export interface TicketState {
 }
 
 export interface TicketTransition {
-  id:            string;
-  name:          string;
-  from_state_id: string;
-  to_state_id:   string;
-  to_label:      string;
-  to_name:       string;
-  variant:       'primary' | 'success' | 'danger' | 'warning' | 'default';
-  allowed_roles: string[];
+  id:               string;
+  name:             string;
+  from_state_id:    string;
+  to_state_id:      string;
+  to_label:         string;
+  to_name:          string;
+  to_is_pause_state: boolean;
+  variant:          'primary' | 'success' | 'danger' | 'warning' | 'default';
+  allowed_roles:    string[];
 }
 
 export interface TicketModuleWorkflow {
@@ -68,9 +69,10 @@ export interface TicketListItem {
   created_by:           string;
   creator_name:         string;
   assignee_name:        string | null;
-  sla_status:           SlaStatus | null;
-  sla_deadline_tracked: string | null;
-  breached_at:          string | null;
+  sla_status:              SlaStatus | null;
+  sla_deadline_tracked:    string | null;
+  breached_at:             string | null;
+  last_transition_reason:  string | null;
 }
 
 export interface TicketAttachment {
@@ -381,6 +383,11 @@ export const ticketsService = {
 
   async reject(ticketId: string, reason: string): Promise<{ ok: boolean; escalated: boolean }> {
     const { data } = await api.post(`/tickets/${ticketId}/reject`, { reason });
+    return data;
+  },
+
+  async forceReopen(ticketId: string, reason: string): Promise<{ ok: boolean; escalated: boolean }> {
+    const { data } = await api.post(`/tickets/${ticketId}/force-reopen`, { reason });
     return data;
   },
 

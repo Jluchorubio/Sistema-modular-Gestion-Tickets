@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, Ticket, Search, Monitor } from 'lucide-react';
+import { Plus, X, Ticket, Search, Monitor, BookOpen, ExternalLink } from 'lucide-react';
 import {
   ticketsService,
   type CreateTicketDto, type AssetSearchResult,
@@ -10,6 +10,7 @@ import {
   type TicketPriority,
 } from '@/services/tickets.service';
 import { systemConfigService, type DamageType } from '@/services/system-config.service';
+import { docsService, type Article } from '@/app/(app)/helpdesk/knowledge/_lib/knowledge.service';
 
 const PRIORITIES = TICKET_PRIORITIES;
 
@@ -29,6 +30,7 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   const [selectedAsset,          setSelectedAsset]          = useState<AssetSearchResult | null>(null);
   const [assetSearching,         setAssetSearching]         = useState(false);
   const [error,                  setError]                  = useState('');
+  const [kbQuery,                setKbQuery]               = useState('');
 
   /* ── Damage types cascade ── */
   const { data: damageTypes } = useQuery({
@@ -48,6 +50,22 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
     }, 350);
     return () => clearTimeout(t);
   }, [assetSearch]);
+
+  /* ── KB title debounce ── */
+  useEffect(() => {
+    const title = form.title ?? '';
+    if (title.length < 3) { setKbQuery(''); return; }
+    const t = setTimeout(() => setKbQuery(title), 500);
+    return () => clearTimeout(t);
+  }, [form.title]);
+
+  const { data: kbArticles = [] } = useQuery<Article[]>({
+    queryKey: ['kb-suggest', moduleId, kbQuery],
+    queryFn:  () => docsService.getArticles(moduleId, kbQuery),
+    enabled:  kbQuery.length >= 3,
+    staleTime: 60_000,
+    select: (data) => data.slice(0, 4),
+  });
 
   function selectDamageType(dt: DamageType | null) {
     setSelectedDamageType(dt);
@@ -116,6 +134,28 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
               <label style={lbl}>Título <span style={{ color: '#ff5e3a' }}>*</span></label>
               <input type="text" value={form.title ?? ''} onChange={e => set('title', e.target.value)}
                 placeholder="Describe el problema o solicitud…" maxLength={255} style={inp} autoFocus />
+              {kbArticles.length > 0 && (
+                <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fde68a' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                    <BookOpen size={11} style={{ color: '#92400e', flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                      Artículos relacionados en la KB
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {kbArticles.map(a => (
+                      <a key={a.id} href={`/helpdesk/knowledge/${a.id}`} target="_blank" rel="noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', borderRadius: 6, background: '#fff8e1', border: '1px solid #fde68a', textDecoration: 'none', color: '#0e2235' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = '#fef9c3'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = '#fff8e1'; }}
+                      >
+                        <span style={{ flex: 1, fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
+                        <ExternalLink size={9} style={{ color: '#a16207', flexShrink: 0 }} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Descripción */}

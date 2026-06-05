@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui.store';
-import { PermissionGate } from '@/components/auth/PermissionGate';
+import { useAuthStore } from '@/stores/auth.store';
+import { usePermissionsStore } from '@/stores/permissions.store';
 import { systemConfigService } from '@/services/system-config.service';
 import type { ModuleNavItem } from '@/types/nav.types';
 import styles from './sidebar.module.css';
@@ -33,7 +34,30 @@ export function AppSidebar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const moduleNav     = useUIStore((s) => s.moduleNav);
   const moduleName    = useUIStore((s) => s.moduleName);
+  const moduleId      = useUIStore((s) => s.moduleId);
   const pathname      = usePathname();
+
+  const user         = useAuthStore((s) => s.user);
+  const isSuperadmin = user?.is_superadmin ?? false;
+
+  /* Current module role */
+  const userModuleRole = moduleId
+    ? (user?.module_roles?.find(
+        (r) => r.module_id === moduleId && r.status === 'active',
+      )?.role_name ?? null)
+    : null;
+
+  /* Is admin/jefe of ANY module (for global sidebar visibility) */
+  const isAnyModuleAdmin = !isSuperadmin && (user?.module_roles?.some(
+    (r) => r.status === 'active' && (r.role_name === 'admin_modulo' || r.role_name === 'jefe_tecnico'),
+  ) ?? false);
+
+  /* Global sidebar permission checks */
+  const canSeeUsers   = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:users'));
+  const canSeeRoles   = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:roles'));
+  const canSeeReports = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:reports'));
+  const canSeeTrash   = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:trash'));
+  const canSeeConfig  = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:config'));
 
   const { data: company } = useQuery({
     queryKey: ['company-public'],
@@ -59,6 +83,12 @@ export function AppSidebar() {
 
   function renderModuleItem(item: ModuleNavItem) {
     const active = isActive(item.href, item.key);
+
+    /* Role-based gating (mirrors ModuleSubNav) */
+    if (item.allowedRoles && !isSuperadmin) {
+      if (!userModuleRole || !item.allowedRoles.includes(userModuleRole)) return null;
+    }
+
     const link = (
       <Link
         key={item.key}
@@ -71,9 +101,35 @@ export function AppSidebar() {
         <span className={styles.navLabel}>{item.label}</span>
       </Link>
     );
+
+    /* If allowedRoles passed → role already validated, no permKey needed */
+    if (item.allowedRoles) return link;
+
+    /* Fallback: permKey-based gate */
     return item.permKey
-      ? <PermissionGate key={item.key} perm={item.permKey}>{link}</PermissionGate>
+      ? null /* permKey without allowedRoles is not used — items should declare allowedRoles */
       : link;
+  }
+
+  function globalNavLink(
+    href: string,
+    label: string,
+    Icon: React.ElementType,
+    visible: boolean,
+  ) {
+    if (!visible) return null;
+    const active = isActive(href);
+    return (
+      <Link
+        href={href}
+        title={label}
+        aria-label={label}
+        className={`${styles.navItem}${active ? ` ${styles.navItemActive}` : ''}`}
+      >
+        <Icon className={styles.navIcon} aria-hidden="true" />
+        <span className={styles.navLabel}>{label}</span>
+      </Link>
+    );
   }
 
   return (
@@ -120,7 +176,7 @@ export function AppSidebar() {
       <nav className={styles.nav} aria-label="Panel principal">
 
         {moduleNav !== null ? (
-          moduleNav.map(renderModuleItem)
+          moduleNav.map((item) => renderModuleItem(item))
         ) : (
           <>
             <Link
@@ -133,65 +189,20 @@ export function AppSidebar() {
               <span className={styles.navLabel}>Módulos Disponibles</span>
             </Link>
 
-            <PermissionGate perm="global:sidebar:users">
-              <Link
-                href="/users"
-                title="Usuarios"
-                aria-label="Usuarios"
-                className={`${styles.navItem}${isActive('/users') ? ` ${styles.navItemActive}` : ''}`}
-              >
-                <UserCog className={styles.navIcon} aria-hidden="true" />
-                <span className={styles.navLabel}>Usuarios</span>
-              </Link>
-            </PermissionGate>
+            {/* Usuarios — superadmin (global) or any module admin (scoped) */}
+            {globalNavLink('/users', 'Usuarios', UserCog, canSeeUsers || isAnyModuleAdmin)}
 
-            <PermissionGate perm="global:sidebar:roles">
-              <Link
-                href="/roles"
-                title="Roles"
-                aria-label="Roles"
-                className={`${styles.navItem}${isActive('/roles') ? ` ${styles.navItemActive}` : ''}`}
-              >
-                <ShieldCheck className={styles.navIcon} aria-hidden="true" />
-                <span className={styles.navLabel}>Roles</span>
-              </Link>
-            </PermissionGate>
+            {/* Roles — superadmin only */}
+            {globalNavLink('/roles', 'Roles', ShieldCheck, canSeeRoles)}
 
-            <PermissionGate perm="global:sidebar:reports">
-              <Link
-                href="/reports"
-                title="Reportes"
-                aria-label="Reportes"
-                className={`${styles.navItem}${isActive('/reports') ? ` ${styles.navItemActive}` : ''}`}
-              >
-                <BarChart2 className={styles.navIcon} aria-hidden="true" />
-                <span className={styles.navLabel}>Reportes</span>
-              </Link>
-            </PermissionGate>
+            {/* Reportes — superadmin (global) or module admin/jefe */}
+            {globalNavLink('/reports', 'Reportes', BarChart2, canSeeReports || isAnyModuleAdmin)}
 
-            <PermissionGate perm="global:sidebar:trash">
-              <Link
-                href="/trash"
-                title="Papelera"
-                aria-label="Papelera"
-                className={`${styles.navItem}${isActive('/trash') ? ` ${styles.navItemActive}` : ''}`}
-              >
-                <Trash2 className={styles.navIcon} aria-hidden="true" />
-                <span className={styles.navLabel}>Papelera</span>
-              </Link>
-            </PermissionGate>
+            {/* Papelera — superadmin (global) or module admin */}
+            {globalNavLink('/trash', 'Papelera', Trash2, canSeeTrash || isAnyModuleAdmin)}
 
-            <PermissionGate perm="global:sidebar:config">
-              <Link
-                href="/config"
-                title="Configuración del Sistema"
-                aria-label="Configuración del Sistema"
-                className={`${styles.navItem}${isActive('/config') ? ` ${styles.navItemActive}` : ''}`}
-              >
-                <SlidersHorizontal className={styles.navIcon} aria-hidden="true" />
-                <span className={styles.navLabel}>Configuración del Sistema</span>
-              </Link>
-            </PermissionGate>
+            {/* Configuración del Sistema — superadmin only */}
+            {globalNavLink('/config', 'Configuración del Sistema', SlidersHorizontal, canSeeConfig)}
           </>
         )}
 

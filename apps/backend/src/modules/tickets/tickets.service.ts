@@ -60,6 +60,7 @@ export class TicketsService {
       this.db.query<any[]>(
         `SELECT tr.id, tr.name, tr.from_state_id, tr.to_state_id,
                 ts2.label AS to_label, ts2.name AS to_name,
+                ts2.is_pause_state AS to_is_pause_state,
                 COALESCE(tr.variant, 'default') AS variant,
                 COALESCE(tr.allowed_roles, '{}') AS allowed_roles
          FROM   tickets.transitions tr
@@ -150,7 +151,13 @@ export class TicketsService {
                LIMIT  1) AS assignee_name,
               st.status      AS sla_status,
               st.deadline_at AS sla_deadline_tracked,
-              st.breached_at
+              st.breached_at,
+              (SELECT tsh.transition_reason
+               FROM   tickets.ticket_state_history tsh
+               WHERE  tsh.ticket_id = t.id
+                 AND  tsh.transition_reason IS NOT NULL
+               ORDER  BY tsh.transitioned_at DESC
+               LIMIT  1) AS last_transition_reason
        FROM   tickets.tickets                     t
        JOIN   modules.modules                     m  ON m.id  = t.module_id
        LEFT JOIN modules.categories               c  ON c.id  = t.category_id
@@ -241,8 +248,9 @@ export class TicketsService {
       this.db.query<any[]>(
         `SELECT tr.id, tr.name, tr.from_state_id, tr.to_state_id,
                 tr.variant, tr.allowed_roles,
-                ts2.label AS to_label,
-                ts2.name  AS to_name
+                ts2.label          AS to_label,
+                ts2.name           AS to_name,
+                ts2.is_pause_state AS to_is_pause_state
          FROM   tickets.transitions tr
          JOIN   tickets.states ts2 ON ts2.id = tr.to_state_id
          WHERE  tr.workflow_version_id = $1
@@ -525,10 +533,11 @@ export class TicketsService {
         [trans.to_state_id, ticketId],
       );
 
-      [toState] = await qr.query<any[]>(
+      const toStateRows: any[] = await qr.query(
         `SELECT is_final, name, label, is_pause_state, is_approval_state FROM tickets.states WHERE id = $1`,
         [trans.to_state_id],
       );
+      toState = toStateRows[0];
 
       // 1. Resume SLA if leaving a paused state (en_espera)
       await qr.query(
@@ -710,6 +719,57 @@ export class TicketsService {
     return { ok: true, escalated: shouldEscalate };
   }
 
+  async forceReopenTicket(userId: string, ticketId: string, dto: { reason: string }) {
+    const [ticket] = await this.db.query<any[]>(
+      `SELECT t.id, t.title, t.created_by, t.workflow_version_id, t.current_state_id,
+              t.reprocess_count, t.module_id, t.priority, s.is_final
+       FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
+       WHERE  t.id = $1`,
+      [ticketId],
+    );
+    if (!ticket)        throw new NotFoundException('Ticket not found');
+    if (!ticket.is_final) throw new BadRequestException('Solo se pueden reabrir tickets en estado final.');
+    if ((ticket.reprocess_count ?? 0) >= 5) throw new BadRequestException('Límite de reaperturas alcanzado (5).');
+
+    const [initState] = await this.db.query<any[]>(
+      `SELECT id FROM tickets.states WHERE workflow_version_id = $1 AND is_initial = true LIMIT 1`,
+      [ticket.workflow_version_id],
+    );
+    if (!initState) throw new BadRequestException('No se encontró estado inicial en el flujo de trabajo.');
+
+    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
+
+    const reopenCount  = (ticket.reprocess_count ?? 0) + 1;
+    const shouldEscalate = reopenCount >= 3 && ticket.priority !== 'critica';
+    const newPriority    = shouldEscalate ? 'alta' : ticket.priority;
+
+    await this.db.query(
+      `UPDATE tickets.tickets
+       SET current_state_id = $1,
+           reprocess_count  = $2,
+           priority         = $3
+       WHERE id = $4`,
+      [initState.id, reopenCount, newPriority, ticketId],
+    );
+
+    await this.db.query(
+      `INSERT INTO tickets.ticket_state_history
+         (ticket_id, from_state_id, to_state_id, transitioned_by, transition_reason)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [ticketId, ticket.current_state_id, initState.id, userId, dto.reason || 'Reapertura forzada'],
+    );
+
+    this.events.emit('ticket.state_changed', {
+      ticketId,
+      title:     ticket.title,
+      createdBy: ticket.created_by,
+      toLabel:   'Reabierto',
+      actorId:   userId,
+    });
+
+    return { ok: true, escalated: shouldEscalate };
+  }
+
   /* ── Attachments ────────────────────────────────────────────────────────── */
 
   async getAttachments(ticketId: string) {
@@ -786,10 +846,11 @@ export class TicketsService {
                 p.avatar_url,
                 tsh.transition_reason AS content,
                 jsonb_build_object(
-                  'from_state', fs.label,
-                  'to_state',   ts.label,
-                  'to_state_name', ts.name,
-                  'is_final',   ts.is_final
+                  'from_state',     fs.label,
+                  'to_state',       ts.label,
+                  'to_state_name',  ts.name,
+                  'is_final',       ts.is_final,
+                  'is_pause_state', ts.is_pause_state
                 ) AS metadata,
                 tsh.transitioned_at AS created_at
          FROM   tickets.ticket_state_history tsh

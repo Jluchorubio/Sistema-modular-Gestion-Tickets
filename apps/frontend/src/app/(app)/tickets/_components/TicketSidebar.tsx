@@ -3,14 +3,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ChevronRight, AlertTriangle, CheckCircle2, XCircle,
-  Phone, X, Link2, Search, Unlink, UserX,
+  ChevronRight, ChevronDown, AlertTriangle, CheckCircle2, XCircle,
+  Phone, X, Link2, Search, Unlink, UserX, BookOpen, ExternalLink,
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   type TicketAsset, type TicketPriority,
   SLA_STATUS_COLORS, SLA_STATUS_LABELS,
   ASSET_STATUS_COLORS, ASSET_STATUS_LABELS,
+  TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
+  ticketsService,
 } from '@/services/tickets.service';
+import type { TechAvailStatus } from '@/types/module.types';
 import {
   type TicketMeeting,
   PROVIDER_LABELS, PROVIDER_COLORS,
@@ -20,6 +24,7 @@ import type { ModuleTechnician } from '@/types/module.types';
 import type { LocalGuest } from './hooks/useTicketData';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
+import { docsService } from '@/app/(app)/helpdesk/knowledge/_lib/knowledge.service';
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -29,7 +34,7 @@ interface RelationItem {
 }
 
 interface TransitionItem {
-  id: string; variant?: string; to_label: string;
+  id: string; variant?: string; to_label: string; to_is_pause_state: boolean;
 }
 
 interface SlaInfo {
@@ -41,7 +46,7 @@ interface SlaInfo {
 export interface TicketSidebarProps {
   ticketId: string;
   ticket: {
-    id: string; module_name: string; category_name: string | null;
+    id: string; module_id: string; module_name: string; category_name: string | null;
     damage_type_label?: string | null; priority: TicketPriority; urgency: string;
     impact: string; created_at: string; reprocess_count: number;
     is_final: boolean; escalated?: boolean; escalation_note?: string | null;
@@ -77,11 +82,102 @@ export interface TicketSidebarProps {
 
 /* ── Sub-component helper ───────────────────────────────────────────────── */
 
-function SideSection({ label, children }: { label: string; children: React.ReactNode }) {
+function SideSection({
+  label, children, collapsible = false, defaultOpen = true,
+}: {
+  label: string; children: React.ReactNode; collapsible?: boolean; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
-      <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>{label}</p>
-      {children}
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: open ? 10 : 0, cursor: collapsible ? 'pointer' : 'default' }}
+        onClick={collapsible ? () => setOpen(v => !v) : undefined}
+      >
+        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: 0 }}>{label}</p>
+        {collapsible && (
+          <ChevronDown size={11} style={{ color: '#94a3b8', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }} />
+        )}
+      </div>
+      {open && children}
+    </div>
+  );
+}
+
+function AssetPrevTickets({ ticketId, assetId }: { ticketId: string; assetId: string }) {
+  const { data: prevTickets = [], isLoading } = useQuery({
+    queryKey: ['asset-prev-tickets', ticketId, assetId],
+    queryFn:  () => ticketsService.getAssetPrevTickets(ticketId, assetId),
+    staleTime: 5 * 60_000,
+  });
+
+  return (
+    <div style={{ padding: '8px 10px', background: '#fff', borderRadius: '0 0 8px 8px', border: '1px solid #ff5e3a25', borderTop: 'none' }}>
+      <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 6px' }}>
+        Incidentes previos{prevTickets.length > 0 ? ` (${prevTickets.length})` : ''}
+      </p>
+      {isLoading ? (
+        <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>Cargando…</p>
+      ) : prevTickets.length === 0 ? (
+        <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>Sin incidentes previos.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {prevTickets.slice(0, 5).map(pt => (
+            <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 7px', borderRadius: 5, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: pt.is_final ? '#22c55e' : '#f59e0b', flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: '#334155', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pt.title}</span>
+              <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0, whiteSpace: 'nowrap' }}>{pt.state_label}</span>
+            </div>
+          ))}
+          {prevTickets.length > 5 && (
+            <p style={{ fontSize: 9, color: '#94a3b8', margin: '2px 0 0', textAlign: 'center' }}>+{prevTickets.length - 5} más</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── KB suggestions ─────────────────────────────────────────────────────── */
+
+function KbSuggestions({ moduleId, query }: { moduleId: string; query: string }) {
+  const router = useRouter();
+  const { data: articles = [], isLoading } = useQuery({
+    queryKey: ['kb-suggest', moduleId, query],
+    queryFn:  () => docsService.getArticles(moduleId, query),
+    enabled:  !!moduleId && !!query,
+    staleTime: 5 * 60_000,
+    select: (data) => data.filter(a => a.is_published).slice(0, 4),
+  });
+
+  if (isLoading) return <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>Buscando…</p>;
+  if (articles.length === 0) return (
+    <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>Sin artículos relacionados.</p>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {articles.map(a => (
+        <button
+          key={a.id}
+          type="button"
+          onClick={() => router.push(`/helpdesk/knowledge/docs/${a.id}`)}
+          style={{
+            display: 'flex', alignItems: 'flex-start', gap: 7,
+            padding: '6px 8px', borderRadius: 7,
+            border: '1px solid #e2e8f0', background: '#f8fafc',
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#eff6ff'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}
+        >
+          <BookOpen size={10} style={{ color: '#6366f1', marginTop: 1, flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: '#334155', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {a.title}
+          </span>
+          <ExternalLink size={9} style={{ color: '#94a3b8', flexShrink: 0 }} />
+        </button>
+      ))}
     </div>
   );
 }
@@ -102,8 +198,9 @@ export function TicketSidebar({
   const [transReason,   setTransReason]   = useState('');
 
   /* ── Participants / instant call ── */
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [isCalling,      setIsCalling]      = useState(false);
+  const [selectedUserId,  setSelectedUserId]  = useState('');
+  const [isCalling,       setIsCalling]       = useState(false);
+  const [showTechPicker,  setShowTechPicker]  = useState(false);
 
   /* ── Meeting form ── */
   const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'teams' | 'zoom' | 'internal'>('google_meet');
@@ -111,6 +208,21 @@ export function TicketSidebar({
   const [meetingUrl,      setMeetingUrl]      = useState('');
   const [scheduledDate,   setScheduledDate]   = useState('');
   const [scheduledTime,   setScheduledTime]   = useState('10:00');
+
+  /* ── Asset expand ── */
+  const [expandedAssetId, setExpandedAssetId] = useState<string | null>(null);
+
+  /* ── Reassign ── */
+  const qcInner = useQueryClient();
+  const [showReassign, setShowReassign] = useState(false);
+  const reassignMut = useMutation({
+    mutationFn: (techId: string) => ticketsService.addAssignment(ticketId, techId, 'owner'),
+    onSuccess: () => {
+      qcInner.invalidateQueries({ queryKey: ['ticket-detail', ticketId] });
+      qcInner.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
+      setShowReassign(false);
+    },
+  });
 
   /* ── Relation form ── */
   const [showRelForm,      setShowRelForm]      = useState(false);
@@ -146,24 +258,105 @@ export function TicketSidebar({
   };
 
   return (
-    <div style={{ overflowY: 'auto', background: '#fff' }}>
+    <div style={{ overflowY: 'auto', background: '#f8fafc' }}>
+
+      {/* SLA */}
+      <SideSection label="SLA">
+        {ticket.sla_deadline_tracked ? (
+          <div style={{ padding: '10px 11px', background: `${sla.color}08`, borderRadius: 8, border: `1px solid ${sla.color}25` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+              <span style={{ fontSize: 10, color: '#64748b' }}>Deadline</span>
+              {sla.label && (
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600, background: `${sla.color}22`, color: sla.color, border: `1px solid ${sla.color}44` }}>
+                  {sla.label}
+                </span>
+              )}
+            </div>
+            <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 3px' }}>{fmtDate(ticket.sla_deadline_tracked)}</p>
+            {sla.countdown && <p style={{ fontSize: 13, fontWeight: 800, color: sla.color, margin: 0 }}>{sla.countdown}</p>}
+          </div>
+        ) : (
+          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Sin SLA configurado</p>
+        )}
+        {ticket.escalated && ticket.escalation_note?.startsWith('Auto-escalado') && (
+          <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 7, background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', gap: 6 }}>
+            <AlertTriangle size={11} style={{ color: '#ea580c', flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 10, color: '#9a3412', margin: 0, lineHeight: 1.4 }}>Auto-escalado por recurrencia</p>
+          </div>
+        )}
+      </SideSection>
 
       {/* Asignado a */}
       <SideSection label="Asignado a">
-        {ownerAssignment ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#ff5e3a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{ownerAssignment.user_name?.charAt(0).toUpperCase()}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          {ownerAssignment ? (
+            <>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#ff5e3a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{ownerAssignment.user_name?.charAt(0).toUpperCase()}</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{ownerAssignment.user_name}</p>
+                <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Técnico asignado</p>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flex: 1 }}>
+              <UserX size={13} style={{ color: '#94a3b8' }} />
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>Sin asignar</span>
             </div>
-            <div>
-              <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{ownerAssignment.user_name}</p>
-              <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Técnico asignado</p>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <UserX size={13} style={{ color: '#94a3b8' }} />
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>Sin asignar</span>
+          )}
+          <PermissionGate perm="helpdesk:tickets:assign">
+            {!ticket.is_final && (
+              <button
+                type="button"
+                onClick={() => setShowReassign(v => !v)}
+                style={{
+                  fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6,
+                  border: `1px solid ${showReassign ? '#0e2235' : '#e2e8f0'}`,
+                  background: showReassign ? '#0e2235' : '#f8fafc',
+                  color: showReassign ? '#fff' : '#64748b',
+                  cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                }}
+              >
+                {ownerAssignment ? 'Cambiar' : 'Asignar'}
+              </button>
+            )}
+          </PermissionGate>
+        </div>
+        {showReassign && (
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 200, overflowY: 'auto' }}>
+            {[...technicians]
+              .sort((a, b) => {
+                const order: Record<string, number> = { disponible: 0, ocupado: 1, en_reunion: 2, ausente: 3, fuera_horario: 4, offline: 5 };
+                return (order[a.avail_status] ?? 9) - (order[b.avail_status] ?? 9);
+              })
+              .map(t => {
+                const ac = TECH_AVAIL_COLORS[t.avail_status ?? 'offline'];
+                const isCurrentOwner = ownerAssignment?.user_name === `${t.first_name} ${t.last_name}`;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    disabled={reassignMut.isPending || isCurrentOwner}
+                    onClick={() => reassignMut.mutate(t.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      padding: '6px 9px', borderRadius: 6,
+                      border: `1px solid ${isCurrentOwner ? '#e2e8f0' : '#f1f5f9'}`,
+                      background: isCurrentOwner ? '#f8fafc' : '#fff',
+                      cursor: isCurrentOwner ? 'default' : 'pointer',
+                      fontFamily: 'inherit', opacity: isCurrentOwner ? .5 : 1,
+                    }}
+                    onMouseEnter={e => { if (!isCurrentOwner) (e.currentTarget as HTMLButtonElement).style.background = '#f0f4ff'; }}
+                    onMouseLeave={e => { if (!isCurrentOwner) (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
+                  >
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: ac, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: 11, color: '#334155', textAlign: 'left' }}>{t.first_name} {t.last_name}</span>
+                    <span style={{ fontSize: 9, color: ac, fontWeight: 600 }}>{TECH_AVAIL_LABELS[t.avail_status as TechAvailStatus]}</span>
+                    {isCurrentOwner && <span style={{ fontSize: 9, color: '#94a3b8' }}>actual</span>}
+                  </button>
+                );
+              })}
           </div>
         )}
       </SideSection>
@@ -221,12 +414,41 @@ export function TicketSidebar({
                     </button>
                     {isAct && (
                       <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <textarea value={transReason} onChange={e => setTransReason(e.target.value)}
-                          placeholder="Motivo (opcional)…" rows={2}
-                          style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box', outline: 'none' }} />
-                        <button type="button" disabled={mutPending.transition}
+                        {tr.to_is_pause_state ? (
+                          <>
+                            <p style={{ fontSize: 10, fontWeight: 700, color: '#64748b', margin: 0 }}>
+                              ¿Por qué se pone en espera?
+                            </p>
+                            {[
+                              'Esperando usuario',
+                              'Esperando proveedor',
+                              'Esperando repuesto',
+                              'Esperando aprobación',
+                            ].map(opt => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setTransReason(opt === transReason ? '' : opt)}
+                                style={{
+                                  padding: '6px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600,
+                                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                                  border: `1.5px solid ${transReason === opt ? '#f59e0b' : '#e2e8f0'}`,
+                                  background: transReason === opt ? '#fef3c7' : '#f8fafc',
+                                  color: transReason === opt ? '#92400e' : '#475569',
+                                }}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </>
+                        ) : (
+                          <textarea value={transReason} onChange={e => setTransReason(e.target.value)}
+                            placeholder="Motivo (opcional)…" rows={2}
+                            style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box', outline: 'none' }} />
+                        )}
+                        <button type="button" disabled={mutPending.transition || (tr.to_is_pause_state && !transReason)}
                           onClick={() => { onTransition(tr.id, transReason.trim() || undefined); setActiveTransId(null); setTransReason(''); }}
-                          style={{ padding: '6px 0', borderRadius: 7, background: bg, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: mutPending.transition ? .7 : 1 }}>
+                          style={{ padding: '6px 0', borderRadius: 7, background: bg, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (mutPending.transition || (tr.to_is_pause_state && !transReason)) ? .5 : 1 }}>
                           {mutPending.transition ? 'Guardando…' : 'Confirmar'}
                         </button>
                       </div>
@@ -240,7 +462,7 @@ export function TicketSidebar({
       </PermissionGate>
 
       {/* Detalles */}
-      <SideSection label="Detalles">
+      <SideSection label="Detalles" collapsible defaultOpen={false}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {([
             ['Módulo',       ticket.module_name],
@@ -261,52 +483,36 @@ export function TicketSidebar({
         </div>
       </SideSection>
 
-      {/* SLA */}
-      <SideSection label="SLA">
-        {ticket.sla_deadline_tracked ? (
-          <div style={{ padding: '10px 11px', background: `${sla.color}08`, borderRadius: 8, border: `1px solid ${sla.color}25` }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-              <span style={{ fontSize: 10, color: '#64748b' }}>Deadline</span>
-              {sla.label && (
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600, background: `${sla.color}22`, color: sla.color, border: `1px solid ${sla.color}44` }}>
-                  {sla.label}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 3px' }}>{fmtDate(ticket.sla_deadline_tracked)}</p>
-            {sla.countdown && <p style={{ fontSize: 13, fontWeight: 800, color: sla.color, margin: 0 }}>{sla.countdown}</p>}
-          </div>
-        ) : (
-          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Sin SLA configurado</p>
-        )}
-        {ticket.escalated && ticket.escalation_note?.startsWith('Auto-escalado') && (
-          <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 7, background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', gap: 6 }}>
-            <AlertTriangle size={11} style={{ color: '#ea580c', flexShrink: 0, marginTop: 1 }} />
-            <p style={{ fontSize: 10, color: '#9a3412', margin: 0, lineHeight: 1.4 }}>Auto-escalado por recurrencia</p>
-          </div>
-        )}
-      </SideSection>
-
       {/* Activo */}
       {linkedAssets.length > 0 && (
         <SideSection label={`Activo (${linkedAssets.length})`}>
           {linkedAssets.map(asset => {
             const sc = ASSET_STATUS_COLORS[asset.status] ?? '#94a3b8';
+            const isExpanded = expandedAssetId === asset.id;
             return (
-              <div key={asset.id} style={{ padding: '9px 11px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 6 }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: '0 0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.name}</p>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${sc}18`, color: sc, border: `1px solid ${sc}30` }}>
-                    {ASSET_STATUS_LABELS[asset.status] ?? asset.status}
-                  </span>
-                  <button type="button" onClick={() => router.push('/inventory/' + asset.id)}
-                    style={{ fontSize: 10, fontWeight: 700, color: '#ff5e3a', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
-                    Ver <ChevronRight size={10} />
-                  </button>
+              <div key={asset.id} style={{ marginBottom: 6 }}>
+                <div style={{ padding: '9px 11px', background: '#fff', borderRadius: isExpanded ? '8px 8px 0 0' : 8, border: `1px solid ${isExpanded ? '#ff5e3a30' : '#e2e8f0'}`, transition: 'border-color .15s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{asset.name}</p>
+                    <button type="button" onClick={() => setExpandedAssetId(isExpanded ? null : asset.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, flexShrink: 0 }}>
+                      <ChevronDown size={11} style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${sc}18`, color: sc, border: `1px solid ${sc}30` }}>
+                      {ASSET_STATUS_LABELS[asset.status] ?? asset.status}
+                    </span>
+                    <button type="button" onClick={() => router.push('/inventory/' + asset.id)}
+                      style={{ fontSize: 10, fontWeight: 700, color: '#ff5e3a', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
+                      Ver <ChevronRight size={10} />
+                    </button>
+                  </div>
+                  {asset.assigned_to_name && (
+                    <p style={{ fontSize: 10, color: '#94a3b8', margin: '4px 0 0' }}>Custodio: {asset.assigned_to_name}</p>
+                  )}
                 </div>
-                {asset.assigned_to_name && (
-                  <p style={{ fontSize: 10, color: '#94a3b8', margin: '4px 0 0' }}>Custodio: {asset.assigned_to_name}</p>
-                )}
+                {isExpanded && <AssetPrevTickets ticketId={ticketId} assetId={asset.id} />}
               </div>
             );
           })}
@@ -336,20 +542,81 @@ export function TicketSidebar({
             ))}
           </div>
         )}
-        <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)}
-          style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', marginBottom: 6, boxSizing: 'border-box' }}>
-          <option value="">Invitar tecnico...</option>
-          {technicians.map(u => <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>)}
-        </select>
+        {/* Custom tech picker with availability dots */}
+        <div style={{ position: 'relative', marginBottom: 6 }}>
+          <button
+            type="button"
+            onClick={() => setShowTechPicker(v => !v)}
+            style={{
+              width: '100%', padding: '6px 9px', borderRadius: 7,
+              border: `1px solid ${showTechPicker ? '#0e2235' : '#e2e8f0'}`,
+              background: '#fff', fontSize: 11, fontFamily: 'inherit',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+              boxSizing: 'border-box' as const, textAlign: 'left',
+            }}
+          >
+            {selectedUserId ? (() => {
+              const t = technicians.find(u => u.id === selectedUserId);
+              const ac = TECH_AVAIL_COLORS[t?.avail_status ?? 'offline'];
+              return t ? (
+                <>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: ac, flexShrink: 0 }} />
+                  <span style={{ flex: 1, color: '#334155' }}>{t.first_name} {t.last_name}</span>
+                  <span style={{ fontSize: 9, color: ac }}>{TECH_AVAIL_LABELS[t.avail_status as TechAvailStatus]}</span>
+                </>
+              ) : <span style={{ color: '#94a3b8', flex: 1 }}>Invitar técnico…</span>;
+            })() : <span style={{ color: '#94a3b8', flex: 1 }}>Invitar técnico…</span>}
+            <ChevronDown size={11} style={{ color: '#94a3b8', flexShrink: 0, transform: showTechPicker ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+          </button>
+          {showTechPicker && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+              background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
+              boxShadow: '0 8px 24px rgba(14,34,53,.12)', marginTop: 2,
+              maxHeight: 220, overflowY: 'auto',
+            }}>
+              {[...technicians]
+                .sort((a, b) => {
+                  const order: Record<string, number> = { disponible: 0, ocupado: 1, en_reunion: 2, ausente: 3, fuera_horario: 4, offline: 5 };
+                  return (order[a.avail_status] ?? 9) - (order[b.avail_status] ?? 9);
+                })
+                .map(u => {
+                  const ac  = TECH_AVAIL_COLORS[u.avail_status ?? 'offline'];
+                  const sel = selectedUserId === u.id;
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => { setSelectedUserId(u.id); setShowTechPicker(false); }}
+                      style={{
+                        width: '100%', padding: '7px 10px', border: 'none',
+                        background: sel ? '#f0f4ff' : 'transparent',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                        fontFamily: 'inherit', textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: ac, flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 11, color: '#334155', fontWeight: sel ? 700 : 400 }}>
+                        {u.first_name} {u.last_name}
+                      </span>
+                      <span style={{ fontSize: 9, color: ac, fontWeight: 600 }}>
+                        {TECH_AVAIL_LABELS[u.avail_status as TechAvailStatus]}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+        </div>
         <button type="button" disabled={!selectedUserId || isCalling}
-          onClick={() => onInstantCall(selectedUserId, setSelectedUserId, setIsCalling)}
+          onClick={() => { onInstantCall(selectedUserId, setSelectedUserId, setIsCalling); setShowTechPicker(false); }}
           style={{ display: 'flex', alignItems: 'center', gap: 5, width: '100%', justifyContent: 'center', padding: '6px', borderRadius: 7, border: 'none', background: selectedUserId && !isCalling ? '#0e2235' : '#e2e8f0', color: selectedUserId ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: selectedUserId ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
           <Phone size={11} /> {isCalling ? 'Invitando...' : 'Invitar'}
         </button>
       </SideSection>
 
       {/* Reuniones */}
-      <SideSection label={meetings.length > 0 ? `Reuniones (${meetings.length})` : 'Reuniones'}>
+      <SideSection label={meetings.length > 0 ? `Reuniones (${meetings.length})` : 'Reuniones'} collapsible defaultOpen={meetings.length > 0}>
         {meetings.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 10 }}>
             {meetings.map(m => {
@@ -410,7 +677,7 @@ export function TicketSidebar({
 
       {/* Relacionados */}
       {(relations.length > 0 || !ticket.is_final) && (
-        <SideSection label={relations.length > 0 ? `Relacionados (${relations.length})` : 'Relacionados'}>
+        <SideSection label={relations.length > 0 ? `Relacionados (${relations.length})` : 'Relacionados'} collapsible defaultOpen={relations.length > 0}>
           {relations.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
               {relations.map(r => (
@@ -477,6 +744,16 @@ export function TicketSidebar({
               </div>
             </div>
           )}
+        </SideSection>
+      )}
+
+      {/* Conocimiento relacionado */}
+      {(ticket.category_name || ticket.damage_type_label) && (
+        <SideSection label="Conocimiento" collapsible defaultOpen={false}>
+          <KbSuggestions
+            moduleId={ticket.module_id}
+            query={ticket.damage_type_label ?? ticket.category_name ?? ''}
+          />
         </SideSection>
       )}
 

@@ -115,8 +115,8 @@ function CommentContent({ ev }: { ev: TicketTimelineEvent }) {
 
 /* ─── STATUS CHANGE ─────────────────────────────────────── */
 function StatusChangeDot({ ev }: { ev: TicketTimelineEvent }) {
-  const isFinal = (ev.metadata ?? {}).is_final;
-  const color   = isFinal ? '#22c55e' : '#6366f1';
+  const meta  = ev.metadata ?? {};
+  const color = meta.is_final ? '#22c55e' : meta.is_pause_state ? '#f59e0b' : '#6366f1';
   return (
     <Dot color={color}>
       <ArrowRight size={12} style={{ color }} />
@@ -126,29 +126,41 @@ function StatusChangeDot({ ev }: { ev: TicketTimelineEvent }) {
 function StatusChangeContent({ ev }: { ev: TicketTimelineEvent }) {
   const meta    = ev.metadata ?? {};
   const isFinal = meta.is_final;
-  const toColor = isFinal ? '#22c55e' : '#6366f1';
+  const isPause = meta.is_pause_state;
+  const toColor = isFinal ? '#22c55e' : isPause ? '#f59e0b' : '#6366f1';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', minHeight: 28 }}>
-      <span style={{ fontSize: 11, color: C.sub }}>
-        <strong style={{ color: C.navy }}>{ev.user_name}</strong> cambió estado
-      </span>
-      {meta.from_state && (
-        <>
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: '#f1f5f9', color: C.sub, border: `1px solid ${C.border}` }}>
-            {meta.from_state}
-          </span>
-          <ArrowRight size={10} style={{ color: C.muted, flexShrink: 0 }} />
-        </>
-      )}
-      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: `${toColor}14`, color: toColor, border: `1px solid ${toColor}35` }}>
-        {meta.to_state}
-      </span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minHeight: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, color: C.sub }}>
+          <strong style={{ color: C.navy }}>{ev.user_name}</strong> cambió estado
+        </span>
+        {meta.from_state && (
+          <>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: '#f1f5f9', color: C.sub, border: `1px solid ${C.border}` }}>
+              {meta.from_state}
+            </span>
+            <ArrowRight size={10} style={{ color: C.muted, flexShrink: 0 }} />
+          </>
+        )}
+        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: `${toColor}14`, color: toColor, border: `1px solid ${toColor}35`, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          {isPause && '⏸'}{meta.to_state}
+        </span>
+        <span style={{ fontSize: 10, color: C.muted, marginLeft: 'auto', flexShrink: 0 }} title={fmtDate(ev.created_at)}>
+          {fmtRel(ev.created_at)}
+        </span>
+      </div>
       {ev.content && (
-        <span style={{ fontSize: 10, color: C.muted, fontStyle: 'italic', marginLeft: 2 }}>— {ev.content}</span>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          padding: isPause ? '3px 10px' : '2px 8px', borderRadius: 6, alignSelf: 'flex-start',
+          background: isPause ? '#fef3c7' : '#f8fafc',
+          border: `1px solid ${isPause ? '#fde68a' : C.border}`,
+          fontSize: 11, color: isPause ? '#92400e' : C.sub,
+          fontWeight: isPause ? 700 : 400,
+        }}>
+          {isPause && '⏸'}{ev.content}
+        </div>
       )}
-      <span style={{ fontSize: 10, color: C.muted, marginLeft: 'auto', flexShrink: 0 }} title={fmtDate(ev.created_at)}>
-        {fmtRel(ev.created_at)}
-      </span>
     </div>
   );
 }
