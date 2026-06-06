@@ -53,6 +53,15 @@ export class TicketsController {
     return this.svc.getModuleWorkflow(moduleId);
   }
 
+  @Patch('transitions/:id')
+  @RequirePermission('helpdesk:config:manage')
+  updateTransition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { allowed_roles?: string[]; variant?: string; name?: string },
+  ) {
+    return this.svc.updateTransition(id, body);
+  }
+
   @Get('search')
   @RequirePermission('helpdesk:tickets:view')
   searchTickets(

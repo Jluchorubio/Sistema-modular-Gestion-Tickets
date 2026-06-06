@@ -1245,6 +1245,27 @@ export class TicketsService {
     return row ?? null;
   }
 
+  /* ── Workflow transition config ── */
+  async updateTransition(id: string, dto: { allowed_roles?: string[]; variant?: string; name?: string }) {
+    const sets: string[] = [];
+    const params: any[]  = [];
+    let p = 1;
+
+    if (dto.allowed_roles !== undefined) { sets.push(`allowed_roles = $${p++}::text[]`); params.push(dto.allowed_roles); }
+    if (dto.variant       !== undefined) { sets.push(`variant = $${p++}`);               params.push(dto.variant); }
+    if (dto.name          !== undefined) { sets.push(`name = $${p++}`);                  params.push(dto.name); }
+
+    if (!sets.length) throw new BadRequestException('Nothing to update');
+    params.push(id);
+
+    const [row] = await this.db.query<any[]>(
+      `UPDATE tickets.transitions SET ${sets.join(', ')} WHERE id = $${p} RETURNING id`,
+      params,
+    );
+    if (!row) throw new NotFoundException('Transition not found');
+    return row;
+  }
+
   /* ── Assignment history for a technician ── */
   async getAssignmentHistory(userId: string, moduleId?: string, limit = 50) {
     return this.db.query<any[]>(

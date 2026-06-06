@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Settings, Shield, Wrench, CalendarClock, type LucideIcon } from 'lucide-react';
+import { Settings, Shield, Wrench, CalendarClock, GitBranch, type LucideIcon } from 'lucide-react';
 import { useModules }    from '@/hooks/useModules';
 import { useModuleNav }  from '@/hooks/useModuleNav';
 import { useAuthStore }  from '@/stores/auth.store';
@@ -11,18 +11,20 @@ import { ModuleConfigClient }   from '@/components/modules/ModuleConfigClient';
 import { SlaTicketsTab }        from '@/components/config/SlaTicketsTab';
 import { DamageTypesTab }       from '@/components/config/DamageTypesTab';
 import { ModuleCalendarioTab }  from '@/components/config/ModuleCalendarioTab';
+import { WorkflowTab }          from '@/components/config/WorkflowTab';
 
 import { Spinner }              from '@/components/ui/Spinner';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import styles from '@/app/(app)/requests/config/config.module.css';
 
-type Tab = 'general' | 'sla-tickets' | 'daños' | 'calendario';
+type Tab = 'general' | 'sla-tickets' | 'daños' | 'calendario' | 'flujo';
 
 const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
   { key: 'general',     label: 'General',        Icon: Settings     },
   { key: 'sla-tickets', label: 'SLA Tickets',    Icon: Shield       },
   { key: 'daños',       label: 'Tipos de Daño',  Icon: Wrench       },
   { key: 'calendario',  label: 'Calendario',     Icon: CalendarClock },
+  { key: 'flujo',       label: 'Flujo',          Icon: GitBranch    },
 ];
 
 export default function HelpdeskConfigPage() {
@@ -83,6 +85,7 @@ export default function HelpdeskConfigPage() {
           {tab === 'sla-tickets' && <SlaTicketsTab moduleId={helpdeskRef.id} />}
           {tab === 'daños'       && <DamageTypesTab />}
           {tab === 'calendario'  && <ModuleCalendarioTab moduleId={helpdeskRef.id} />}
+          {tab === 'flujo'       && <WorkflowTab moduleId={helpdeskRef.id} />}
         </div>
 
       </div>

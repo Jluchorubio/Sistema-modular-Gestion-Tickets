@@ -371,6 +371,11 @@ export const ticketsService = {
     return data;
   },
 
+  async updateTransition(id: string, dto: { allowed_roles?: string[]; variant?: string; name?: string }): Promise<{ id: string }> {
+    const { data } = await api.patch(`/tickets/transitions/${id}`, dto);
+    return data;
+  },
+
   async addCollaborator(ticketId: string, userId: string, role: string): Promise<TicketAssignment> {
     const { data } = await api.post(`/tickets/${ticketId}/assignments`, { user_id: userId, role });
     return data;
