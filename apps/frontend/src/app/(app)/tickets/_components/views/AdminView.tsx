@@ -628,13 +628,13 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
           <button type="button" title="Módulo Principal" style={iconBtn} onClick={() => router.push(basePath)}>
             <Home size={15} />
           </button>
-          <button type="button" title="Historial de tickets" style={iconBtn} onClick={() => router.push(`${basePath}`)}>
+          <button type="button" title="Reportes" style={iconBtn} onClick={() => router.push(`${basePath}/reports`)}>
             <ArrowLeftRight size={15} />
           </button>
-          <button type="button" title="Estructura de equipos" style={iconBtn}>
+          <button type="button" title="Técnicos" style={iconBtn} onClick={() => router.push(`${basePath}/technicians`)}>
             <Layers size={15} />
           </button>
-          <button type="button" title="Configuración del módulo" style={iconBtn}>
+          <button type="button" title="Configuración del módulo" style={iconBtn} onClick={() => router.push(`${basePath}/config`)}>
             <Settings size={15} />
           </button>
           {canCreate && moduleId && (

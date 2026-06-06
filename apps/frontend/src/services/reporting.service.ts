@@ -168,8 +168,4 @@ export const reportingService = {
     return data;
   },
 
-  exportTicketsCsvUrl(moduleId?: string): string {
-    const base = (api.defaults.baseURL ?? '') + '/reporting/export/tickets';
-    return moduleId ? `${base}?moduleId=${moduleId}` : base;
-  },
 };

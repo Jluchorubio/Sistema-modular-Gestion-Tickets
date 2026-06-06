@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart2, Users, Clock, Star, TrendingUp, RefreshCw, Download } from 'lucide-react';
 import { reportingService, type HelpdeskTechnician } from '@/services/reporting.service';
+import api from '@/services/api';
 import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
 import { fmtDay } from '@/lib/formatters';
 
@@ -77,7 +78,28 @@ function Stars({ score }: { score: number | null }) {
 
 /* ── Main ── */
 export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
-  const [tab, setTab] = useState<Tab>('operacion');
+  const [tab,           setTab]           = useState<Tab>('operacion');
+  const [csvExporting,  setCsvExporting]  = useState(false);
+
+  async function handleExportCsv() {
+    setCsvExporting(true);
+    try {
+      const res = await api.get('/reporting/export/tickets', {
+        params:       { moduleId },
+        responseType: 'blob',
+      });
+      const url  = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
+      const link = document.createElement('a');
+      link.href  = url;
+      link.download = `tickets-${Date.now()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } finally {
+      setCsvExporting(false);
+    }
+  }
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['helpdesk-reports', moduleId],
@@ -115,10 +137,11 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
             <RefreshCw size={12} style={{ animation: isFetching ? 'spin 1s linear infinite' : 'none' }} />
             Actualizar
           </button>
-          <a href={reportingService.exportTicketsCsvUrl(moduleId)} download
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: C.navy, color: '#fff', fontSize: 11, fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>
-            <Download size={12} /> Exportar CSV
-          </a>
+          <button type="button" onClick={handleExportCsv} disabled={csvExporting}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: csvExporting ? '#64748b' : C.navy, color: '#fff', fontSize: 11, fontWeight: 700, cursor: csvExporting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            <Download size={12} style={{ animation: csvExporting ? 'spin 1s linear infinite' : 'none' }} />
+            {csvExporting ? 'Exportando…' : 'Exportar CSV'}
+          </button>
         </div>
       </div>
 

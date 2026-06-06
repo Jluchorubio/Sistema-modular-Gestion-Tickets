@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Ticket, Download, Package } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUIStore } from '@/stores/ui.store';
 import { ADMIN_ROLES } from '@/constants/roles';
 import { reportingService, type DailyTrend, type SlaByPriority, type AuditEntry } from '@/services/reporting.service';
+import api from '@/services/api';
 import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
 import { fmtDay } from '@/lib/formatters';
 import styles from '../reports.module.css';
@@ -141,6 +142,27 @@ export function ReportsClient() {
   }, [user]);
 
   const [selectedModule, setSelectedModule] = useState<string>('');
+  const [csvExporting,   setCsvExporting]   = useState(false);
+
+  const handleExportCsv = useCallback(async () => {
+    setCsvExporting(true);
+    try {
+      const res = await api.get('/reporting/export/tickets', {
+        params:       selectedModule ? { moduleId: selectedModule } : {},
+        responseType: 'blob',
+      });
+      const url  = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
+      const link = document.createElement('a');
+      link.href  = url;
+      link.download = `tickets-${Date.now()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } finally {
+      setCsvExporting(false);
+    }
+  }, [selectedModule]);
 
   // Sync to module context: auto-filter when entering a module, reset when leaving
   useEffect(() => {
@@ -194,15 +216,16 @@ export function ReportsClient() {
             <h1 className={styles.title}>Centro de Reportes y Auditoría</h1>
             <p className={styles.sub}>Estadísticas avanzadas, nivel de servicio de acuerdos de SLA y registro de auditoría de seguridad global.</p>
           </div>
-          <a
-            href={reportingService.exportTicketsCsvUrl(moduleId)}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={csvExporting}
             className={styles.filterBtn}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
-            download
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: csvExporting ? 'not-allowed' : 'pointer', opacity: csvExporting ? 0.7 : 1, fontFamily: 'inherit' }}
           >
             <Download size={13} />
-            Exportar tickets CSV
-          </a>
+            {csvExporting ? 'Exportando…' : 'Exportar tickets CSV'}
+          </button>
         </div>
 
         {/* ── Module filter — hidden when locked to a module context ── */}
