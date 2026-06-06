@@ -12,6 +12,7 @@ import { authService } from '@/services/auth.service';
 import type { LoginResponse } from '@/types/auth.types';
 import { LoginForm } from './_components/LoginForm';
 import { OtpForm } from './_components/OtpForm';
+import { TotpForm } from './_components/TotpForm';
 import { ForgotForm } from './_components/ForgotForm';
 import { ResetForm } from './_components/ResetForm';
 import styles from './login.module.css';
@@ -91,6 +92,7 @@ export function LoginClient() {
 
   const [view,       setView]       = useState<AuthView>('login');
   const [otpToken,   setOtpToken]   = useState('');
+  const [mfaType,    setMfaType]    = useState<'email_otp' | 'totp'>('email_otp');
   const [resetToken, setResetToken] = useState('');
   const [errorData,  setErrorData]  = useState('');
   const [slideIndex, setSlideIndex] = useState(0);
@@ -256,12 +258,19 @@ export function LoginClient() {
 
           {view === 'login' && (
             <LoginForm
-              onOtp={(t) => { setOtpToken(t); setView('otp'); }}
+              onOtp={(t, type) => { setOtpToken(t); setMfaType(type); setView('otp'); }}
               onForgot={() => setView('forgot')}
               onRedirect={redirect}
             />
           )}
-          {view === 'otp' && (
+          {view === 'otp' && mfaType === 'totp' && (
+            <TotpForm
+              otpToken={otpToken}
+              onBack={() => setView('login')}
+              onSuccess={redirect}
+            />
+          )}
+          {view === 'otp' && mfaType === 'email_otp' && (
             <OtpForm
               otpToken={otpToken}
               onBack={() => setView('login')}
@@ -283,7 +292,7 @@ export function LoginClient() {
                 Contraseña actualizada. Inicia sesión con tu nueva contraseña.
               </p>
               <LoginForm
-                onOtp={(t) => { setOtpToken(t); setView('otp'); }}
+                onOtp={(t, type) => { setOtpToken(t); setMfaType(type); setView('otp'); }}
                 onForgot={() => setView('forgot')}
                 onRedirect={redirect}
               />

@@ -58,6 +58,15 @@ export const authService = {
     await api.post('/auth/logout', { refresh_token: refreshToken });
   },
 
+  async verifyTotpLogin(code: string, otpToken: string): Promise<OtpVerifyResponse> {
+    const { data } = await api.post(
+      '/auth/totp/verify-login',
+      { code },
+      { headers: { Authorization: `Bearer ${otpToken}` } },
+    );
+    return data;
+  },
+
   async setupTotp(): Promise<{ qr: string; secret: string }> {
     const { data } = await api.get('/auth/totp/setup');
     return data;

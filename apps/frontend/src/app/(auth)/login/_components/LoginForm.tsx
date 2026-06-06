@@ -18,7 +18,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 interface Props {
-  onOtp:      (token: string) => void;
+  onOtp:      (token: string, mfa_type: 'email_otp' | 'totp') => void;
   onForgot:   () => void;
   onRedirect: (data: LoginResponse) => void;
 }
@@ -35,7 +35,8 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
     try {
       const data = await authService.login(values);
       if ('requires_mfa' in data && data.requires_mfa) {
-        onOtp((data as MfaChallenge).otp_token);
+        const challenge = data as MfaChallenge;
+        onOtp(challenge.otp_token, challenge.mfa_type);
         return;
       }
       onRedirect(data as LoginResponse);

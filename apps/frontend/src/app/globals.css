@@ -10,6 +10,23 @@
   --brand-primary-20:   rgba(14,34,53,0.20);
   --brand-primary-hover:rgba(14,34,53,0.85);
 
+  /* ── App light-mode tokens (use these in new components) ── */
+  --app-coral:       #ff5e3a;
+  --app-coral-10:    rgba(255,94,58,0.10);
+  --app-coral-20:    rgba(255,94,58,0.20);
+  --app-navy:        #0e2235;
+  --app-page:        #f8fafc;
+  --app-card:        #ffffff;
+  --app-border:      #e2e8f0;
+  --app-border-soft: #f1f5f9;
+  --app-text:        #334155;
+  --app-text-main:   #0e2235;
+  --app-text-sub:    #64748b;
+  --app-text-muted:  #94a3b8;
+  --app-success:     #16a34a;
+  --app-warning:     #f59e0b;
+  --app-danger:      #ef4444;
+
   /* Dark surfaces (auth pages) */
   --color-bg: #0f172a;
   --color-surface: #1e293b;

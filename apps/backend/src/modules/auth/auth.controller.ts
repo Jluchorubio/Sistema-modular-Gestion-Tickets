@@ -87,7 +87,7 @@ export class AuthController {
   async googleCallback(@Req() req: any, @Res() res: Response) {
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
     try {
-      const result = await this.authService.loginWithGoogle(req.user, req.ip, req.headers['user-agent']);
+      const result = await this.authService.loginWithOAuth(req.user, req.ip, req.headers['user-agent']);
       const u      = result.user;
       return res.redirect(
         `${appUrl}/auth/callback` +
@@ -119,7 +119,7 @@ export class AuthController {
   async microsoftCallback(@Req() req: any, @Res() res: Response) {
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
     try {
-      const result = await this.authService.loginWithGoogle(req.user, req.ip, req.headers['user-agent']);
+      const result = await this.authService.loginWithOAuth(req.user, req.ip, req.headers['user-agent']);
       const u      = result.user;
       return res.redirect(
         `${appUrl}/auth/callback` +
@@ -227,6 +227,19 @@ export class AuthController {
   }
 
   // ─── TOTP (Google Authenticator) ─────────────────────────────────────────────
+
+  @Post('totp/verify-login')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Verificar código TOTP durante login. Requiere otp_token en Authorization.' })
+  verifyTotpLogin(
+    @Req() req: any,
+    @Body() body: { code: string },
+    @Headers('authorization') auth: string,
+  ) {
+    const token = auth?.replace('Bearer ', '').trim();
+    if (!token) throw new UnauthorizedException('otp_token requerido en Authorization header');
+    return this.authService.verifyTotpLogin(token, body.code, req.ip, req.headers['user-agent']);
+  }
 
   @SkipProfileCheck()
   @UseGuards(JwtAuthGuard)

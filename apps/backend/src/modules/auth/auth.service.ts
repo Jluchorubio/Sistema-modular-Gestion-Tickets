@@ -139,7 +139,25 @@ export class AuthService {
       [cred.cred_id],
     );
 
-    // Check if OTP is enabled for this user (default true for safety)
+    // TOTP takes precedence over email OTP when enabled
+    try {
+      const [totpRow] = await this.db.query<{ totp_enabled: boolean }[]>(
+        `SELECT totp_enabled FROM auth.mfa_settings WHERE user_id = $1`,
+        [cred.user_id],
+      );
+      if (totpRow?.totp_enabled) {
+        return {
+          requires_mfa: true,
+          mfa_type: 'totp' as const,
+          otp_token: this.jwt.sign(
+            { sub: cred.user_id, email: cred.email, otp_pending: true },
+            { expiresIn: `${OTP_EXPIRY_MINUTES}m` },
+          ),
+        };
+      }
+    } catch { /* fall through to email OTP */ }
+
+    // Check if email OTP is enabled for this user (default true for safety)
     let otpEnabled = true;
     try {
       const [otpRow] = await this.db.query<{ otp_enabled: boolean }[]>(
@@ -155,7 +173,7 @@ export class AuthService {
       await this.sendEmailOtp(cred.user_id, cred.email);
       return {
         requires_mfa: true,
-        mfa_type: 'email_otp',
+        mfa_type: 'email_otp' as const,
         otp_token: this.jwt.sign(
           { sub: cred.user_id, email: cred.email, otp_pending: true },
           { expiresIn: `${OTP_EXPIRY_MINUTES}m` },
@@ -168,9 +186,41 @@ export class AuthService {
     return session;
   }
 
-  // ─── Google OAuth ────────────────────────────────────────────────────────────
+  // ─── TOTP login verify ───────────────────────────────────────────────────────
 
-  async loginWithGoogle(profile: { email: string; firstName: string; lastName: string; avatar: string | null }, ip?: string, userAgent?: string) {
+  async verifyTotpLogin(otpToken: string, code: string, ip?: string, userAgent?: string) {
+    let payload: any;
+    try { payload = this.jwt.verify(otpToken); }
+    catch { throw new UnauthorizedException('otp_token inválido o expirado'); }
+    if (!payload.otp_pending) throw new UnauthorizedException('Token no es de OTP');
+
+    const [row] = await this.db.query<{ totp_secret: string; totp_enabled: boolean }[]>(
+      `SELECT totp_secret, totp_enabled FROM auth.mfa_settings WHERE user_id = $1`,
+      [payload.sub],
+    );
+    if (!row?.totp_enabled) throw new UnauthorizedException('TOTP no está activo');
+
+    const valid = speakeasy.totp.verify({
+      secret:   row.totp_secret,
+      encoding: 'base32',
+      token:    code,
+      window:   1,
+    });
+    if (!valid) throw new UnauthorizedException('Código TOTP inválido');
+
+    const [userRow] = await this.db.query<{ first_name: string; last_name: string; is_superadmin: boolean }[]>(
+      `SELECT first_name, last_name, is_superadmin FROM users.profiles WHERE id = $1`,
+      [payload.sub],
+    );
+    if (!userRow) throw new UnauthorizedException('Usuario no encontrado');
+
+    this.auditAuthEvent('auth.login_totp', payload.sub, ip, userAgent);
+    return this.buildSession(payload.sub, payload.email, userRow.first_name, userRow.last_name, userRow.is_superadmin, ip, userAgent);
+  }
+
+  // ─── OAuth (Google / Microsoft) ──────────────────────────────────────────────
+
+  async loginWithOAuth(profile: { email: string; firstName: string; lastName: string; avatar: string | null }, ip?: string, userAgent?: string) {
     const rows = await this.db.query<any[]>(
       `SELECT c.user_id, c.email, p.first_name, p.last_name, p.is_superadmin
        FROM auth.credentials c

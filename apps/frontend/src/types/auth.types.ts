@@ -23,7 +23,7 @@ export interface LoginResponse {
 
 export interface MfaChallenge {
   requires_mfa: true;
-  mfa_type: 'email_otp';
+  mfa_type: 'email_otp' | 'totp';
   otp_token: string;
 }
 
