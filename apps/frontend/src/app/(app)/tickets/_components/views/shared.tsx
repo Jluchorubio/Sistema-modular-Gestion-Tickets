@@ -104,6 +104,12 @@ export function TicketCard({ ticket, onClick }: { ticket: TicketListItem; onClic
         <PriorityBadge priority={ticket.priority} />
       </div>
       <h3 className={styles.cardTitle}>{ticket.title}</h3>
+      {ticket.is_approval_state && (
+        <p style={{ margin: '2px 0 0', fontSize: 10, color: '#92400e', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
+          Esperando aprobación del usuario
+        </p>
+      )}
       {ticket.is_pause_state && ticket.last_transition_reason && (
         <p style={{ margin: '2px 0 0', fontSize: 10, color: '#92400e', fontWeight: 600 }}>⏸ {ticket.last_transition_reason}</p>
       )}

@@ -900,21 +900,25 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
           </div>
 
           {/* CONTEXT STRIP */}
-          <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '0 20px', height: 34, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, overflowX: 'auto' }}>
-            <PriorityBadge priority={ticket.priority} />
-            {ticket.category_name && <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>{ticket.category_name}</span>}
+          <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '0 20px', height: 34, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 16, overflowX: 'auto' }}>
             {ownerAssignment ? (
-              <span style={{ fontSize: 10, color: '#475569', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+              <span style={{ fontSize: 10, color: '#475569', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', fontWeight: 600 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
                 {ownerAssignment.user_name}
               </span>
             ) : (
               <span style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic' }}>Sin asignar</span>
             )}
-            <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-              Urgencia: <strong style={{ color: '#64748b' }}>{ticket.urgency}</strong>
-              {' · '}Impacto: <strong style={{ color: '#64748b' }}>{ticket.impact}</strong>
+            <span style={{ width: 1, height: 14, background: '#e2e8f0', flexShrink: 0 }} />
+            <span style={{ fontSize: 10, color: '#94a3b8', whiteSpace: 'nowrap' }}>
+              U: <strong style={{ color: '#64748b' }}>{ticket.urgency}</strong>
+              {'  '}I: <strong style={{ color: '#64748b' }}>{ticket.impact}</strong>
             </span>
+            {ticket.created_at && (
+              <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                {fmtRelative(ticket.created_at)}
+              </span>
+            )}
           </div>
 
           {/* 2-COLUMN BODY */}
@@ -980,6 +984,24 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 <div style={{ padding: '8px 20px', borderBottom: '1px solid #fed7aa', background: '#fff7ed', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <AlertTriangle size={13} style={{ color: '#c2410c' }} />
                   <span style={{ fontSize: 11, fontWeight: 700, color: '#c2410c' }}>Este ticket fue escalado automáticamente por recurrencia.</span>
+                </div>
+              )}
+
+              {/* TECH APPROVAL BANNER — visible to agents/admins, not the creator */}
+              {ticket.is_approval_state && currentUser?.id !== ticket.created_by && (
+                <div style={{ padding: '10px 20px', borderBottom: '1px solid #fde68a', background: '#fffbeb', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <CheckCircle2 size={14} style={{ color: '#22c55e', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '.05em' }}>Esperando aprobación del usuario</span>
+                    <span style={{ fontSize: 11, color: '#a16207', marginLeft: 6 }}>
+                      — {ticket.creator_name} debe aceptar o reabrir
+                    </span>
+                  </div>
+                  {approvalCountdown.label && (
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, flexShrink: 0, background: approvalCountdown.urgent ? '#fef2f2' : '#f0fdf4', color: approvalCountdown.urgent ? '#dc2626' : '#16a34a', border: `1px solid ${approvalCountdown.urgent ? '#fecaca' : '#bbf7d0'}`, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Clock size={9} /> Auto-cierre en {approvalCountdown.label}
+                    </span>
+                  )}
                 </div>
               )}
 
