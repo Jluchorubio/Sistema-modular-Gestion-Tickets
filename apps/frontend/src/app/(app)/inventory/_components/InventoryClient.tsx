@@ -152,9 +152,11 @@ function BulkQrPrintModal({
       onClick={onClose}
     >
       <style>{`@media print {
-        body > * { display: none !important; }
-        #bulk-qr-sheet { display: grid !important; position: fixed; inset: 0;
+        body > * { visibility: hidden; }
+        #bulk-qr-sheet, #bulk-qr-sheet * { visibility: visible; }
+        #bulk-qr-sheet { position: fixed; inset: 0; overflow: visible;
           background: #fff; padding: 24px; z-index: 9999;
+          display: grid !important;
           grid-template-columns: repeat(3, 1fr); gap: 16px;
           align-content: start; }
       }`}</style>

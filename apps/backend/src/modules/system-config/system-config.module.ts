@@ -6,6 +6,7 @@ import { PriorityEngineService } from '../tickets/priority/priority-engine.servi
 import { MessagingModule } from '../../shared/messaging/messaging.module';
 
 @Module({
+  imports:     [MessagingModule],
   controllers: [SystemConfigController],
   providers:   [SystemConfigService, AuditLogService, PriorityEngineService],
   exports:     [SystemConfigService, AuditLogService],
