@@ -89,6 +89,31 @@ export function TicketSidebar({
     danger: '#ef4444', warning: '#f59e0b', default: '#0e2235',
   };
 
+  /* ── Fase 4A: human deadline — "vence lunes a las 9:00" ── */
+  function fmtHumanDeadline(dateStr: string): string {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = d.getTime() - now.getTime();
+    const diffH  = diffMs / 3_600_000;
+    const DAYS_ES = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    const timeStr = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const sameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+
+    if (diffMs < 0) {
+      if (sameDay(d, now))   return `venció hoy a las ${timeStr}`;
+      const daysDiff = Math.round(Math.abs(diffMs) / 86_400_000);
+      if (daysDiff === 1)    return `venció ayer a las ${timeStr}`;
+      if (daysDiff < 7)      return `venció el ${DAYS_ES[d.getDay()]} a las ${timeStr}`;
+      return `venció el ${d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`;
+    }
+    if (sameDay(d, now))     return `vence hoy a las ${timeStr}`;
+    if (sameDay(d, tomorrow))return `vence mañana a las ${timeStr}`;
+    if (diffH < 7 * 24)      return `vence el ${DAYS_ES[d.getDay()]} a las ${timeStr}`;
+    return `vence el ${d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`;
+  }
+
   /* ── Pause time display ── */
   function fmtPauseMinutes(min: number): string {
     if (min < 60) return `${min}m`;
@@ -165,8 +190,11 @@ export function TicketSidebar({
                 </span>
               )}
             </div>
-            <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 3px' }}>{fmtDate(ticket.sla_deadline_tracked)}</p>
-            {sla.countdown && <p style={{ fontSize: 13, fontWeight: 800, color: sla.color, margin: 0 }}>{sla.countdown}</p>}
+            <p style={{ fontSize: 13, fontWeight: 800, color: sla.color, margin: '0 0 2px' }}>
+              {fmtHumanDeadline(ticket.sla_deadline_tracked)}
+            </p>
+            <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>{fmtDate(ticket.sla_deadline_tracked)}</p>
+            {sla.countdown && <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', margin: '3px 0 0' }}>{sla.countdown}</p>}
           </div>
         ) : (
           <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Sin SLA configurado</p>

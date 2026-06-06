@@ -476,7 +476,7 @@ function KbSuggestions({ moduleId, query }: { moduleId: string; query: string })
 
 /* ── Detalles tab ────────────────────────────────────────────────────── */
 function DetallesTab({
-  ticketId, ticket, relations,
+  ticketId, ticket, relations, linkedAssets,
   onAddRelation, onRemoveRelation, onSearchTickets,
   mutPending,
 }: {
@@ -488,7 +488,11 @@ function DetallesTab({
     creator_name: string;
     assignments: { id: string; user_name: string; role: string; is_active: boolean; assigned_at: string }[];
     id: string;
+    escalated?:      boolean;
+    escalation_note?: string | null;
+    history?:        { id: string; transitioned_at: string; from_label: string; to_label: string; actor_name: string; transition_reason: string | null }[];
   };
+  linkedAssets:     { id: string; name: string }[];
   relations:        ReturnType<typeof useTicketData>['relations'];
   onAddRelation:    (targetId: string, relationType: string, notes?: string) => Promise<void>;
   onRemoveRelation: (relId: string) => void;
@@ -658,6 +662,93 @@ function DetallesTab({
           )}
         </div>
       )}
+
+      {/* Fase 4B — Escalation history */}
+      {ticket.escalated && (() => {
+        const escalEvents = (ticket.history ?? []).filter(h =>
+          h.to_label.toLowerCase().includes('escal') ||
+          (h.transition_reason ?? '').toLowerCase().includes('escal') ||
+          (h.transition_reason ?? '').toLowerCase().includes('auto-escal')
+        );
+        return (
+          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #fed7aa', padding: '14px 16px' }}>
+            <p style={{ fontSize: 9, fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Historial de escalaciones</p>
+            {escalEvents.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {escalEvents.map(ev => (
+                  <div key={ev.id} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#f97316', marginTop: 4, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: '0 0 1px', fontSize: 11, fontWeight: 700, color: '#9a3412' }}>
+                        {ev.from_label} → {ev.to_label}
+                      </p>
+                      {ev.transition_reason && (
+                        <p style={{ margin: '0 0 1px', fontSize: 10, color: '#c2410c' }}>"{ev.transition_reason}"</p>
+                      )}
+                      <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>
+                        {ev.actor_name} · {fmtDate(ev.transitioned_at)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <AlertTriangle size={12} style={{ color: '#f97316', flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 700, color: '#9a3412' }}>Ticket escalado</p>
+                  {ticket.escalation_note && <p style={{ margin: 0, fontSize: 10, color: '#c2410c' }}>"{ticket.escalation_note}"</p>}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Fase 4C — Recurrence context */}
+      {(() => {
+        const firstAsset = linkedAssets[0] ?? null;
+        const { data: prevTickets } = useQuery({
+          queryKey: ['prev-tickets', ticketId, firstAsset?.id],
+          queryFn:  () => ticketsService.getAssetPrevTickets(ticketId, firstAsset!.id),
+          enabled:  !!firstAsset,
+          staleTime: 60_000,
+        });
+        const reprocess = ticket.reprocess_count ?? 0;
+        const prevCount = prevTickets?.length ?? 0;
+        if (reprocess === 0 && prevCount === 0) return null;
+        return (
+          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e0e7ff', padding: '14px 16px' }}>
+            <p style={{ fontSize: 9, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Contexto de recurrencia</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {reprocess > 0 && (
+                <div style={{ display: 'flex', gap: 8, padding: '7px 9px', background: '#eef2ff', borderRadius: 7 }}>
+                  <span style={{ fontSize: 16 }}>🔁</span>
+                  <div>
+                    <p style={{ margin: '0 0 1px', fontSize: 11, fontWeight: 700, color: '#4338ca' }}>
+                      Reabierto {reprocess} {reprocess === 1 ? 'vez' : 'veces'}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 9, color: '#6366f1' }}>Este ticket fue reabierto después de marcar como resuelto</p>
+                  </div>
+                </div>
+              )}
+              {firstAsset && prevCount > 0 && (
+                <div style={{ display: 'flex', gap: 8, padding: '7px 9px', background: '#fdf4ff', borderRadius: 7 }}>
+                  <span style={{ fontSize: 16 }}>📌</span>
+                  <div>
+                    <p style={{ margin: '0 0 1px', fontSize: 11, fontWeight: 700, color: '#7e22ce' }}>
+                      {prevCount} ticket{prevCount !== 1 ? 's' : ''} anterior{prevCount !== 1 ? 'es' : ''} en {firstAsset.name}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 9, color: '#9333ea' }}>
+                      {prevCount >= 3 ? '⚠ Activo con incidencias repetidas' : 'Historial de incidencias en este activo'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Base de conocimiento */}
       {(ticket.category_name || ticket.damage_type_label) && (
@@ -1133,6 +1224,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                   <DetallesTab
                     ticketId={ticketId}
                     ticket={ticket}
+                    linkedAssets={linkedAssets}
                     relations={relations}
                     onAddRelation={async (targetId, relationType, notes) => { await addRelMut.mutateAsync({ targetId, relationType, notes }); }}
                     onRemoveRelation={(relId) => removeRelMut.mutate(relId)}
