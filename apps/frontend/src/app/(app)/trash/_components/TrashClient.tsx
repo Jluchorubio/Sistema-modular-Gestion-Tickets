@@ -31,9 +31,11 @@ const TYPE_BADGE: Record<string, string> = {
 };
 
 export function TrashClient() {
-  const loaded  = usePermissionsStore(s => s.loaded);
-  const canView = usePermission('global:sidebar:trash');
-  const qc      = useQueryClient();
+  const loaded     = usePermissionsStore(s => s.loaded);
+  const canView    = usePermission('global:sidebar:trash');
+  const canRestore = usePermission('global:trash:restore');
+  const canPurge   = usePermission('global:trash:purge');
+  const qc         = useQueryClient();
 
   const [filter, setFilter] = useState<TrashType>('all');
 
@@ -234,20 +236,24 @@ export function TrashClient() {
               <span className={`${styles.daysPill}${urgent ? ` ${styles.daysPillUrgent}` : ''}`}>
                 {days}d restantes
               </span>
-              <button
-                className={styles.btnSecondary}
-                onClick={() => restoreMut.mutate({ type: item.item_type, id: item.id })}
-                disabled={restoreMut.isPending}
-              >
-                Restaurar
-              </button>
-              <button
-                className={styles.btnDanger}
-                onClick={() => openReAuthFor(item, false)}
-                disabled={permDeleteMut.isPending}
-              >
-                Eliminar def.
-              </button>
+              {canRestore && (
+                <button
+                  className={styles.btnSecondary}
+                  onClick={() => restoreMut.mutate({ type: item.item_type, id: item.id })}
+                  disabled={restoreMut.isPending}
+                >
+                  Restaurar
+                </button>
+              )}
+              {canPurge && (
+                <button
+                  className={styles.btnDanger}
+                  onClick={() => openReAuthFor(item, false)}
+                  disabled={permDeleteMut.isPending}
+                >
+                  Eliminar def.
+                </button>
+              )}
             </div>
           </div>
         );
@@ -258,19 +264,19 @@ export function TrashClient() {
         selectedCount={selected.size}
         onClear={() => clearSelection()}
         actions={[
-          {
+          ...(canRestore ? [{
             label:   'Restaurar',
-            variant: 'success',
+            variant: 'success' as const,
             loading: bulkRestoreMut.isPending,
             disabled: bulkPending,
             onClick: () => bulkRestoreMut.mutate(selectedItems),
-          },
-          {
+          }] : []),
+          ...(canPurge ? [{
             label:   'Eliminar definitivamente',
-            variant: 'danger',
+            variant: 'danger' as const,
             disabled: bulkPending,
             onClick: () => openReAuthFor(null, true),
-          },
+          }] : []),
         ]}
       />
 

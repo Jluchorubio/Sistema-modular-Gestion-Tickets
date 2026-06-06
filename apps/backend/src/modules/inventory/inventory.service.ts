@@ -239,23 +239,20 @@ export class InventoryService {
     }
 
     if (asset.status === 'asignado' && dto.status !== 'disponible') {
-      const [activeAssignment] = await this.db.query<{ id: string; user_id: string }[]>(
-        `SELECT id, user_id FROM inventory.asset_assignments
+      const closedAssignments = await this.db.query<{ id: string; user_id: string }[]>(
+        `UPDATE inventory.asset_assignments
+         SET status = 'devuelto', unassigned_at = now()
          WHERE asset_id = $1 AND status = 'activo'
-         ORDER BY assigned_at DESC LIMIT 1`,
+         RETURNING id, user_id`,
         [assetId],
       );
-      if (activeAssignment) {
-        await this.db.query(
-          `UPDATE inventory.asset_assignments SET status = 'devuelto', unassigned_at = now() WHERE id = $1`,
-          [activeAssignment.id],
-        );
+      const histAction = dto.status === 'dado_de_baja' ? 'dado_de_baja' : 'reparacion';
+      for (const a of closedAssignments) {
         await this.db.query(
           `INSERT INTO inventory.asset_assignment_history
              (asset_id, user_id, assigned_by, assignment_id, action, reason)
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [assetId, activeAssignment.user_id, actorId, activeAssignment.id,
-           dto.status === 'dado_de_baja' ? 'dado_de_baja' : 'reparacion', dto.reason ?? null],
+          [assetId, a.user_id, actorId, a.id, histAction, dto.reason ?? null],
         );
       }
     } else {
@@ -461,21 +458,38 @@ export class InventoryService {
     rows: Array<Omit<CreateAssetDto, 'module_id'>>,
   ): Promise<{ created: number; errors: { row: number; message: string }[] }> {
     if (rows.length > 100) throw new BadRequestException('Máximo 100 activos por importación');
+
     const errors: { row: number; message: string }[] = [];
-    let created = 0;
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (!r.name?.trim())      { errors.push({ row: i + 1, message: 'Nombre requerido'     }); continue; }
-      if (!r.environment_id)    { errors.push({ row: i + 1, message: 'environment_id requerido' }); continue; }
-      if (!r.category_id)       { errors.push({ row: i + 1, message: 'category_id requerido' }); continue; }
-      try {
-        await this.create({ ...r, module_id: moduleId });
-        created++;
-      } catch (e: any) {
-        errors.push({ row: i + 1, message: e.message ?? 'Error desconocido' });
-      }
+      if (!r.name?.trim())   errors.push({ row: i + 1, message: 'Nombre requerido' });
+      if (!r.environment_id) errors.push({ row: i + 1, message: 'environment_id requerido' });
+      if (!r.category_id)    errors.push({ row: i + 1, message: 'category_id requerido' });
     }
-    return { created, errors };
+    if (errors.length > 0) return { created: 0, errors };
+
+    const qr = this.db.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      for (const r of rows) {
+        await qr.query(
+          `INSERT INTO inventory.assets
+             (module_id, environment_id, category_id, name, description, serial_number, specifications)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [moduleId, r.environment_id, r.category_id, r.name.trim(),
+           r.description ?? null, r.serial_number ?? null,
+           r.specifications ? JSON.stringify(r.specifications) : null],
+        );
+      }
+      await qr.commitTransaction();
+      return { created: rows.length, errors: [] };
+    } catch (e: any) {
+      await qr.rollbackTransaction();
+      throw new BadRequestException(e.message ?? 'Error en importación masiva');
+    } finally {
+      await qr.release();
+    }
   }
 
   /* ── Asset images ───────────────────────────────────────────────────────── */
