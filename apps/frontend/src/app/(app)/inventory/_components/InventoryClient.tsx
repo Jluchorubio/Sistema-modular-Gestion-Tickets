@@ -2,10 +2,10 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Check, ChevronDown, Plus, X, QrCode, Package, User, Clock, Pencil,
-  Trash2, Search, AlertTriangle, Upload,
+  Trash2, Search, AlertTriangle, Upload, Printer,
   Boxes, CheckCircle2, Wrench, Ban, LayoutGrid, List, AlignJustify,
 } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
@@ -120,6 +120,113 @@ function QrModal({ assetId, assetName, onClose }: { assetId: string; assetName: 
             <p style={{ fontSize: 10, color: C.muted, marginTop: 12, fontFamily: 'monospace', letterSpacing: '.04em' }}>{data.qr_code}</p>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ── BulkQrPrintModal ────────────────────────────────────────────────────── */
+function BulkQrPrintModal({
+  assets,
+  onClose,
+}: {
+  assets: Array<{ id: string; name: string; qr_code: string }>;
+  onClose: () => void;
+}) {
+  const queries = useQueries({
+    queries: assets.map(a => ({
+      queryKey: ['asset-qr', a.id],
+      queryFn:  () => inventoryService.getQr(a.id),
+      staleTime: 10 * 60_000,
+    })),
+  });
+
+  const loading = queries.some(q => q.isLoading);
+  const loaded  = queries.filter(q => q.data).length;
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.65)', zIndex: 80,
+               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+               backdropFilter: 'blur(3px)' }}
+      onClick={onClose}
+    >
+      <style>{`@media print {
+        body > * { display: none !important; }
+        #bulk-qr-sheet { display: grid !important; position: fixed; inset: 0;
+          background: #fff; padding: 24px; z-index: 9999;
+          grid-template-columns: repeat(3, 1fr); gap: 16px;
+          align-content: start; }
+      }`}</style>
+      <div
+        style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 700,
+                 maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+                 boxShadow: '0 28px 70px rgba(14,34,53,.22)', overflow: 'hidden' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <p style={SECTION_HEAD}>Impresión masiva</p>
+            <h2 style={{ fontSize: 15, fontWeight: 800, color: C.navy, margin: 0 }}>
+              {loading
+                ? `Cargando QRs… (${loaded}/${assets.length})`
+                : `${assets.length} código${assets.length !== 1 ? 's' : ''} QR listos`}
+            </h2>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => window.print()}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
+                       borderRadius: 8, border: 'none',
+                       background: loading ? C.muted : C.navy, color: '#fff',
+                       fontSize: 12, fontWeight: 700, cursor: loading ? 'default' : 'pointer',
+                       fontFamily: 'inherit', opacity: loading ? .6 : 1 }}
+            >
+              <Printer size={13} /> Imprimir
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${C.border}`,
+                       background: '#fff', cursor: 'pointer', display: 'grid',
+                       placeItems: 'center', color: C.muted }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        <div
+          id="bulk-qr-sheet"
+          style={{ flex: 1, overflowY: 'auto', padding: 20,
+                   display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}
+        >
+          {assets.map((a, i) => {
+            const qData = queries[i]?.data;
+            return (
+              <div key={a.id} style={{ border: `1px solid ${C.border}`, borderRadius: 9,
+                                       padding: '14px 10px', textAlign: 'center', background: '#fff' }}>
+                {qData?.qr_image ? (
+                  <img src={qData.qr_image} alt="QR"
+                    style={{ width: 140, height: 140, display: 'block', margin: '0 auto 8px', borderRadius: 6 }} />
+                ) : (
+                  <div style={{ width: 140, height: 140, margin: '0 auto 8px', borderRadius: 6,
+                                background: C.surface, display: 'grid', placeItems: 'center' }}>
+                    <QrCode size={32} style={{ color: C.border }} />
+                  </div>
+                )}
+                <p style={{ fontSize: 11, fontWeight: 700, color: C.navy, margin: '0 0 3px',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</p>
+                <p style={{ fontSize: 9, color: C.muted, margin: 0, fontFamily: 'monospace', letterSpacing: '.04em' }}>
+                  {a.qr_code}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -384,14 +491,19 @@ function ViewModeDropdown({ value, onChange }: { value: ViewMode; onChange: (m: 
 }
 
 /* ── AssetCard (grid view) — estilo mockup ───────────────────────────────── */
-function AssetCard({ asset, onOpen, onFullDetail }: { asset: AssetListItem; onOpen: () => void; onFullDetail: () => void }) {
+function AssetCard({
+  asset, onOpen, onFullDetail, selected, onSelect,
+}: {
+  asset: AssetListItem; onOpen: () => void; onFullDetail: () => void;
+  selected?: boolean; onSelect?: () => void;
+}) {
   const color   = ASSET_STATUS_COLORS[asset.status];
   const [hov, setHov] = useState(false);
   return (
     <article
       style={{
-        background: '#fff', borderRadius: 8,
-        border: `1px solid ${hov ? 'rgba(255,94,58,.36)' : C.border}`,
+        background: '#fff', borderRadius: 8, position: 'relative',
+        border: `1px solid ${selected ? C.coral : hov ? 'rgba(255,94,58,.36)' : C.border}`,
         boxShadow: hov ? '0 14px 34px rgba(14,34,53,.09)' : '0 1px 4px rgba(14,34,53,.04)',
         transform: hov ? 'translateY(-2px)' : 'none',
         transition: 'border-color .18s, box-shadow .18s, transform .18s',
@@ -400,6 +512,20 @@ function AssetCard({ asset, onOpen, onFullDetail }: { asset: AssetListItem; onOp
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
+      {onSelect && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onSelect(); }}
+          style={{ position: 'absolute', top: 10, left: 10, zIndex: 2,
+                   width: 20, height: 20, borderRadius: 5,
+                   border: `2px solid ${selected ? C.coral : C.border}`,
+                   background: selected ? C.coral : '#fff',
+                   cursor: 'pointer', display: 'grid', placeItems: 'center',
+                   transition: 'background .14s, border-color .14s' }}
+        >
+          {selected && <Check size={11} style={{ color: '#fff', strokeWidth: 3 }} />}
+        </button>
+      )}
       <div style={{ padding: '16px' }}>
         {/* Icon + status */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
@@ -446,10 +572,26 @@ function AssetCard({ asset, onOpen, onFullDetail }: { asset: AssetListItem; onOp
 }
 
 /* ── AssetListRow ────────────────────────────────────────────────────────── */
-function AssetListRow({ asset, onOpen, onFullDetail }: { asset: AssetListItem; onOpen: () => void; onFullDetail: () => void }) {
+function AssetListRow({
+  asset, onOpen, onFullDetail, selected, onSelect,
+}: {
+  asset: AssetListItem; onOpen: () => void; onFullDetail: () => void;
+  selected?: boolean; onSelect?: () => void;
+}) {
   const color = ASSET_STATUS_COLORS[asset.status];
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 140px 130px 110px auto', gap: 12, alignItems: 'center', padding: '11px 14px', background: '#fff', border: `1px solid ${C.border}`, borderLeft: `3px solid ${color}`, borderRadius: 9 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `${onSelect ? '28px ' : ''}minmax(0,1fr) 140px 130px 110px auto`, gap: 12, alignItems: 'center', padding: '11px 14px', background: '#fff', border: `1px solid ${selected ? C.coral : C.border}`, borderLeft: `3px solid ${selected ? C.coral : color}`, borderRadius: 9 }}>
+      {onSelect && (
+        <button
+          type="button"
+          onClick={onSelect}
+          style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${selected ? C.coral : C.border}`,
+                   background: selected ? C.coral : '#fff', cursor: 'pointer',
+                   display: 'grid', placeItems: 'center', flexShrink: 0 }}
+        >
+          {selected && <Check size={11} style={{ color: '#fff', strokeWidth: 3 }} />}
+        </button>
+      )}
       <button type="button" onClick={onOpen} style={{ display: 'flex', alignItems: 'center', gap: 11, border: 0, background: 'transparent', cursor: 'pointer', minWidth: 0, textAlign: 'left', fontFamily: 'inherit' }}>
         <span style={{ width: 40, height: 40, borderRadius: 8, background: `${color}12`, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
           <Package size={15} style={{ color }} />
@@ -471,19 +613,45 @@ function AssetListRow({ asset, onOpen, onFullDetail }: { asset: AssetListItem; o
 }
 
 /* ── AssetSummaryItem ────────────────────────────────────────────────────── */
-function AssetSummaryItem({ asset, onOpen }: { asset: AssetListItem; onOpen: () => void }) {
+function AssetSummaryItem({
+  asset, onOpen, selected, onSelect,
+}: {
+  asset: AssetListItem; onOpen: () => void;
+  selected?: boolean; onSelect?: () => void;
+}) {
   const color = ASSET_STATUS_COLORS[asset.status];
   return (
-    <button type="button" onClick={onOpen} style={{ padding: '14px 16px', borderRadius: 9, border: `1px solid ${C.border}`, borderLeft: `3px solid ${color}`, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, textAlign: 'left', fontFamily: 'inherit', width: '100%', transition: 'box-shadow .14s' }}
-      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 14px rgba(14,34,53,.07)')}
-      onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}>
-      <span style={{ minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: 9, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.09em', marginBottom: 4 }}>{asset.category_name}</span>
-        <strong style={{ display: 'block', fontSize: 13, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 700 }}>{asset.name}</strong>
-        <small style={{ display: 'block', fontSize: 10, color: C.muted, marginTop: 3, fontWeight: 500 }}>{asset.location_name}</small>
-      </span>
-      <StatusBadge status={asset.status} />
-    </button>
+    <div
+      style={{ padding: '14px 16px', borderRadius: 9, border: `1px solid ${selected ? C.coral : C.border}`,
+               borderLeft: `3px solid ${selected ? C.coral : color}`, background: '#fff',
+               display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', position: 'relative',
+               boxSizing: 'border-box' }}
+    >
+      {onSelect && (
+        <button
+          type="button"
+          onClick={onSelect}
+          style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${selected ? C.coral : C.border}`,
+                   background: selected ? C.coral : '#fff', cursor: 'pointer', flexShrink: 0,
+                   display: 'grid', placeItems: 'center' }}
+        >
+          {selected && <Check size={10} style={{ color: '#fff', strokeWidth: 3 }} />}
+        </button>
+      )}
+      <button type="button" onClick={onOpen}
+        style={{ flex: 1, minWidth: 0, border: 'none', background: 'none', cursor: 'pointer',
+                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                 textAlign: 'left', fontFamily: 'inherit', padding: 0 }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '.8')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 9, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.09em', marginBottom: 4 }}>{asset.category_name}</span>
+          <strong style={{ display: 'block', fontSize: 13, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 700 }}>{asset.name}</strong>
+          <small style={{ display: 'block', fontSize: 10, color: C.muted, marginTop: 3, fontWeight: 500 }}>{asset.location_name}</small>
+        </span>
+        <StatusBadge status={asset.status} />
+      </button>
+    </div>
   );
 }
 
@@ -861,7 +1029,19 @@ export function InventoryClient() {
   const [showCreate,      setShowCreate]      = useState(false);
   const [showScan,        setShowScan]        = useState(false);
   const [showBulk,        setShowBulk]        = useState(false);
+  const [selectMode,      setSelectMode]      = useState(false);
+  const [selectedIds,     setSelectedIds]     = useState<Set<string>>(new Set());
+  const [showBulkQr,      setShowBulkQr]      = useState(false);
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function toggleSelectAsset(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function exitSelectMode() { setSelectMode(false); setSelectedIds(new Set()); }
 
   useEffect(() => {
     const stored = window.localStorage.getItem('inventory:assets:view') as ViewMode | null;
@@ -1069,6 +1249,13 @@ export function InventoryClient() {
                 <QrCode size={12} style={{ color: C.coral }} /> Escanear QR
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700, border: `1px solid ${selectMode ? C.coral : C.border}`, background: selectMode ? `${C.coral}12` : '#fff', color: selectMode ? C.coral : C.sub, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, transition: 'all .15s' }}>
+              <Printer size={12} />
+              {selectMode && selectedIds.size > 0 ? `${selectedIds.size} sel.` : selectMode ? 'Cancelar' : 'Imprimir QRs'}
+            </button>
           </div>
 
           {/* States */}
@@ -1094,17 +1281,37 @@ export function InventoryClient() {
             <>
               {viewMode === 'card' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
-                  {filtered.map(a => <AssetCard key={a.id} asset={a} onOpen={() => setDrawerAssetId(a.id)} onFullDetail={() => goToDetail(a.id)} />)}
+                  {filtered.map(a => (
+                    <AssetCard key={a.id} asset={a}
+                      onOpen={() => !selectMode && setDrawerAssetId(a.id)}
+                      onFullDetail={() => !selectMode && goToDetail(a.id)}
+                      selected={selectedIds.has(a.id)}
+                      onSelect={selectMode ? () => toggleSelectAsset(a.id) : undefined}
+                    />
+                  ))}
                 </div>
               )}
               {viewMode === 'list' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  {filtered.map(a => <AssetListRow key={a.id} asset={a} onOpen={() => setDrawerAssetId(a.id)} onFullDetail={() => goToDetail(a.id)} />)}
+                  {filtered.map(a => (
+                    <AssetListRow key={a.id} asset={a}
+                      onOpen={() => !selectMode && setDrawerAssetId(a.id)}
+                      onFullDetail={() => !selectMode && goToDetail(a.id)}
+                      selected={selectedIds.has(a.id)}
+                      onSelect={selectMode ? () => toggleSelectAsset(a.id) : undefined}
+                    />
+                  ))}
                 </div>
               )}
               {viewMode === 'summary' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 7 }}>
-                  {filtered.map(a => <AssetSummaryItem key={a.id} asset={a} onOpen={() => setDrawerAssetId(a.id)} />)}
+                  {filtered.map(a => (
+                    <AssetSummaryItem key={a.id} asset={a}
+                      onOpen={() => !selectMode && setDrawerAssetId(a.id)}
+                      selected={selectedIds.has(a.id)}
+                      onSelect={selectMode ? () => toggleSelectAsset(a.id) : undefined}
+                    />
+                  ))}
                 </div>
               )}
             </>
@@ -1121,6 +1328,44 @@ export function InventoryClient() {
       {showCreate && selectedModule && <CreateModal moduleId={selectedModule} onClose={() => setShowCreate(false)} />}
       {showScan   && <ScanModal onClose={() => setShowScan(false)} onOpen={id => setDrawerAssetId(id)} />}
       {showBulk   && selectedModule && <BulkImportModal moduleId={selectedModule} onClose={() => setShowBulk(false)} />}
+      {showBulkQr && selectedIds.size > 0 && (
+        <BulkQrPrintModal
+          assets={filtered.filter(a => selectedIds.has(a.id)).map(a => ({ id: a.id, name: a.name, qr_code: a.qr_code }))}
+          onClose={() => setShowBulkQr(false)}
+        />
+      )}
+
+      {/* Floating selection bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: C.navy, color: '#fff', padding: '12px 20px', borderRadius: 12,
+          display: 'flex', alignItems: 'center', gap: 12, zIndex: 60,
+          boxShadow: '0 8px 30px rgba(14,34,53,.28)', whiteSpace: 'nowrap',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700 }}>
+            {selectedIds.size} activo{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowBulkQr(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
+                     borderRadius: 8, border: 'none', background: C.coral, color: '#fff',
+                     fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            <Printer size={12} /> Imprimir QRs
+          </button>
+          <button
+            type="button"
+            onClick={exitSelectMode}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,.2)',
+                     background: 'transparent', color: 'rgba(255,255,255,.7)',
+                     fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
     </ModuleLayout>
   );
 }
