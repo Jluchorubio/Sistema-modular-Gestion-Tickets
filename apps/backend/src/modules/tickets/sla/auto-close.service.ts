@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cron } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessagingService } from '../../../shared/messaging/messaging.service';
 
 @Injectable()
 export class AutoCloseService {
@@ -10,7 +10,7 @@ export class AutoCloseService {
 
   constructor(
     @InjectDataSource() private readonly db: DataSource,
-    private readonly events: EventEmitter2,
+    private readonly messaging: MessagingService,
   ) {}
 
   /** Runs every hour. Closes tickets that have been in resuelto (approval state)
@@ -76,7 +76,7 @@ export class AutoCloseService {
           `UPDATE tickets.tickets SET current_state_id = $1 WHERE id = $2`,
           [t.close_state_id, t.ticket_id],
         );
-        this.events.emit('ticket.state_changed', {
+        this.messaging.emit('ticket.state_changed', {
           ticketId:  t.ticket_id,
           title:     t.title,
           createdBy: t.created_by,

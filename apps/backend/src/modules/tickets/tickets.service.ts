@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessagingService } from '../../shared/messaging/messaging.service';
 import { SlaEvaluatorService } from './sla/sla-evaluator.service';
 import { PriorityEngineService } from './priority/priority-engine.service';
 import { AssignmentService } from './assignment/assignment.service';
@@ -10,7 +10,7 @@ import { AssignmentService } from './assignment/assignment.service';
 export class TicketsService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
-    private readonly events: EventEmitter2,
+    private readonly messaging: MessagingService,
     private readonly slaEvaluator: SlaEvaluatorService,
     private readonly priorityEngine: PriorityEngineService,
     private readonly assignment: AssignmentService,
@@ -464,7 +464,7 @@ export class TicketsService {
       ticket.id, dto.module_id, dto.category_id, userId,
     );
 
-    this.events.emit('ticket.created', {
+    this.messaging.emit('ticket.created', {
       ticketId:        ticket.id,
       title:           ticket.title,
       createdBy:       userId,
@@ -592,13 +592,13 @@ export class TicketsService {
 
     // Emit events after commit — side effects outside the transaction
     if (toState?.is_approval_state) {
-      this.events.emit('ticket.validation_required', {
+      this.messaging.emit('ticket.validation_required', {
         ticketId,
         title:     ticket.title,
         createdBy: ticket.created_by,
       });
     } else if (!toState?.is_final) {
-      this.events.emit('ticket.state_changed', {
+      this.messaging.emit('ticket.state_changed', {
         ticketId,
         title:     ticket.title,
         createdBy: ticket.created_by,
@@ -708,7 +708,7 @@ export class TicketsService {
       [ticketId],
     );
 
-    this.events.emit('ticket.state_changed', {
+    this.messaging.emit('ticket.state_changed', {
       ticketId,
       title:     ticket.title,
       createdBy: ticket.created_by,
@@ -759,7 +759,7 @@ export class TicketsService {
       [ticketId, ticket.current_state_id, initState.id, userId, dto.reason || 'Reapertura forzada'],
     );
 
-    this.events.emit('ticket.state_changed', {
+    this.messaging.emit('ticket.state_changed', {
       ticketId,
       title:     ticket.title,
       createdBy: ticket.created_by,
@@ -980,7 +980,7 @@ export class TicketsService {
         `SELECT first_name || ' ' || last_name AS full_name FROM users.profiles WHERE id = $1`,
         [userId],
       );
-      this.events.emit('ticket.comment_added', {
+      this.messaging.emit('ticket.comment_added', {
         ticketId:   ticketId,
         title:      ticket.title,
         createdBy:  ticket.created_by,
@@ -1165,7 +1165,7 @@ export class TicketsService {
         `SELECT title FROM tickets.tickets WHERE id = $1`,
         [ticketId],
       );
-      this.events.emit('ticket.assigned', {
+      this.messaging.emit('ticket.assigned', {
         ticketId,
         title:      t?.title ?? '',
         assigneeId: dto.user_id,

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessagingService } from '../../shared/messaging/messaging.service';
 import { CacheService } from '../../shared/redis/cache.service';
 import {
   CreateStructureTypeDto, UpdateStructureTypeDto,
@@ -28,7 +28,7 @@ export class SystemConfigService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
     private readonly cache: CacheService,
-    private readonly events: EventEmitter2,
+    private readonly messaging: MessagingService,
   ) {}
 
   /* ── Company info ──────────────────────────────────────────────── */
@@ -71,7 +71,7 @@ export class SystemConfigService {
       values,
     );
 
-    this.events.emit('config.company.updated', {
+    this.messaging.emit('config.company.updated', {
       name:          org.name,
       slug:          org.slug,
       logo_url:      org.logo_url,

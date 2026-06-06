@@ -14,9 +14,11 @@ import { AssignmentService } from './assignment/assignment.service';
 import { RoundRobinStrategy } from './assignment/strategies/round-robin.strategy';
 import { SkillBasedStrategy } from './assignment/strategies/skill-based.strategy';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { MessagingModule } from '../../shared/messaging/messaging.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([]), NotificationsModule],
+  imports: [
+    MessagingModule,TypeOrmModule.forFeature([]), NotificationsModule],
   controllers: [TicketsController, MeetingsController],
   providers: [TicketsService, KnowledgeService, MeetingsService, SlaService, SlaEvaluatorService, SlaBreachService, AutoCloseService, PriorityEngineService, AssignmentService, RoundRobinStrategy, SkillBasedStrategy],
   exports: [TicketsService, KnowledgeService, MeetingsService, SlaService, SlaEvaluatorService, PriorityEngineService],

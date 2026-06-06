@@ -4,9 +4,11 @@ import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
 import { SystemConfigModule } from '../system-config/system-config.module';
 import { TicketsModule } from '../tickets/tickets.module';
+import { MessagingModule } from '../../shared/messaging/messaging.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([]), SystemConfigModule, TicketsModule],
+  imports: [
+    MessagingModule,TypeOrmModule.forFeature([]), SystemConfigModule, TicketsModule],
   controllers: [RequestsController],
   providers: [RequestsService],
   exports: [RequestsService],

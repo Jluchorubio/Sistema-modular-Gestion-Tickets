@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessagingService } from '../../shared/messaging/messaging.service';
 import { AvailabilityDto } from './dto/availability.dto';
 import { SelfAvailabilityDto } from './dto/self-availability.dto';
 import { AddSkillDto } from './dto/add-skill.dto';
@@ -27,7 +27,7 @@ export class SkillService {
 
   constructor(
     @InjectDataSource() private readonly db: DataSource,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly messaging: MessagingService,
   ) {}
 
   // ─── Disponibilidad ──────────────────────────────────────────────────────────
@@ -139,7 +139,7 @@ export class SkillService {
       [userId, dto.module_id, is_available, dto.status, dto.unavailable_to ?? null, dto.notes ?? null],
     );
 
-    this.eventEmitter.emit('tech.availability.changed', {
+    this.messaging.emit('tech.availability.changed', {
       userId,
       moduleId:    dto.module_id,
       status:      dto.status,

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessagingService } from '../../shared/messaging/messaging.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ReviewRequestDto } from './dto/review-request.dto';
 import { calculatePriority } from './priority.engine';
@@ -15,7 +15,7 @@ const PRIORITY_HOURS: Record<string, number> = { critica: 2, alta: 8, media: 24,
 export class RequestsService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
-    private readonly events: EventEmitter2,
+    private readonly messaging: MessagingService,
     private readonly systemConfig: SystemConfigService,
     private readonly slaEvaluator: SlaEvaluatorService,
   ) {}
@@ -281,7 +281,7 @@ export class RequestsService {
 
     if (dto.status === 'approved' || dto.status === 'rejected') {
       const event = dto.status === 'approved' ? 'request.approved' : 'request.rejected';
-      this.events.emit(event, {
+      this.messaging.emit(event, {
         requestId:   updated.id,
         title:       updated.title,
         requesterId: updated.requester_id,
@@ -325,7 +325,7 @@ export class RequestsService {
       [requestId, userId],
     );
 
-    this.events.emit('request.taken', {
+    this.messaging.emit('request.taken', {
       requestId:   updated.id,
       title:       updated.title,
       requesterId: updated.requester_id,

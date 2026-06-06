@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessagingService } from '../../shared/messaging/messaging.service';
 
 export type MeetingProvider = 'google_meet' | 'teams' | 'zoom' | 'internal';
 export type MeetingStatus   = 'scheduled' | 'active' | 'completed' | 'cancelled';
@@ -19,7 +19,7 @@ export interface CreateMeetingDto {
 export class MeetingsService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
-    private readonly events: EventEmitter2,
+    private readonly messaging: MessagingService,
   ) {}
 
   async getMeetings(ticketId: string) {
@@ -90,7 +90,7 @@ export class MeetingsService {
       [ticketId],
     );
     const allParticipants = [...(dto.participant_ids ?? []), actorId];
-    this.events.emit('meeting.scheduled', {
+    this.messaging.emit('meeting.scheduled', {
       meetingId:      meeting.id,
       ticketId,
       ticketTitle:    ticketRow?.title ?? ticketId,

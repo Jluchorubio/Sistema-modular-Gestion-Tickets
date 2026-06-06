@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { Transport } from '@nestjs/microservices';
 import * as helmet from 'helmet';
 import * as compression from 'compression';
 import * as express from 'express';
@@ -25,6 +26,23 @@ async function bootstrap() {
 
   // WebSocket adapter (socket.io)
   app.useWebSocketAdapter(new IoAdapter(app));
+
+  // RabbitMQ hybrid microservice — active only when RABBITMQ_URL is set
+  const rabbitmqUrl = process.env.RABBITMQ_URL;
+  if (rabbitmqUrl) {
+    app.connectMicroservice({
+      transport: Transport.RMQ,
+      options: {
+        urls: [rabbitmqUrl],
+        queue: 'notifications_queue',
+        queueOptions: { durable: true },
+        noAck: false,
+        prefetchCount: 10,
+      },
+    });
+    await app.startAllMicroservices();
+    console.log('  RabbitMQ microservice conectado.');
+  }
 
   // ── Security ────────────────────────────────────────────────────────────────
   app.use((helmet as any).default({
