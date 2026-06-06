@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Clock, AlertTriangle, CheckCircle2, XCircle,
-  Paperclip, Star, Monitor, ChevronUp,
+  Paperclip, Star, Monitor, ChevronUp, AlertCircle, Tag,
 } from 'lucide-react';
 import { TicketTimeline } from './TicketTimeline';
 import { TicketSidebar } from './TicketSidebar';
@@ -46,6 +46,29 @@ function StateBadge({ label, isFinal }: { label: string; isFinal: boolean }) {
       {label}
     </span>
   );
+}
+
+/* ── Approval expiry countdown ───────────────────────────────────────── */
+function useApprovalCountdown(expiresAt: string | null) {
+  const [label, setLabel] = useState('');
+  const [urgent, setUrgent] = useState(false);
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    const tick = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff <= 0) { setLabel('Expirado'); setUrgent(true); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setUrgent(diff < 3600000 * 4);
+      setLabel(h > 0 ? `${h}h ${m}m` : `${m}m`);
+    };
+    tick();
+    const id = setInterval(tick, 60000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  return { label, urgent };
 }
 
 /* ── Main component ─────────────────────────────────────────────────── */
@@ -127,6 +150,9 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
   /* ── UI state ── */
   const [descExpanded, setDescExpanded] = useState(false);
+
+  /* ── Approval expiry countdown ── */
+  const approvalCountdown = useApprovalCountdown(ticket?.approval_expires_at ?? null);
 
   /* ── Render ── */
   return (
@@ -214,6 +240,32 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
           </div>
 
 
+          {/* CONTEXT STRIP — priority + category + assignee quick-read */}
+          <div style={{
+            background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
+            padding: '0 20px', height: 34, flexShrink: 0,
+            display: 'flex', alignItems: 'center', gap: 14, overflowX: 'auto',
+          }}>
+            <PriorityBadge priority={ticket.priority} />
+            {ticket.category_name && (
+              <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {ticket.category_name}
+              </span>
+            )}
+            {ownerAssignment ? (
+              <span style={{ fontSize: 10, color: '#475569', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                {ownerAssignment.user_name}
+              </span>
+            ) : (
+              <span style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic' }}>Sin asignar</span>
+            )}
+            <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+              Urgencia: <strong style={{ color: '#64748b' }}>{ticket.urgency}</strong>
+              {' · '}Impacto: <strong style={{ color: '#64748b' }}>{ticket.impact}</strong>
+            </span>
+          </div>
+
           {/* 2-COLUMN BODY */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', flex: 1, overflow: 'hidden' }}>
 
@@ -236,6 +288,11 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                       {ticket.category_name}
                     </span>
                   )}
+                  {ticket.damage_category_label && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Tag size={8} /> {ticket.damage_category_label}
+                    </span>
+                  )}
                   {ticket.damage_type_label && (
                     <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a' }}>
                       {ticket.damage_type_label}
@@ -255,6 +312,14 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                     Solicitado por <strong style={{ color: '#475569' }}>{ticket.creator_name}</strong> · #{ticket.id.slice(0,8).toUpperCase()}
                   </span>
                 </div>
+
+                {/* Custom damage description */}
+                {ticket.custom_damage_description && (
+                  <div style={{ margin: '8px 0 2px', padding: '7px 10px', borderRadius: 7, background: '#fffbeb', border: '1px solid #fde68a', fontSize: 11, color: '#92400e', display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1, color: '#d97706' }} />
+                    <span><strong>Descripción del daño:</strong> {ticket.custom_damage_description}</span>
+                  </div>
+                )}
 
                 {/* Description (collapsible) */}
                 {ticket.description && (
@@ -277,14 +342,46 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 )}
               </div>
 
+              {/* Escalation banner — visible for all team members */}
+              {ticket.escalated && ticket.escalation_note && (
+                <div style={{ padding: '10px 20px', borderBottom: '1px solid #fed7aa', background: '#fff7ed', flexShrink: 0, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <AlertTriangle size={14} style={{ color: '#c2410c', flexShrink: 0, marginTop: 1 }} />
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 2 }}>
+                      Motivo de escalamiento
+                    </span>
+                    <span style={{ fontSize: 12, color: '#92400e' }}>{ticket.escalation_note}</span>
+                  </div>
+                </div>
+              )}
+              {ticket.escalated && !ticket.escalation_note && (
+                <div style={{ padding: '8px 20px', borderBottom: '1px solid #fed7aa', background: '#fff7ed', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AlertTriangle size={13} style={{ color: '#c2410c' }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#c2410c' }}>Este ticket fue escalado automáticamente por recurrencia.</span>
+                </div>
+              )}
+
               {/* Rating + acceptance banner */}
               {ticket.is_approval_state && currentUser?.id === ticket.created_by && (
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: '#fffbeb', flexShrink: 0 }}>
                   {!showRejectForm ? (
                     <>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: '0 0 2px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <CheckCircle2 size={14} style={{ color: '#22c55e' }} /> Solución aplicada — ¿quedaste satisfecho?
-                      </p>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 2 }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: '#92400e', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <CheckCircle2 size={14} style={{ color: '#22c55e' }} /> Solución aplicada — ¿quedaste satisfecho?
+                        </p>
+                        {approvalCountdown.label && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, flexShrink: 0,
+                            background: approvalCountdown.urgent ? '#fef2f2' : '#fef3c7',
+                            color: approvalCountdown.urgent ? '#dc2626' : '#92400e',
+                            border: `1px solid ${approvalCountdown.urgent ? '#fecaca' : '#fde68a'}`,
+                            display: 'flex', alignItems: 'center', gap: 4,
+                          }}>
+                            <Clock size={9} /> Vence en {approvalCountdown.label}
+                          </span>
+                        )}
+                      </div>
                       <p style={{ fontSize: 11, color: '#a16207', margin: '0 0 12px' }}>Califica la atención antes de aceptar. Puedes reabrir si la solución no es correcta.</p>
 
                       {/* Stars */}

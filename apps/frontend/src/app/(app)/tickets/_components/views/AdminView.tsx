@@ -222,12 +222,19 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 {t.state_label}
               </span>
 
-              {/* SLA badge */}
-              {slaC && slaL && (
-                <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: `${slaC}15`, color: slaC, border: `1px solid ${slaC}30`, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                  <Clock size={8} />{slaL}
+              {/* Approval / SLA badge */}
+              {t.is_approval_state ? (
+                <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', flexShrink: 0 }}>
+                  ✓ Por aprobar
                 </span>
-              )}
+              ) : slaC && slaL ? (
+                <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: `${slaC}15`, color: slaC, border: `1px solid ${slaC}30`, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                  <Clock size={8} />
+                  {breached && t.breached_at
+                    ? `Vencido ${fmtRelative(t.breached_at)}`
+                    : slaL}
+                </span>
+              ) : null}
 
               {/* Arrow */}
               <ChevronRight size={13} style={{ color: '#cbd5e1', flexShrink: 0 }} />
@@ -489,12 +496,57 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </div>
             </div>
 
+            {/* Urgent queue — tickets needing immediate action */}
+            {(() => {
+              const urgent = allTickets
+                .filter(t => !t.is_final)
+                .filter(t => t.sla_status === 'breached' || t.is_approval_state || t.assignee_name === null)
+                .sort((a, b) => {
+                  const score = (t: TicketListItem) =>
+                    (t.sla_status === 'breached' ? 0 : t.assignee_name === null ? 1 : 2) * 10
+                    + PRIORITY_ORDER[t.priority];
+                  return score(a) - score(b);
+                })
+                .slice(0, 5);
+              if (urgent.length === 0) return null;
+              return (
+                <div>
+                  <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Atención urgente</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    {urgent.map(t => {
+                      const tag = t.sla_status === 'breached'
+                        ? { label: 'VENCIDO', color: '#ef4444', bg: '#fef2f2' }
+                        : t.is_approval_state
+                        ? { label: 'APROBAR', color: '#92400e', bg: '#fef3c7' }
+                        : { label: 'SIN ASIGNAR', color: '#6366f1', bg: '#eef2ff' };
+                      return (
+                        <button key={t.id} type="button"
+                          onClick={() => router.push(`${basePath}/ticket/${t.id}`)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 8px', borderRadius: 7, border: '1px solid #f1f5f9', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}>
+                          <div style={{ width: 4, height: 28, borderRadius: 2, background: TICKET_PRIORITY_COLORS[t.priority], flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: '#0e2235', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</p>
+                            <span style={{ fontSize: 8, fontWeight: 800, padding: '1px 5px', borderRadius: 4, background: tag.bg, color: tag.color }}>{tag.label}</span>
+                          </div>
+                          <ChevronRight size={10} style={{ color: '#cbd5e1', flexShrink: 0 }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Top technicians */}
             {topTechs.length > 0 && (
               <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Técnicos activos</p>
+                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Carga de técnicos</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {topTechs.map(t => (
+                  {topTechs.map(t => {
+                    const availColor = t.avail_status === 'disponible' ? '#22c55e' : t.avail_status === 'ocupado' ? '#f59e0b' : '#94a3b8';
+                    return (
                     <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <span style={{ fontSize: 9, fontWeight: 800, color: '#fff' }}>{t.first_name?.[0]}{t.last_name?.[0]}</span>
@@ -502,12 +554,13 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.first_name} {t.last_name}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: t.avail_status === 'disponible' ? '#22c55e' : t.avail_status === 'ocupado' ? '#f59e0b' : '#94a3b8', flexShrink: 0 }} />
-                          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600 }}>{t.cnt} tickets</span>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: availColor, flexShrink: 0 }} />
+                          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600 }}>{t.cnt} ticket{t.cnt !== 1 ? 's' : ''}</span>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

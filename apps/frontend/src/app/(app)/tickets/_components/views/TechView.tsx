@@ -163,39 +163,76 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
 
           {isLoading ? (
             <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>Cargando cola de trabajo…</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* ANTERIORES */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#ff5e3a', textTransform: 'uppercase', letterSpacing: '.07em' }}>Anteriores · pendientes</span>
-                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{previous.length} ticket{previous.length !== 1 ? 's' : ''}</span>
-                </div>
-                {previous.length === 0 ? (
-                  <div style={{ background: '#f8fafc', borderRadius: 10, padding: '20px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets anteriores</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {previous.map((t) => <TechQueueItem key={t.id} ticket={t} basePath={basePath} />)}
-                  </div>
-                )}
-              </div>
+          ) : (() => {
+            const all = (assigned ?? []) as AssignedTicket[];
+            const breached   = all.filter(t => t.sla_status === 'breached' && !t.is_final);
+            const approvals  = all.filter(t => t.is_approval_state);
+            const prevNormal = previous.filter(t => !t.is_approval_state && t.sla_status !== 'breached');
+            const todayNormal= today.filter(t => !t.is_approval_state && t.sla_status !== 'breached');
 
-              {/* HOY */}
-              <div>
+            function SectionHeader({ label, count, color }: { label: string; count: number; color: string }) {
+              return (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.07em' }}>Hoy · actuales</span>
-                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{today.length} ticket{today.length !== 1 ? 's' : ''}</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: '.07em' }}>{label}</span>
+                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{count} ticket{count !== 1 ? 's' : ''}</span>
                 </div>
-                {today.length === 0 ? (
-                  <div style={{ background: '#f8fafc', borderRadius: 10, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets nuevos hoy</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {today.map((t) => <TechQueueItem key={t.id} ticket={t} basePath={basePath} />)}
+              );
+            }
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* URGENTE — SLA vencido */}
+                {breached.length > 0 && (
+                  <div style={{ background: '#fff5f5', borderRadius: 10, padding: '12px', border: '1.5px solid #fecaca' }}>
+                    <SectionHeader label="⚡ SLA Vencido — Atención inmediata" count={breached.length} color="#ef4444" />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {breached.map((t) => <TechQueueItem key={t.id} ticket={t} basePath={basePath} />)}
+                    </div>
+                  </div>
+                )}
+
+                {/* POR APROBAR */}
+                {approvals.length > 0 && (
+                  <div style={{ background: '#fffbeb', borderRadius: 10, padding: '12px', border: '1.5px solid #fde68a' }}>
+                    <SectionHeader label="✓ Esperando aprobación del usuario" count={approvals.length} color="#92400e" />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {approvals.map((t) => <TechQueueItem key={t.id} ticket={t} basePath={basePath} />)}
+                    </div>
+                  </div>
+                )}
+
+                {/* ANTERIORES normales */}
+                {prevNormal.length > 0 && (
+                  <div>
+                    <SectionHeader label="Anteriores · pendientes" count={prevNormal.length} color="#ff5e3a" />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {prevNormal.map((t) => <TechQueueItem key={t.id} ticket={t} basePath={basePath} />)}
+                    </div>
+                  </div>
+                )}
+
+                {/* HOY normales */}
+                <div>
+                  <SectionHeader label="Hoy · actuales" count={todayNormal.length} color="#0e2235" />
+                  {todayNormal.length === 0 ? (
+                    <div style={{ background: '#f8fafc', borderRadius: 10, padding: '24px', textAlign: 'center', border: '1px solid #eef2f6', color: '#94a3b8', fontSize: 12 }}>Sin tickets nuevos hoy</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {todayNormal.map((t) => <TechQueueItem key={t.id} ticket={t} basePath={basePath} />)}
+                    </div>
+                  )}
+                </div>
+
+                {breached.length === 0 && approvals.length === 0 && prevNormal.length === 0 && todayNormal.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                    <Ticket size={32} style={{ color: '#e2e8f0' }} />
+                    <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 12 }}>Sin tickets asignados</p>
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
         {showCreate && moduleId && <CreateDrawer moduleId={moduleId} onClose={() => setShowCreate(false)} />}
       </>

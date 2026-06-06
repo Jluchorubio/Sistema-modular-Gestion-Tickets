@@ -260,6 +260,71 @@ export function TicketSidebar({
   return (
     <div style={{ overflowY: 'auto', background: '#f8fafc' }}>
 
+      {/* Cambiar estado — PRIMERO: es la acción operacional principal */}
+      <PermissionGate perm="helpdesk:tickets:edit">
+        {!ticket.is_final && ticket.transitions.length > 0 && (
+          <SideSection label="Cambiar estado">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {ticket.transitions.map(tr => {
+                const bg = VBGS[tr.variant ?? 'default'] ?? '#0e2235';
+                const isAct = activeTransId === tr.id;
+                return (
+                  <div key={tr.id}>
+                    <button type="button"
+                      onClick={() => { setActiveTransId(isAct ? null : tr.id); setTransReason(''); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 7, border: 'none', background: isAct ? '#475569' : bg, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%' }}>
+                      {tr.variant === 'success' ? <CheckCircle2 size={12} /> : tr.variant === 'danger' ? <XCircle size={12} /> : <ChevronRight size={12} />}
+                      {tr.to_label}
+                    </button>
+                    {isAct && (
+                      <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        {tr.to_is_pause_state ? (
+                          <>
+                            <p style={{ fontSize: 10, fontWeight: 700, color: '#64748b', margin: 0 }}>
+                              ¿Por qué se pone en espera?
+                            </p>
+                            {[
+                              'Esperando usuario',
+                              'Esperando proveedor',
+                              'Esperando repuesto',
+                              'Esperando aprobación',
+                            ].map(opt => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setTransReason(opt === transReason ? '' : opt)}
+                                style={{
+                                  padding: '6px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600,
+                                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                                  border: `1.5px solid ${transReason === opt ? '#f59e0b' : '#e2e8f0'}`,
+                                  background: transReason === opt ? '#fef3c7' : '#f8fafc',
+                                  color: transReason === opt ? '#92400e' : '#475569',
+                                }}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </>
+                        ) : (
+                          <textarea value={transReason} onChange={e => setTransReason(e.target.value)}
+                            placeholder="Motivo (opcional)…" rows={2}
+                            style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box', outline: 'none' }} />
+                        )}
+                        <button type="button" disabled={mutPending.transition || (tr.to_is_pause_state && !transReason)}
+                          onClick={() => { onTransition(tr.id, transReason.trim() || undefined); setActiveTransId(null); setTransReason(''); }}
+                          style={{ padding: '6px 0', borderRadius: 7, background: bg, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (mutPending.transition || (tr.to_is_pause_state && !transReason)) ? .5 : 1 }}>
+                          {mutPending.transition ? 'Guardando…' : 'Confirmar'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </SideSection>
+        )}
+      </PermissionGate>
+
       {/* SLA */}
       <SideSection label="SLA">
         {ticket.sla_deadline_tracked ? (
@@ -278,6 +343,34 @@ export function TicketSidebar({
         ) : (
           <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Sin SLA configurado</p>
         )}
+
+        {/* SLA status explanations */}
+        {ticket.sla_status === 'paused' && (
+          <div style={{ marginTop: 8, padding: '6px 9px', borderRadius: 7, background: '#fefce8', border: '1px solid #fde68a', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+            <CheckCircle2 size={11} style={{ color: '#ca8a04', flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 10, color: '#92400e', margin: 0, lineHeight: 1.4 }}>
+              SLA pausado — el tiempo no cuenta mientras el ticket esté en espera o fuera de horario laboral.
+            </p>
+          </div>
+        )}
+        {ticket.sla_status === 'met' && (
+          <div style={{ marginTop: 8, padding: '6px 9px', borderRadius: 7, background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', gap: 6 }}>
+            <CheckCircle2 size={11} style={{ color: '#16a34a', flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 10, color: '#166534', margin: 0 }}>SLA cumplido en tiempo.</p>
+          </div>
+        )}
+        {ticket.sla_status === 'breached' && (
+          <div style={{ marginTop: 8, padding: '6px 9px', borderRadius: 7, background: '#fef2f2', border: '1px solid #fecaca', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+            <AlertTriangle size={11} style={{ color: '#dc2626', flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 10, color: '#991b1b', margin: 0, lineHeight: 1.4 }}>
+              SLA vencido — este ticket superó el tiempo de respuesta acordado.
+              {ticket.sla_deadline_tracked && (
+                <> Deadline fue {fmtDate(ticket.sla_deadline_tracked)}.</>
+              )}
+            </p>
+          </div>
+        )}
+
         {ticket.escalated && ticket.escalation_note?.startsWith('Auto-escalado') && (
           <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 7, background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', gap: 6 }}>
             <AlertTriangle size={11} style={{ color: '#ea580c', flexShrink: 0, marginTop: 1 }} />
@@ -395,71 +488,6 @@ export function TicketSidebar({
           </div>
         </div>
       </SideSection>
-
-      {/* Cambiar estado */}
-      <PermissionGate perm="helpdesk:tickets:edit">
-        {!ticket.is_final && ticket.transitions.length > 0 && (
-          <SideSection label="Cambiar estado">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {ticket.transitions.map(tr => {
-                const bg = VBGS[tr.variant ?? 'default'] ?? '#0e2235';
-                const isAct = activeTransId === tr.id;
-                return (
-                  <div key={tr.id}>
-                    <button type="button"
-                      onClick={() => { setActiveTransId(isAct ? null : tr.id); setTransReason(''); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 7, border: 'none', background: isAct ? '#475569' : bg, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%' }}>
-                      {tr.variant === 'success' ? <CheckCircle2 size={12} /> : tr.variant === 'danger' ? <XCircle size={12} /> : <ChevronRight size={12} />}
-                      {tr.to_label}
-                    </button>
-                    {isAct && (
-                      <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        {tr.to_is_pause_state ? (
-                          <>
-                            <p style={{ fontSize: 10, fontWeight: 700, color: '#64748b', margin: 0 }}>
-                              ¿Por qué se pone en espera?
-                            </p>
-                            {[
-                              'Esperando usuario',
-                              'Esperando proveedor',
-                              'Esperando repuesto',
-                              'Esperando aprobación',
-                            ].map(opt => (
-                              <button
-                                key={opt}
-                                type="button"
-                                onClick={() => setTransReason(opt === transReason ? '' : opt)}
-                                style={{
-                                  padding: '6px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600,
-                                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                                  border: `1.5px solid ${transReason === opt ? '#f59e0b' : '#e2e8f0'}`,
-                                  background: transReason === opt ? '#fef3c7' : '#f8fafc',
-                                  color: transReason === opt ? '#92400e' : '#475569',
-                                }}
-                              >
-                                {opt}
-                              </button>
-                            ))}
-                          </>
-                        ) : (
-                          <textarea value={transReason} onChange={e => setTransReason(e.target.value)}
-                            placeholder="Motivo (opcional)…" rows={2}
-                            style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box', outline: 'none' }} />
-                        )}
-                        <button type="button" disabled={mutPending.transition || (tr.to_is_pause_state && !transReason)}
-                          onClick={() => { onTransition(tr.id, transReason.trim() || undefined); setActiveTransId(null); setTransReason(''); }}
-                          style={{ padding: '6px 0', borderRadius: 7, background: bg, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (mutPending.transition || (tr.to_is_pause_state && !transReason)) ? .5 : 1 }}>
-                          {mutPending.transition ? 'Guardando…' : 'Confirmar'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </SideSection>
-        )}
-      </PermissionGate>
 
       {/* Detalles */}
       <SideSection label="Detalles" collapsible defaultOpen={false}>
@@ -749,7 +777,10 @@ export function TicketSidebar({
 
       {/* Conocimiento relacionado */}
       {(ticket.category_name || ticket.damage_type_label) && (
-        <SideSection label="Conocimiento" collapsible defaultOpen={false}>
+        <SideSection label="Base de conocimiento" collapsible defaultOpen>
+          <p style={{ fontSize: 10, color: '#94a3b8', margin: '0 0 8px' }}>
+            Artículos relacionados con <strong style={{ color: '#475569' }}>{ticket.damage_type_label ?? ticket.category_name}</strong>
+          </p>
           <KbSuggestions
             moduleId={ticket.module_id}
             query={ticket.damage_type_label ?? ticket.category_name ?? ''}
