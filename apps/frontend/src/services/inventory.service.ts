@@ -101,6 +101,7 @@ export interface CreateAssetDto {
   name:            string;
   description?:    string;
   serial_number?:  string;
+  specifications?: Record<string, unknown>;
 }
 
 export const ASSET_STATUS_LABELS: Record<AssetStatus, string> = {

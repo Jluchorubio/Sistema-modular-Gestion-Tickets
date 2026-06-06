@@ -21,6 +21,7 @@ import {
   ASSET_STATUS_LABELS, ASSET_STATUS_COLORS, ASSET_ACTION_LABELS, ASSET_ACTION_COLORS,
 } from '@/services/inventory.service';
 import { ticketsService } from '@/services/tickets.service';
+import { modulesService, type FieldDef } from '@/services/modules.service';
 import { ADMIN_ROLES } from '@/constants/roles';
 import { fmtDate } from '@/lib/formatters';
 
@@ -238,29 +239,54 @@ function BulkImportModal({ moduleId, onClose }: { moduleId: string; onClose: () 
 /* ── CreateModal ─────────────────────────────────────────────────────────── */
 function CreateModal({ moduleId, onClose }: { moduleId: string; onClose: () => void }) {
   const qc = useQueryClient();
-  const { data: categories }   = useQuery({ queryKey: ['ticket-categories', moduleId],   queryFn: () => ticketsService.getCategories(moduleId),   staleTime: 5 * 60_000 });
+  const { data: categories }   = useQuery({ queryKey: ['inv-categories', moduleId],      queryFn: () => modulesService.getCategories(moduleId),  staleTime: 5 * 60_000 });
   const { data: environments } = useQuery({ queryKey: ['ticket-environments', moduleId], queryFn: () => ticketsService.getEnvironments(moduleId), staleTime: 5 * 60_000 });
-  const [form, setForm]  = useState<Partial<CreateAssetDto>>({ module_id: moduleId });
+  const [form,  setForm]  = useState<Partial<CreateAssetDto>>({ module_id: moduleId });
+  const [specs, setSpecs] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
 
+  const selectedCategory = useMemo(
+    () => (categories ?? []).find((c: any) => c.id === form.category_id),
+    [categories, form.category_id],
+  );
+  const fieldSchema: FieldDef[] = useMemo(
+    () => selectedCategory?.field_schema ?? [],
+    [selectedCategory],
+  );
+
   const createMut = useMutation({
-    mutationFn: () => inventoryService.create(form as CreateAssetDto),
+    mutationFn: () => {
+      const specsPayload = Object.fromEntries(
+        Object.entries(specs).filter(([, v]) => v !== ''),
+      );
+      return inventoryService.create({
+        ...(form as CreateAssetDto),
+        specifications: Object.keys(specsPayload).length ? specsPayload : undefined,
+      });
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['inventory'] }); onClose(); },
     onError: (e: any) => setError(e?.response?.data?.message ?? 'Error al crear el activo.'),
   });
 
-  function set(key: keyof CreateAssetDto, val: string) { setForm(f => ({ ...f, [key]: val })); }
+  function set(key: keyof CreateAssetDto, val: string) {
+    setForm(f => ({ ...f, [key]: val }));
+    if (key === 'category_id') setSpecs({});
+  }
+  function setSpec(key: string, val: string) { setSpecs(s => ({ ...s, [key]: val })); }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name?.trim())   { setError('Nombre requerido.'); return; }
     if (!form.category_id)    { setError('Categoría requerida.'); return; }
     if (!form.environment_id) { setError('Ambiente requerido.'); return; }
+    const missing = fieldSchema.filter(f => f.required && !specs[f.key]?.trim());
+    if (missing.length > 0) { setError(`Campo requerido: ${missing[0].label}`); return; }
     setError(''); createMut.mutate();
   }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.55)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(2px)' }} onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
         <button type="button" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.muted }}><X size={13} /></button>
         <p style={SECTION_HEAD}>Registro rápido</p>
         <h2 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: '0 0 20px' }}>Nuevo activo</h2>
@@ -270,7 +296,7 @@ function CreateModal({ moduleId, onClose }: { moduleId: string; onClose: () => v
             <div><label style={LABEL}>Categoría *</label>
               <select value={form.category_id ?? ''} onChange={e => set('category_id', e.target.value)} style={INPUT}>
                 <option value="">Seleccionar…</option>
-                {(categories ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {(categories ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.parent_id ? `  ${c.name}` : c.name}</option>)}
               </select>
             </div>
             <div><label style={LABEL}>Ambiente *</label>
@@ -281,7 +307,43 @@ function CreateModal({ moduleId, onClose }: { moduleId: string; onClose: () => v
             </div>
           </div>
           <div><label style={LABEL}>Número de serie</label><input type="text" value={form.serial_number ?? ''} onChange={e => set('serial_number', e.target.value)} placeholder="SN-XXXX-0000" style={INPUT} /></div>
-          <div><label style={LABEL}>Descripción</label><textarea value={form.description ?? ''} onChange={e => set('description', e.target.value)} placeholder="Descripción del activo…" rows={3} style={{ ...INPUT, resize: 'vertical' }} /></div>
+          <div><label style={LABEL}>Descripción</label><textarea value={form.description ?? ''} onChange={e => set('description', e.target.value)} placeholder="Descripción del activo…" rows={2} style={{ ...INPUT, resize: 'vertical' }} /></div>
+
+          {/* Dynamic fields from category field_schema */}
+          {fieldSchema.length > 0 && (
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+              <p style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.06em', margin: '0 0 10px' }}>
+                Campos de {selectedCategory?.name}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {fieldSchema.map(f => (
+                  <div key={f.key}>
+                    <label style={LABEL}>{f.label}{f.required ? ' *' : ''}</label>
+                    {f.type === 'select' && f.options ? (
+                      <select value={specs[f.key] ?? ''} onChange={e => setSpec(f.key, e.target.value)} style={INPUT}>
+                        <option value="">Seleccionar…</option>
+                        {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    ) : f.type === 'boolean' ? (
+                      <select value={specs[f.key] ?? ''} onChange={e => setSpec(f.key, e.target.value)} style={INPUT}>
+                        <option value="">Seleccionar…</option>
+                        <option value="true">Sí</option>
+                        <option value="false">No</option>
+                      </select>
+                    ) : (
+                      <input
+                        type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}
+                        value={specs[f.key] ?? ''}
+                        onChange={e => setSpec(f.key, e.target.value)}
+                        style={INPUT}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {error && <p style={{ fontSize: 11, color: '#EF4444', margin: 0 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 4 }}>
             <button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: C.sub }}>Cancelar</button>
