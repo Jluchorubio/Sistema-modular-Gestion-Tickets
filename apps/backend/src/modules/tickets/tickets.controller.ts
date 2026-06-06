@@ -245,6 +245,25 @@ export class TicketsController {
     return this.svc.getTicketAssets(id);
   }
 
+  @Post(':id/assets')
+  @RequirePermission('helpdesk:tickets:edit')
+  linkAsset(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { asset_id: string; notes?: string },
+  ) {
+    return this.svc.linkAsset(id, body.asset_id, body.notes);
+  }
+
+  @Delete(':id/assets/:assetId')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:edit')
+  unlinkAsset(
+    @Param('id',      ParseUUIDPipe) id:      string,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+  ) {
+    return this.svc.unlinkAsset(id, assetId);
+  }
+
   @Get(':id/assets/:assetId/history')
   @RequirePermission('helpdesk:tickets:view')
   getTicketAssetHistory(

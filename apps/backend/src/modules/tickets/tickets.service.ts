@@ -1056,6 +1056,30 @@ export class TicketsService {
     );
   }
 
+  async linkAsset(ticketId: string, assetId: string, notes?: string) {
+    const [existing] = await this.db.query<any[]>(
+      `SELECT id FROM inventory.ticket_assets WHERE ticket_id = $1 AND asset_id = $2`,
+      [ticketId, assetId],
+    );
+    if (existing) return existing;
+    const [row] = await this.db.query<any[]>(
+      `INSERT INTO inventory.ticket_assets (ticket_id, asset_id, notes)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (ticket_id, asset_id) DO UPDATE SET notes = EXCLUDED.notes
+       RETURNING id`,
+      [ticketId, assetId, notes ?? null],
+    );
+    return row;
+  }
+
+  async unlinkAsset(ticketId: string, assetId: string) {
+    await this.db.query(
+      `DELETE FROM inventory.ticket_assets WHERE ticket_id = $1 AND asset_id = $2`,
+      [ticketId, assetId],
+    );
+    return { ok: true };
+  }
+
   /* ── Related tickets ───────────────────────────────────────────────────── */
 
   async getTicketRelations(ticketId: string) {

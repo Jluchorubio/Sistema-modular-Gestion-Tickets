@@ -464,6 +464,16 @@ export const ticketsService = {
     return data;
   },
 
+  async linkAsset(ticketId: string, assetId: string, notes?: string): Promise<{ id: string }> {
+    const { data } = await api.post(`/tickets/${ticketId}/assets`, { asset_id: assetId, notes });
+    return data;
+  },
+
+  async unlinkAsset(ticketId: string, assetId: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/tickets/${ticketId}/assets/${assetId}`);
+    return data;
+  },
+
   async searchAssets(q: string): Promise<AssetSearchResult[]> {
     const { data } = await api.get('/tickets/asset-search', { params: { q } });
     return data;
