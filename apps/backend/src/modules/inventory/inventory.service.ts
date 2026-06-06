@@ -105,8 +105,11 @@ export class InventoryService {
     );
   }
 
-  async create(dto: CreateAssetDto) {
+  async create(dto: CreateAssetDto, actorId?: string) {
     const { module_id, environment_id, category_id, name, description, serial_number, specifications } = dto;
+    if (actorId) {
+      await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+    }
     const [asset] = await this.db.query<any[]>(
       `INSERT INTO inventory.assets
          (module_id, environment_id, category_id, name, description, serial_number, specifications)
@@ -153,6 +156,7 @@ export class InventoryService {
     );
     if (existing) throw new BadRequestException('Este usuario ya tiene custodia activa sobre este activo');
 
+    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
     await this.db.query(
       `UPDATE inventory.assets SET status = 'asignado' WHERE id = $1 AND status != 'asignado'`,
       [assetId],
@@ -213,6 +217,7 @@ export class InventoryService {
       [assetId],
     );
     if (parseInt(remaining.cnt, 10) === 0) {
+      await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
       await this.db.query(`UPDATE inventory.assets SET status = 'disponible' WHERE id = $1`, [assetId]);
     }
 
@@ -270,6 +275,7 @@ export class InventoryService {
       );
     }
 
+    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
     await this.db.query(
       `UPDATE inventory.assets SET status = $1 WHERE id = $2`,
       [dto.status, assetId],
@@ -409,6 +415,9 @@ export class InventoryService {
     if (!fields.length) throw new BadRequestException('Nada que actualizar');
     fields.push(`updated_at = now()`);
     values.push(id);
+    if (actorId) {
+      await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+    }
     const [row] = await this.db.query<any[]>(
       `UPDATE inventory.assets SET ${fields.join(', ')}
        WHERE id = $${idx} AND deleted_at IS NULL RETURNING id, name, serial_number, status, parent_asset_id`,
@@ -441,6 +450,7 @@ export class InventoryService {
     if (asset.status === 'asignado')
       throw new BadRequestException('No se puede eliminar un activo asignado. Devuélvelo primero.');
 
+    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
     await this.db.query(
       `UPDATE inventory.assets SET deleted_at = now(), updated_at = now() WHERE id = $1`,
       [id],

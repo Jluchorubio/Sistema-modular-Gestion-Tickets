@@ -117,8 +117,8 @@ export class InventoryController {
   @Post()
   @RequirePermission('inventario:items:create')
   @ApiOperation({ summary: 'Crear activo de inventario.' })
-  create(@Body() dto: CreateAssetDto) {
-    return this.service.create(dto);
+  create(@Req() req: any, @Body() dto: CreateAssetDto) {
+    return this.service.create(dto, req.user.sub);
   }
 
   @Post(':id/assign')
