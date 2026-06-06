@@ -23,6 +23,7 @@ export interface AssignedTicket {
   created_by: string; creator_name: string;
   sla_status: string | null; sla_deadline_tracked: string | null;
   assignment_role: string;
+  last_transition_reason?: string | null;
 }
 
 /* ─────────────────── Constants ──────────────────────────────────────────── */

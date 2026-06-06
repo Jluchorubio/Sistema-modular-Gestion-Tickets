@@ -49,6 +49,11 @@ export function TechQueueItem({ ticket, basePath }: { ticket: AssignedTicket; ba
           {ticket.category_name && (
             <span style={{ fontSize: 10, color: '#94a3b8' }}>{ticket.category_name}</span>
           )}
+          {ticket.is_pause_state && ticket.last_transition_reason && (
+            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              ⏸ {ticket.last_transition_reason}
+            </span>
+          )}
           {slaLabel && slaColor && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9.5, fontWeight: 700, color: slaColor }}>
               <Clock size={9} />{slaLabel}

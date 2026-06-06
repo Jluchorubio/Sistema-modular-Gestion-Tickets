@@ -205,16 +205,22 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 </p>
               </div>
 
-              {/* Assignee */}
+              {/* Assignee + unassigned time — Fase 2A */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                <div style={{ width: 22, height: 22, borderRadius: '50%', background: t.assignee_name ? '#0e2235' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 9, fontWeight: 800, color: t.assignee_name ? '#fff' : '#94a3b8' }}>
-                    {t.assignee_name ? initials(t.assignee_name) : '?'}
+                {t.assignee_name === null && !t.is_final ? (
+                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #e9d5ff', whiteSpace: 'nowrap' }}>
+                    Sin asignar · {fmtRelative(t.created_at)}
                   </span>
-                </div>
-                <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {t.assignee_name ?? 'Sin asignar'}
-                </span>
+                ) : (
+                  <>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, color: '#fff' }}>{initials(t.assignee_name!)}</span>
+                    </div>
+                    <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.assignee_name}
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* State badge */}
@@ -255,7 +261,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
       p, count: allTickets.filter(t => t.priority === p && !t.is_final).length, color: TICKET_PRIORITY_COLORS[p],
     }));
     const topTechs = (techs ?? [])
-      .map(t => ({ ...t, cnt: allTickets.filter(tk => tk.assignee_name === `${t.first_name} ${t.last_name}`).length }))
+      .map(t => ({ ...t, cnt: t.active_tickets }))
       .sort((a, b) => b.cnt - a.cnt).slice(0, 5);
 
     return (
@@ -462,6 +468,32 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
 
           {/* RIGHT METRICS PANEL */}
           <div style={{ width: 252, flexShrink: 0, padding: '24px 16px 40px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', borderLeft: '1px solid #e2e8f0', background: '#fff' }}>
+
+            {/* Global pulse — Fase 3B */}
+            {(() => {
+              const unassignedCount = allTickets.filter(t => t.assignee_name === null && !t.is_final).length;
+              const atRiskCount     = allTickets.filter(t => {
+                if (t.is_final || t.sla_status !== 'active') return false;
+                const diffH = t.sla_deadline_tracked
+                  ? (new Date(t.sla_deadline_tracked).getTime() - Date.now()) / 3_600_000 : null;
+                return diffH !== null && diffH < 4;
+              }).length;
+              const availableTechs = (techs ?? []).filter(t => t.avail_status === 'disponible').length;
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+                  {[
+                    { val: unassignedCount, label: 'Sin asignar', color: unassignedCount > 0 ? '#7e22ce' : '#22c55e', bg: unassignedCount > 0 ? '#fdf4ff' : '#f0fdf4' },
+                    { val: atRiskCount,     label: 'SLA en riesgo', color: atRiskCount > 0 ? '#f97316' : '#22c55e', bg: atRiskCount > 0 ? '#fff7ed' : '#f0fdf4' },
+                    { val: availableTechs, label: 'Disponibles', color: availableTechs > 0 ? '#16a34a' : '#dc2626', bg: availableTechs > 0 ? '#f0fdf4' : '#fef2f2' },
+                  ].map(({ val, label, color, bg }) => (
+                    <div key={label} style={{ background: bg, border: `1px solid ${color}25`, borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 1px', fontSize: 18, fontWeight: 900, color }}>{val}</p>
+                      <p style={{ margin: 0, fontSize: 8, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.04em' }}>{label}</p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             {/* SLA compliance */}
             <div>
