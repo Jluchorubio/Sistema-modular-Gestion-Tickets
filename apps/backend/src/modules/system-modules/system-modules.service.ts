@@ -99,12 +99,28 @@ export class SystemModulesService {
       finalSlug = `${slug}-${counter++}`;
     }
 
-    const rows = await this.db.query<any[]>(
-      `INSERT INTO modules.modules (name, slug, description, type, image_url, color)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [name, finalSlug, description ?? null, type ?? 'custom', image_url ?? null, color ?? null],
+    // bootstrap_module creates the module + default roles, workflow, SLA policy, assignment policy,
+    // and module settings in one atomic DB function. permission_scope defaults to the slug.
+    const [result] = await this.db.query<{ module_id: string }[]>(
+      `SELECT (modules.bootstrap_module(NULL, $1, $2, $3, false, NULL, $4, $2, false))::jsonb->>'module_id' AS module_id`,
+      [name, finalSlug, description ?? null, type ?? 'custom'],
     );
-    return rows[0];
+
+    if (!result?.module_id) throw new Error('bootstrap_module no retornó module_id');
+
+    // Apply image/color after bootstrap (not supported as bootstrap params)
+    if (image_url || color) {
+      await this.db.query(
+        `UPDATE modules.modules SET image_url = $1, color = $2 WHERE id = $3`,
+        [image_url ?? null, color ?? null, result.module_id],
+      );
+    }
+
+    const [mod] = await this.db.query<any[]>(
+      `SELECT * FROM modules.modules WHERE id = $1`,
+      [result.module_id],
+    );
+    return mod;
   }
 
   async updateModule(id: string, dto: Record<string, unknown>) {
