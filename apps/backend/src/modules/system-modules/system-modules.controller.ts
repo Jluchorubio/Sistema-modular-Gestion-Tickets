@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Put, Body, Param, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Put, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
@@ -50,8 +50,18 @@ export class SystemModulesController {
 
   @Get(':id/technicians')
   @ApiOperation({ summary: 'Técnicos activos del módulo con rating promedio y tickets activos.' })
-  getModuleTechnicians(@Param('id') id: string, @Req() req: any) {
-    return this.service.getModuleTechnicians(id, req.user.sub);
+  getModuleTechnicians(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Query('limit')  limit?:  string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.service.getModuleTechnicians(
+      id,
+      req.user.sub,
+      limit  ? parseInt(limit,  10) : undefined,
+      offset ? parseInt(offset, 10) : undefined,
+    );
   }
 
   @Patch(':id/technicians/status')

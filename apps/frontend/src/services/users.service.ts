@@ -92,6 +92,24 @@ export interface CompleteProfileDto {
   position_node_id?: string;
 }
 
+export interface TechnicianProfile {
+  id:                string;
+  module_id:         string;
+  module_name:       string;
+  module_slug:       string;
+  technician_type:   'generalist' | 'specialist';
+  max_daily_tickets: number | null;
+  is_active:         boolean;
+  created_at:        string;
+  updated_at:        string;
+  category_skills: {
+    id:            string;
+    category_id:   string;
+    category_name: string;
+    category_slug: string;
+  }[];
+}
+
 export const usersService = {
   async getUsers(filter: UsersFilter = {}): Promise<PaginatedResponse<UserListItem>> {
     const { data } = await api.get('/users', { params: filter });
@@ -342,6 +360,36 @@ export const usersService = {
     notes?: string;
   }): Promise<void> {
     await api.put('/users/me/availability', payload);
+  },
+
+  async getSkills(userId: string): Promise<TechnicianProfile[]> {
+    const { data } = await api.get(`/users/${userId}/skills`);
+    return data;
+  },
+
+  async addSkill(userId: string, dto: {
+    module_id: string;
+    technician_type?: 'generalist' | 'specialist';
+    max_daily_tickets?: number | null;
+    category_ids?: string[];
+  }): Promise<TechnicianProfile[]> {
+    const { data } = await api.post(`/users/${userId}/skills`, dto);
+    return data;
+  },
+
+  async updateSkill(userId: string, skillId: string, dto: {
+    technician_type?: 'generalist' | 'specialist';
+    max_daily_tickets?: number | null;
+    category_ids_add?: string[];
+    category_ids_remove?: string[];
+  }): Promise<TechnicianProfile[]> {
+    const { data } = await api.patch(`/users/${userId}/skills/${skillId}`, dto);
+    return data;
+  },
+
+  async removeSkill(userId: string, skillId: string): Promise<{ ok: boolean; message: string }> {
+    const { data } = await api.delete(`/users/${userId}/skills/${skillId}`);
+    return data;
   },
 
   async bulkImportAndAssign(

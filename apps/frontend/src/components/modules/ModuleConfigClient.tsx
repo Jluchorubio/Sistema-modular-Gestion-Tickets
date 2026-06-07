@@ -1,11 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { modulesService } from '@/services/modules.service';
 import type { ModuleDetail } from '@/types/module.types';
-import { Spinner } from '@/components/ui/Spinner';
-
 interface Props {
   module: ModuleDetail;
   moduleId: string;
@@ -14,14 +12,6 @@ interface Props {
   isInventory?: boolean;
   isAlwaysOpen?: boolean;
 }
-
-const PRIORITY_LABEL: Record<string, string> = {
-  baja: 'Baja', media: 'Media', alta: 'Alta', critica: 'Crítica',
-};
-
-const PRIORITY_COLOR: Record<string, string> = {
-  baja: '#15803d', media: '#b45309', alta: '#c2410c', critica: '#991b1b',
-};
 
 function RadioOption({
   name, value, checked, onChange, label, desc, disabled,
@@ -68,8 +58,6 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
   const [autoCloseHours, setAutoCloseHours]       = useState<number>((mod as any).auto_close_hours ?? 48);
   const [saved, setSaved]                         = useState(false);
 
-  const [slaEditing, setSlaEditing] = useState<Record<string, { hrs: string; hfr: string }>>({});
-
   const updateMut = useMutation({
     mutationFn: (dto: Record<string, unknown>) => modulesService.updateModule(moduleId, dto),
     onSuccess: () => {
@@ -77,22 +65,6 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     },
-  });
-
-  const { data: rules, isLoading: slaLoading } = useQuery({
-    queryKey: ['module-sla', moduleId],
-    queryFn:  () => modulesService.getModuleSlaRules(moduleId),
-  });
-
-  const slaSaveMut = useMutation({
-    mutationFn: ({ priority, dto }: { priority: string; dto: { hours_to_resolve: number; hours_to_first_response: number } }) =>
-      modulesService.upsertModuleSlaRule(moduleId, priority, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['module-sla', moduleId] }),
-  });
-
-  const slaResetMut = useMutation({
-    mutationFn: (priority: string) => modulesService.deleteModuleSlaRule(moduleId, priority),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['module-sla', moduleId] }),
   });
 
   function saveConfig() {
@@ -394,106 +366,6 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
         </div>
       )}
 
-      {/* ── Reglas SLA ── */}
-      {!isInventory && <div style={card}>
-        <div style={sectionHead}>Reglas SLA</div>
-        {slaLoading ? <Spinner /> : !rules?.length ? (
-          <p style={{ fontSize: 13, color: '#94a3b8' }}>No hay reglas SLA configuradas para este módulo.</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr>
-                  {['Prioridad', 'Horas p/ resolver', 'Horas p/ 1ra resp.', 'Fuente', ''].map((h) => (
-                    <th key={h} style={{
-                      textAlign: 'left', padding: '8px 12px', fontSize: 10.5,
-                      fontWeight: 800, color: '#94a3b8', borderBottom: '1px solid #f1f5f9',
-                      textTransform: 'uppercase', letterSpacing: '0.06em',
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map((rule) => {
-                  const isDirty = rule.priority in slaEditing;
-                  const hrs = slaEditing[rule.priority]?.hrs ?? String(rule.hours_to_resolve);
-                  const hfr = slaEditing[rule.priority]?.hfr ?? String(rule.hours_to_first_response);
-                  return (
-                    <tr key={rule.priority} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ fontWeight: 700, color: PRIORITY_COLOR[rule.priority] }}>
-                          {PRIORITY_LABEL[rule.priority] ?? rule.priority}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <input
-                          type="number" min={1} value={hrs} disabled={!canEdit}
-                          onChange={(e) => setSlaEditing((p) => ({
-                            ...p,
-                            [rule.priority]: { hrs: e.target.value, hfr: p[rule.priority]?.hfr ?? String(rule.hours_to_first_response) },
-                          }))}
-                          style={{ width: 68, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 13, fontFamily: 'inherit' }}
-                        />
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <input
-                          type="number" min={1} value={hfr} disabled={!canEdit}
-                          onChange={(e) => setSlaEditing((p) => ({
-                            ...p,
-                            [rule.priority]: { hrs: p[rule.priority]?.hrs ?? String(rule.hours_to_resolve), hfr: e.target.value },
-                          }))}
-                          style={{ width: 68, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 13, fontFamily: 'inherit' }}
-                        />
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>
-                        {rule.is_override ? (
-                          <span style={{ background: '#312e81', color: '#c7d2fe', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>Override</span>
-                        ) : (
-                          <span style={{ background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: '1px solid #e2e8f0' }}>Global</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>
-                        {canEdit && (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            {isDirty && (
-                              <button
-                                type="button" disabled={slaSaveMut.isPending}
-                                onClick={() => {
-                                  const h = parseInt(hrs, 10);
-                                  const r = parseInt(hfr, 10);
-                                  if (!h || !r || h < 1 || r < 1) return;
-                                  slaSaveMut.mutate(
-                                    { priority: rule.priority, dto: { hours_to_resolve: h, hours_to_first_response: r } },
-                                    { onSuccess: () => setSlaEditing((p) => { const n = { ...p }; delete n[rule.priority]; return n; }) },
-                                  );
-                                }}
-                                style={{ padding: '4px 10px', background: '#ff5e3a', color: '#fff', border: 'none', borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                              >
-                                Guardar
-                              </button>
-                            )}
-                            {rule.is_override && (
-                              <button
-                                type="button" disabled={slaResetMut.isPending}
-                                onClick={() => slaResetMut.mutate(rule.priority, {
-                                  onSuccess: () => setSlaEditing((p) => { const n = { ...p }; delete n[rule.priority]; return n; }),
-                                })}
-                                style={{ padding: '4px 10px', background: 'transparent', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 2, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
-                              >
-                                Restablecer
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>}
     </div>
   );
 }

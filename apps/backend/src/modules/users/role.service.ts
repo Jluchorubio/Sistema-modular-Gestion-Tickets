@@ -99,8 +99,16 @@ export class RoleService {
     return { ok: true, message: 'Rol removido' };
   }
 
-  async getUsersByModule(moduleId: string) {
+  async getUsersByModule(moduleId: string, limit?: number, offset?: number) {
     await this.assertModuleExists(moduleId);
+
+    const params: unknown[] = [moduleId];
+    let limitClause = '';
+    if (limit != null) {
+      params.push(limit);
+      params.push(offset ?? 0);
+      limitClause = `LIMIT $${params.length - 1} OFFSET $${params.length}`;
+    }
 
     return this.db.query<any[]>(
       `SELECT p.id,
@@ -117,8 +125,9 @@ export class RoleService {
        WHERE  umr.module_id = $1
          AND  umr.is_active = true
          AND  p.deleted_at  IS NULL
-       ORDER  BY p.first_name, p.last_name, mr.name`,
-      [moduleId],
+       ORDER  BY p.first_name, p.last_name, mr.name
+       ${limitClause}`,
+      params,
     );
   }
 

@@ -318,7 +318,7 @@ export class SystemModulesService {
     );
   }
 
-  async getModuleTechnicians(moduleId: string, requesterId: string) {
+  async getModuleTechnicians(moduleId: string, requesterId: string, limit?: number, offset?: number) {
     const [isMember] = await this.db.query<{ ok: boolean }[]>(
       `SELECT (
          EXISTS(SELECT 1 FROM users.profiles WHERE id = $1 AND is_superadmin = true)
@@ -328,6 +328,14 @@ export class SystemModulesService {
       [requesterId, moduleId],
     );
     if (!isMember?.ok) throw new ForbiddenException('No eres miembro de este módulo');
+
+    const params: unknown[] = [moduleId];
+    let limitClause = '';
+    if (limit != null) {
+      params.push(limit);
+      params.push(offset ?? 0);
+      limitClause = `LIMIT $${params.length - 1} OFFSET $${params.length}`;
+    }
 
     return this.db.query<any[]>(
       `SELECT p.id, p.first_name, p.last_name, p.username, p.avatar_url, mr.name AS role_name,
@@ -357,8 +365,9 @@ export class SystemModulesService {
        WHERE  umr.module_id = $1 AND umr.is_active = true
          AND  mr.name IN ('tecnico', 'jefe_tecnico')
          AND  p.deleted_at IS NULL
-       ORDER  BY mr.name DESC, p.first_name`,
-      [moduleId],
+       ORDER  BY mr.name DESC, p.first_name
+       ${limitClause}`,
+      params,
     );
   }
 

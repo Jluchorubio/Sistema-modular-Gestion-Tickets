@@ -197,8 +197,16 @@ export class UsersController {
   @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:users:view')
   @ApiOperation({ summary: 'Usuarios activos de un módulo con sus roles.' })
-  getUsersByModule(@Param('moduleId', ParseUUIDPipe) moduleId: string) {
-    return this.roleService.getUsersByModule(moduleId);
+  getUsersByModule(
+    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Query('limit')  limit?:  string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.roleService.getUsersByModule(
+      moduleId,
+      limit  ? parseInt(limit,  10) : undefined,
+      offset ? parseInt(offset, 10) : undefined,
+    );
   }
 
   // ─── System stats (superadmin) ───────────────────────────────────────────────
