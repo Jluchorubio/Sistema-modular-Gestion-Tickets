@@ -76,6 +76,11 @@ export function TrashClient() {
     onSuccess:  invalidate,
   });
 
+  const purgeExpiredMut = useMutation({
+    mutationFn: () => adminService.purgeExpired(),
+    onSuccess:  invalidate,
+  });
+
   const bulkRestoreMut = useMutation({
     mutationFn: async (its: TrashItem[]) => {
       const byType: Record<string, string[]> = {};
@@ -154,6 +159,26 @@ export function TrashClient() {
               : 'Items eliminados. Se conservan 90 días antes del borrado permanente.'}
           </p>
         </div>
+        {canPurge && (
+          <button
+            type="button"
+            disabled={purgeExpiredMut.isPending}
+            onClick={() => {
+              if (confirm('¿Eliminar permanentemente todos los elementos con retención vencida (>90 días)? Esta acción no se puede deshacer.')) {
+                purgeExpiredMut.mutate();
+              }
+            }}
+            style={{
+              padding: '7px 14px', borderRadius: 6, border: '1px solid #fecaca',
+              background: purgeExpiredMut.isPending ? '#fef2f2' : 'transparent',
+              color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: purgeExpiredMut.isPending ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5,
+              opacity: purgeExpiredMut.isPending ? 0.6 : 1,
+            }}
+          >
+            {purgeExpiredMut.isPending ? 'Purgando…' : 'Purgar expirados'}
+          </button>
+        )}
       </div>
 
       <div className={styles.tabs}>

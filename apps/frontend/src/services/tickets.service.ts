@@ -552,6 +552,11 @@ export const ticketsService = {
     return data;
   },
 
+  async triggerBreachCheck(): Promise<{ checked: number; breached: number }> {
+    const { data } = await api.post('/tickets/sla/breach-check');
+    return data;
+  },
+
   async convertToArticle(
     ticketId: string,
     dto: { module_id: string; title: string; content: string; category?: string; tags?: string[] },

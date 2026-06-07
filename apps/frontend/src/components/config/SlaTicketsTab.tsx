@@ -1,9 +1,10 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Pencil, Check, X, ChevronRight, ChevronDown, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Trash2, Pencil, Check, X, ChevronRight, ChevronDown, ToggleLeft, ToggleRight, ShieldAlert } from 'lucide-react';
 import { systemConfigService } from '@/services/system-config.service';
 import { modulesService }      from '@/services/modules.service';
+import { ticketsService }      from '@/services/tickets.service';
 import type { TicketSlaRule, SlaCondition, DamageType, TicketCategory } from '@/services/system-config.service';
 import type { ModuleCategory } from '@/services/modules.service';
 import { Spinner } from '@/components/ui/Spinner';
@@ -655,8 +656,14 @@ function AddRuleForm({
 
 /* ── Main tab ── */
 export function SlaTicketsTab({ moduleId }: Props) {
-  const [addingRule, setAddingRule] = useState(false);
+  const [addingRule,   setAddingRule]   = useState(false);
+  const [breachResult, setBreachResult] = useState<{ checked: number; breached: number } | null>(null);
   const critical = useCriticalChange();
+
+  const breachCheckMut = useMutation({
+    mutationFn: () => ticketsService.triggerBreachCheck(),
+    onSuccess:  (res) => setBreachResult(res),
+  });
 
   const { data: policies = [], isLoading: loadingPolicies } = useQuery({
     queryKey: ['ticket-sla-policies', moduleId],
@@ -717,14 +724,32 @@ export function SlaTicketsTab({ moduleId }: Props) {
               {activePolicy.rules.length} regla(s) · {activeRules.length} activa(s)
             </p>
           </div>
-          {!addingRule && (
-            <button onClick={() => setAddingRule(true)}
-              style={{ padding: '7px 14px', borderRadius: 9, border: 'none', background: C.coral,
-                color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <Plus size={12} /> Nueva regla
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {breachResult && (
+              <span style={{ fontSize: 11, color: '#64748b' }}>
+                Revisados: <strong>{breachResult.checked}</strong> · Vencidos: <strong style={{ color: '#ef4444' }}>{breachResult.breached}</strong>
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => breachCheckMut.mutate()}
+              disabled={breachCheckMut.isPending}
+              style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid #fecaca',
+                background: '#fff', color: '#ef4444', fontSize: 12, fontWeight: 700,
+                cursor: breachCheckMut.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                opacity: breachCheckMut.isPending ? 0.6 : 1 }}>
+              <ShieldAlert size={12} /> {breachCheckMut.isPending ? 'Verificando…' : 'Check SLA'}
             </button>
-          )}
+            {!addingRule && (
+              <button onClick={() => setAddingRule(true)}
+                style={{ padding: '7px 14px', borderRadius: 9, border: 'none', background: C.coral,
+                  color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <Plus size={12} /> Nueva regla
+              </button>
+            )}
+          </div>
         </div>
 
         {addingRule && (

@@ -92,6 +92,19 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
     staleTime: 60_000,
   });
 
+  /* ── Tech rating (own profile, tech roles only) ── */
+  const isTech = useMemo(
+    () => (user.module_roles ?? []).some(r => r.status === 'active' && ['tecnico', 'jefe_tecnico'].includes(r.role_name)),
+    [user.module_roles],
+  );
+
+  const { data: techStats } = useQuery({
+    queryKey:  ['tech-stats', uid],
+    queryFn:   () => usersService.getMyTechStats(),
+    enabled:   isOwnProfile && isTech,
+    staleTime: 60_000,
+  });
+
   /* ── Activity heatmap (26 weeks) ── */
   const { data: activityData = [] } = useQuery({
     queryKey:  ['activity-heatmap', uid],
@@ -248,6 +261,33 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
               <div className={styles.ticketStatValue} style={{ color }}>{value}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Tech rating (own profile, tech roles only) ── */}
+      {isOwnProfile && isTech && techStats && (
+        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionTitle}>Rendimiento técnico</p>
+            <span style={{ fontSize: 10, color: '#94A3B8' }}>{techStats.rated_tickets} ticket{techStats.rated_tickets !== 1 ? 's' : ''} valorado{techStats.rated_tickets !== 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ padding: '14px 22px 16px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 3 }}>
+              {[1,2,3,4,5].map(n => (
+                <Star
+                  key={n} size={20}
+                  fill={n <= Math.round(techStats.avg_rating) ? '#F59E0B' : 'none'}
+                  stroke={n <= Math.round(techStats.avg_rating) ? '#F59E0B' : '#CBD5E1'}
+                />
+              ))}
+            </div>
+            <span style={{ fontSize: 22, fontWeight: 800, color: '#0e2235' }}>
+              {techStats.avg_rating > 0 ? techStats.avg_rating.toFixed(1) : '—'}
+            </span>
+            {techStats.rated_tickets === 0 && (
+              <span style={{ fontSize: 12, color: '#94A3B8' }}>Sin valoraciones aún</span>
+            )}
+          </div>
         </div>
       )}
 
