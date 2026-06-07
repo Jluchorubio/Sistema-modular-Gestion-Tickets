@@ -51,7 +51,7 @@ import {
   ASSET_ACTION_LABELS,
   ASSET_ACTION_COLORS,
 } from "@/services/inventory.service";
-import { ADMIN_ROLES } from "@/constants/roles";
+import { usePermission } from "@/hooks/usePermission";
 import { fmtDate } from "@/lib/formatters";
 
 /* ── Tokens ── */
@@ -1969,12 +1969,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
 
   const user = useAuthStore((s) => s.user);
   const isSuperadmin = user?.is_superadmin ?? false;
-  const canEdit =
-    isSuperadmin ||
-    (user?.module_roles
-      ?.filter((r) => r.status === "active")
-      .some((r) => (ADMIN_ROLES as string[]).includes(r.role_name)) ??
-      false);
+  const canEdit = usePermission('inventario:items:edit');
   const moduleId = inventoryId ?? "";
 
   /* ── UI state ── */

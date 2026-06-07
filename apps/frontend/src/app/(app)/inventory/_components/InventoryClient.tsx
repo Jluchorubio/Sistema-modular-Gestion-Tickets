@@ -22,7 +22,7 @@ import {
 } from '@/services/inventory.service';
 import { ticketsService } from '@/services/tickets.service';
 import { modulesService, type FieldDef } from '@/services/modules.service';
-import { ADMIN_ROLES } from '@/constants/roles';
+import { usePermission } from '@/hooks/usePermission';
 import { fmtDate } from '@/lib/formatters';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -690,10 +690,10 @@ function MetricsRow({ assets }: { assets: AssetListItem[] }) {
 
 /* ── AssetDrawer ─────────────────────────────────────────────────────────── */
 interface DrawerProps {
-  assetId: string; moduleId: string; canEdit: boolean;
+  assetId: string; moduleId: string; canEdit: boolean; canDelete: boolean;
   onClose: () => void; onFullDetail: () => void;
 }
-function AssetDrawer({ assetId, moduleId, canEdit, onClose, onFullDetail }: DrawerProps) {
+function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDetail }: DrawerProps) {
   const qc = useQueryClient();
   const [tab,            setTab]            = useState<DrawerTab>('general');
   const [showQr,         setShowQr]         = useState(false);
@@ -858,15 +858,15 @@ function AssetDrawer({ assetId, moduleId, canEdit, onClose, onFullDetail }: Draw
                   )}
 
                   {/* Edit / Delete */}
-                  {canEdit && asset.status !== 'dado_de_baja' && (
+                  {(canEdit || canDelete) && asset.status !== 'dado_de_baja' && (
                     <div style={{ display: 'flex', gap: 8 }}>
-                      {!editing && (
+                      {canEdit && !editing && (
                         <button type="button" onClick={() => { setEditForm({ name: asset.name, description: asset.description ?? '', serial_number: asset.serial_number ?? '' }); setEditing(true); }}
                           style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer', fontFamily: 'inherit' }}>
                           <Pencil size={12} /> Editar
                         </button>
                       )}
-                      {asset.status !== 'asignado' && (
+                      {canDelete && asset.status !== 'asignado' && (
                         <button type="button" disabled={deleteMut.isPending} onClick={() => { if (confirm(`¿Eliminar "${asset.name}"?`)) deleteMut.mutate(); }}
                           style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: '1px solid #FECACA', background: '#FEF2F2', color: '#EF4444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                           <Trash2 size={12} />{deleteMut.isPending ? 'Eliminando…' : 'Eliminar'}
@@ -1002,17 +1002,15 @@ export function InventoryClient() {
     return out;
   }, [user]);
 
-  const canEdit = useMemo(() => {
-    if (isSuperadmin) return true;
-    const roles = user?.module_roles?.filter(r => r.status === 'active').map(r => r.role_name) ?? [];
-    return roles.some(r => (ADMIN_ROLES as string[]).includes(r));
-  }, [user, isSuperadmin]);
+  const canCreate = usePermission('inventario:items:create');
+  const canEdit   = usePermission('inventario:items:edit');
+  const canDelete = usePermission('inventario:items:delete');
 
   /* ── Module admin info (for contact button) ── */
   const { data: inventoryMembers } = useQuery({
     queryKey: ['inventory-module-admin', inventoryId],
     queryFn:  () => usersService.getModuleUsers(inventoryId!),
-    enabled:  !!inventoryId && (isSuperadmin || canEdit),
+    enabled:  !!inventoryId && canEdit,
     staleTime: 10 * 60_000,
   });
   const inventoryAdmin = (inventoryMembers as any[] | undefined)?.find(
@@ -1202,7 +1200,7 @@ export function InventoryClient() {
           </div>
 
           {/* Admin panel */}
-          {canEdit && (
+          {(canEdit || canCreate) && (
             <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
               <p style={{ ...LABEL, marginBottom: 8 }}>Panel técnico</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -1239,7 +1237,7 @@ export function InventoryClient() {
                 style={{ width: '100%', padding: '7px 10px 7px 28px', borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff', color: C.text } as React.CSSProperties} />
             </div>
             <ViewModeDropdown value={viewMode} onChange={changeViewMode} />
-            {canEdit && selectedModule && (
+            {canCreate && selectedModule && (
               <button type="button" onClick={() => setShowCreate(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700, border: 'none', background: C.navy, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                 <Plus size={12} style={{ color: C.green }} /> Registrar activo
@@ -1269,7 +1267,7 @@ export function InventoryClient() {
               <p style={{ fontSize: 13, color: C.muted, margin: '0 0 4px', fontWeight: 600 }}>
                 {debouncedQ ? `Sin resultados para "${debouncedQ}"` : 'No hay activos en este filtro.'}
               </p>
-              {canEdit && selectedModule && scope === 'all' && !debouncedQ && (
+              {canCreate && selectedModule && scope === 'all' && !debouncedQ && (
                 <button type="button" onClick={() => setShowCreate(true)}
                   style={{ marginTop: 12, padding: '7px 16px', borderRadius: 7, border: 'none', background: C.navy, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                   <Plus size={12} /> Registrar primer activo
@@ -1323,7 +1321,7 @@ export function InventoryClient() {
 
       {/* Drawer + Modals */}
       {drawerAssetId && (
-        <AssetDrawer assetId={drawerAssetId} moduleId={selectedModule || inventoryId || ''} canEdit={canEdit}
+        <AssetDrawer assetId={drawerAssetId} moduleId={selectedModule || inventoryId || ''} canEdit={canEdit} canDelete={canDelete}
           onClose={() => setDrawerAssetId(null)}
           onFullDetail={() => { goToDetail(drawerAssetId!); setDrawerAssetId(null); }} />
       )}
