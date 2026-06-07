@@ -172,8 +172,8 @@ export class SlaEvaluatorService {
       case '=':   return actual === cond.value;
       case '!=':  return actual !== cond.value;
       case 'IN': {
-        let arr: string[] = [];
-        try { arr = JSON.parse(cond.value); } catch { return false; }
+        // Value stored as comma-separated (e.g. "alta,critica") by the frontend
+        const arr = cond.value.split(',').map(s => s.trim()).filter(Boolean);
         return arr.includes(actual);
       }
       case '>':   return Number(actual) > Number(cond.value);
