@@ -194,8 +194,10 @@ export const usersService = {
     id: string; title: string; priority: string;
     created_at: string; updated_at: string;
     module_name: string; module_slug: string | null;
-    state_label: string; state_name: string; is_final: boolean;
+    state_label: string; state_name: string;
+    is_final: boolean; is_pause_state: boolean; is_approval_state: boolean;
     sla_status: string | null; sla_deadline_tracked: string | null;
+    approval_expires_at: string | null;
   }[]> {
     const { data } = await api.get('/users/me/recent-tickets', { params: { limit } });
     return data;

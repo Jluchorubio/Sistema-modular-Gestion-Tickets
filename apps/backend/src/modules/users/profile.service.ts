@@ -330,11 +330,14 @@ export class ProfileService {
       `SELECT t.id, t.title, t.priority, t.created_at, t.updated_at,
               m.name  AS module_name,
               m.slug  AS module_slug,
-              s.label AS state_label,
-              s.name  AS state_name,
+              s.label            AS state_label,
+              s.name             AS state_name,
               s.is_final,
-              st.status      AS sla_status,
-              st.deadline_at AS sla_deadline_tracked
+              s.is_pause_state,
+              s.is_approval_state,
+              st.status          AS sla_status,
+              st.deadline_at     AS sla_deadline_tracked,
+              st.approval_expires_at
        FROM   tickets.tickets t
        JOIN   modules.modules  m  ON m.id = t.module_id
        JOIN   tickets.states   s  ON s.id = t.current_state_id
