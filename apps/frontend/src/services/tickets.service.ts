@@ -551,4 +551,12 @@ export const ticketsService = {
     const { data } = await api.get('/tickets/assignments/history', { params });
     return data;
   },
+
+  async convertToArticle(
+    ticketId: string,
+    dto: { module_id: string; title: string; content: string; category?: string; tags?: string[] },
+  ): Promise<{ id: string; title: string }> {
+    const { data } = await api.post(`/tickets/${ticketId}/to-article`, dto);
+    return data;
+  },
 };

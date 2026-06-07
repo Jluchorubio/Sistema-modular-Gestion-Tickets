@@ -1,5 +1,5 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Ticket, FileText, ShieldCheck, Star } from 'lucide-react';
@@ -91,6 +91,39 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
     enabled:   canSeeOps,
     staleTime: 60_000,
   });
+
+  /* ── Activity heatmap (26 weeks) ── */
+  const { data: activityData = [] } = useQuery({
+    queryKey:  ['activity-heatmap', uid],
+    queryFn:   () => usersService.getMyActivity(),
+    enabled:   isOwnProfile,
+    staleTime: 300_000,
+  });
+
+  const heatmapWeeks = useMemo(() => {
+    const map = new Map(activityData.map(d => [d.day, d.count]));
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - 181);
+    const weeks: { iso: string; count: number; dow: number }[][] = [];
+    let week: { iso: string; count: number; dow: number }[] = [];
+    for (let i = 0; i < 182; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const iso = d.toISOString().split('T')[0];
+      if (i > 0 && d.getDay() === 0) { weeks.push(week); week = []; }
+      week.push({ iso, count: map.get(iso) ?? 0, dow: d.getDay() });
+    }
+    if (week.length) weeks.push(week);
+    return weeks;
+  }, [activityData]);
+
+  const heatColor = useCallback((count: number): string => {
+    if (count === 0) return '#f1f5f9';
+    if (count <= 2)  return '#c7d2fe';
+    if (count <= 5)  return '#818cf8';
+    return '#4f46e5';
+  }, []);
 
   // operational feed excludes login/session events (those live in Security tab)
   const operationalFeed = useMemo(
@@ -215,6 +248,42 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
               <div className={styles.ticketStatValue} style={{ color }}>{value}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Activity heatmap (own profile only) ── */}
+      {isOwnProfile && heatmapWeeks.length > 0 && (
+        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionTitle}>Actividad</p>
+            <span style={{ fontSize: 10, color: '#94A3B8' }}>{activityData.reduce((s, d) => s + d.count, 0)} acciones en 26 semanas</span>
+          </div>
+          <div style={{ padding: '14px 22px 16px', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+              {heatmapWeeks.map((week, wi) => (
+                <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {week.map((day) => (
+                    <div
+                      key={day.iso}
+                      title={`${day.iso}: ${day.count} acción${day.count !== 1 ? 'es' : ''}`}
+                      style={{
+                        width: 10, height: 10, borderRadius: 2,
+                        background: heatColor(day.count),
+                        cursor: 'default',
+                      }}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, justifyContent: 'flex-end' }}>
+              <span style={{ fontSize: 9, color: '#94a3b8' }}>Menos</span>
+              {['#f1f5f9', '#c7d2fe', '#818cf8', '#4f46e5'].map(c => (
+                <div key={c} style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
+              ))}
+              <span style={{ fontSize: 9, color: '#94a3b8' }}>Más</span>
+            </div>
+          </div>
         </div>
       )}
 

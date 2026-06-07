@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Download, Trash2, Eye, Calendar, User, Tag, FileText, File, Image, Film } from 'lucide-react';
@@ -48,6 +49,7 @@ export default function DocDetailPage() {
   const { user }     = useAuthStore();
   const isSuperadmin = user?.is_superadmin ?? false;
   const qc           = useQueryClient();
+  const [localVote, setLocalVote] = useState<1 | -1 | null>(null);
 
   const { modules }  = useModules();
   const helpdeskId   = modules?.find(isHelpdeskModule)?.id;
@@ -66,6 +68,14 @@ export default function DocDetailPage() {
   const delMut = useMutation({
     mutationFn: () => docsService.deleteArticle(id),
     onSuccess:  () => router.replace('/helpdesk/knowledge/docs'),
+  });
+
+  const voteMut = useMutation({
+    mutationFn: (value: 1 | -1) => docsService.voteArticle(id, value),
+    onSuccess: (_data, value) => {
+      setLocalVote(prev => prev === value ? null : value);
+      qc.invalidateQueries({ queryKey: ['knowledge-article', id] });
+    },
   });
 
   if (isLoading) {
@@ -216,6 +226,37 @@ export default function DocDetailPage() {
             </div>
           </div>
         ) : null}
+
+        {/* Vote section */}
+        <div style={{ padding: '18px 32px', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>¿Te fue útil?</span>
+          <button
+            type="button"
+            onClick={() => voteMut.mutate(1)}
+            disabled={voteMut.isPending}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px',
+              borderRadius: 6, border: `1px solid ${localVote === 1 ? '#16a34a' : C.border}`,
+              background: localVote === 1 ? '#f0fdf4' : '#fff', color: localVote === 1 ? '#16a34a' : C.sub,
+              cursor: voteMut.isPending ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            }}
+          >
+            👍 Sí ({article.helpful_count})
+          </button>
+          <button
+            type="button"
+            onClick={() => voteMut.mutate(-1)}
+            disabled={voteMut.isPending}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px',
+              borderRadius: 6, border: `1px solid ${localVote === -1 ? '#ef4444' : C.border}`,
+              background: localVote === -1 ? '#fef2f2' : '#fff', color: localVote === -1 ? '#ef4444' : C.sub,
+              cursor: voteMut.isPending ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            }}
+          >
+            👎 No ({article.not_helpful_count})
+          </button>
+        </div>
 
       </div>
     </ModuleLayout>

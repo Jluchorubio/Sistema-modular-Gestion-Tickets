@@ -68,10 +68,6 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
     window.location.href = `${API_URL}/api/v1/auth/google`;
   }
 
-  function doMicrosoft() {
-    window.location.href = `${API_URL}/api/v1/auth/microsoft`;
-  }
-
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} noValidate className={styles.loginForm}>
       <label className={styles.label}>ID de Operador / Correo</label>
@@ -133,19 +129,6 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
         Login con Google
       </button>
 
-      <button
-        type="button"
-        className={`${styles.btn} ${styles.btnMicrosoft}`}
-        onClick={doMicrosoft}
-      >
-        <svg width="18" height="18" viewBox="0 0 21 21" fill="none" aria-hidden="true">
-          <rect x="1"  y="1"  width="9" height="9" fill="#F25022" />
-          <rect x="11" y="1"  width="9" height="9" fill="#7FBA00" />
-          <rect x="1"  y="11" width="9" height="9" fill="#00A4EF" />
-          <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
-        </svg>
-        Login con Microsoft Azure AD
-      </button>
     </form>
   );
 }

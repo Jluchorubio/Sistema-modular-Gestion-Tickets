@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Clock, AlertTriangle, CheckCircle2, XCircle,
   Paperclip, Star, Monitor, ChevronUp, AlertCircle, Tag,
@@ -811,6 +811,22 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [ratingHover,   setRatingHover]   = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [descExpanded,  setDescExpanded]  = useState(false);
+  const [showToArticle, setShowToArticle] = useState(false);
+  const [articleTitle,  setArticleTitle]  = useState('');
+  const [articleContent,setArticleContent] = useState('');
+  const [articleDone,   setArticleDone]   = useState<string | null>(null);
+
+  const myModuleRole = currentUser?.module_roles?.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
+  const canEditKb = (currentUser?.is_superadmin ?? false) || ['admin_modulo', 'jefe_tecnico'].includes(myModuleRole ?? '');
+
+  const toArticleMut = useMutation({
+    mutationFn: (dto: { module_id: string; title: string; content: string }) =>
+      ticketsService.convertToArticle(ticket!.id, dto),
+    onSuccess: (art) => {
+      setArticleDone(art.id);
+      setShowToArticle(false);
+    },
+  });
 
   const {
     uploadMut, deletAttMut, addCommentMut, rateMut, transMut,
@@ -966,6 +982,53 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                         {descExpanded ? <><ChevronUp size={10} /> Mostrar menos</> : <><ChevronDown size={10} /> Ver descripción completa</>}
                       </button>
                     )}
+                  </div>
+                )}
+
+                {/* Convert to KB article */}
+                {canEditKb && !articleDone && !showToArticle && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+                    <button type="button"
+                      onClick={() => { setArticleTitle(ticket.title); setArticleContent(ticket.description ?? ''); setShowToArticle(true); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                      <BookOpen size={11} /> Convertir a artículo de conocimiento
+                    </button>
+                  </div>
+                )}
+                {canEditKb && articleDone && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: '#16a34a', fontWeight: 700 }}>Artículo creado.</span>
+                    <button type="button" onClick={() => router.push(`/helpdesk/knowledge/docs/${articleDone}`)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                      <ExternalLink size={10} /> Ver artículo
+                    </button>
+                  </div>
+                )}
+                {canEditKb && showToArticle && (
+                  <div style={{ marginTop: 10, padding: 14, background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '.06em', margin: '0 0 10px' }}>Nuevo artículo de conocimiento</p>
+                    <div style={{ marginBottom: 8 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 3 }}>Título</label>
+                      <input value={articleTitle} onChange={e => setArticleTitle(e.target.value)}
+                        style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ marginBottom: 10 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 3 }}>Contenido</label>
+                      <textarea value={articleContent} onChange={e => setArticleContent(e.target.value)} rows={5}
+                        style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button"
+                        disabled={!articleTitle.trim() || !articleContent.trim() || toArticleMut.isPending}
+                        onClick={() => toArticleMut.mutate({ module_id: ticket.module_id, title: articleTitle.trim(), content: articleContent.trim() })}
+                        style={{ padding: '6px 14px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (!articleTitle.trim() || !articleContent.trim()) ? 0.5 : 1 }}>
+                        {toArticleMut.isPending ? 'Creando…' : 'Crear artículo'}
+                      </button>
+                      <button type="button" onClick={() => setShowToArticle(false)}
+                        style={{ padding: '6px 12px', background: 'transparent', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
