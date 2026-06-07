@@ -92,6 +92,20 @@ export interface CompleteProfileDto {
   position_node_id?: string;
 }
 
+export interface TechnicianAvailability {
+  id:               string;
+  module_id:        string;
+  module_name:      string;
+  module_slug:      string | null;
+  status:           string;
+  is_available:     boolean;
+  reason:           string | null;
+  unavailable_from: string | null;
+  unavailable_to:   string | null;
+  notes:            string | null;
+  updated_at:       string;
+}
+
 export interface TechnicianProfile {
   id:                string;
   module_id:         string;
@@ -389,6 +403,23 @@ export const usersService = {
 
   async removeSkill(userId: string, skillId: string): Promise<{ ok: boolean; message: string }> {
     const { data } = await api.delete(`/users/${userId}/skills/${skillId}`);
+    return data;
+  },
+
+  async getAvailabilityByUser(userId: string): Promise<TechnicianAvailability[]> {
+    const { data } = await api.get(`/users/${userId}/availability`);
+    return data;
+  },
+
+  async setAvailabilityByUser(userId: string, dto: {
+    module_id: string;
+    is_available: boolean;
+    reason?: string;
+    unavailable_from?: string;
+    unavailable_to?: string;
+    notes?: string;
+  }): Promise<TechnicianAvailability[]> {
+    const { data } = await api.put(`/users/${userId}/availability`, dto);
     return data;
   },
 

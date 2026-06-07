@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { usersService, type TechnicianProfile } from '@/services/users.service';
+import { usersService, type TechnicianProfile, type TechnicianAvailability } from '@/services/users.service';
 import { modulesService } from '@/services/modules.service';
 import type { ProfileUser } from './profile.types';
 import { Spinner } from '@/components/ui/Spinner';
@@ -313,6 +313,255 @@ function AddProfileForm({
   );
 }
 
+/* ── Availability section ─────────────────────────────────────── */
+
+const STATUS_LABEL: Record<string, string> = {
+  disponible:   'Disponible',
+  ocupado:      'Ocupado',
+  en_reunion:   'En reunión',
+  fuera_horario:'Fuera de horario',
+  ausente:      'Ausente',
+  offline:      'Offline',
+};
+
+const STATUS_COLOR: Record<string, { bg: string; color: string; border: string }> = {
+  disponible:    { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+  ocupado:       { bg: '#fff7ed', color: '#d97706', border: '#fed7aa' },
+  en_reunion:    { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
+  fuera_horario: { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0' },
+  ausente:       { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+  offline:       { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0' },
+};
+
+const REASON_LABEL: Record<string, string> = {
+  vacation:        'Vacaciones',
+  maternity_leave: 'Licencia maternidad/paternidad',
+  sick_leave:      'Incapacidad',
+  training:        'Capacitación',
+  other:           'Otro',
+};
+
+function AvailabilityRow({
+  moduleId,
+  moduleName,
+  avail,
+  targetUserId,
+  canEdit,
+}: {
+  moduleId:     string;
+  moduleName:   string;
+  avail:        TechnicianAvailability | undefined;
+  targetUserId: string;
+  canEdit:      boolean;
+}) {
+  const qc = useQueryClient();
+  const [editing, setEditing]         = useState(false);
+  const [isAvail, setIsAvail]         = useState(avail?.is_available ?? true);
+  const [reason, setReason]           = useState(avail?.reason ?? '');
+  const [from, setFrom]               = useState(avail?.unavailable_from?.slice(0, 10) ?? '');
+  const [to, setTo]                   = useState(avail?.unavailable_to?.slice(0, 10) ?? '');
+  const [notes, setNotes]             = useState(avail?.notes ?? '');
+
+  function startEdit() {
+    setIsAvail(avail?.is_available ?? true);
+    setReason(avail?.reason ?? '');
+    setFrom(avail?.unavailable_from?.slice(0, 10) ?? '');
+    setTo(avail?.unavailable_to?.slice(0, 10) ?? '');
+    setNotes(avail?.notes ?? '');
+    setEditing(true);
+  }
+
+  const saveMut = useMutation({
+    mutationFn: () => usersService.setAvailabilityByUser(targetUserId, {
+      module_id:        moduleId,
+      is_available:     isAvail,
+      reason:           !isAvail && reason ? reason : undefined,
+      unavailable_from: !isAvail && from   ? from + 'T00:00:00Z' : undefined,
+      unavailable_to:   !isAvail && to     ? to   + 'T23:59:59Z' : undefined,
+      notes:            notes.trim() || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user-availability', targetUserId] });
+      setEditing(false);
+    },
+  });
+
+  const s = avail?.status ?? null;
+  const sc = s ? (STATUS_COLOR[s] ?? STATUS_COLOR.offline) : null;
+
+  return (
+    <div style={{ border: '1px solid #e9eef4', borderRadius: 2, padding: '14px 18px', background: '#fff', marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>{moduleName}</div>
+          {avail ? (
+            <div style={{ marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{
+                padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                background: sc?.bg, color: sc?.color, border: `1px solid ${sc?.border}`,
+              }}>
+                {STATUS_LABEL[s!] ?? s}
+              </span>
+              {avail.reason && (
+                <span style={{ fontSize: 11, color: '#64748b' }}>
+                  {REASON_LABEL[avail.reason] ?? avail.reason}
+                </span>
+              )}
+              {avail.unavailable_to && (
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                  hasta {new Date(avail.unavailable_to).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+              {avail.notes && (
+                <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>"{avail.notes}"</span>
+              )}
+            </div>
+          ) : (
+            <span style={{ fontSize: 11, color: '#cbd5e1', marginTop: 2, display: 'block' }}>Sin estado configurado</span>
+          )}
+        </div>
+        {canEdit && !editing && (
+          <button
+            type="button" onClick={startEdit}
+            style={{ padding: '4px 12px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: '#f8fafc', color: '#475569', fontFamily: 'inherit', flexShrink: 0 }}
+          >
+            Editar
+          </button>
+        )}
+      </div>
+
+      {editing && canEdit && (
+        <div style={{ marginTop: 12, padding: '14px 16px', background: '#f8fafc', border: '1px solid #e9eef4', borderRadius: 2 }}>
+          {/* Disponible toggle */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <button
+              type="button"
+              onClick={() => setIsAvail(true)}
+              style={{
+                padding: '5px 14px', borderRadius: 2, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: '1px solid',
+                borderColor: isAvail ? '#16a34a' : '#e2e8f0',
+                background:  isAvail ? '#f0fdf4' : '#fff',
+                color:       isAvail ? '#16a34a' : '#94a3b8',
+              }}
+            >Disponible</button>
+            <button
+              type="button"
+              onClick={() => setIsAvail(false)}
+              style={{
+                padding: '5px 14px', borderRadius: 2, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: '1px solid',
+                borderColor: !isAvail ? '#dc2626' : '#e2e8f0',
+                background:  !isAvail ? '#fef2f2' : '#fff',
+                color:       !isAvail ? '#dc2626' : '#94a3b8',
+              }}
+            >No disponible</button>
+          </div>
+
+          {!isAvail && (
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Motivo</label>
+                <select
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: '#fff' }}
+                >
+                  <option value="">Sin especificar</option>
+                  {Object.entries(REASON_LABEL).map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Desde</label>
+                <input type="date" value={from} onChange={e => setFrom(e.target.value)}
+                  style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Hasta</label>
+                <input type="date" value={to} onChange={e => setTo(e.target.value)}
+                  style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit' }} />
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Notas</label>
+            <input
+              type="text" placeholder="Opcional…" value={notes} onChange={e => setNotes(e.target.value)}
+              style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button" disabled={saveMut.isPending} onClick={() => saveMut.mutate()}
+              style={{ padding: '5px 14px', background: '#ff5e3a', color: '#fff', border: 'none', borderRadius: 2, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              {saveMut.isPending ? 'Guardando…' : 'Guardar'}
+            </button>
+            <button
+              type="button" onClick={() => setEditing(false)}
+              style={{ padding: '5px 12px', background: 'transparent', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Cancelar
+            </button>
+          </div>
+          {saveMut.isError && (
+            <p style={{ fontSize: 11, color: '#ef4444', marginTop: 6 }}>Error al guardar. Verifica permisos.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AvailabilitySection({
+  user,
+  targetUserId,
+  canEdit,
+  techModules,
+}: {
+  user:         ProfileUser;
+  targetUserId: string;
+  canEdit:      boolean;
+  techModules:  { module_id: string; module_name: string }[];
+}) {
+  const { data: availability = [], isLoading } = useQuery<TechnicianAvailability[]>({
+    queryKey: ['user-availability', targetUserId],
+    queryFn:  () => usersService.getAvailabilityByUser(targetUserId),
+    staleTime: 30_000,
+  });
+
+  if (techModules.length === 0) return null;
+
+  const availMap = new Map(availability.map(a => [a.module_id, a]));
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <div style={{ marginBottom: 16, paddingTop: 24, borderTop: '1px solid #f1f5f9' }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: '#0e2235' }}>Disponibilidad</div>
+        <p style={{ fontSize: 12, color: '#64748b', margin: '4px 0 0' }}>
+          Estado de disponibilidad por módulo.{canEdit ? ' Como admin puedes marcar ausencias, vacaciones o incapacidades.' : ''}
+        </p>
+      </div>
+      {isLoading ? (
+        <Spinner />
+      ) : (
+        techModules.map(m => (
+          <AvailabilityRow
+            key={m.module_id}
+            moduleId={m.module_id}
+            moduleName={m.module_name}
+            avail={availMap.get(m.module_id)}
+            targetUserId={targetUserId}
+            canEdit={canEdit}
+          />
+        ))
+      )}
+    </div>
+  );
+}
+
 export function ProfileSkillsTab({ user, targetUserId, canEdit }: Props) {
   const [showAdd, setShowAdd] = useState(false);
 
@@ -380,6 +629,13 @@ export function ProfileSkillsTab({ user, targetUserId, canEdit }: Props) {
           canEdit={canEdit}
         />
       ))}
+
+      <AvailabilitySection
+        user={user}
+        targetUserId={targetUserId}
+        canEdit={canEdit}
+        techModules={techModules}
+      />
     </div>
   );
 }
