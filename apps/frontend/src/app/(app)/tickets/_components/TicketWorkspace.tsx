@@ -894,6 +894,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' }}>
               <StateBadge label={ticket.state_label} isFinal={ticket.is_final} />
+              <PriorityBadge priority={ticket.priority} />
               {ticket.escalated && (
                 <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>ESCALADO</span>
               )}

@@ -6,22 +6,30 @@ import { DataSource } from 'typeorm';
 export class ReportingService {
   constructor(@InjectDataSource() private readonly db: DataSource) {}
 
-  async slaMetrics(moduleId?: string) {
-    const cond  = moduleId ? `AND t.module_id = $1` : '';
-    const params = moduleId ? [moduleId] : [];
+  async slaMetrics(moduleId?: string, dateFrom?: string, dateTo?: string) {
+    const conditions: string[] = [];
+    const params: any[]        = [];
+    let   idx = 1;
+
+    if (moduleId)  { conditions.push(`t.module_id = $${idx++}`); params.push(moduleId); }
+    if (dateFrom)  { conditions.push(`t.created_at >= $${idx++}`); params.push(dateFrom); }
+    if (dateTo)    { conditions.push(`t.created_at <= $${idx++}`); params.push(dateTo); }
+
+    const cond = conditions.length ? `AND ${conditions.join(' AND ')}` : '';
 
     const [summary] = await this.db.query<any[]>(
       `SELECT
-         COUNT(*)                                           AS total,
-         COUNT(*) FILTER (WHERE t.sla_deadline IS NULL)    AS without_sla,
-         COUNT(*) FILTER (WHERE t.sla_deadline < now() AND NOT s.is_final) AS breached,
-         COUNT(*) FILTER (WHERE t.sla_deadline >= now() OR s.is_final)    AS compliant,
+         COUNT(*)                                                        AS total,
+         COUNT(*) FILTER (WHERE t.sla_deadline IS NULL)                 AS without_sla,
+         COUNT(*) FILTER (WHERE tst.status = 'breached')                AS breached,
+         COUNT(*) FILTER (WHERE tst.status = 'met' OR tst.status = 'active') AS compliant,
          ROUND(
-           100.0 * COUNT(*) FILTER (WHERE t.sla_deadline >= now() OR s.is_final)
-           / NULLIF(COUNT(*) FILTER (WHERE t.sla_deadline IS NOT NULL), 0)
+           100.0 * COUNT(*) FILTER (WHERE tst.status IN ('met', 'active'))
+           / NULLIF(COUNT(*) FILTER (WHERE tst.status IS NOT NULL), 0)
          , 1) AS compliance_pct
        FROM tickets.tickets t
        JOIN tickets.states s ON s.id = t.current_state_id
+       LEFT JOIN tickets.ticket_sla_tracking tst ON tst.ticket_id = t.id
        WHERE 1=1 ${cond}`,
       params,
     );
@@ -30,10 +38,11 @@ export class ReportingService {
       `SELECT
          t.priority,
          COUNT(*)                                                      AS total,
-         COUNT(*) FILTER (WHERE t.sla_deadline < now() AND NOT s.is_final) AS breached,
-         AVG(EXTRACT(EPOCH FROM (t.sla_deadline - t.created_at)) / 3600) AS avg_sla_hours
+         COUNT(*) FILTER (WHERE tst.status = 'breached')              AS breached,
+         AVG(EXTRACT(EPOCH FROM (tst.deadline_at - tst.started_at)) / 3600) AS avg_sla_hours
        FROM tickets.tickets t
        JOIN tickets.states s ON s.id = t.current_state_id
+       LEFT JOIN tickets.ticket_sla_tracking tst ON tst.ticket_id = t.id
        WHERE t.sla_deadline IS NOT NULL ${cond}
        GROUP BY t.priority
        ORDER BY t.priority`,
@@ -134,47 +143,59 @@ export class ReportingService {
     return lines.join('\r\n');
   }
 
-  async ticketsSummary(moduleId?: string) {
-    const cond  = moduleId ? `AND t.module_id = $1` : '';
-    const params = moduleId ? [moduleId] : [];
+  async ticketsSummary(moduleId?: string, dateFrom?: string, dateTo?: string) {
+    const conditions: string[] = [];
+    const params: any[]        = [];
+    let   idx = 1;
 
-    const byState = await this.db.query<any[]>(
-      `SELECT s.name AS state_name, s.label AS state_label, s.is_final,
-              COUNT(*) AS total
-       FROM tickets.tickets t
-       JOIN tickets.states s ON s.id = t.current_state_id
-       WHERE 1=1 ${cond}
-       GROUP BY s.name, s.label, s.is_final
-       ORDER BY s.is_final, s.name`,
-      params,
-    );
+    if (moduleId)  { conditions.push(`t.module_id = $${idx++}`); params.push(moduleId); }
+    if (dateFrom)  { conditions.push(`t.created_at >= $${idx++}`); params.push(dateFrom); }
+    if (dateTo)    { conditions.push(`t.created_at <= $${idx++}`); params.push(dateTo); }
 
-    const byPriority = await this.db.query<any[]>(
-      `SELECT t.priority, COUNT(*) AS total
-       FROM tickets.tickets t WHERE 1=1 ${cond}
-       GROUP BY t.priority ORDER BY t.priority`,
-      params,
-    );
+    const cond = conditions.length ? `AND ${conditions.join(' AND ')}` : '';
 
-    const trend = await this.db.query<any[]>(
-      `SELECT date_trunc('day', t.created_at)::date AS day, COUNT(*) AS created
-       FROM tickets.tickets t
-       WHERE t.created_at >= now() - INTERVAL '30 days' ${cond}
-       GROUP BY 1 ORDER BY 1`,
-      params,
-    );
+    // Trend: use supplied date range, or last 30 days if no from-date
+    const trendFrom = dateFrom ?? null;
+    const trendCond = trendFrom
+      ? cond
+      : `${cond} AND t.created_at >= now() - INTERVAL '30 days'`;
 
-    const [totals] = await this.db.query<any[]>(
-      `SELECT
-         COUNT(*)                                           AS total,
-         COUNT(*) FILTER (WHERE NOT s.is_final)            AS open,
-         COUNT(*) FILTER (WHERE s.is_final)                AS closed,
-         COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '7 days') AS last_7_days
-       FROM tickets.tickets t
-       JOIN tickets.states s ON s.id = t.current_state_id
-       WHERE 1=1 ${cond}`,
-      params,
-    );
+    const [byState, byPriority, trend, [totals]] = await Promise.all([
+      this.db.query<any[]>(
+        `SELECT s.name AS state_name, s.label AS state_label, s.is_final,
+                COUNT(*) AS total
+         FROM tickets.tickets t
+         JOIN tickets.states s ON s.id = t.current_state_id
+         WHERE 1=1 ${cond}
+         GROUP BY s.name, s.label, s.is_final
+         ORDER BY s.is_final, s.name`,
+        params,
+      ),
+      this.db.query<any[]>(
+        `SELECT t.priority, COUNT(*) AS total
+         FROM tickets.tickets t WHERE 1=1 ${cond}
+         GROUP BY t.priority ORDER BY t.priority`,
+        params,
+      ),
+      this.db.query<any[]>(
+        `SELECT date_trunc('day', t.created_at)::date AS day, COUNT(*) AS created
+         FROM tickets.tickets t
+         WHERE 1=1 ${trendCond}
+         GROUP BY 1 ORDER BY 1`,
+        params,
+      ),
+      this.db.query<any[]>(
+        `SELECT
+           COUNT(*)                                           AS total,
+           COUNT(*) FILTER (WHERE NOT s.is_final)            AS open,
+           COUNT(*) FILTER (WHERE s.is_final)                AS closed,
+           COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '7 days') AS last_7_days
+         FROM tickets.tickets t
+         JOIN tickets.states s ON s.id = t.current_state_id
+         WHERE 1=1 ${cond}`,
+        params,
+      ),
+    ]);
 
     return { totals, by_state: byState, by_priority: byPriority, daily_trend: trend };
   }

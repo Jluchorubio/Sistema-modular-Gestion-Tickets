@@ -142,6 +142,8 @@ export function ReportsClient() {
   }, [user]);
 
   const [selectedModule, setSelectedModule] = useState<string>('');
+  const [dateFrom,       setDateFrom]       = useState<string>('');
+  const [dateTo,         setDateTo]         = useState<string>('');
   const [csvExporting,   setCsvExporting]   = useState(false);
 
   const handleExportCsv = useCallback(async () => {
@@ -170,16 +172,18 @@ export function ReportsClient() {
   }, [storeModuleId]);
 
   const moduleId = selectedModule || undefined;
+  const from     = dateFrom || undefined;
+  const to       = dateTo   || undefined;
 
   const { data: sla, isLoading: slaLoading } = useQuery({
-    queryKey:  ['reports-sla', moduleId],
-    queryFn:   () => reportingService.getSlaMetrics(moduleId),
+    queryKey:  ['reports-sla', moduleId, from, to],
+    queryFn:   () => reportingService.getSlaMetrics(moduleId, from, to),
     staleTime: 2 * 60_000,
   });
 
   const { data: tickets, isLoading: ticketsLoading } = useQuery({
-    queryKey:  ['reports-tickets', moduleId],
-    queryFn:   () => reportingService.getTicketsSummary(moduleId),
+    queryKey:  ['reports-tickets', moduleId, from, to],
+    queryFn:   () => reportingService.getTicketsSummary(moduleId, from, to),
     staleTime: 2 * 60_000,
   });
 
@@ -250,6 +254,33 @@ export function ReportsClient() {
             ))}
           </div>
         )}
+
+        {/* ── Date range filter ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Rango de fechas:</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={e => setDateFrom(e.target.value)}
+            style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontFamily: 'inherit', color: '#334155' }}
+          />
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>—</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={e => setDateTo(e.target.value)}
+            style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontFamily: 'inherit', color: '#334155' }}
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              type="button"
+              onClick={() => { setDateFrom(''); setDateTo(''); }}
+              style={{ fontSize: 11, fontWeight: 700, color: '#ff5e3a', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
 
         {isLoading && <div className={styles.loading}>Cargando métricas…</div>}
 

@@ -221,9 +221,10 @@ export class SlaEvaluatorService {
     from:       Date,
     moduleId:   string,
   ): Promise<Date> {
-    const [businessHours, holidays] = await Promise.all([
+    const [businessHours, holidays, tz] = await Promise.all([
       this.loadBusinessHours(moduleId),
       this.loadHolidays(moduleId),
+      this.loadOrgTimezone(),
     ]);
 
     // No business hours configured → add raw hours (simple calendar)
@@ -231,14 +232,15 @@ export class SlaEvaluatorService {
       return new Date(from.getTime() + hoursToAdd * 3600_000);
     }
 
-    return this.advanceBusinessTime(from, hoursToAdd, businessHours, holidays);
+    return this.advanceBusinessTime(from, hoursToAdd, businessHours, holidays, tz);
   }
 
   private advanceBusinessTime(
-    start:         Date,
+    start:          Date,
     hoursRemaining: number,
-    businessHours: BusinessHour[],
-    holidays:      Set<string>,
+    businessHours:  BusinessHour[],
+    holidays:       Set<string>,
+    tz:             string,
   ): Date {
     const dayMap = new Map<number, { startMs: number; endMs: number }>();
     for (const bh of businessHours) {
@@ -255,22 +257,20 @@ export class SlaEvaluatorService {
     while (remaining > 0 && safeguard < 400) {
       safeguard++;
 
-      // Use UTC methods to avoid local-timezone day shifting
-      const dow     = cursor.getUTCDay();
-      const dateStr = this.toDateStr(cursor);
+      const { localDayStart, dow } = this.getLocalDateInfo(cursor, tz);
+      const dateStr = this.toDateStr(cursor, tz);
 
       if (holidays.has(dateStr) || !dayMap.has(dow)) {
-        cursor = this.nextDayStart(cursor, dayMap);
+        cursor = this.nextDayStart(cursor, dayMap, tz);
         continue;
       }
 
       const { startMs, endMs } = dayMap.get(dow)!;
-      const dayStart = this.utcDayStart(cursor);
-      const bStart   = new Date(dayStart.getTime() + startMs);
-      const bEnd     = new Date(dayStart.getTime() + endMs);
+      const bStart = new Date(localDayStart.getTime() + startMs);
+      const bEnd   = new Date(localDayStart.getTime() + endMs);
 
       if (cursor < bStart) { cursor = bStart; continue; }
-      if (cursor >= bEnd)  { cursor = this.nextDayStart(cursor, dayMap); continue; }
+      if (cursor >= bEnd)  { cursor = this.nextDayStart(cursor, dayMap, tz); continue; }
 
       const available = bEnd.getTime() - cursor.getTime();
       if (remaining <= available) {
@@ -278,21 +278,27 @@ export class SlaEvaluatorService {
         remaining = 0;
       } else {
         remaining -= available;
-        cursor     = this.nextDayStart(cursor, dayMap);
+        cursor     = this.nextDayStart(cursor, dayMap, tz);
       }
     }
 
     return cursor;
   }
 
-  private nextDayStart(from: Date, dayMap: Map<number, { startMs: number; endMs: number }>): Date {
-    let next = this.utcDayStart(from);
-    next = new Date(next.getTime() + 86_400_000);
+  private nextDayStart(
+    from:   Date,
+    dayMap: Map<number, { startMs: number; endMs: number }>,
+    tz:     string,
+  ): Date {
+    const { localDayStart } = this.getLocalDateInfo(from, tz);
+    let next = new Date(localDayStart.getTime() + 86_400_000);
 
     for (let i = 0; i < 7; i++) {
-      if (dayMap.has(next.getUTCDay())) {
-        const { startMs } = dayMap.get(next.getUTCDay())!;
-        return new Date(next.getTime() + startMs);
+      const { dow } = this.getLocalDateInfo(next, tz);
+      if (dayMap.has(dow)) {
+        const { localDayStart: nextDayStart } = this.getLocalDateInfo(next, tz);
+        const { startMs } = dayMap.get(dow)!;
+        return new Date(nextDayStart.getTime() + startMs);
       }
       next = new Date(next.getTime() + 86_400_000);
     }
@@ -300,8 +306,31 @@ export class SlaEvaluatorService {
     return new Date(from.getTime() + 86_400_000);
   }
 
-  private utcDayStart(d: Date): Date {
-    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  private getLocalDateInfo(d: Date, tz: string): { localDayStart: Date; dow: number } {
+    const DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      weekday:  'short',
+      hour:     '2-digit',
+      minute:   '2-digit',
+      second:   '2-digit',
+      hour12:   false,
+    }).formatToParts(d).reduce<Record<string, string>>((acc, p) => {
+      acc[p.type] = p.value;
+      return acc;
+    }, {});
+
+    const localH  = +parts.hour   || 0;
+    const localM  = +parts.minute || 0;
+    const localS  = +parts.second || 0;
+    const dow     = DOW_SHORT.indexOf(parts.weekday ?? 'Sun');
+
+    // localDayStart = d minus elapsed local time within the day
+    const localDayStart = new Date(
+      d.getTime() - (localH * 3_600_000 + localM * 60_000 + localS * 1_000),
+    );
+
+    return { localDayStart, dow };
   }
 
   private timeToMs(t: string): number {
@@ -309,8 +338,8 @@ export class SlaEvaluatorService {
     return ((h * 60 + m) * 60 + (s ?? 0)) * 1000;
   }
 
-  private toDateStr(d: Date): string {
-    return d.toISOString().slice(0, 10);
+  private toDateStr(d: Date, tz: string): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d);
   }
 
   /* ── DB loaders ───────────────────────────────────────────────────────── */
@@ -342,6 +371,14 @@ export class SlaEvaluatorService {
       [moduleId],
     );
     return new Set(rows.map(r => r.holiday_date.slice(0, 10)));
+  }
+
+  private async loadOrgTimezone(): Promise<string> {
+    const [row] = await this.db.query<{ timezone: string }[]>(
+      `SELECT timezone FROM users.organizations
+       WHERE id = '00000000-0000-0000-0000-000000000001'`,
+    );
+    return row?.timezone ?? 'America/Bogota';
   }
 
   /* ── Suggest priority from damage_type ───────────────────────────────── */

@@ -189,6 +189,42 @@ export class NotificationsService {
     });
   }
 
+  @OnEvent('ticket.approval_expired')
+  async onApprovalExpired(ev: { ticketId: string; title: string; createdBy: string; reopenCount: number }) {
+    await this.notifyUser({
+      userId:    ev.createdBy,
+      eventType: 'ticket.approval_expired',
+      subject:   `Aprobación expirada: ${ev.title}`,
+      body:      `Tu aprobación para el ticket "${ev.title}" expiró sin respuesta y el ticket fue reabierto (reapertura #${ev.reopenCount}).`,
+      channels:  ['in_app', 'email'],
+      meta:      { ticketId: ev.ticketId },
+    });
+  }
+
+  @OnEvent('ticket.escalated')
+  async onTicketEscalated(ev: { ticketId: string; title: string; moduleId: string; reason?: string }) {
+    if (!ev.moduleId) return;
+    const chiefs = await this.db.query<{ user_id: string }[]>(
+      `SELECT umr.user_id
+       FROM   modules.user_module_roles umr
+       JOIN   modules.module_roles      mr  ON mr.id = umr.role_id
+       WHERE  umr.module_id = $1
+         AND  mr.name       = 'jefe_tecnico'
+         AND  umr.is_active = true`,
+      [ev.moduleId],
+    );
+    for (const { user_id } of chiefs) {
+      await this.notifyUser({
+        userId:    user_id,
+        eventType: 'ticket.escalated',
+        subject:   `Ticket escalado: ${ev.title}`,
+        body:      `El ticket "${ev.title}" fue escalado. ${ev.reason ?? 'Requiere atención prioritaria.'}`,
+        channels:  ['in_app', 'email'],
+        meta:      { ticketId: ev.ticketId, moduleId: ev.moduleId },
+      });
+    }
+  }
+
   @OnEvent('meeting.scheduled')
   async onMeetingScheduled(ev: {
     meetingId:      string;

@@ -716,6 +716,15 @@ export class TicketsService {
       actorId:   userId,
     });
 
+    if (shouldEscalate) {
+      this.messaging.emit('ticket.escalated', {
+        ticketId,
+        title:    ticket.title,
+        moduleId: ticket.module_id,
+        reason:   `Auto-escalado por ${reopenCount} rechazos de aprobación`,
+      });
+    }
+
     return { ok: true, escalated: shouldEscalate };
   }
 
@@ -766,6 +775,15 @@ export class TicketsService {
       toLabel:   'Reabierto',
       actorId:   userId,
     });
+
+    if (shouldEscalate) {
+      this.messaging.emit('ticket.escalated', {
+        ticketId,
+        title:    ticket.title,
+        moduleId: ticket.module_id,
+        reason:   `Auto-escalado por ${reopenCount} reaperturas`,
+      });
+    }
 
     return { ok: true, escalated: shouldEscalate };
   }

@@ -28,6 +28,7 @@ export class ApprovalExpiryService {
       ticket_id:            string;
       title:                string;
       created_by:           string;
+      module_id:            string;
       workflow_version_id:  string;
       current_state_id:     string;
       reprocess_count:      number;
@@ -36,6 +37,7 @@ export class ApprovalExpiryService {
       SELECT t.id                  AS ticket_id,
              t.title,
              t.created_by,
+             t.module_id,
              t.workflow_version_id,
              t.current_state_id,
              t.reprocess_count,
@@ -100,6 +102,22 @@ export class ApprovalExpiryService {
           toLabel:   'Aprobación expirada — reabierto',
           actorId:   'system',
         });
+
+        this.messaging.emit('ticket.approval_expired', {
+          ticketId:      t.ticket_id,
+          title:         t.title,
+          createdBy:     t.created_by,
+          reopenCount,
+        });
+
+        if (shouldEscalate) {
+          this.messaging.emit('ticket.escalated', {
+            ticketId:  t.ticket_id,
+            title:     t.title,
+            moduleId:  t.module_id,
+            reason:    `Auto-escalado por ${reopenCount} reaperturas de aprobación`,
+          });
+        }
 
         this.logger.log(`Ticket ${t.ticket_id} reopened after approval expiry (reopen #${reopenCount})`);
       } catch (err: any) {

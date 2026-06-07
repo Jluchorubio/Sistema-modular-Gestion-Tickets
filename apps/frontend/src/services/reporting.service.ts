@@ -135,16 +135,20 @@ export interface HelpdeskMetrics {
 }
 
 export const reportingService = {
-  async getSlaMetrics(moduleId?: string): Promise<SlaMetrics> {
+  async getSlaMetrics(moduleId?: string, dateFrom?: string, dateTo?: string): Promise<SlaMetrics> {
     const params: Record<string, string> = {};
     if (moduleId) params.moduleId = moduleId;
+    if (dateFrom) params.dateFrom = dateFrom;
+    if (dateTo)   params.dateTo   = dateTo;
     const { data } = await api.get('/reporting/sla', { params });
     return data;
   },
 
-  async getTicketsSummary(moduleId?: string): Promise<TicketsSummary> {
+  async getTicketsSummary(moduleId?: string, dateFrom?: string, dateTo?: string): Promise<TicketsSummary> {
     const params: Record<string, string> = {};
     if (moduleId) params.moduleId = moduleId;
+    if (dateFrom) params.dateFrom = dateFrom;
+    if (dateTo)   params.dateTo   = dateTo;
     const { data } = await api.get('/reporting/tickets', { params });
     return data;
   },

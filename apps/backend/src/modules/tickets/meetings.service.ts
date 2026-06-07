@@ -45,6 +45,15 @@ export class MeetingsService {
       throw new BadRequestException(`Proveedor inválido: ${dto.provider}`);
     }
 
+    if (dto.meeting_url) {
+      try { new URL(dto.meeting_url); } catch {
+        throw new BadRequestException('El enlace de reunión no es una URL válida.');
+      }
+      if (!dto.meeting_url.startsWith('https://') && !dto.meeting_url.startsWith('http://')) {
+        throw new BadRequestException('El enlace de reunión debe comenzar con https:// o http://');
+      }
+    }
+
     const [ticket] = await this.db.query<{ id: string; module_id: string }[]>(
       `SELECT id, module_id FROM tickets.tickets WHERE id = $1`,
       [ticketId],

@@ -121,7 +121,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
       list = [...list].sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
       return { ticketsOld: list, ticketsToday: [] };
     }
-    if (sortBy === 'newest') {
+    if (sortBy === 'newest' || sortBy === 'state') {
       return { ticketsOld: list, ticketsToday: [] };
     }
 
@@ -137,6 +137,18 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
     today.sort(byPriority);
     return { ticketsOld: old, ticketsToday: today };
   }, [allTickets, myAssignedTickets, quickFilter, search, sortBy, user?.id, user?.first_name, user?.last_name]);
+
+  const ticketsByState = useMemo(() => {
+    if (sortBy !== 'state') return null;
+    const map = new Map<string, TicketListItem[]>();
+    for (const t of ticketsOld) {
+      const key = t.state_label;
+      const arr = map.get(key) ?? [];
+      arr.push(t);
+      map.set(key, arr);
+    }
+    return map;
+  }, [sortBy, ticketsOld]);
 
   const statCounts = useMemo(() => {
     const waiting   = myAssignedTickets.filter((t) => t.assignment_role === 'owner' && !t.is_final && !t.is_approval_state).length;
@@ -346,6 +358,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                   <option value="auto">Automático (SLA)</option>
                   <option value="newest">Recientes</option>
                   <option value="priority">Prioridad</option>
+                  <option value="state">Por estado</option>
                 </select>
               </div>
             </div>
@@ -745,6 +758,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                       <option value="auto">Automático (SLA)</option>
                       <option value="newest">Más recientes</option>
                       <option value="priority">Por prioridad</option>
+                      <option value="state">Por estado</option>
                     </select>
                   </div>
                 </div>
@@ -821,6 +835,24 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                   <Plus size={13} />Crear primer ticket
                 </button>
               )}
+            </div>
+          ) : sortBy === 'state' && ticketsByState ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {[...ticketsByState.entries()].map(([stateLabel, stTickets]) => (
+                <div key={stateLabel}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '.07em', padding: '2px 8px', background: '#eef2ff', borderRadius: 5, border: '1px solid #c7d2fe' }}>
+                      {stateLabel}
+                    </span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{stTickets.length}</span>
+                  </div>
+                  <div className={styles.cardGrid}>
+                    {stTickets.map((t) => (
+                      <TicketCard key={t.id} ticket={t} onClick={() => router.push(`${basePath}/ticket/${t.id}`)} />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : sortBy !== 'auto' ? (
             <div className={styles.cardGrid}>

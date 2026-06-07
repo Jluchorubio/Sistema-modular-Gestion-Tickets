@@ -18,17 +18,29 @@ export class ReportingController {
   @Get('sla')
   @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Métricas de SLA: cumplimiento global y por prioridad.' })
-  @ApiQuery({ name: 'moduleId', required: false })
-  slaMetrics(@Query('moduleId') moduleId?: string) {
-    return this.service.slaMetrics(moduleId);
+  @ApiQuery({ name: 'moduleId',  required: false })
+  @ApiQuery({ name: 'dateFrom',  required: false })
+  @ApiQuery({ name: 'dateTo',    required: false })
+  slaMetrics(
+    @Query('moduleId') moduleId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo')   dateTo?:   string,
+  ) {
+    return this.service.slaMetrics(moduleId, dateFrom, dateTo);
   }
 
   @Get('tickets')
   @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Resumen de tickets: totales, por estado, prioridad y tendencia 30 días.' })
-  @ApiQuery({ name: 'moduleId', required: false })
-  ticketsSummary(@Query('moduleId') moduleId?: string) {
-    return this.service.ticketsSummary(moduleId);
+  @ApiQuery({ name: 'moduleId',  required: false })
+  @ApiQuery({ name: 'dateFrom',  required: false })
+  @ApiQuery({ name: 'dateTo',    required: false })
+  ticketsSummary(
+    @Query('moduleId') moduleId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo')   dateTo?:   string,
+  ) {
+    return this.service.ticketsSummary(moduleId, dateFrom, dateTo);
   }
 
   @Get('inventory')
