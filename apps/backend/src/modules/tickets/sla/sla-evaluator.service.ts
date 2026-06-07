@@ -308,27 +308,44 @@ export class SlaEvaluatorService {
 
   private getLocalDateInfo(d: Date, tz: string): { localDayStart: Date; dow: number } {
     const DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const parts = new Intl.DateTimeFormat('en-US', {
+
+    const fmt = new Intl.DateTimeFormat('en-US', {
       timeZone: tz,
       weekday:  'short',
       hour:     '2-digit',
       minute:   '2-digit',
       second:   '2-digit',
       hour12:   false,
-    }).formatToParts(d).reduce<Record<string, string>>((acc, p) => {
+    });
+
+    const parts = fmt.formatToParts(d).reduce<Record<string, string>>((acc, p) => {
       acc[p.type] = p.value;
       return acc;
     }, {});
 
-    const localH  = +parts.hour   || 0;
-    const localM  = +parts.minute || 0;
-    const localS  = +parts.second || 0;
-    const dow     = DOW_SHORT.indexOf(parts.weekday ?? 'Sun');
+    const localH = +parts.hour   || 0;
+    const localM = +parts.minute || 0;
+    const localS = +parts.second || 0;
+    const dow    = DOW_SHORT.indexOf(parts.weekday ?? 'Sun');
 
-    // localDayStart = d minus elapsed local time within the day
-    const localDayStart = new Date(
+    // Subtract elapsed local time to get local midnight in UTC.
+    let localDayStart = new Date(
       d.getTime() - (localH * 3_600_000 + localM * 60_000 + localS * 1_000),
     );
+
+    // DST-safety: verify the result is actually midnight in tz.
+    // If a DST transition occurred during the day, our subtraction can be off by ±1h.
+    const vParts = fmt.formatToParts(localDayStart).reduce<Record<string, string>>((acc, p) => {
+      acc[p.type] = p.value; return acc;
+    }, {});
+    const vH = +vParts.hour || 0;
+    const vM = +vParts.minute || 0;
+    const vS = +vParts.second || 0;
+    if (vH !== 0 || vM !== 0 || vS !== 0) {
+      localDayStart = new Date(
+        localDayStart.getTime() - (vH * 3_600_000 + vM * 60_000 + vS * 1_000),
+      );
+    }
 
     return { localDayStart, dow };
   }

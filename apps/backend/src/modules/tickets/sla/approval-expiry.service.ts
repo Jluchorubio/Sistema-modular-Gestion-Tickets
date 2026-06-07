@@ -75,25 +75,61 @@ export class ApprovalExpiryService {
           continue;
         }
 
-        await this.db.query(`SELECT set_config('app.current_user_id', 'system', true)`);
-
         const reopenCount    = (t.reprocess_count ?? 0) + 1;
         const shouldEscalate = reopenCount >= 3 && t.priority !== 'critica';
         const newPriority    = shouldEscalate ? 'alta' : t.priority;
 
-        await this.db.query(
-          `UPDATE tickets.tickets
-           SET current_state_id = $1,
-               reprocess_count  = $2,
-               priority         = $3
-           WHERE id = $4`,
-          [trans.to_state_id, reopenCount, newPriority, t.ticket_id],
-        );
-
-        await this.db.query(
-          `UPDATE tickets.ticket_approvals SET status = 'expired' WHERE ticket_id = $1 AND status = 'pending'`,
+        // Fetch approval wait duration BEFORE transaction (read-only)
+        const [approval] = await this.db.query<{ created_at: string }[]>(
+          `SELECT created_at FROM tickets.ticket_approvals
+           WHERE ticket_id = $1 AND status = 'pending' LIMIT 1`,
           [t.ticket_id],
         );
+        const waitSecs = approval
+          ? Math.ceil((Date.now() - new Date(approval.created_at).getTime()) / 1000)
+          : 0;
+
+        // Atomic transaction: ticket state + approval status + SLA extension
+        const qr = this.db.createQueryRunner();
+        await qr.connect();
+        await qr.startTransaction();
+        try {
+          await qr.query(`SELECT set_config('app.current_user_id', 'system', true)`);
+
+          await qr.query(
+            `UPDATE tickets.tickets
+             SET current_state_id = $1,
+                 reprocess_count  = $2,
+                 priority         = $3
+             WHERE id = $4`,
+            [trans.to_state_id, reopenCount, newPriority, t.ticket_id],
+          );
+
+          await qr.query(
+            `UPDATE tickets.ticket_approvals
+             SET status = 'expired'
+             WHERE ticket_id = $1 AND status = 'pending'`,
+            [t.ticket_id],
+          );
+
+          // Extend SLA by time spent in approval; reactivate tracking
+          if (waitSecs > 0) {
+            await qr.query(
+              `UPDATE tickets.ticket_sla_tracking
+               SET deadline_at = deadline_at + ($1 || ' seconds')::interval,
+                   status      = 'active'
+               WHERE ticket_id = $2 AND status IN ('active', 'breached')`,
+              [waitSecs, t.ticket_id],
+            );
+          }
+
+          await qr.commitTransaction();
+        } catch (txErr) {
+          await qr.rollbackTransaction();
+          throw txErr;
+        } finally {
+          await qr.release();
+        }
 
         this.messaging.emit('ticket.state_changed', {
           ticketId:  t.ticket_id,

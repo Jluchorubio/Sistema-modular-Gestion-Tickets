@@ -26,7 +26,8 @@ describe('SlaEvaluatorService', () => {
 
   describe('advanceBusinessTime', () => {
     function advance(start: Date, hours: number, holidays = NO_HOLIDAYS): Date {
-      return (service as any).advanceBusinessTime(start, hours, WEEKDAY_HOURS, holidays);
+      // Use 'UTC' timezone so business hours match UTC directly, same as old behavior
+      return (service as any).advanceBusinessTime(start, hours, WEEKDAY_HOURS, holidays, 'UTC');
     }
 
     it('adds hours within the same business day', () => {
@@ -89,28 +90,63 @@ describe('SlaEvaluatorService', () => {
   });
 
   /* ── resolveDeadline ─────────────────────────────────────────────────── */
+  // Promise.all fires loadBusinessHours, loadHolidays, loadOrgTimezone in parallel.
+  // Call order: (1) module BH, (2) holidays, (3) org TZ, (4) global BH if (1) was empty.
 
   describe('resolveDeadline', () => {
     it('adds raw calendar hours when no business hours are configured', async () => {
       mockDb.query
-        .mockResolvedValueOnce([])  // no module business hours
-        .mockResolvedValueOnce([])  // no global business hours
-        .mockResolvedValueOnce([]); // holidays
+        .mockResolvedValueOnce([])                        // (1) module business hours → empty
+        .mockResolvedValueOnce([])                        // (2) holidays → empty
+        .mockResolvedValueOnce([{ timezone: 'UTC' }])    // (3) org timezone
+        .mockResolvedValueOnce([]);                       // (4) global business hours → empty
 
       const from = new Date('2024-01-15T10:00:00.000Z');
       const result = await service.resolveDeadline(4, from, 'mod-x');
       expect(result.toISOString()).toBe('2024-01-15T14:00:00.000Z');
     });
 
-    it('uses business hours when configured', async () => {
+    it('uses business hours when module hours are configured', async () => {
       mockDb.query
-        .mockResolvedValueOnce(WEEKDAY_HOURS)  // module business hours (returned directly)
-        .mockResolvedValueOnce([]);             // holidays
+        .mockResolvedValueOnce(WEEKDAY_HOURS)             // (1) module business hours → has data
+        .mockResolvedValueOnce([])                        // (2) holidays → empty
+        .mockResolvedValueOnce([{ timezone: 'UTC' }]);    // (3) org timezone (no (4): module BH non-empty)
 
-      // Monday 09:00 + 2h = 11:00
+      // Monday 09:00 UTC + 2h = 11:00 UTC (UTC TZ, Mon in dayMap at idx 1)
       const from = new Date('2024-01-15T09:00:00.000Z');
       const result = await service.resolveDeadline(2, from, 'mod-x');
       expect(result.toISOString()).toBe('2024-01-15T11:00:00.000Z');
+    });
+
+    it('uses global business hours when module has none', async () => {
+      mockDb.query
+        .mockResolvedValueOnce([])                        // (1) module business hours → empty
+        .mockResolvedValueOnce([])                        // (2) holidays → empty
+        .mockResolvedValueOnce([{ timezone: 'UTC' }])    // (3) org timezone
+        .mockResolvedValueOnce(WEEKDAY_HOURS);            // (4) global business hours
+
+      // Monday 09:00 UTC + 2h = 11:00 UTC
+      const from = new Date('2024-01-15T09:00:00.000Z');
+      const result = await service.resolveDeadline(2, from, 'mod-x');
+      expect(result.toISOString()).toBe('2024-01-15T11:00:00.000Z');
+    });
+
+    it('handles org with America/Bogota timezone (UTC-5)', async () => {
+      // Business hours are Mon-Fri 08:00-17:00 LOCAL to Bogota
+      // Monday 2024-01-15 08:00 UTC = Monday 2024-01-15 03:00 Bogota → before BH start
+      // Monday 2024-01-15 13:00 UTC = Monday 2024-01-15 08:00 Bogota → at BH start
+      // +2h local = 10:00 Bogota = 15:00 UTC
+      const bogotaHours = [
+        { day_of_week: 1, start_time: '08:00:00', end_time: '17:00:00' },
+      ];
+      mockDb.query
+        .mockResolvedValueOnce(bogotaHours)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ timezone: 'America/Bogota' }]);
+
+      const from = new Date('2024-01-15T13:00:00.000Z'); // 08:00 Bogota
+      const result = await service.resolveDeadline(2, from, 'mod-x');
+      expect(result.toISOString()).toBe('2024-01-15T15:00:00.000Z'); // 10:00 Bogota
     });
   });
 

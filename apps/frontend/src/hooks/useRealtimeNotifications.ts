@@ -48,10 +48,37 @@ export function useRealtimeNotifications() {
       }
     });
 
-    /* ── Ticket queue updated (assign/transition) → refresh queue + workspace ── */
+    /* ── Ticket queue updated (assign/transition) → refresh queue ── */
     socket.on('ticket:queue_updated', () => {
-      qc.invalidateQueries({ queryKey: ['queue-unassigned'],     exact: false });
-      qc.invalidateQueries({ queryKey: ['my-assigned-tickets'],  exact: false });
+      qc.invalidateQueries({ queryKey: ['queue-unassigned'],    exact: false });
+      qc.invalidateQueries({ queryKey: ['my-assigned-tickets'], exact: false });
+      qc.invalidateQueries({ queryKey: ['tickets'],             exact: false });
+    });
+
+    /* ── Ticket state changed → invalidate detail + assignment lists ── */
+    socket.on('ticket:state_changed', (payload: { ticketId?: string }) => {
+      if (payload?.ticketId) {
+        qc.invalidateQueries({ queryKey: ['ticket-detail', payload.ticketId] });
+        qc.invalidateQueries({ queryKey: ['ticket-timeline', payload.ticketId] });
+      }
+      qc.invalidateQueries({ queryKey: ['tickets'], exact: false });
+    });
+
+    /* ── New comment → invalidate timeline ── */
+    socket.on('ticket:comment_added', (payload: { ticketId?: string }) => {
+      if (payload?.ticketId) {
+        qc.invalidateQueries({ queryKey: ['ticket-timeline', payload.ticketId] });
+        qc.invalidateQueries({ queryKey: ['ticket-detail', payload.ticketId] });
+      }
+    });
+
+    /* ── Assignment → invalidate detail + queue ── */
+    socket.on('ticket:assigned', (payload: { ticketId?: string }) => {
+      if (payload?.ticketId) {
+        qc.invalidateQueries({ queryKey: ['ticket-detail', payload.ticketId] });
+      }
+      qc.invalidateQueries({ queryKey: ['queue-unassigned'],    exact: false });
+      qc.invalidateQueries({ queryKey: ['my-assigned-tickets'], exact: false });
     });
 
     socket.on('connect', () => {
@@ -68,6 +95,9 @@ export function useRealtimeNotifications() {
       socket.off('tech:status_changed');
       socket.off('presence:change');
       socket.off('ticket:queue_updated');
+      socket.off('ticket:state_changed');
+      socket.off('ticket:comment_added');
+      socket.off('ticket:assigned');
       socket.off('connect');
       socket.off('disconnect');
       socketService.disconnect();

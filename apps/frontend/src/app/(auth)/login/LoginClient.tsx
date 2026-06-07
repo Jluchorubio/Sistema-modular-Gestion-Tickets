@@ -72,9 +72,11 @@ function handleAuthRedirect(data: LoginResponse, push: (href: string) => void) {
   const { access_token, refresh_token, user } = data;
   const needsProfile = !user.profile_complete && !user.is_superadmin;
   const needsSetup   = !!user.needs_setup;
-  useAuthStore.getState().setTokens(access_token, refresh_token, user.force_password_change, needsProfile, needsSetup);
+  const forcePw      = !!user.force_password_change;
+  useAuthStore.getState().setTokens(access_token, refresh_token, forcePw, needsProfile, needsSetup);
   if (needsSetup)   return push(ROUTES.AUTH.SETUP);
   if (needsProfile) return push(ROUTES.AUTH.COMPLETE_PROFILE);
+  if (forcePw)      return push(ROUTES.AUTH.CHANGE_PASSWORD);
   push(ROUTES.APP.DASHBOARD);
 }
 

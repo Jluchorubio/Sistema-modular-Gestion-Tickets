@@ -32,12 +32,12 @@ export class AutoCloseService {
       close_state_id: string;
     }[]>(`
       WITH approval_tickets AS (
-        SELECT t.id                  AS ticket_id,
+        SELECT t.id                      AS ticket_id,
                t.title,
                t.created_by,
                t.workflow_version_id,
                t.current_state_id,
-               tsh.changed_at        AS entered_approval_at,
+               tsh.transitioned_at       AS entered_approval_at,
                m.auto_close_hours
         FROM   tickets.tickets  t
         JOIN   tickets.states   s   ON s.id = t.current_state_id   AND s.is_approval_state = true
@@ -45,14 +45,14 @@ export class AutoCloseService {
                                    AND m.auto_close_hours IS NOT NULL
                                    AND m.auto_close_hours > 0
         JOIN   LATERAL (
-                 SELECT to_state_id, changed_at
+                 SELECT to_state_id, transitioned_at
                  FROM   tickets.ticket_state_history
                  WHERE  ticket_id = t.id AND to_state_id = t.current_state_id
-                 ORDER  BY changed_at DESC
+                 ORDER  BY transitioned_at DESC
                  LIMIT  1
                ) tsh ON true
         WHERE  t.deleted_at IS NULL
-          AND  tsh.changed_at < now() - (m.auto_close_hours || ' hours')::interval
+          AND  tsh.transitioned_at < now() - (m.auto_close_hours || ' hours')::interval
       )
       SELECT at.ticket_id,
              at.title,
@@ -103,13 +103,13 @@ export class AutoCloseService {
       JOIN   modules.modules  m  ON m.id = t.module_id
                                 AND m.auto_close_hours > 0
       JOIN   LATERAL (
-               SELECT changed_at
+               SELECT transitioned_at
                FROM   tickets.ticket_state_history
                WHERE  ticket_id = t.id AND to_state_id = t.current_state_id
-               ORDER  BY changed_at DESC LIMIT 1
+               ORDER  BY transitioned_at DESC LIMIT 1
              ) tsh ON true
       WHERE  t.deleted_at IS NULL
-        AND  tsh.changed_at < now() - (m.auto_close_hours || ' hours')::interval
+        AND  tsh.transitioned_at < now() - (m.auto_close_hours || ' hours')::interval
     `);
     return Number(count);
   }

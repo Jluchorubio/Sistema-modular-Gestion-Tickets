@@ -838,7 +838,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
             </div>
           ) : sortBy === 'state' && ticketsByState ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {[...ticketsByState.entries()].map(([stateLabel, stTickets]) => (
+              {Array.from(ticketsByState.entries()).map(([stateLabel, stTickets]: [string, TicketListItem[]]) => (
                 <div key={stateLabel}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <span style={{ fontSize: 10, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '.07em', padding: '2px 8px', background: '#eef2ff', borderRadius: 5, border: '1px solid #c7d2fe' }}>
@@ -847,7 +847,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                     <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{stTickets.length}</span>
                   </div>
                   <div className={styles.cardGrid}>
-                    {stTickets.map((t) => (
+                    {stTickets.map((t: TicketListItem) => (
                       <TicketCard key={t.id} ticket={t} onClick={() => router.push(`${basePath}/ticket/${t.id}`)} />
                     ))}
                   </div>

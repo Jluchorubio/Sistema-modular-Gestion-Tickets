@@ -2,6 +2,7 @@ export const ROUTES = {
   AUTH: {
     LOGIN: '/login',
     COMPLETE_PROFILE: '/complete-profile',
+    CHANGE_PASSWORD:  '/change-password',
     SETUP: '/setup',
   },
   APP: {

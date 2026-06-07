@@ -25,7 +25,9 @@ export default function AuthCallbackPage() {
 
     tokens.set(at, rt, forcePw, needsProfile);
     window.history.replaceState(null, '', window.location.pathname);
-    router.push(needsProfile ? ROUTES.AUTH.COMPLETE_PROFILE : ROUTES.APP.DASHBOARD);
+    if (needsProfile)  return router.push(ROUTES.AUTH.COMPLETE_PROFILE);
+    if (forcePw)       return router.push(ROUTES.AUTH.CHANGE_PASSWORD);
+    router.push(ROUTES.APP.DASHBOARD);
   }, [router]);
 
   return null;

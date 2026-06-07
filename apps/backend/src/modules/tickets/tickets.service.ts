@@ -736,7 +736,7 @@ export class TicketsService {
        WHERE  t.id = $1`,
       [ticketId],
     );
-    if (!ticket)        throw new NotFoundException('Ticket not found');
+    if (!ticket)          throw new NotFoundException('Ticket not found');
     if (!ticket.is_final) throw new BadRequestException('Solo se pueden reabrir tickets en estado final.');
     if ((ticket.reprocess_count ?? 0) >= 5) throw new BadRequestException('Límite de reaperturas alcanzado (5).');
 
@@ -746,27 +746,53 @@ export class TicketsService {
     );
     if (!initState) throw new BadRequestException('No se encontró estado inicial en el flujo de trabajo.');
 
-    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
-
-    const reopenCount  = (ticket.reprocess_count ?? 0) + 1;
+    const reopenCount    = (ticket.reprocess_count ?? 0) + 1;
     const shouldEscalate = reopenCount >= 3 && ticket.priority !== 'critica';
     const newPriority    = shouldEscalate ? 'alta' : ticket.priority;
 
-    await this.db.query(
-      `UPDATE tickets.tickets
-       SET current_state_id = $1,
-           reprocess_count  = $2,
-           priority         = $3
-       WHERE id = $4`,
-      [initState.id, reopenCount, newPriority, ticketId],
-    );
+    const qr = this.db.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      await qr.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
 
-    await this.db.query(
-      `INSERT INTO tickets.ticket_state_history
-         (ticket_id, from_state_id, to_state_id, transitioned_by, transition_reason)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [ticketId, ticket.current_state_id, initState.id, userId, dto.reason || 'Reapertura forzada'],
-    );
+      // UPDATE triggers trg_ticket_state_history automatically — no manual INSERT needed
+      await qr.query(
+        `UPDATE tickets.tickets
+         SET current_state_id = $1,
+             reprocess_count  = $2,
+             priority         = $3
+         WHERE id = $4`,
+        [initState.id, reopenCount, newPriority, ticketId],
+      );
+
+      // Set transition_reason on the history row just created by the trigger
+      await qr.query(
+        `UPDATE tickets.ticket_state_history
+         SET transition_reason = $1
+         WHERE ticket_id = $2 AND to_state_id = $3
+           AND transitioned_at = (
+             SELECT MAX(transitioned_at) FROM tickets.ticket_state_history
+             WHERE ticket_id = $2 AND to_state_id = $3
+           )`,
+        [dto.reason || 'Reapertura forzada', ticketId, initState.id],
+      );
+
+      // Reactivate SLA tracking so breach cron picks it up on next cycle
+      await qr.query(
+        `UPDATE tickets.ticket_sla_tracking
+         SET status = 'active'
+         WHERE ticket_id = $1 AND status IN ('met', 'breached')`,
+        [ticketId],
+      );
+
+      await qr.commitTransaction();
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.release();
+    }
 
     this.messaging.emit('ticket.state_changed', {
       ticketId,

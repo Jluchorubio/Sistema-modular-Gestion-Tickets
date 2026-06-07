@@ -15,12 +15,14 @@ const PROTECTED = [
   '/inventory',
   '/reports',
   '/config',
+  '/change-password',
 ];
 
 export function middleware(request: NextRequest) {
   const { pathname }   = request.nextUrl;
   const hasSession     = request.cookies.has('has_session');
   const needsProfile   = request.cookies.get('needs_profile')?.value === '1';
+  const forcePw        = request.cookies.get('force_pw')?.value === '1';
   const isProtected    = PROTECTED.some((p) => pathname.startsWith(p));
 
   // 1. No session → login
@@ -35,19 +37,29 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/complete-profile', request.url));
   }
 
-  // 3. Authenticated: redirect away from login
-  if (pathname === '/login' && hasSession) {
-    return NextResponse.redirect(
-      new URL(needsProfile ? '/complete-profile' : '/dashboard', request.url),
-    );
+  // 3. Has session but force_pw set → must change password before continuing
+  if (isProtected && hasSession && forcePw && pathname !== '/change-password') {
+    return NextResponse.redirect(new URL('/change-password', request.url));
   }
 
-  // 4. Authenticated + profile done: block re-entry to complete-profile
+  // 4. Authenticated: redirect away from login
+  if (pathname === '/login' && hasSession) {
+    if (needsProfile)  return NextResponse.redirect(new URL('/complete-profile', request.url));
+    if (forcePw)       return NextResponse.redirect(new URL('/change-password', request.url));
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // 5. Authenticated + profile done: block re-entry to complete-profile
   if (pathname === '/complete-profile' && hasSession && !needsProfile) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // 5. /setup requires session
+  // 6. Authenticated + no force_pw: block re-entry to change-password
+  if (pathname === '/change-password' && hasSession && !forcePw) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // 7. /setup requires session
   if (pathname === '/setup' && !hasSession) {
     return NextResponse.redirect(new URL('/login', request.url));
   }

@@ -42,11 +42,15 @@ export const tokens = {
     document.cookie = needsProfile
       ? `needs_profile=1; ${COOKIE_MAX}`
       : `needs_profile=; ${COOKIE_EXP}`;
+    document.cookie = forcePw === true
+      ? `force_pw=1; ${COOKIE_MAX}`
+      : `force_pw=; ${COOKIE_EXP}`;
   },
 
   clearForcePw(): void {
     if (!isBrowser()) return;
     localStorage.removeItem(KEYS.FORCE_PW);
+    document.cookie = `force_pw=; ${COOKIE_EXP}`;
   },
 
   clearNeedsProfile(): void {
@@ -67,5 +71,6 @@ export const tokens = {
     localStorage.removeItem(KEYS.NEEDS_SETUP);
     document.cookie = `has_session=; ${COOKIE_EXP}`;
     document.cookie = `needs_profile=; ${COOKIE_EXP}`;
+    document.cookie = `force_pw=; ${COOKIE_EXP}`;
   },
 };

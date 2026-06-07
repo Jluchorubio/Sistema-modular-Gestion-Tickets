@@ -19,13 +19,15 @@ export class ReportingService {
 
     const [summary] = await this.db.query<any[]>(
       `SELECT
-         COUNT(*)                                                        AS total,
-         COUNT(*) FILTER (WHERE t.sla_deadline IS NULL)                 AS without_sla,
-         COUNT(*) FILTER (WHERE tst.status = 'breached')                AS breached,
-         COUNT(*) FILTER (WHERE tst.status = 'met' OR tst.status = 'active') AS compliant,
+         COUNT(*)                                                          AS total,
+         -- Legacy: no sla_deadline column OR no tracking row
+         COUNT(*) FILTER (WHERE t.sla_deadline IS NULL
+                             OR  tst.ticket_id IS NULL)                   AS without_sla,
+         COUNT(*) FILTER (WHERE tst.status = 'breached')                  AS breached,
+         COUNT(*) FILTER (WHERE tst.status IN ('met', 'active'))           AS compliant,
          ROUND(
            100.0 * COUNT(*) FILTER (WHERE tst.status IN ('met', 'active'))
-           / NULLIF(COUNT(*) FILTER (WHERE tst.status IS NOT NULL), 0)
+           / NULLIF(COUNT(*) FILTER (WHERE tst.ticket_id IS NOT NULL), 0)
          , 1) AS compliance_pct
        FROM tickets.tickets t
        JOIN tickets.states s ON s.id = t.current_state_id
