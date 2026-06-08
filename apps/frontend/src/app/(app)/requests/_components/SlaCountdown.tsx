@@ -35,14 +35,20 @@ export function SlaCountdown({ sla_due_at }: { sla_due_at: string }) {
   }, [sla_due_at]);
 
   const pct = diffPct(sla_due_at);
+  const urgent = pct < 0.25;
+  const color  = overdue ? 'var(--status-breached-text)' : urgent ? 'var(--status-warning-text)' : 'var(--status-success-text)';
+  const bg     = overdue ? 'var(--status-breached-bg)'   : urgent ? 'var(--status-warning-bg)'   : 'var(--status-success-bg)';
+  const border = overdue ? 'var(--status-breached-border)': urgent ? 'var(--status-warning-border)': 'var(--status-success-border)';
+  const glow   = overdue ? '0 0 0 2px var(--status-breached-glow)' : urgent ? '0 0 0 2px var(--status-escalated-glow)' : undefined;
+
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       fontSize: 11, fontWeight: 700, fontFamily: 'monospace',
-      color:       overdue ? '#EF4444' : pct < 0.25 ? '#F59E0B' : '#22C55E',
-      background:  overdue ? '#450a0a' : pct < 0.25 ? '#451a03' : '#052e16',
-      border: `1px solid ${overdue ? '#7f1d1d' : pct < 0.25 ? '#78350f' : '#14532d'}`,
-      padding: '2px 8px', borderRadius: 6,
+      color, background: bg,
+      border: `1px solid ${border}`,
+      boxShadow: glow,
+      padding: '2px 8px', borderRadius: 'var(--radius-md, 8px)',
     }}>
       {overdue ? <AlertTriangle size={10} /> : <Clock size={10} />}
       {label}

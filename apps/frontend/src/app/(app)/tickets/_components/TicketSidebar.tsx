@@ -7,7 +7,6 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   type TicketPriority,
-  SLA_STATUS_COLORS, SLA_STATUS_LABELS,
   TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
   ticketsService,
 } from '@/services/tickets.service';
@@ -23,7 +22,9 @@ interface TransitionItem {
 }
 
 interface SlaInfo {
-  color:     string;
+  text:      string;
+  bg:        string;
+  border:    string;
   label:     string | null;
   countdown: string | null;
 }
@@ -181,20 +182,27 @@ export function TicketSidebar({
       {/* ── 2. SLA ── */}
       <SideSection label="SLA">
         {ticket.sla_deadline_tracked ? (
-          <div style={{ padding: '10px 11px', background: `${sla.color}08`, borderRadius: 8, border: `1px solid ${sla.color}25` }}>
+          <div style={{ padding: '10px 11px', background: sla.bg, borderRadius: 8, border: `1px solid ${sla.border}` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
               <span style={{ fontSize: 10, color: '#64748b' }}>Deadline</span>
               {sla.label && (
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600, background: `${sla.color}22`, color: sla.color, border: `1px solid ${sla.color}44` }}>
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: sla.bg, color: sla.text, border: `1px solid ${sla.border}` }}>
                   {sla.label}
                 </span>
               )}
             </div>
-            <p style={{ fontSize: 13, fontWeight: 800, color: sla.color, margin: '0 0 2px' }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: sla.text, margin: '0 0 2px' }}>
               {fmtHumanDeadline(ticket.sla_deadline_tracked)}
             </p>
             <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>{fmtDate(ticket.sla_deadline_tracked)}</p>
-            {sla.countdown && <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', margin: '3px 0 0' }}>{sla.countdown}</p>}
+            {sla.countdown && (
+              <p style={{ fontSize: 11, fontWeight: 700, color: sla.text, margin: '5px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {ticket.sla_status === 'breached' && (
+                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--status-breached-text)', animation: 'pulse 1.2s ease-in-out infinite' }} />
+                )}
+                {sla.countdown}
+              </p>
+            )}
           </div>
         ) : (
           <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Sin SLA configurado</p>

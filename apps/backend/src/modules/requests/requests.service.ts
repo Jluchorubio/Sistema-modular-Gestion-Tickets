@@ -416,6 +416,70 @@ export class RequestsService {
     return PRIORITY_HOURS[priority] ?? 24;
   }
 
+  async getStats(userId: string) {
+    const [profile] = await this.db.query<{ is_superadmin: boolean }[]>(
+      `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
+      [userId],
+    );
+    const isSuperadmin = profile?.is_superadmin ?? false;
+
+    const scopeClause = isSuperadmin ? '' : `
+      AND (
+        r.assigned_to = $1
+        OR r.metadata->>'module_id' IN (
+          SELECT umr.module_id::text
+          FROM   modules.user_module_roles umr
+          JOIN   modules.module_roles      mr ON mr.id = umr.role_id
+          WHERE  umr.user_id = $1 AND umr.is_active = TRUE AND mr.is_admin = TRUE
+        )
+      )`;
+    const params = isSuperadmin ? [] : [userId];
+
+    const [stats] = await this.db.query<any[]>(
+      `SELECT
+         COUNT(*)                                                               AS total,
+         COUNT(*) FILTER (WHERE r.status = 'pending')                         AS pending,
+         COUNT(*) FILTER (WHERE r.status = 'taken')                           AS taken,
+         COUNT(*) FILTER (WHERE r.status = 'in_progress')                     AS in_progress,
+         COUNT(*) FILTER (WHERE r.escalated = TRUE)                           AS escalated,
+         COUNT(*) FILTER (WHERE r.sla_due_at < now()
+                          AND r.status NOT IN ('completed','approved','rejected','cancelled')) AS sla_breached
+       FROM requests.admin_requests r
+       WHERE r.deleted_at IS NULL ${scopeClause}`,
+      params,
+    );
+
+    return {
+      total:        parseInt(stats.total,        10),
+      pending:      parseInt(stats.pending,      10),
+      taken:        parseInt(stats.taken,        10),
+      in_progress:  parseInt(stats.in_progress,  10),
+      escalated:    parseInt(stats.escalated,    10),
+      sla_breached: parseInt(stats.sla_breached, 10),
+    };
+  }
+
+  async getMyStats(userId: string) {
+    const [stats] = await this.db.query<any[]>(
+      `SELECT
+         COUNT(*) FILTER (WHERE r.status = 'pending')                  AS pending,
+         COUNT(*) FILTER (WHERE r.status IN ('taken', 'in_progress'))  AS in_progress,
+         COUNT(*) FILTER (WHERE r.status IN ('completed', 'approved')) AS completed,
+         COUNT(*) FILTER (WHERE r.status = 'rejected')                 AS rejected,
+         COUNT(*)                                                       AS total
+       FROM requests.admin_requests r
+       WHERE r.requester_id = $1 AND r.deleted_at IS NULL`,
+      [userId],
+    );
+    return {
+      pending:     parseInt(stats.pending,     10),
+      in_progress: parseInt(stats.in_progress, 10),
+      completed:   parseInt(stats.completed,   10),
+      rejected:    parseInt(stats.rejected,    10),
+      total:       parseInt(stats.total,       10),
+    };
+  }
+
   async findByUser(targetUserId: string, limit = 10) {
     return this.db.query<any[]>(
       `SELECT r.id, r.type, r.title, r.status, r.priority, r.created_at, r.updated_at,

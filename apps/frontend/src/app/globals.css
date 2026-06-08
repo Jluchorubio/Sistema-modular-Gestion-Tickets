@@ -27,6 +27,72 @@
   --app-warning:     #f59e0b;
   --app-danger:      #ef4444;
 
+  /* ── Semantic status system ──────────────────────────────────────────── */
+  /* Each state: -text / -bg / -border / -glow (urgent states only)        */
+
+  /* success — completed, resolved, approved, active */
+  --status-success-text:   #15803d;
+  --status-success-bg:     #f0fdf4;
+  --status-success-border: #bbf7d0;
+
+  /* warning — pending, waiting */
+  --status-warning-text:   #92400e;
+  --status-warning-bg:     #fffbeb;
+  --status-warning-border: #fde68a;
+
+  /* danger — rejected, failed, critical */
+  --status-danger-text:    #991b1b;
+  --status-danger-bg:      #fef2f2;
+  --status-danger-border:  #fecaca;
+
+  /* info — taken, in_progress (normal pace) */
+  --status-info-text:      #1d4ed8;
+  --status-info-bg:        #eff6ff;
+  --status-info-border:    #bfdbfe;
+
+  /* paused — ticket on hold */
+  --status-paused-text:    #6d28d9;
+  --status-paused-bg:      #f5f3ff;
+  --status-paused-border:  #ddd6fe;
+
+  /* approval — under_review, awaiting decision */
+  --status-approval-text:   #7c2d12;
+  --status-approval-bg:     #fff7ed;
+  --status-approval-border: #fed7aa;
+
+  /* escalated — escalated requests/tickets (orange, high urgency) */
+  --status-escalated-text:   #c2410c;
+  --status-escalated-bg:     #fff7ed;
+  --status-escalated-border: #fdba74;
+  --status-escalated-glow:   rgba(249,115,22,.18);
+
+  /* breached — SLA deadline exceeded (red-hot) */
+  --status-breached-text:   #dc2626;
+  --status-breached-bg:     #fef2f2;
+  --status-breached-border: #fca5a5;
+  --status-breached-glow:   rgba(239,68,68,.18);
+
+  /* closed — closed, cancelled, archived */
+  --status-closed-text:   #475569;
+  --status-closed-bg:     #f8fafc;
+  --status-closed-border: #e2e8f0;
+
+  /* neutral — draft, unknown, not_started */
+  --status-neutral-text:   #64748b;
+  --status-neutral-bg:     #f1f5f9;
+  --status-neutral-border: #e2e8f0;
+
+  /* ── Ticket status semantic aliases ─────────────────────────────────── */
+  --ticket-open:        var(--status-success-text);
+  --ticket-waiting:     var(--status-warning-text);
+  --ticket-inprogress:  var(--status-info-text);
+  --ticket-paused:      var(--status-paused-text);
+  --ticket-done:        var(--status-paused-text);
+  --ticket-closed:      var(--status-closed-text);
+  --ticket-rework:      var(--status-danger-text);
+  --ticket-escalated:   var(--status-escalated-text);
+  --ticket-breached:    var(--status-breached-text);
+
   /* Dark surfaces (auth pages) */
   --color-bg: #0f172a;
   --color-surface: #1e293b;
@@ -111,6 +177,11 @@
   --fw-bold:   700;
   --fw-heavy:  800;
   --fw-black:  900;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .3; }
 }
 
 *,

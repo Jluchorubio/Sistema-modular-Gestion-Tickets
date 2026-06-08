@@ -142,4 +142,20 @@ export const requestsService = {
     const { data } = await api.delete(`/requests/${id}/escalate`);
     return data;
   },
+
+  async getStats(): Promise<{
+    total: number; pending: number; taken: number;
+    in_progress: number; escalated: number; sla_breached: number;
+  }> {
+    const { data } = await api.get('/requests/stats');
+    return data;
+  },
+
+  async getMyStats(): Promise<{
+    pending: number; in_progress: number; completed: number;
+    rejected: number; total: number;
+  }> {
+    const { data } = await api.get('/requests/stats/mine');
+    return data;
+  },
 };

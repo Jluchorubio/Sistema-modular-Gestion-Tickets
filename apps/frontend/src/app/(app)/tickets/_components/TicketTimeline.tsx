@@ -91,21 +91,28 @@ function CommentContent({ ev }: { ev: TicketTimelineEvent }) {
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 5 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: C.navy }}>{ev.user_name ?? 'Sistema'}</span>
         {isInternal && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '1px 6px', borderRadius: 4, border: '1px solid #fde68a' }}>
-            <Lock size={8} /> Nota interna
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 800, color: '#92400e', background: '#fef3c7', padding: '2px 7px', borderRadius: 4, border: '1px solid #f59e0b', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+            <Lock size={8} /> Equipo
           </span>
         )}
         <span style={{ fontSize: 10, color: C.muted, marginLeft: 'auto', flexShrink: 0 }} title={fmtDate(ev.created_at)}>
           {fmtRel(ev.created_at)}
         </span>
       </div>
+      {isInternal && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 8px', marginBottom: 4, background: '#92400e', borderRadius: '6px 6px 0 0' }}>
+          <Lock size={9} style={{ color: '#fde68a', flexShrink: 0 }} />
+          <span style={{ fontSize: 9, fontWeight: 800, color: '#fef3c7', textTransform: 'uppercase', letterSpacing: '.06em' }}>Nota interna — no visible para el solicitante</span>
+        </div>
+      )}
       <div style={{
         background: isInternal ? '#fffbeb' : '#fff',
-        border: `1px solid ${isInternal ? '#fde68a' : C.border}`,
-        borderRadius: '0 10px 10px 10px',
+        border: `${isInternal ? 2 : 1}px solid ${isInternal ? '#f59e0b' : C.border}`,
+        borderRadius: isInternal ? '0 10px 10px 10px' : '0 10px 10px 10px',
+        borderLeft: isInternal ? '3px solid #f59e0b' : `1px solid ${C.border}`,
         padding: '10px 13px',
       }}>
-        <p style={{ fontSize: 13, color: C.navy, margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>
+        <p style={{ fontSize: 13, color: isInternal ? '#78350f' : C.navy, margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>
           {ev.content}
         </p>
       </div>
@@ -116,7 +123,7 @@ function CommentContent({ ev }: { ev: TicketTimelineEvent }) {
 /* ─── STATUS CHANGE ─────────────────────────────────────── */
 function StatusChangeDot({ ev }: { ev: TicketTimelineEvent }) {
   const meta  = ev.metadata ?? {};
-  const color = meta.is_final ? '#22c55e' : meta.is_pause_state ? '#f59e0b' : '#6366f1';
+  const color = meta.is_final ? '#22c55e' : meta.is_pause_state ? '#f59e0b' : '#3b82f6';
   return (
     <Dot color={color}>
       <ArrowRight size={12} style={{ color }} />
@@ -127,7 +134,7 @@ function StatusChangeContent({ ev }: { ev: TicketTimelineEvent }) {
   const meta    = ev.metadata ?? {};
   const isFinal = meta.is_final;
   const isPause = meta.is_pause_state;
-  const toColor = isFinal ? '#22c55e' : isPause ? '#f59e0b' : '#6366f1';
+  const toColor = isFinal ? '#22c55e' : isPause ? '#f59e0b' : '#3b82f6';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minHeight: 28 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>

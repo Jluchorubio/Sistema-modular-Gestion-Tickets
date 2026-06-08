@@ -47,10 +47,10 @@ import {
   type FieldDef,
   type AssetImage,
   ASSET_STATUS_LABELS,
-  ASSET_STATUS_COLORS,
   ASSET_ACTION_LABELS,
   ASSET_ACTION_COLORS,
 } from "@/services/inventory.service";
+import { getAssetStatusConfig } from "@/constants/status";
 import { usePermission } from "@/hooks/usePermission";
 import { fmtDate } from "@/lib/formatters";
 
@@ -102,7 +102,7 @@ function relativeTime(dateStr: string): string {
 
 /* ── StatusBadge ── */
 function StatusBadge({ status }: { status: AssetStatus }) {
-  const color = ASSET_STATUS_COLORS[status];
+  const cfg = getAssetStatusConfig(status);
   return (
     <span
       style={{
@@ -113,14 +113,12 @@ function StatusBadge({ status }: { status: AssetStatus }) {
         borderRadius: 99,
         fontSize: 12,
         fontWeight: 700,
-        background: `${color}18`,
-        color,
-        border: `1px solid ${color}35`,
+        background: cfg.bg,
+        color: cfg.text,
+        border: `1px solid ${cfg.border}`,
       }}
     >
-      <span
-        style={{ width: 7, height: 7, borderRadius: "50%", background: color }}
-      />
+      <span style={{ width: 7, height: 7, borderRadius: "50%", background: cfg.text }} />
       {ASSET_STATUS_LABELS[status]}
     </span>
   );
@@ -1561,7 +1559,7 @@ function RelateAssetModal({
                   <button key={asset.id} type="button"
                     onClick={() => setSelected(selected?.id === asset.id ? null : { id: asset.id, name: asset.name })}
                     style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 9, border: `1.5px solid ${selected?.id === asset.id ? C.coral : C.border}`, background: selected?.id === asset.id ? `${C.coral}08` : "#fff", cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const, transition: "border-color .12s" }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: ASSET_STATUS_COLORS[asset.status as AssetStatus] ?? C.muted, flexShrink: 0 }} />
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: getAssetStatusConfig(asset.status as AssetStatus).text, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{asset.name}</p>
                       <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{asset.category_name}{asset.serial_number ? ` · ${asset.serial_number}` : ""}</p>
@@ -3205,7 +3203,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                           style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
                           onMouseEnter={e => { e.currentTarget.style.borderColor = C.coral + "80"; e.currentTarget.style.background = "#fff"; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.bg; }}>
-                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: ASSET_STATUS_COLORS[child.status], flexShrink: 0 }} />
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: getAssetStatusConfig(child.status).text, flexShrink: 0 }} />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{child.name}</p>
                             <p style={{ fontSize: 10, color: C.muted, margin: 0 }}>{child.category_name}</p>

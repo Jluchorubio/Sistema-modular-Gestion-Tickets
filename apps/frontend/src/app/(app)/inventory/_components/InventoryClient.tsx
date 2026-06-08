@@ -18,8 +18,9 @@ import {
   inventoryService,
   type AssetListItem, type AssetDetail, type AssetStatus, type CreateAssetDto,
   type AssetAssignment, type AssetHistoryEntry, type AssetTicket,
-  ASSET_STATUS_LABELS, ASSET_STATUS_COLORS, ASSET_ACTION_LABELS, ASSET_ACTION_COLORS,
+  ASSET_STATUS_LABELS, ASSET_ACTION_LABELS, ASSET_ACTION_COLORS,
 } from '@/services/inventory.service';
+import { getAssetStatusConfig } from '@/constants/status';
 import { ticketsService } from '@/services/tickets.service';
 import { modulesService, type FieldDef } from '@/services/modules.service';
 import { usePermission } from '@/hooks/usePermission';
@@ -79,17 +80,17 @@ const SECTION_HEAD: React.CSSProperties = {
 
 /* ── StatusBadge ─────────────────────────────────────────────────────────── */
 function StatusBadge({ status, size = 'sm' }: { status: AssetStatus; size?: 'sm' | 'md' }) {
-  const color = ASSET_STATUS_COLORS[status];
+  const cfg = getAssetStatusConfig(status);
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
       padding: size === 'md' ? '4px 10px' : '3px 8px',
       borderRadius: 99, fontWeight: 700,
       fontSize: size === 'md' ? 11 : 10,
-      background: `${color}14`, color,
-      border: `1px solid ${color}30`,
+      background: cfg.bg, color: cfg.text,
+      border: `1px solid ${cfg.border}`,
     }}>
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: cfg.text, flexShrink: 0 }} />
       {ASSET_STATUS_LABELS[status]}
     </span>
   );
@@ -499,7 +500,7 @@ function AssetCard({
   asset: AssetListItem; onOpen: () => void; onFullDetail: () => void;
   selected?: boolean; onSelect?: () => void;
 }) {
-  const color   = ASSET_STATUS_COLORS[asset.status];
+  const cfg     = getAssetStatusConfig(asset.status);
   const [hov, setHov] = useState(false);
   return (
     <article
@@ -531,8 +532,8 @@ function AssetCard({
       <div style={{ padding: '16px' }}>
         {/* Icon + status */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
-          <div style={{ width: 46, height: 46, borderRadius: 8, background: `${color}12`, display: 'grid', placeItems: 'center', border: `1px solid ${color}20` }}>
-            <Package size={19} style={{ color }} />
+          <div style={{ width: 46, height: 46, borderRadius: 8, background: cfg.bg, display: 'grid', placeItems: 'center', border: `1px solid ${cfg.border}` }}>
+            <Package size={19} style={{ color: cfg.text }} />
           </div>
           <StatusBadge status={asset.status} />
         </div>
@@ -580,9 +581,9 @@ function AssetListRow({
   asset: AssetListItem; onOpen: () => void; onFullDetail: () => void;
   selected?: boolean; onSelect?: () => void;
 }) {
-  const color = ASSET_STATUS_COLORS[asset.status];
+  const cfg = getAssetStatusConfig(asset.status);
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `${onSelect ? '28px ' : ''}minmax(0,1fr) 140px 130px 110px auto`, gap: 12, alignItems: 'center', padding: '11px 14px', background: '#fff', border: `1px solid ${selected ? C.coral : C.border}`, borderLeft: `3px solid ${selected ? C.coral : color}`, borderRadius: 9 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `${onSelect ? '28px ' : ''}minmax(0,1fr) 140px 130px 110px auto`, gap: 12, alignItems: 'center', padding: '11px 14px', background: '#fff', border: `1px solid ${selected ? C.coral : C.border}`, borderLeft: `3px solid ${selected ? C.coral : cfg.text}`, borderRadius: 9 }}>
       {onSelect && (
         <button
           type="button"
@@ -595,8 +596,8 @@ function AssetListRow({
         </button>
       )}
       <button type="button" onClick={onOpen} style={{ display: 'flex', alignItems: 'center', gap: 11, border: 0, background: 'transparent', cursor: 'pointer', minWidth: 0, textAlign: 'left', fontFamily: 'inherit' }}>
-        <span style={{ width: 40, height: 40, borderRadius: 8, background: `${color}12`, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-          <Package size={15} style={{ color }} />
+        <span style={{ width: 40, height: 40, borderRadius: 8, background: cfg.bg, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+          <Package size={15} style={{ color: cfg.text }} />
         </span>
         <span style={{ minWidth: 0 }}>
           <strong style={{ display: 'block', fontSize: 13, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 700 }}>{asset.name}</strong>
@@ -621,11 +622,11 @@ function AssetSummaryItem({
   asset: AssetListItem; onOpen: () => void;
   selected?: boolean; onSelect?: () => void;
 }) {
-  const color = ASSET_STATUS_COLORS[asset.status];
+  const cfg = getAssetStatusConfig(asset.status);
   return (
     <div
       style={{ padding: '14px 16px', borderRadius: 9, border: `1px solid ${selected ? C.coral : C.border}`,
-               borderLeft: `3px solid ${selected ? C.coral : color}`, background: '#fff',
+               borderLeft: `3px solid ${selected ? C.coral : cfg.text}`, background: '#fff',
                display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', position: 'relative',
                boxSizing: 'border-box' }}
     >

@@ -3,25 +3,14 @@ import {
   Loader2, CheckCircle2, TrendingUp, TrendingDown, Zap, ExternalLink,
 } from 'lucide-react';
 import { type AdmRequest } from '@/services/requests.service';
-import {
-  REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS,
-  REQUEST_PRIORITY_LABELS, REQUEST_PRIORITY_COLORS,
-} from '@/constants/requests';
+import { REQUEST_TYPE_LABELS } from '@/constants/requests';
+import { getRequestStatusConfig, getPriorityConfig } from '@/constants/status';
+import { StatusBadge, PriorityDot } from '@/components/ui/StatusBadge';
 import { fmtDate } from '@/lib/formatters';
 import { SlaCountdown } from './SlaCountdown';
 import { TimelinePanel } from './TimelinePanel';
 import styles from '../requests.module.css';
 
-const STATUS_PILL: Record<string, string> = {
-  pending:      styles.pillPending,
-  taken:        styles.pillTaken,
-  in_progress:  styles.pillUnderReview,
-  completed:    styles.pillApproved,
-  under_review: styles.pillUnderReview,
-  approved:     styles.pillApproved,
-  rejected:     styles.pillRejected,
-  cancelled:    styles.pillCancelled,
-};
 
 const EXECUTABLE_TYPES = new Set([
   'role_change', 'module_access', 'sede_change', 'info_correction', 'permission_adjustment', 'reactivation',
@@ -59,7 +48,8 @@ export function RequestCard({
   isTakePending, isProgressPending, isReviewPending, isDeescalatePending,
   permTake = true, permProgress = true, permApprove = true, permEscalate = true,
 }: Props) {
-  const statusColor   = REQUEST_STATUS_COLORS[req.status] ?? '#94a3b8';
+  const statusCfg     = getRequestStatusConfig(req.status);
+  const priorityCfg   = getPriorityConfig(req.priority);
   const hasSla        = (req.status === 'taken' || req.status === 'in_progress') && req.sla_due_at;
   const isEscalated   = req.escalated === true;
   const canCancel     = !isSuperadmin && activeTab === 'mine' && ['pending', 'under_review'].includes(req.status);
@@ -95,12 +85,7 @@ export function RequestCard({
             <span>·</span>
             <span>{fmtDate(req.created_at)}</span>
             <span>·</span>
-            <span
-              className={styles.priorityDot}
-              style={{ background: REQUEST_PRIORITY_COLORS[req.priority] }}
-              title={`Prioridad: ${REQUEST_PRIORITY_LABELS[req.priority]}`}
-            />
-            <span style={{ fontSize: 11, color: '#64748B' }}>{REQUEST_PRIORITY_LABELS[req.priority]}</span>
+            <PriorityDot config={priorityCfg} showLabel title={`Prioridad: ${priorityCfg.label}`} />
             {req.taken_by_name && (
               <><span>·</span><span style={{ fontSize: 11, color: '#8B5CF6' }}>Tomado por {req.taken_by_name}</span></>
             )}
@@ -109,12 +94,7 @@ export function RequestCard({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span
-            className={`${styles.pill} ${STATUS_PILL[req.status] ?? ''}`}
-            style={{ background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44` }}
-          >
-            {REQUEST_STATUS_LABELS[req.status] ?? req.status}
-          </span>
+          <StatusBadge config={statusCfg} glow={req.escalated} />
           {canCancel && (
             <button className={styles.cancelBtn} title="Cancelar solicitud" onClick={onCancel}>
               <X size={13} />
@@ -125,7 +105,7 @@ export function RequestCard({
               className={styles.expandBtn}
               title="Ver y gestionar solicitud"
               onClick={onDetail}
-              style={{ color: '#6366f1' }}
+              style={{ color: '#64748b' }}
             >
               <ExternalLink size={14} />
             </button>

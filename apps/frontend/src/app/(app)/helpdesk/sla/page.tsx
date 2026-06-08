@@ -9,7 +9,9 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
-import { ticketsService, type TicketListItem, type SlaStatus, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS } from '@/services/tickets.service';
+import { ticketsService, type TicketListItem, type SlaStatus, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
+import { MetricCard, MetricRow } from '@/components/ui/MetricCard';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 
 /* ── Design tokens ── */
@@ -68,44 +70,6 @@ const RISK_LABELS: Record<string, string> = {
   paused:   'Pausado',
 };
 
-/* ── Metric card ── */
-function MetricCard({
-  icon, label, value, color, active, onClick
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  color: string;
-  active?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: active ? `${color}10` : '#fff',
-        border: `1.5px solid ${active ? color : C.border}`,
-        borderRadius: 12,
-        padding: '16px 20px',
-        cursor: onClick ? 'pointer' : 'default',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        flex: 1,
-        minWidth: 140,
-        transition: 'border-color .15s',
-      }}
-    >
-      <div style={{ width: 40, height: 40, borderRadius: 10, background: `${color}15`, display: 'grid', placeItems: 'center', color, flexShrink: 0 }}>
-        {icon}
-      </div>
-      <div>
-        <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: active ? color : C.navy, lineHeight: 1 }}>{value}</p>
-        <p style={{ margin: '3px 0 0', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</p>
-      </div>
-    </div>
-  );
-}
 
 /* ── Ticket row ── */
 function TicketRow({ ticket }: { ticket: TicketListItem }) {
@@ -113,7 +77,7 @@ function TicketRow({ ticket }: { ticket: TicketListItem }) {
   const h         = hoursLeft(ticket.sla_deadline_tracked ?? ticket.sla_deadline);
   const risk      = riskLevel(h, ticket.sla_status);
   const riskColor = RISK_COLORS[risk] ?? C.muted;
-  const pColor    = TICKET_PRIORITY_COLORS[ticket.priority] ?? C.muted;
+  const pColor    = getPriorityConfig(ticket.priority).color;
 
   return (
     <div
@@ -293,13 +257,13 @@ export default function SlaPage() {
       </div>
 
       {/* Metric cards */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        <MetricCard icon={<AlertTriangle size={18} />} label="Vencidos"    value={stats.breached_active} color="#ef4444" active={view === 'breached'} onClick={() => setView(v => v === 'breached' ? 'all' : 'breached')} />
-        <MetricCard icon={<Clock size={18} />}         label="Crítico <2h" value={stats.critical_active} color="#f97316" active={view === 'critical'} onClick={() => setView(v => v === 'critical' ? 'all' : 'critical')} />
-        <MetricCard icon={<Clock size={18} />}         label="En riesgo"   value={stats.warning_active}  color="#f59e0b" active={view === 'warning'}  onClick={() => setView(v => v === 'warning'  ? 'all' : 'warning')}  />
-        <MetricCard icon={<CheckCircle2 size={18} />}  label="En tiempo"   value={stats.ok_active}       color="#22c55e" active={view === 'ok'}       onClick={() => setView(v => v === 'ok'       ? 'all' : 'ok')}       />
-        <MetricCard icon={<Pause size={18} />}         label="Cumplidos"   value={stats.closed_met}      color="#94a3b8" active={view === 'met'}      onClick={() => setView(v => v === 'met'      ? 'all' : 'met')}      />
-      </div>
+      <MetricRow style={{ marginBottom: 20 }}>
+        <MetricCard icon={<AlertTriangle size={18} />} label="Vencidos"    value={stats.breached_active} color="var(--status-breached-text)" active={view === 'breached'} onClick={() => setView(v => v === 'breached' ? 'all' : 'breached')} />
+        <MetricCard icon={<Clock size={18} />}         label="Crítico <2h" value={stats.critical_active} color="var(--status-escalated-text)" active={view === 'critical'} onClick={() => setView(v => v === 'critical' ? 'all' : 'critical')} />
+        <MetricCard icon={<Clock size={18} />}         label="En riesgo"   value={stats.warning_active}  color="var(--status-warning-text)"   active={view === 'warning'}  onClick={() => setView(v => v === 'warning'  ? 'all' : 'warning')}  />
+        <MetricCard icon={<CheckCircle2 size={18} />}  label="En tiempo"   value={stats.ok_active}       color="var(--status-success-text)"   active={view === 'ok'}       onClick={() => setView(v => v === 'ok'       ? 'all' : 'ok')}       />
+        <MetricCard icon={<Pause size={18} />}         label="Cumplidos"   value={stats.closed_met}      color="var(--status-closed-text)"    active={view === 'met'}      onClick={() => setView(v => v === 'met'      ? 'all' : 'met')}      />
+      </MetricRow>
 
       {/* Search */}
       <div style={{ position: 'relative', marginBottom: 14 }}>

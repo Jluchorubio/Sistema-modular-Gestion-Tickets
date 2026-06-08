@@ -10,9 +10,9 @@ import {
   type TicketRating,
   type RateTicketDto,
   type TicketTimelineEvent,
-  SLA_STATUS_COLORS,
   SLA_STATUS_LABELS,
 } from '@/services/tickets.service';
+import { getSlaStatusConfig, type StatusConfig } from '@/constants/status';
 import { modulesService } from '@/services/modules.service';
 import { meetingsService, type TicketMeeting } from '@/services/meetings.service';
 import type { ModuleTechnician } from '@/types/module.types';
@@ -122,9 +122,9 @@ export function useTicketData({ ticketId, helpdeskId }: UseTicketDataProps) {
     return () => clearInterval(id);
   }, []);
 
-  const slaColor = ticket?.sla_status
-    ? (SLA_STATUS_COLORS[ticket.sla_status as keyof typeof SLA_STATUS_COLORS] ?? '#94A3B8')
-    : '#94A3B8';
+  const slaCfg: StatusConfig | null = ticket?.sla_status
+    ? getSlaStatusConfig(ticket.sla_status)
+    : null;
 
   const slaLabel = ticket?.sla_status
     ? (SLA_STATUS_LABELS[ticket.sla_status as keyof typeof SLA_STATUS_LABELS] ?? ticket.sla_status)
@@ -192,7 +192,7 @@ export function useTicketData({ ticketId, helpdeskId }: UseTicketDataProps) {
     relations,
     linkedAssets,
     /* SLA */
-    slaColor,
+    slaCfg,
     slaLabel,
     slaCountdown,
     /* derived */

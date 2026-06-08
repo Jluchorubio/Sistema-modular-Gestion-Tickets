@@ -3,9 +3,9 @@
 import { Star, ChevronDown, Ticket, Clock } from 'lucide-react';
 import {
   type TicketListItem, type TicketPriority,
-  TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
-  SLA_STATUS_COLORS, SLA_STATUS_LABELS,
+  SLA_STATUS_LABELS,
 } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import styles from '../../tickets.module.css';
 
@@ -54,13 +54,13 @@ export function isToday(dateStr: string) {
 /* ─────────────────── PriorityBadge ─────────────────────────────────────── */
 
 export function PriorityBadge({ priority }: { priority: TicketPriority }) {
-  const color = TICKET_PRIORITY_COLORS[priority];
+  const cfg = getPriorityConfig(priority);
   return (
     <span
       className={styles.priorityBadge}
-      style={{ background: `${color}22`, color, borderColor: `${color}44` }}
+      style={{ background: `color-mix(in srgb, ${cfg.color} 15%, transparent)`, color: cfg.color, borderColor: `color-mix(in srgb, ${cfg.color} 30%, transparent)` }}
     >
-      {TICKET_PRIORITY_LABELS[priority]}
+      {cfg.label}
     </span>
   );
 }
@@ -90,7 +90,7 @@ export function Stars({ rating, size = 13 }: { rating: number; size?: number }) 
 
 export function TicketCard({ ticket, onClick }: { ticket: TicketListItem; onClick: () => void }) {
   const overdue  = ticket.sla_status === 'breached';
-  const slaColor = ticket.sla_status ? (SLA_STATUS_COLORS[ticket.sla_status] ?? '#94A3B8') : null;
+  const slaCfg   = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status) : null;
   const slaLabel = ticket.sla_status ? (SLA_STATUS_LABELS[ticket.sla_status] ?? null) : null;
 
   return (
@@ -126,8 +126,8 @@ export function TicketCard({ ticket, onClick }: { ticket: TicketListItem; onClic
           </div>
         </div>
         <div className={styles.cardStats}>
-          {slaLabel && slaColor && (
-            <span className={styles.slaStat} style={{ color: slaColor }}>
+          {slaLabel && slaCfg && (
+            <span className={styles.slaStat} style={{ color: slaCfg.text }}>
               <Clock size={9} />{slaLabel}
             </span>
           )}

@@ -17,9 +17,10 @@ import { useAuthStore } from '@/stores/auth.store';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
   type TicketPriority,
-  TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
+  TICKET_PRIORITY_LABELS,
   ticketsService,
 } from '@/services/tickets.service';
+import { getPriorityConfig } from '@/constants/status';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import styles from '../tickets.module.css';
@@ -31,18 +32,33 @@ import { DetallesTab } from './tabs/DetallesTab';
 
 /* ── Badges ──────────────────────────────────────────────────────────── */
 function PriorityBadge({ priority }: { priority: TicketPriority }) {
-  const color = TICKET_PRIORITY_COLORS[priority];
+  const cfg = getPriorityConfig(priority);
   return (
-    <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600, background: `${color}22`, color, border: `1px solid ${color}44` }}>
+    <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600, background: `color-mix(in srgb, ${cfg.color} 15%, transparent)`, color: cfg.color, border: `1px solid color-mix(in srgb, ${cfg.color} 30%, transparent)` }}>
       {TICKET_PRIORITY_LABELS[priority]}
     </span>
   );
 }
 
-function StateBadge({ label, isFinal }: { label: string; isFinal: boolean }) {
-  const color = isFinal ? '#22C55E' : '#6366F1';
+function StateBadge({ label, isFinal, isPause, isApproval }: {
+  label: string; isFinal: boolean; isPause?: boolean; isApproval?: boolean;
+}) {
+  const text   = isFinal    ? 'var(--status-success-text)'
+    : isPause              ? 'var(--status-paused-text)'
+    : isApproval           ? 'var(--status-approval-text)'
+    :                        'var(--status-info-text)';
+  const bg     = isFinal    ? 'var(--status-success-bg)'
+    : isPause              ? 'var(--status-paused-bg)'
+    : isApproval           ? 'var(--status-approval-bg)'
+    :                        'var(--status-info-bg)';
+  const border = isFinal    ? 'var(--status-success-border)'
+    : isPause              ? 'var(--status-paused-border)'
+    : isApproval           ? 'var(--status-approval-border)'
+    :                        'var(--status-info-border)';
   return (
-    <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600, background: `${color}22`, color, border: `1px solid ${color}44` }}>
+    <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: bg, color: text, border: `1px solid ${border}`, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+      {isPause && <span style={{ fontSize: 9 }}>⏸</span>}
+      {isApproval && <span style={{ fontSize: 9 }}>✓?</span>}
       {label}
     </span>
   );
@@ -101,7 +117,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
     meetings,
     relations,
     linkedAssets,
-    slaColor, slaLabel, slaCountdown,
+    slaCfg, slaLabel, slaCountdown,
     ownerAssignment,
     computeAllGuests,
     qc,
@@ -216,7 +232,12 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#ff5e3a', letterSpacing: '.03em' }}>#{ticket.id.slice(0, 8).toUpperCase()}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' }}>
-              <StateBadge label={ticket.state_label} isFinal={ticket.is_final} />
+              <StateBadge
+                label={ticket.state_label}
+                isFinal={ticket.is_final}
+                isPause={ticket.is_pause_state}
+                isApproval={ticket.is_approval_state}
+              />
               <PriorityBadge priority={ticket.priority} />
               {ticket.escalated && (
                 <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>ESCALADO</span>
@@ -231,8 +252,8 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                   ⏸ {ticket.history[0].transition_reason}
                 </span>
               )}
-              {slaCountdown && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: `${slaColor}15`, color: slaColor, border: `1px solid ${slaColor}30`, display: 'flex', alignItems: 'center', gap: 4 }}>
+              {slaCountdown && slaCfg && (
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: slaCfg.bg, color: slaCfg.text, border: `1px solid ${slaCfg.border}`, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Clock size={9} /> {slaCountdown}
                 </span>
               )}
@@ -599,15 +620,21 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                               <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{currentUser?.first_name?.charAt(0).toUpperCase() ?? 'T'}</span>
                             </div>
                             <div style={{ flex: 1 }}>
+                              {commentType === 'internal' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: '6px 6px 0 0', background: '#92400e', marginBottom: -1 }}>
+                                  <span style={{ fontSize: 9 }}>🔒</span>
+                                  <span style={{ fontSize: 10, fontWeight: 800, color: '#fef3c7', textTransform: 'uppercase', letterSpacing: '.06em' }}>Nota interna — solo visible para el equipo</span>
+                                </div>
+                              )}
                               <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
-                                placeholder={commentType === 'internal' ? '🔒 Nota interna — visible solo para el equipo técnico...' : 'Escribe tu respuesta al solicitante...'}
+                                placeholder={commentType === 'internal' ? 'Contexto interno, diagnóstico, detalles técnicos…' : 'Escribe tu respuesta al solicitante...'}
                                 rows={replyText ? 3 : 2}
-                                style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: `1px solid ${commentType === 'internal' ? '#fde68a' : '#e2e8f0'}`, background: commentType === 'internal' ? '#fffbeb' : '#fff', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box', transition: 'border-color .15s, background .15s' }}
+                                style={{ width: '100%', padding: '9px 12px', borderRadius: commentType === 'internal' ? '0 0 9px 9px' : 9, border: `${commentType === 'internal' ? '2px' : '1px'} solid ${commentType === 'internal' ? '#f59e0b' : '#e2e8f0'}`, background: commentType === 'internal' ? '#fffbeb' : '#fff', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box', transition: 'border-color .15s, background .15s' }}
                                 onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && replyText.trim()) { e.preventDefault(); addCommentMut.mutate(); } }}
                               />
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                                 <select value={commentType} onChange={e => setCommentType(e.target.value as 'public' | 'internal')}
-                                  style={{ fontSize: 10, padding: '3px 7px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, color: '#475569' }}>
+                                  style={{ fontSize: 10, padding: '3px 7px', borderRadius: 6, border: `1px solid ${commentType === 'internal' ? '#f59e0b' : '#e2e8f0'}`, background: commentType === 'internal' ? '#fef3c7' : '#f8fafc', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, color: commentType === 'internal' ? '#92400e' : '#475569' }}>
                                   <option value="public">📢 Público</option>
                                   <option value="internal">🔒 Interno</option>
                                 </select>
@@ -673,7 +700,13 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               ticket={ticket}
               ownerAssignment={ownerAssignment}
               technicians={technicians}
-              sla={{ color: slaColor, label: slaLabel, countdown: slaCountdown }}
+              sla={{
+                text:      slaCfg?.text      ?? 'var(--status-neutral-text)',
+                bg:        slaCfg?.bg        ?? 'var(--status-neutral-bg)',
+                border:    slaCfg?.border    ?? 'var(--status-neutral-border)',
+                label:     slaLabel,
+                countdown: slaCountdown,
+              }}
               onTransition={(transId, reason) => transMut.mutate({ transId, reason })}
               mutPending={{ transition: transMut.isPending }}
             />

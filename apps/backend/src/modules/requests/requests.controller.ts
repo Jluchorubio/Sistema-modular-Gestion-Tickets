@@ -57,6 +57,22 @@ export class RequestsController {
     return this.service.completeMineTask(req.user.sub, id);
   }
 
+  @Get('stats')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo')
+  @RequirePermission('gestion:requests:view_all')
+  @ApiOperation({ summary: 'Stats de solicitudes para admin/superadmin.' })
+  getStats(@Req() req: any) {
+    return this.service.getStats(req.user.sub);
+  }
+
+  @Get('stats/mine')
+  @RequirePermission('gestion:requests:view_own')
+  @ApiOperation({ summary: 'Stats propias del usuario autenticado.' })
+  getMyStats(@Req() req: any) {
+    return this.service.getMyStats(req.user.sub);
+  }
+
   @Get('user/:id')
   @UseGuards(RolesGuard)
   @Roles('superadmin', 'admin_modulo')
