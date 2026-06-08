@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 
 interface NotificationLog {
   id:         string;
@@ -21,6 +22,7 @@ export class NotificationsController {
   constructor(@InjectDataSource() private readonly db: DataSource) {}
 
   @Get('me')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Listar notificaciones internas del usuario autenticado (últimas 30).' })
   async getMyNotifications(@Req() req: any) {
     const rows = await this.db.query<NotificationLog[]>(
@@ -38,6 +40,7 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Marcar notificación interna como leída.' })
   async markAsRead(@Req() req: any, @Param('id') id: string) {
     await this.db.query(
@@ -50,6 +53,7 @@ export class NotificationsController {
   }
 
   @Patch('me/read-all')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Marcar todas las notificaciones internas como leídas.' })
   async markAllAsRead(@Req() req: any) {
     await this.db.query(
@@ -62,6 +66,7 @@ export class NotificationsController {
   }
 
   @Delete(':id')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Descartar notificación (ocultar de la bandeja).' })
   async dismissOne(@Req() req: any, @Param('id') id: string) {
     await this.db.query(
@@ -74,6 +79,7 @@ export class NotificationsController {
   }
 
   @Delete('me/read')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Descartar todas las notificaciones leídas del usuario.' })
   async dismissAllRead(@Req() req: any) {
     await this.db.query(

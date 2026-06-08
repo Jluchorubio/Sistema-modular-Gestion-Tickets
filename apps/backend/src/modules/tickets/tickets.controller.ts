@@ -54,7 +54,7 @@ export class TicketsController {
   }
 
   @Patch('transitions/:id')
-  @RequirePermission('helpdesk:config:manage')
+  @RequirePermission('global:config:sla')
   updateTransition(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { allowed_roles?: string[]; variant?: string; name?: string },

@@ -64,7 +64,7 @@ export class ReportingController {
   }
 
   @Get('helpdesk')
-  @RequirePermission('helpdesk:reports:view')
+  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Métricas específicas de Helpdesk: KPIs, técnicos, categorías, SLA.' })
   @ApiQuery({ name: 'moduleId', required: true })
   helpdeskMetrics(@Query('moduleId') moduleId: string) {

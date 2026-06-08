@@ -243,6 +243,8 @@ export class InventoryService {
       throw new BadRequestException('Para asignar usa el endpoint /assign');
     }
 
+    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+
     if (asset.status === 'asignado' && dto.status !== 'disponible') {
       const closedAssignments = await this.db.query<{ id: string; user_id: string }[]>(
         `UPDATE inventory.asset_assignments
@@ -275,7 +277,6 @@ export class InventoryService {
       );
     }
 
-    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
     await this.db.query(
       `UPDATE inventory.assets SET status = $1 WHERE id = $2`,
       [dto.status, assetId],

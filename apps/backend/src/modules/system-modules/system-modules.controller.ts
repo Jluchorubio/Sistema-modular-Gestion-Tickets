@@ -65,6 +65,7 @@ export class SystemModulesController {
   }
 
   @Patch(':id/technicians/status')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Técnico actualiza su propia disponibilidad en el módulo.' })
   setTechnicianStatus(
     @Param('id') moduleId: string,

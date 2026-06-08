@@ -16,6 +16,7 @@ export class CalendarController {
   constructor(private readonly service: CalendarService) {}
 
   @Get('events')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Listar eventos del calendario (scoped por rol).' })
   getEvents(
     @Req() req: any,
@@ -31,12 +32,14 @@ export class CalendarController {
   }
 
   @Post('events')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Crear evento en el calendario.' })
   createEvent(@Req() req: any, @Body() dto: CreateCalendarEventDto) {
     return this.service.createEvent(req.user.sub, dto);
   }
 
   @Patch('events/:id')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Actualizar evento del calendario.' })
   updateEvent(
     @Req() req: any,
@@ -47,6 +50,7 @@ export class CalendarController {
   }
 
   @Delete('events/:id')
+  @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Eliminar (soft-delete) evento del calendario.' })
   deleteEvent(
     @Req() req: any,
