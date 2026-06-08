@@ -10,6 +10,7 @@ import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { TECH_AVAIL_COLORS, TECH_AVAIL_LABELS } from '@/services/tickets.service';
+import { MetricCard } from '@/components/ui/MetricCard';
 import { modulesService } from '@/services/modules.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import { MODULE_ROLE_LABELS } from '@/constants/roles';
@@ -152,15 +153,6 @@ function TechCard({ tech, basePath }: { tech: ModuleTechnician; basePath: string
   );
 }
 
-/* ── Summary card ── */
-function StatPill({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '12px 18px', textAlign: 'center', minWidth: 90 }}>
-      <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color, lineHeight: 1 }}>{value}</p>
-      <p style={{ margin: '4px 0 0', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</p>
-    </div>
-  );
-}
 
 /* ── Main page ── */
 export default function TechniciansPage() {
@@ -236,11 +228,11 @@ export default function TechniciansPage() {
 
         {/* Summary pills */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <StatPill label="Total" value={techs.length} color={C.navy} />
-          <StatPill label="Disponibles" value={available} color="#20c933" />
-          <StatPill label="Ocupados" value={busy} color="#f59e0b" />
-          <StatPill label="Ausentes" value={absent} color="#94a3b8" />
-          <StatPill label="Tickets activos" value={totalActive} color={C.coral} />
+          <MetricCard size="sm" label="Total"          value={techs.length} color={C.navy}    />
+          <MetricCard size="sm" label="Disponibles"    value={available}    color="#20c933"   />
+          <MetricCard size="sm" label="Ocupados"       value={busy}         color="#f59e0b"   />
+          <MetricCard size="sm" label="Ausentes"       value={absent}       color="#94a3b8"   />
+          <MetricCard size="sm" label="Tickets activos" value={totalActive} color={C.coral}   />
         </div>
       </div>
 

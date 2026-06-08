@@ -6,9 +6,10 @@ import { Plus, X, Ticket, Search, Monitor, BookOpen, ExternalLink } from 'lucide
 import {
   ticketsService,
   type CreateTicketDto, type AssetSearchResult,
-  TICKET_PRIORITY_LABELS, TICKET_PRIORITIES,
+  TICKET_PRIORITIES,
   type TicketPriority,
 } from '@/services/tickets.service';
+import { getPriorityConfig } from '@/constants/status';
 import { systemConfigService, type DamageType } from '@/services/system-config.service';
 import { modulesService, type ModuleLocation } from '@/services/modules.service';
 import { docsService, type Article } from '@/app/(app)/helpdesk/knowledge/_lib/knowledge.service';
@@ -298,7 +299,7 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
                 <div>
                   <label className={styles.lbl}>Prioridad</label>
                   <select value={form.priority ?? 'media'} onChange={e => set('priority', e.target.value)} className={styles.inp}>
-                    {PRIORITIES.map(p => <option key={p} value={p}>{TICKET_PRIORITY_LABELS[p]}</option>)}
+                    {PRIORITIES.map(p => <option key={p} value={p}>{getPriorityConfig(p).label}</option>)}
                   </select>
                 </div>
                 <div>

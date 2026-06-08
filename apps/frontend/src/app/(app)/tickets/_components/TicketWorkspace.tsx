@@ -17,7 +17,6 @@ import { useAuthStore } from '@/stores/auth.store';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
   type TicketPriority,
-  TICKET_PRIORITY_LABELS,
   ticketsService,
 } from '@/services/tickets.service';
 import { getPriorityConfig } from '@/constants/status';
@@ -35,7 +34,7 @@ function PriorityBadge({ priority }: { priority: TicketPriority }) {
   const cfg = getPriorityConfig(priority);
   return (
     <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 600, background: `color-mix(in srgb, ${cfg.color} 15%, transparent)`, color: cfg.color, border: `1px solid color-mix(in srgb, ${cfg.color} 30%, transparent)` }}>
-      {TICKET_PRIORITY_LABELS[priority]}
+      {cfg.label}
     </span>
   );
 }

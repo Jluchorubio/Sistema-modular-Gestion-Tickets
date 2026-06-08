@@ -10,7 +10,6 @@ import {
   type TicketRating,
   type RateTicketDto,
   type TicketTimelineEvent,
-  SLA_STATUS_LABELS,
 } from '@/services/tickets.service';
 import { getSlaStatusConfig, type StatusConfig } from '@/constants/status';
 import { modulesService } from '@/services/modules.service';
@@ -127,7 +126,7 @@ export function useTicketData({ ticketId, helpdeskId }: UseTicketDataProps) {
     : null;
 
   const slaLabel = ticket?.sla_status
-    ? (SLA_STATUS_LABELS[ticket.sla_status as keyof typeof SLA_STATUS_LABELS] ?? ticket.sla_status)
+    ? (getSlaStatusConfig(ticket.sla_status).label ?? ticket.sla_status)
     : null;
 
   const slaCountdown = useMemo(() => {

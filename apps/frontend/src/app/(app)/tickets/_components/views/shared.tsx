@@ -3,7 +3,6 @@
 import { Star, ChevronDown, Ticket, Clock } from 'lucide-react';
 import {
   type TicketListItem, type TicketPriority,
-  SLA_STATUS_LABELS,
 } from '@/services/tickets.service';
 import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
@@ -91,7 +90,7 @@ export function Stars({ rating, size = 13 }: { rating: number; size?: number }) 
 export function TicketCard({ ticket, onClick }: { ticket: TicketListItem; onClick: () => void }) {
   const overdue  = ticket.sla_status === 'breached';
   const slaCfg   = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status) : null;
-  const slaLabel = ticket.sla_status ? (SLA_STATUS_LABELS[ticket.sla_status] ?? null) : null;
+  const slaLabel = ticket.sla_status ? (getSlaStatusConfig(ticket.sla_status).label ?? null) : null;
 
   return (
     <div className={`${styles.ticketCard}${overdue ? ` ${styles.ticketCardOverdue}` : ''}`} onClick={onClick}>

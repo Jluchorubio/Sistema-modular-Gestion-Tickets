@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
-import { ticketsService, type TicketListItem, type SlaStatus, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
+import { ticketsService, type TicketListItem, type SlaStatus } from '@/services/tickets.service';
 import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { MetricCard, MetricRow } from '@/components/ui/MetricCard';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
@@ -113,8 +113,8 @@ function TicketRow({ ticket }: { ticket: TicketListItem }) {
       </p>
 
       {/* Priority */}
-      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-        {TICKET_PRIORITY_LABELS[ticket.priority]}
+      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `color-mix(in srgb, ${pColor} 15%, transparent)`, color: pColor, border: `1px solid color-mix(in srgb, ${pColor} 25%, transparent)`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+        {getPriorityConfig(ticket.priority).label}
       </span>
 
       {/* Time left */}
