@@ -1,4 +1,4 @@
-import { IsString, IsIn, IsOptional, IsInt, IsBoolean, IsEmail, Min, MinLength, MaxLength, IsNumber, Matches } from 'class-validator';
+import { IsString, IsIn, IsOptional, IsInt, IsBoolean, IsEmail, Min, Max, MinLength, MaxLength, IsNumber, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 const PRIORITIES = ['baja', 'media', 'alta', 'critica'] as const;
@@ -39,6 +39,30 @@ export class UpdateCompanyDto {
 
   @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(30)
   contact_phone?: string;
+}
+
+export class UpdatePasswordPolicyDto {
+  @ApiPropertyOptional({ minimum: 6, maximum: 128 }) @IsOptional() @IsInt() @Min(6) @Max(128)
+  min_length?: number;
+
+  @ApiPropertyOptional() @IsOptional() @IsBoolean()
+  require_uppercase?: boolean;
+
+  @ApiPropertyOptional() @IsOptional() @IsBoolean()
+  require_lowercase?: boolean;
+
+  @ApiPropertyOptional() @IsOptional() @IsBoolean()
+  require_number?: boolean;
+
+  @ApiPropertyOptional() @IsOptional() @IsBoolean()
+  require_special?: boolean;
+
+  @ApiPropertyOptional({ description: '0 = sin expiración', minimum: 0, maximum: 365 })
+  @IsOptional() @IsInt() @Min(0) @Max(365)
+  expiry_days?: number;
+
+  @ApiPropertyOptional() @IsOptional() @IsBoolean()
+  totp_required?: boolean;
 }
 
 export class UpdateDamageTypeDto {

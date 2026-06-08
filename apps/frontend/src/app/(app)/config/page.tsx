@@ -23,7 +23,7 @@ import { OrgFlowTab }           from '@/components/config/OrgFlowTab';
 import type {
   Company, BusinessHour, Holiday, AuditLog,
   PriorityFormula, PriorityPreview,
-  SlaRule, OrgNode,
+  SlaRule, OrgNode, PasswordPolicy,
 } from '@/services/system-config.service';
 import type { CriticalAuthData } from '@/hooks/useCriticalChange';
 import styles from './config.module.css';
@@ -1303,11 +1303,35 @@ const ACTIVE_PROTECTIONS = [
 ] as const;
 
 function SeguridadTab() {
+  const qc       = useQueryClient();
+  const critical  = useCriticalChange();
+
   const { data: recentCritical = [], isLoading } = useQuery<AuditLog[]>({
     queryKey: ['audit-logs', { critical: true }],
     queryFn:  () => systemConfigService.getAuditLogs({ limit: 8 }),
     staleTime: 30_000,
   });
+
+  const { data: policy, isLoading: policyLoading } = useQuery<PasswordPolicy>({
+    queryKey: ['password-policy'],
+    queryFn:  () => systemConfigService.getPasswordPolicy(),
+    staleTime: 60_000,
+  });
+
+  const [policyForm, setPolicyForm] = useState<Partial<PasswordPolicy> | null>(null);
+  const form: PasswordPolicy | null = policyForm !== null ? { ...(policy ?? DEFAULT_POLICY), ...policyForm } : (policy ?? null);
+
+  function savePolicy() {
+    if (!policyForm) return;
+    critical.triggerCritical(
+      { entityLabel: 'Política de contraseñas', description: 'Cambia los requisitos de seguridad para todos los usuarios.' },
+      async (auth) => {
+        await systemConfigService.updatePasswordPolicy(policyForm, auth);
+        await qc.invalidateQueries({ queryKey: ['password-policy'] });
+        setPolicyForm(null);
+      },
+    );
+  }
 
   const criticalLogs = (recentCritical as AuditLog[]).filter(l => l.verified_2fa);
 
@@ -1412,22 +1436,98 @@ function SeguridadTab() {
         )}
       </div>
 
-      {/* ── Future policies placeholder ── */}
-      <div style={{ ...card, borderStyle: 'dashed', background: '#fafafa' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <ShieldAlert size={14} style={{ color: '#94a3b8' }} />
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Política de contraseñas — Próximamente
+      {/* ── Password policy ── */}
+      <div style={card}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={sectionTitle}>Política de contraseñas</div>
+          {policyForm !== null && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={() => setPolicyForm(null)}
+                style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', color: '#64748b' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={savePolicy}
+                style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: 'none', background: '#0e2235', color: '#fff', cursor: 'pointer', fontWeight: 700 }}
+              >
+                Guardar
+              </button>
+            </div>
+          )}
+        </div>
+
+        {policyLoading || !form ? (
+          <Spinner />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* min_length */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#0e2235' }}>Longitud mínima</div>
+                <div style={{ fontSize: 11, color: '#64748b' }}>Número mínimo de caracteres requeridos</div>
+              </div>
+              <input
+                type="number" min={6} max={128}
+                value={form.min_length}
+                onChange={e => setPolicyForm(p => ({ ...(p ?? policy ?? DEFAULT_POLICY), min_length: Number(e.target.value) }))}
+                style={{ width: 64, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 13, textAlign: 'center' }}
+              />
+            </div>
+
+            {/* booleans */}
+            {([
+              ['require_uppercase', 'Requiere mayúscula',       'Al menos una letra A–Z'],
+              ['require_lowercase', 'Requiere minúscula',       'Al menos una letra a–z'],
+              ['require_number',    'Requiere número',          'Al menos un dígito 0–9'],
+              ['require_special',   'Requiere carácter especial', 'Al menos un símbolo (!@#$%…)'],
+              ['totp_required',     '2FA obligatorio',          'Todos los usuarios deben activar TOTP para acceder'],
+            ] as [keyof PasswordPolicy, string, string][]).map(([key, label, desc]) => {
+              const val = form[key] as boolean;
+              return (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#0e2235' }}>{label}</div>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>{desc}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPolicyForm(p => ({ ...(p ?? policy ?? DEFAULT_POLICY), [key]: !val }))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: val ? '#22c55e' : '#cbd5e1' }}
+                  >
+                    {val ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                  </button>
+                </div>
+              );
+            })}
+
+            {/* expiry_days */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#0e2235' }}>Expiración (días)</div>
+                <div style={{ fontSize: 11, color: '#64748b' }}>Días hasta que la contraseña expira. 0 = sin expiración</div>
+              </div>
+              <input
+                type="number" min={0} max={365}
+                value={form.expiry_days}
+                onChange={e => setPolicyForm(p => ({ ...(p ?? policy ?? DEFAULT_POLICY), expiry_days: Number(e.target.value) }))}
+                style={{ width: 64, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 13, textAlign: 'center' }}
+              />
+            </div>
           </div>
-        </div>
-        <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.6 }}>
-          Longitud mínima, complejidad, expiración, 2FA obligatorio para todos los usuarios.
-          En desarrollo para la próxima fase.
-        </div>
+        )}
       </div>
+
+      <CriticalChangeModal {...critical} />
     </div>
   );
 }
+
+const DEFAULT_POLICY: PasswordPolicy = {
+  min_length: 8, require_uppercase: true, require_lowercase: true,
+  require_number: true, require_special: false, expiry_days: 0, totp_required: false,
+};
 
 /* ── Org-required screen ────────────────────────────────────────── */
 

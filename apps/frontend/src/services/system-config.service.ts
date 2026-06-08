@@ -215,6 +215,16 @@ export interface PublicCompanyInfo {
   language:      string;
 }
 
+export interface PasswordPolicy {
+  min_length:        number;
+  require_uppercase: boolean;
+  require_lowercase: boolean;
+  require_number:    boolean;
+  require_special:   boolean;
+  expiry_days:       number;
+  totp_required:     boolean;
+}
+
 const BASE = '/system-config';
 
 export const systemConfigService = {
@@ -224,6 +234,12 @@ export const systemConfigService = {
     api.patch<Company>(`${BASE}/company`, dto, { headers: criticalHeaders(auth) }).then(r => r.data),
   setupCompany: (dto: Partial<Company>) =>
     api.patch<Company>(`${BASE}/company/setup`, dto).then(r => r.data),
+
+  /* ── Password policy ── */
+  getPasswordPolicy: () =>
+    api.get<PasswordPolicy>(`${BASE}/password-policy`).then(r => r.data),
+  updatePasswordPolicy: (dto: Partial<PasswordPolicy>, auth?: CriticalAuthData) =>
+    api.patch<PasswordPolicy>(`${BASE}/password-policy`, dto, { headers: criticalHeaders(auth) }).then(r => r.data),
 
   /* ── Org summary ── */
   getOrgSummary: () => api.get<OrgSummary>(`${BASE}/org/summary`).then(r => r.data),

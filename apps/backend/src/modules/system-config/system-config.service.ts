@@ -10,8 +10,9 @@ import {
 import {
   UpdateSlaRuleDto, UpdateCompanyDto,
   UpdateDamageTypeDto, UpsertBusinessHourDto, CreateHolidayDto,
-  CreateTicketCategoryDto, CreateDamageTypeDto,
+  CreateTicketCategoryDto, CreateDamageTypeDto, UpdatePasswordPolicyDto,
 } from './dto/config.dto';
+import { PasswordPolicy, DEFAULT_PASSWORD_POLICY } from '../../shared/utils/password-policy.util';
 import { BulkImportUsersDto } from './dto/bulk-import.dto';
 
 const TTL = {
@@ -81,6 +82,26 @@ export class SystemConfigService {
     });
 
     return org;
+  }
+
+  /* ── Password policy ───────────────────────────────────────────── */
+
+  async getPasswordPolicy(): Promise<PasswordPolicy> {
+    const [org] = await this.db.query<{ password_policy: PasswordPolicy }[]>(
+      `SELECT password_policy FROM users.organizations WHERE id = '00000000-0000-0000-0000-000000000001'`,
+    );
+    return org?.password_policy ?? DEFAULT_PASSWORD_POLICY;
+  }
+
+  async updatePasswordPolicy(dto: UpdatePasswordPolicyDto): Promise<PasswordPolicy> {
+    const [org] = await this.db.query<{ password_policy: PasswordPolicy }[]>(
+      `UPDATE users.organizations
+       SET password_policy = password_policy || $1::jsonb, updated_at = now()
+       WHERE id = '00000000-0000-0000-0000-000000000001'
+       RETURNING password_policy`,
+      [JSON.stringify(dto)],
+    );
+    return org.password_policy;
   }
 
   async initializeSystem() {

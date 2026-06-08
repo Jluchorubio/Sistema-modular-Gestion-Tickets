@@ -8,6 +8,7 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { enforcePasswordPolicy, DEFAULT_PASSWORD_POLICY, PasswordPolicy } from '../../shared/utils/password-policy.util';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { PreferencesDto } from './dto/preferences.dto';
@@ -203,6 +204,11 @@ export class ProfileService {
     if (dto.current_password === dto.new_password) {
       throw new BadRequestException('La nueva contraseña debe ser diferente');
     }
+
+    const [orgRow] = await this.db.query<{ password_policy: PasswordPolicy }[]>(
+      `SELECT password_policy FROM users.organizations WHERE id = '00000000-0000-0000-0000-000000000001'`,
+    );
+    enforcePasswordPolicy(dto.new_password, orgRow?.password_policy ?? DEFAULT_PASSWORD_POLICY);
 
     const newHash = await bcrypt.hash(dto.new_password, BCRYPT_ROUNDS);
     try {

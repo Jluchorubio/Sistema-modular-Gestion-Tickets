@@ -15,6 +15,7 @@ import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { createHash, randomBytes } from 'crypto';
+import { enforcePasswordPolicy, DEFAULT_PASSWORD_POLICY, PasswordPolicy } from '../../shared/utils/password-policy.util';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import * as http from 'http';
@@ -406,6 +407,8 @@ export class AuthService {
     );
     if (!rows[0]) throw new BadRequestException('Token inválido o expirado');
 
+    enforcePasswordPolicy(newPassword, await this.fetchPasswordPolicy());
+
     const hash = await bcrypt.hash(newPassword, 10);
     await this.db.query(
       `UPDATE auth.credentials SET password_hash = $1 WHERE user_id = $2`,
@@ -601,6 +604,8 @@ export class AuthService {
     if (!credRow) throw new BadRequestException('Credenciales no encontradas');
     if (credRow.password_hash.startsWith('!')) throw new BadRequestException('Cuenta OAuth — no tiene contraseña local');
 
+    enforcePasswordPolicy(newPassword, await this.fetchPasswordPolicy());
+
     const newHash = await bcrypt.hash(newPassword, 10);
     try {
       await this.db.query(
@@ -623,6 +628,17 @@ export class AuthService {
     );
     if (!cred || cred.password_hash.startsWith('!')) return false;
     return bcrypt.compare(password, cred.password_hash);
+  }
+
+  private async fetchPasswordPolicy(): Promise<PasswordPolicy> {
+    try {
+      const [org] = await this.db.query<{ password_policy: PasswordPolicy }[]>(
+        `SELECT password_policy FROM users.organizations WHERE id = '00000000-0000-0000-0000-000000000001'`,
+      );
+      return org?.password_policy ?? DEFAULT_PASSWORD_POLICY;
+    } catch {
+      return DEFAULT_PASSWORD_POLICY;
+    }
   }
 
   async validateToken(token: string) {

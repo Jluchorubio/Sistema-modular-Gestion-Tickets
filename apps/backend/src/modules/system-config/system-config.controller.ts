@@ -22,7 +22,7 @@ import {
   UpdateDamageTypeDto, UpsertBusinessHourDto, CreateHolidayDto,
   CreateTicketSlaRuleDto, UpdateTicketSlaRuleDto, CreateTicketSlaConditionDto,
   UpdatePriorityFormulaDto, PreviewPriorityDto,
-  CreateTicketCategoryDto, CreateDamageTypeDto,
+  CreateTicketCategoryDto, CreateDamageTypeDto, UpdatePasswordPolicyDto,
 } from './dto/config.dto';
 import { PriorityEngineService } from '../tickets/priority/priority-engine.service';
 import { BulkImportUsersDto } from './dto/bulk-import.dto';
@@ -119,6 +119,27 @@ export class SystemConfigController {
       entityId:      '00000000-0000-0000-0000-000000000001',
       previousValue: prev,
       newValue:      result,
+    });
+    return result;
+  }
+
+  @Get('password-policy')
+  @RequirePermission('global:config:view')
+  getPasswordPolicy() { return this.svc.getPasswordPolicy(); }
+
+  @Patch('password-policy')
+  @UseGuards(CriticalChangeGuard)
+  @RequirePermission('global:config:company')
+  async updatePasswordPolicy(@Req() req: Request, @Body() dto: UpdatePasswordPolicyDto) {
+    const prev   = await this.svc.getPasswordPolicy();
+    const result = await this.svc.updatePasswordPolicy(dto);
+    await this.audit.record({
+      ...req.criticalAudit!,
+      action:        'UPDATE',
+      entityType:    'password_policy',
+      entityId:      '00000000-0000-0000-0000-000000000001',
+      previousValue: prev  as unknown as Record<string, unknown>,
+      newValue:      result as unknown as Record<string, unknown>,
     });
     return result;
   }
