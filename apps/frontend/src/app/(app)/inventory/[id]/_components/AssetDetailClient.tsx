@@ -749,7 +749,7 @@ function ImageLightbox({
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,.95)",
-        zIndex: 9999,
+        zIndex: 400,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -771,7 +771,7 @@ function ImageLightbox({
           padding: "13px 20px",
           background: "rgba(0,0,0,.5)",
           backdropFilter: "blur(4px)",
-          zIndex: 10000,
+          zIndex: 1,
           flexShrink: 0,
         }}
       >
@@ -973,7 +973,7 @@ function ImageLightbox({
             background: "rgba(0,0,0,.6)",
             backdropFilter: "blur(6px)",
             overflowX: "auto",
-            zIndex: 10000,
+            zIndex: 1,
             flexShrink: 0,
           }}
           onClick={(e) => e.stopPropagation()}

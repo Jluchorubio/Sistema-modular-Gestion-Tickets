@@ -15,7 +15,15 @@ import type { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
   namespace: '/ws',
-  cors: { origin: '*', credentials: true },
+  cors: {
+    origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+      const allowed = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000,http://localhost:8081')
+        .split(',').map(s => s.trim());
+      if (!origin || allowed.includes(origin)) cb(null, true);
+      else cb(new Error(`WS CORS blocked: ${origin}`), false);
+    },
+    credentials: true,
+  },
 })
 export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;

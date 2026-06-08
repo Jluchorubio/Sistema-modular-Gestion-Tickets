@@ -647,7 +647,7 @@ export default function QueuePage() {
       {/* Toast */}
       {toast && (
         <div style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          position: 'fixed', bottom: 24, right: 24, zIndex: 300,
           background: '#0e2235', color: '#fff', padding: '10px 18px',
           borderRadius: 10, fontSize: 12, fontWeight: 700,
           boxShadow: '0 4px 20px rgba(0,0,0,.2)',

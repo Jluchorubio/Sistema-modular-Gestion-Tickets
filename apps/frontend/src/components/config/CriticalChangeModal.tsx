@@ -14,7 +14,7 @@ interface Props {
 }
 
 const overlay: React.CSSProperties = {
-  position: 'fixed', inset: 0, zIndex: 9999,
+  position: 'fixed', inset: 0, zIndex: 210,
   background: 'rgba(14,34,53,.55)', backdropFilter: 'blur(2px)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };

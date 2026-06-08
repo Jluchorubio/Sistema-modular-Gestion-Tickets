@@ -70,7 +70,7 @@ export function AssignUsersModal({ moduleId, existingUserIds, onClose }: Props) 
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 9000,
+      position: 'fixed', inset: 0, zIndex: 210,
       background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(3px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
     }}>

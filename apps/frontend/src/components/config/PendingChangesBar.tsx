@@ -16,7 +16,7 @@ const BAR: React.CSSProperties = {
   background:  '#ffffff',
   borderTop:   '3px solid #ff5e3a',
   boxShadow:   '0 -2px 20px rgba(14,34,53,0.10)',
-  zIndex:      9999,
+  zIndex:      300,
   padding:     '10px 24px',
   display:     'flex',
   alignItems:  'center',
