@@ -1016,7 +1016,7 @@
 .pBtn:disabled { opacity: 0.55; cursor: default; }
 .pBtn:not(:disabled):hover { filter: brightness(0.92); }
 
-.pBtnReview  { background: #eef2ff; color: #6366f1; }
+.pBtnReview  { background: var(--brand-primary-10); color: var(--app-navy); }
 .pBtnApprove { background: #dcfce7; color: #16a34a; }
 .pBtnReject  { background: #fee2e2; color: #dc2626; }
 .pBtnCancel  { background: #f1f5f9; color: #475569; }

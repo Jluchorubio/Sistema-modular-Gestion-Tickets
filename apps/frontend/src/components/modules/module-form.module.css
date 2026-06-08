@@ -19,8 +19,8 @@
 .select:focus,
 .textarea:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99,102,241,.1);
+  border-color: var(--app-navy);
+  box-shadow: 0 0 0 3px var(--brand-primary-10);
 }
 .input::placeholder,
 .textarea::placeholder { color: #94a3b8; }
@@ -110,15 +110,15 @@
   padding: 8px 20px;
   border: none;
   border-radius: 7px;
-  background: #6366f1;
+  background: var(--app-coral);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: background .15s;
+  transition: opacity .15s;
 }
-.btnSubmit:hover    { background: #4f46e5; }
+.btnSubmit:hover    { opacity: .88; }
 .btnSubmit:disabled { opacity: .55; cursor: not-allowed; }
 
 .msgOk  { font-size: 12px; color: #15803d; font-weight: 500; margin-top: 8px; }

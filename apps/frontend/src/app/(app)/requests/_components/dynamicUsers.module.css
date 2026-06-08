@@ -13,9 +13,9 @@
 }
 
 .bannerSuper {
-  background: #1e1b4b;
-  border-color: #4338ca;
-  color: #c7d2fe;
+  background: var(--app-navy);
+  border-color: rgba(255,94,58,.4);
+  color: rgba(255,255,255,.85);
 }
 
 .bannerAdmin {
@@ -97,7 +97,7 @@
 
 .searchInput:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--app-navy);
 }
 
 /* ── List ────────────────────────────────────────────────────────────────────── */
@@ -125,7 +125,7 @@
 
 .row:hover { border-color: #cbd5e1; }
 
-.rowExpanded { border-color: #6366f1 !important; }
+.rowExpanded { border-color: var(--app-coral) !important; }
 
 .rowMain {
   display: flex;
@@ -141,7 +141,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #6366f1;
+  background: var(--app-navy);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,11 +220,11 @@
 
 .modulePill {
   font-size: 11px;
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--brand-primary-10);
+  color: var(--app-navy);
   border-radius: 5px;
   padding: 2px 7px;
-  border: 1px solid #c7d2fe;
+  border: 1px solid var(--brand-primary-20);
 }
 
 .moreRoles {
@@ -286,9 +286,9 @@
 }
 
 .btnAction:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-  background: #eef2ff;
+  border-color: var(--app-navy);
+  color: var(--app-navy);
+  background: var(--brand-primary-10);
 }
 
 .btnActionSecondary {
@@ -382,20 +382,19 @@
   gap: 3px;
   font-size: 11px;
   font-weight: 600;
-  color: #6366f1;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
+  color: var(--app-navy);
+  background: var(--brand-primary-10);
+  border: 1px solid var(--brand-primary-20);
   border-radius: 6px;
   padding: 3px 9px;
   cursor: pointer;
   white-space: nowrap;
   font-family: inherit;
-  transition: all .12s;
+  transition: opacity .12s;
 }
 
 .btnManage:hover {
-  background: #e0e7ff;
-  border-color: #a5b4fc;
+  opacity: .8;
 }
 
 .escalatedTag {
@@ -431,7 +430,7 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: #6366f1;
+  background: var(--app-navy);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -10,7 +10,7 @@
 
 .btnPrimary {
   padding: 8px 16px;
-  background: #6366f1;
+  background: var(--app-coral);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -50,8 +50,8 @@
 .tab:hover { color: #0f172a; }
 
 .tabActive {
-  color: #6366f1;
-  border-bottom-color: #6366f1;
+  color: var(--app-coral);
+  border-bottom-color: var(--app-coral);
   font-weight: 600;
 }
 
@@ -76,7 +76,7 @@
   transition: border-color .15s;
   font-family: inherit;
 }
-.filterSelect:focus { border-color: #6366f1; }
+.filterSelect:focus { border-color: var(--app-navy); }
 
 .onlyMine {
   display: flex;
@@ -86,7 +86,7 @@
   color: #475569;
   cursor: pointer;
 }
-.onlyMineCb { width: 14px; height: 14px; accent-color: #6366f1; }
+.onlyMineCb { width: 14px; height: 14px; accent-color: var(--app-coral); }
 
 /* ── Request card ── */
 .card {
@@ -208,7 +208,7 @@
   font-family: inherit;
 }
 .cancelBtn:hover  { border-color: #fca5a5; color: #ef4444; background: #fef2f2; }
-.expandBtn:hover  { border-color: #c7d2fe; color: #6366f1; background: #eef2ff; }
+.expandBtn:hover  { border-color: var(--app-coral-20); color: var(--app-coral); background: var(--app-coral-10); }
 
 /* ── Timeline ── */
 .timelineWrap {
@@ -282,4 +282,4 @@
   transition: border-color .15s;
   margin-top: 6px;
 }
-.rejectNotes:focus { border-color: #6366f1; }
+.rejectNotes:focus { border-color: var(--app-navy); }

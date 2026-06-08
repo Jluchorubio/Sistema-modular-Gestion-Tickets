@@ -510,7 +510,7 @@
   inset: 0;
   background: rgba(13, 27, 42, 0.72);
   backdrop-filter: blur(4px);
-  z-index: 9000;
+  z-index: var(--z-lightbox);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -617,7 +617,7 @@
   inset: 0;
   background: rgba(13, 27, 42, 0.60);
   backdrop-filter: blur(4px);
-  z-index: 8000;
+  z-index: var(--z-modal-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -643,7 +643,7 @@
   border: 1px solid #D8E0EA;
   border-radius: 10px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
-  z-index: 500;
+  z-index: var(--z-inner-dropdown);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -699,7 +699,7 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.88);
   backdrop-filter: blur(8px);
-  z-index: 9000;
+  z-index: var(--z-lightbox);
   display: flex;
   flex-direction: column;
   align-items: center;

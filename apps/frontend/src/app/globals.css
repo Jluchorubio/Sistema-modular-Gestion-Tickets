@@ -74,6 +74,16 @@
   --sidebar-collapsed: 76px;
   --sidebar-expanded: 220px;
   --header-height: 56px;
+
+  /* Z-index scale — single source of truth */
+  --z-dropdown:       110;   /* page-level inline menus */
+  --z-drawer-overlay: 150;   /* drawer backdrop (above sticky header 100) */
+  --z-drawer:         151;   /* side drawer panel */
+  --z-modal-overlay:  210;   /* modal backdrop (above header dropdowns 200) */
+  --z-modal:          211;   /* modal dialog */
+  --z-inner-dropdown: 220;   /* select/dropdown inside a modal or drawer */
+  --z-toast:          300;   /* toasts / notifications */
+  --z-lightbox:       400;   /* fullscreen image / camera viewer */
 }
 
 *,

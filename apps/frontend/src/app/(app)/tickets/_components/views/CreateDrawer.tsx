@@ -112,13 +112,13 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
     <>
       {/* Overlay */}
       <div
-        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.35)', zIndex: 50 }}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.35)', zIndex: 150 }}
         onClick={onClose}
       />
       {/* Drawer */}
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 480, maxWidth: '100vw',
-        background: '#fff', zIndex: 51,
+        background: '#fff', zIndex: 151,
         display: 'flex', flexDirection: 'column',
         boxShadow: '-8px 0 40px rgba(0,0,0,.14)',
       }}>

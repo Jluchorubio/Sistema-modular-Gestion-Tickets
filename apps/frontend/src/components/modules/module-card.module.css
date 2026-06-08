@@ -140,8 +140,8 @@
 .card.locked:hover .lockedOverlay { opacity: 1; }
 .lockedLabel { font-size: 12px; font-weight: 700; color: #f1f5f9; }
 .lockedHint  {
-  font-size: 10px; color: #818cf8;
-  border: 1px solid #4f46e5; padding: 2px 8px; border-radius: 20px; margin-top: 2px;
+  font-size: 10px; color: #94a3b8;
+  border: 1px solid var(--app-border); padding: 2px 8px; border-radius: 20px; margin-top: 2px;
 }
 
 /* ── Admin avatar bridge — relative h-0 ── */

@@ -373,7 +373,7 @@
 
 /* ── Checkboxes ── */
 .treeCb {
-  accent-color: #4f46e5;
+  accent-color: var(--app-coral);
   cursor: pointer;
   width: 13px;
   height: 13px;
@@ -390,7 +390,7 @@
 
 .btnSave {
   width: 100%;
-  background: #4f46e5;
+  background: var(--app-coral);
   color: #ffffff;
   font-size: 12px;
   font-weight: 900;
@@ -401,11 +401,11 @@
   font-family: inherit;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  transition: background 0.15s;
-  box-shadow: 0 2px 8px rgba(79,70,229,.18);
+  transition: opacity 0.15s;
+  box-shadow: 0 2px 8px var(--app-coral-20);
 }
 
-.btnSave:hover:not(:disabled) { background: #4338ca; }
+.btnSave:hover:not(:disabled) { opacity: .88; }
 .btnSave:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .saveOk  { color: #059669; font-size: 11px; text-align: center; margin-top: 6px; }

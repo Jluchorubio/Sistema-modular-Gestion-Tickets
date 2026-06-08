@@ -65,8 +65,8 @@
   transition: border-color .15s, background .15s, color .15s;
 }
 
-.filterBtn:hover { border-color: #c7d2fe; color: #4f46e5; }
-.filterBtnActive { border-color: #4f46e5 !important; background: rgba(79,70,229,.06) !important; color: #4f46e5 !important; }
+.filterBtn:hover { border-color: var(--app-coral-20); color: var(--app-coral); }
+.filterBtnActive { border-color: var(--app-coral) !important; background: var(--app-coral-10) !important; color: var(--app-coral) !important; }
 
 /* ── Metric cards strip ── */
 .metricsGrid {

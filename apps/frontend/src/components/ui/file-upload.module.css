@@ -17,8 +17,8 @@
 
 .zone:hover,
 .zoneDragging {
-  border-color: #6366f1;
-  background: #eef2ff;
+  border-color: var(--app-coral);
+  background: var(--app-coral-10);
 }
 
 .zoneDisabled {

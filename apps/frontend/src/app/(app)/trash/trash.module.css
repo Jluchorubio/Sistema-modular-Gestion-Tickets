@@ -74,8 +74,8 @@
   letter-spacing: 0.04em;
 }
 
-.tab:hover   { border-color: #4f46e5; color: #4f46e5; }
-.tabActive   { background: rgba(79,70,229,.06); border-color: #4f46e5; color: #4f46e5; }
+.tab:hover   { border-color: var(--app-coral); color: var(--app-coral); }
+.tabActive   { background: var(--app-coral-10); border-color: var(--app-coral); color: var(--app-coral); }
 
 /* ── Select-all bar ── */
 .selectAllBar {
@@ -146,7 +146,7 @@
 .rowCb {
   width: 14px;
   height: 14px;
-  accent-color: #4f46e5;
+  accent-color: var(--app-coral);
   cursor: pointer;
 }
 
@@ -201,7 +201,7 @@
   white-space: nowrap;
 }
 
-.btnSecondary:hover:not(:disabled) { border-color: #4f46e5; color: #4f46e5; }
+.btnSecondary:hover:not(:disabled) { border-color: var(--app-navy); color: var(--app-navy); }
 .btnSecondary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btnDanger {
@@ -241,7 +241,7 @@
   box-sizing: border-box;
 }
 
-.reAuthPwdInput:focus { border-color: #4f46e5; }
+.reAuthPwdInput:focus { border-color: var(--app-navy); }
 
 .reAuthEye {
   position: absolute;

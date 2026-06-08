@@ -74,12 +74,12 @@
 }
 .btnImport:hover { border-color: #0e2235; background: #f8fafc; }
 
-/* Create user button — indigo, rounded-sm */
+/* Create user button */
 .btnCreate {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #4f46e5;
+  background: var(--app-coral);
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
@@ -87,12 +87,12 @@
   border-radius: 4px;
   border: none;
   cursor: pointer;
-  transition: background .15s;
+  transition: background .15s, opacity .15s;
   font-family: inherit;
   box-shadow: 0 1px 3px rgba(0,0,0,.12);
   white-space: nowrap;
 }
-.btnCreate:hover { background: #4338ca; }
+.btnCreate:hover { opacity: .88; }
 
 /* ── Filter card — bg-white border rounded-sm shadow-xs ── */
 .filterCard {
@@ -305,7 +305,7 @@
 .rowCb {
   width: 14px;
   height: 14px;
-  accent-color: #4f46e5;
+  accent-color: var(--app-coral);
   cursor: pointer;
 }
 
@@ -442,8 +442,8 @@
   padding: 0;
 }
 
-.actionBtnEye    { color: #4f46e5; }
-.actionBtnEye:hover { background: #eef2ff; color: #3730a3; }
+.actionBtnEye    { color: var(--app-navy); }
+.actionBtnEye:hover { background: var(--brand-primary-10); color: var(--app-navy); }
 
 .actionBtnOn     { color: #059669; }
 .actionBtnOn:hover { background: #f0fdf4; color: #065f46; }
@@ -646,7 +646,7 @@
   cursor: pointer;
 }
 
-.moduleCheck { accent-color: #4f46e5; cursor: pointer; }
+.moduleCheck { accent-color: var(--app-coral); cursor: pointer; }
 
 .moduleRoleSelect {
   background: #ffffff;
@@ -714,7 +714,7 @@
 
 .modalBtnSave {
   flex: 1;
-  background: #4f46e5;
+  background: var(--app-coral);
   color: #ffffff;
   font-weight: 700;
   padding: 10px;
@@ -722,11 +722,11 @@
   font-size: 12px;
   border: none;
   cursor: pointer;
-  transition: background .15s;
+  transition: opacity .15s;
   font-family: inherit;
-  box-shadow: 0 2px 6px rgba(79,70,229,.25);
+  box-shadow: 0 2px 6px var(--app-coral-20);
 }
-.modalBtnSave:hover    { background: #4338ca; }
+.modalBtnSave:hover    { opacity: .88; }
 .modalBtnSave:disabled { opacity: .4; cursor: not-allowed; }
 
 /* ── Superadmin toggle inline ── */
@@ -748,7 +748,7 @@
   border: none;
   cursor: pointer;
 }
-.superToggleOn { background: #4f46e5; }
+.superToggleOn { background: var(--app-coral); }
 .superToggle::after {
   content: '';
   position: absolute;
