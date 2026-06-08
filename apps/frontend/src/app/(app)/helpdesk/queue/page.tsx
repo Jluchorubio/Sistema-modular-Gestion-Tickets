@@ -51,6 +51,21 @@ function fmtHours(h: number): string {
   return `${(h / 24).toFixed(1)}d`;
 }
 
+function fmtAge(created: string): string {
+  const ms = Date.now() - new Date(created).getTime();
+  const h = ms / 3_600_000;
+  if (h < 1) return `${Math.round(h * 60)}m`;
+  if (h < 24) return `${h.toFixed(0)}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
+function ageColor(created: string): string {
+  const h = (Date.now() - new Date(created).getTime()) / 3_600_000;
+  if (h >= 8) return '#ef4444';
+  if (h >= 2) return '#f59e0b';
+  return '#94a3b8';
+}
+
 const AVAIL_ORDER: Record<string, number> = {
   disponible: 0, ocupado: 1, en_reunion: 2, ausente: 3, fuera_horario: 4, offline: 5,
 };
@@ -185,8 +200,20 @@ function TicketRow({
         <p style={{ margin: '0 0 3px', fontSize: 12.5, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {ticket.title}
         </p>
-        <p style={{ margin: 0, fontSize: 10, color: C.muted }}>
-          #{ticket.id.slice(-6).toUpperCase()} · {ticket.category_name} · {ticket.creator_name}
+        <p style={{ margin: 0, fontSize: 10, color: C.muted, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+          <span>#{ticket.id.slice(-6).toUpperCase()}</span>
+          <span style={{ color: '#e2e8f0' }}>·</span>
+          <span>{ticket.creator_name}</span>
+          <span style={{ color: '#e2e8f0' }}>·</span>
+          <span style={{ color: '#64748b' }}>{ticket.state_label}</span>
+          <span style={{ color: '#e2e8f0' }}>·</span>
+          <span style={{ fontWeight: 700, color: ageColor(ticket.created_at) }}>{fmtAge(ticket.created_at)} en cola</span>
+          {ticket.is_pause_state && ticket.last_transition_reason && (
+            <>
+              <span style={{ color: '#e2e8f0' }}>·</span>
+              <span style={{ color: '#92400e', fontWeight: 600 }}>⏸ {ticket.last_transition_reason}</span>
+            </>
+          )}
         </p>
       </div>
 
@@ -287,7 +314,10 @@ function PriorityGroup({
     <div style={{ marginBottom: 20 }}>
       {/* Group header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: `color-mix(in srgb, ${pColor} 8%, transparent)`, borderRadius: '10px 10px 0 0', border: `1px solid color-mix(in srgb, ${pColor} 20%, transparent)`, borderBottom: 'none' }}>
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: pColor, flexShrink: 0 }} />
+        {group.priority === 'critica'
+          ? <span className={styles.criticalDot} />
+          : <span style={{ width: 9, height: 9, borderRadius: '50%', background: pColor, flexShrink: 0 }} />
+        }
         <span style={{ fontSize: 11, fontWeight: 800, color: pColor, textTransform: 'uppercase', letterSpacing: '.07em' }}>
           {group.label}
         </span>
@@ -515,20 +545,26 @@ export default function QueuePage() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {[
-            { label: 'Sin asignar', value: allTickets.length, color: C.coral },
-            { label: 'Críticos', value: allTickets.filter(t => t.priority === 'critica').length, color: '#ef4444' },
-            { label: 'SLA riesgo', value: allTickets.filter(t => {
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {(() => {
+            const breachedCount = allTickets.filter(t => t.sla_status === 'breached').length;
+            const riskCount = allTickets.filter(t => {
               const h = hoursLeft(t.sla_deadline_tracked ?? t.sla_deadline);
               return t.sla_status === 'active' && h !== null && h < 4;
-            }).length, color: '#f97316' },
-          ].map(s => (
-            <div key={s.label} style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 16px', textAlign: 'center', minWidth: 80 }}>
-              <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</p>
-              <p style={{ margin: '3px 0 0', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
-            </div>
-          ))}
+            }).length;
+            const pills = [
+              { label: 'Sin asignar', value: allTickets.length, color: C.coral },
+              { label: 'Críticos',    value: allTickets.filter(t => t.priority === 'critica').length, color: '#ef4444' },
+              { label: 'SLA riesgo',  value: riskCount, color: '#f97316' },
+              ...(breachedCount > 0 ? [{ label: 'SLA vencido', value: breachedCount, color: '#dc2626' }] : []),
+            ];
+            return pills.map(s => (
+              <div key={s.label} style={{ background: '#fff', border: `1.5px solid ${s.label === 'SLA vencido' ? '#fecaca' : C.border}`, borderRadius: 10, padding: '10px 16px', textAlign: 'center', minWidth: 80 }}>
+                <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</p>
+                <p style={{ margin: '3px 0 0', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
+              </div>
+            ));
+          })()}
         </div>
       </div>
 
@@ -621,6 +657,24 @@ export default function QueuePage() {
         </div>
       ) : (
         <>
+          {/* Urgency alert — critical tickets awaiting assignment */}
+          {grouped[0].tickets.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 8, marginBottom: 14 }}>
+              <AlertTriangle size={14} style={{ color: '#ef4444', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#991b1b' }}>
+                {grouped[0].tickets.length} ticket{grouped[0].tickets.length > 1 ? 's' : ''} crítico{grouped[0].tickets.length > 1 ? 's' : ''} sin asignar
+              </span>
+              {grouped[0].tickets.some(t => (Date.now() - new Date(t.created_at).getTime()) > 3_600_000) && (
+                <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>— más de 1h esperando</span>
+              )}
+              {canAssignOthers && (
+                <button type="button" onClick={() => setFilterCategory(null)}
+                  style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#ef4444', background: 'none', border: '1px solid #fecaca', borderRadius: 6, padding: '3px 9px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                  Asignar ahora ↓
+                </button>
+              )}
+            </div>
+          )}
           {!canTake && !canAssignOthers && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, marginBottom: 14 }}>
               <Inbox size={13} style={{ color: '#1d4ed8' }} />

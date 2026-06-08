@@ -26,3 +26,18 @@
     display: none;
   }
 }
+
+@keyframes queuePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .4; transform: scale(1.35); }
+}
+
+.criticalDot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--status-danger-text, #ef4444);
+  flex-shrink: 0;
+  animation: queuePulse 1.1s ease-in-out infinite;
+}
