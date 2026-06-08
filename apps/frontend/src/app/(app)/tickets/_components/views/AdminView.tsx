@@ -220,13 +220,13 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               {/* Assignee + unassigned time — Fase 2A */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
                 {t.assignee_name === null && !t.is_final ? (
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #e9d5ff', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #e9d5ff', whiteSpace: 'nowrap' }}>
                     Sin asignar · {fmtRelative(t.created_at)}
                   </span>
                 ) : (
                   <>
                     <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: '#fff' }}>{initials(t.assignee_name!)}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>{initials(t.assignee_name!)}</span>
                     </div>
                     <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {t.assignee_name}
@@ -236,17 +236,17 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </div>
 
               {/* State badge */}
-              <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: t.is_final ? '#f0fdf4' : '#eef2ff', color: t.is_final ? '#16a34a' : '#4338ca', border: `1px solid ${t.is_final ? '#bbf7d0' : '#c7d2fe'}`, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: t.is_final ? '#f0fdf4' : '#eef2ff', color: t.is_final ? '#16a34a' : '#4338ca', border: `1px solid ${t.is_final ? '#bbf7d0' : '#c7d2fe'}`, flexShrink: 0 }}>
                 {t.state_label}
               </span>
 
               {/* Approval / SLA badge */}
               {t.is_approval_state ? (
-                <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', flexShrink: 0 }}>
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', flexShrink: 0 }}>
                   ✓ Por aprobar
                 </span>
               ) : slaC && slaL ? (
-                <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: `${slaC}15`, color: slaC, border: `1px solid ${slaC}30`, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: `${slaC}15`, color: slaC, border: `1px solid ${slaC}30`, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                   <Clock size={8} />
                   {breached && t.breached_at
                     ? `Vencido ${fmtRelative(t.breached_at)}`
@@ -329,25 +329,9 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </div>
             </div>
 
-            {/* Search + actions row */}
-            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '10px 14px', borderRadius: 12, border: '1px solid #eef2f6', boxShadow: '0 1px 3px rgba(15,23,42,.04)', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
-                <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar tickets..."
-                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, fontFamily: 'inherit', background: 'transparent', color: '#334155' }}
-                />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                {canCreate && moduleId && (
-                  <button type="button" onClick={() => setShowCreate(true)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: '#ff5e3a', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 3px rgba(255,94,58,.25)' }}>
-                    <Plus size={12} /> Reportar Nuevo Incidente
-                  </button>
-                )}
+            {/* Toolbar row — actions */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button type="button"
                   onClick={() => setShowFilters((v) => !v)}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: showFilters ? '1px solid #ff5e3a' : '1px solid #e2e8f0', background: showFilters ? '#fff5f0' : '#fff', color: showFilters ? '#ff5e3a' : '#475569', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -361,6 +345,30 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                   <option value="state">Por estado</option>
                 </select>
               </div>
+              {canCreate && moduleId && (
+                <button type="button" onClick={() => setShowCreate(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, background: '#ff5e3a', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 3px rgba(255,94,58,.25)' }}>
+                  <Plus size={12} /> Reportar Nuevo Incidente
+                </button>
+              )}
+            </div>
+
+            {/* Search bar — standalone */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', padding: '9px 14px', borderRadius: 12, border: '1px solid #eef2f6', boxShadow: '0 1px 3px rgba(15,23,42,.04)', flexShrink: 0 }}>
+              <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar tickets..."
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, fontFamily: 'inherit', background: 'transparent', color: '#334155' }}
+              />
+              {search && (
+                <button type="button" onClick={() => setSearch('')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, lineHeight: 0, flexShrink: 0 }}>
+                  ×
+                </button>
+              )}
             </div>
 
             {/* Filter panel */}
@@ -368,7 +376,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               <div className={styles.helpdeskFilterPanel}>
                 {/* Priority chips */}
                 <div>
-                  <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Prioridad</p>
+                  <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Prioridad</p>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {PRIORITIES.map((p) => {
                       const c = TICKET_PRIORITY_COLORS[p];
@@ -387,7 +395,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 {/* State chips */}
                 {(workflow?.states ?? []).length > 0 && (
                   <div>
-                    <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Estado</p>
+                    <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Estado</p>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {(workflow?.states ?? []).map((s) => {
                         const active = stateFilter === s.id;
@@ -406,7 +414,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 {/* Category */}
                 {(categories ?? []).length > 0 && (
                   <div>
-                    <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Categoría</p>
+                    <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Categoría</p>
                     <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
                       style={{ fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 10px', fontFamily: 'inherit', background: '#f8fafc', color: '#475569', fontWeight: 600 }}>
                       <option value="">Todas las categorías</option>
@@ -430,7 +438,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Header row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em' }}>Bandeja activa</span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em' }}>Bandeja activa</span>
                 <span style={{ fontSize: 10, background: '#f1f5f9', color: '#475569', fontWeight: 800, padding: '2px 8px', borderRadius: 6 }}>
                   {total} tickets
                 </span>
@@ -459,8 +467,8 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />
-                        <span style={{ fontSize: 9, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '.07em' }}>Anteriores · Alta prioridad</span>
-                        <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsOld.length}</span>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '.07em' }}>Anteriores · Alta prioridad</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsOld.length}</span>
                       </div>
                       {renderTicketList(ticketsOld, 'Sin tickets anteriores')}
                     </div>
@@ -469,8 +477,8 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', display: 'inline-block', flexShrink: 0 }} />
-                      <span style={{ fontSize: 9, fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '.07em' }}>Hoy · Nuevos</span>
-                      <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsToday.length}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '.07em' }}>Hoy · Nuevos</span>
+                      <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsToday.length}</span>
                     </div>
                     {renderTicketList(ticketsToday, 'Sin tickets nuevos hoy')}
                   </div>
@@ -510,7 +518,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
 
             {/* SLA compliance */}
             <div>
-              <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>SLA Compliance</p>
+              <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>SLA Compliance</p>
               <div style={{ position: 'relative', height: 6, borderRadius: 3, background: '#f1f5f9', overflow: 'hidden', marginBottom: 6 }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${compliancePct}%`, borderRadius: 3, background: compliancePct >= 80 ? '#22c55e' : compliancePct >= 60 ? '#f59e0b' : '#ef4444' }} />
               </div>
@@ -526,7 +534,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
 
             {/* By priority */}
             <div>
-              <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Por prioridad (activos)</p>
+              <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Por prioridad (activos)</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {byPriorityStats.map(({ p, count, color }) => (
                   <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -556,7 +564,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               if (urgent.length === 0) return null;
               return (
                 <div>
-                  <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Atención urgente</p>
+                  <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Atención urgente</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                     {urgent.map(t => {
                       const tag = t.sla_status === 'breached'
@@ -587,20 +595,20 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
             {/* Top technicians */}
             {topTechs.length > 0 && (
               <div>
-                <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Carga de técnicos</p>
+                <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Carga de técnicos</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {topTechs.map(t => {
                     const availColor = t.avail_status === 'disponible' ? '#22c55e' : t.avail_status === 'ocupado' ? '#f59e0b' : '#94a3b8';
                     return (
                     <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: 9, fontWeight: 800, color: '#fff' }}>{t.first_name?.[0]}{t.last_name?.[0]}</span>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>{t.first_name?.[0]}{t.last_name?.[0]}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.first_name} {t.last_name}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                           <div style={{ width: 6, height: 6, borderRadius: '50%', background: availColor, flexShrink: 0 }} />
-                          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600 }}>{t.cnt} ticket{t.cnt !== 1 ? 's' : ''}</span>
+                          <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{t.cnt} ticket{t.cnt !== 1 ? 's' : ''}</span>
                         </div>
                       </div>
                     </div>
@@ -612,7 +620,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
 
             {/* Quick actions */}
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 6px' }}>Acciones</p>
+              <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 6px' }}>Acciones</p>
               <button type="button" onClick={() => router.push(`${basePath}/queue`)}
                 style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                 <Ticket size={11} style={{ color: '#ff5e3a', flexShrink: 0 }} /> Cola sin asignar
@@ -725,27 +733,9 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
             const selStyle: React.CSSProperties = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 8px', fontSize: 11, color: '#475569', fontFamily: 'inherit', background: '#fff', cursor: 'pointer' };
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-                <div style={{ background: '#fff', borderRadius: 14, padding: '10px 16px', border: '1px solid #e8edf3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
-                    <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                    <input
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Buscar tickets…"
-                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, color: '#0f172a', fontFamily: 'inherit', background: 'transparent' }}
-                    />
-                  </div>
+                {/* Toolbar row — actions */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {isHelpdeskMockup && canCreate && moduleId && (
-                      <button
-                        type="button"
-                        onClick={() => setShowCreate(true)}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: 'none', background: '#ff5e3a', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, boxShadow: '0 1px 4px rgba(255,94,58,.25)' }}
-                      >
-                        <Plus size={12} />Reportar Nuevo Incidente
-                      </button>
-                    )}
                     <button
                       type="button"
                       onClick={() => setShowFilters((v) => !v)}
@@ -761,6 +751,33 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                       <option value="state">Por estado</option>
                     </select>
                   </div>
+                  {isHelpdeskMockup && canCreate && moduleId && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCreate(true)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: '#ff5e3a', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, boxShadow: '0 1px 4px rgba(255,94,58,.25)' }}
+                    >
+                      <Plus size={12} />Reportar Nuevo Incidente
+                    </button>
+                  )}
+                </div>
+
+                {/* Search bar — standalone */}
+                <div style={{ background: '#fff', borderRadius: 14, padding: '10px 16px', border: '1px solid #e8edf3', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Buscar tickets…"
+                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, color: '#0f172a', fontFamily: 'inherit', background: 'transparent' }}
+                  />
+                  {search && (
+                    <button type="button" onClick={() => setSearch('')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, lineHeight: 0, flexShrink: 0, fontSize: 16 }}>
+                      ×
+                    </button>
+                  )}
                 </div>
 
                 {showFilters && (
@@ -869,7 +886,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                     <span style={{ fontSize: 10, fontWeight: 800, color: isHelpdeskMockup ? '#e53e3e' : '#ff5e3a', textTransform: 'uppercase', letterSpacing: '.07em' }}>
                       Anteriores — Vencidos / Alta Prioridad
                     </span>
-                    <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsOld.length} ticket{ticketsOld.length !== 1 ? 's' : ''}</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsOld.length} ticket{ticketsOld.length !== 1 ? 's' : ''}</span>
                   </div>
                   <div className={styles.cardGrid}>
                     {ticketsOld.map((t) => (
@@ -884,7 +901,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                   <span style={{ fontSize: 10, fontWeight: 800, color: isHelpdeskMockup ? '#94a3b8' : '#3b82f6', textTransform: 'uppercase', letterSpacing: '.07em' }}>
                     Hoy — Actuales
                   </span>
-                  <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsToday.length} ticket{ticketsToday.length !== 1 ? 's' : ''}</span>
+                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsToday.length} ticket{ticketsToday.length !== 1 ? 's' : ''}</span>
                 </div>
                 {ticketsToday.length === 0 ? (
                   isHelpdeskMockup ? (
@@ -915,7 +932,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
           )}
 
           {/* Footer note */}
-          <div style={{ textAlign: 'center', fontSize: 9.5, fontWeight: 800, letterSpacing: '.07em', color: '#cbd5e1', borderTop: '1px solid #f1f5f9', padding: '14px 0 20px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textTransform: 'uppercase' }}>
+          <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 800, letterSpacing: '.07em', color: '#cbd5e1', borderTop: '1px solid #f1f5f9', padding: '14px 0 20px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textTransform: 'uppercase' }}>
             <ShieldCheck size={12} />
             Todos los tickets de este módulo (solo accesible para admin, superadmin y jefe técnico)
           </div>
@@ -945,7 +962,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '.05em', cursor: 'default' }}>
                 <Filter size={10} /> Filtros
               </span>
-              <span style={{ fontSize: 9.5, background: '#e0f2fe', color: '#0369a1', padding: '2px 10px', borderRadius: 99, fontWeight: 800 }}>
+              <span style={{ fontSize: 10, background: '#e0f2fe', color: '#0369a1', padding: '2px 10px', borderRadius: 99, fontWeight: 800 }}>
                 Mesa de Ayuda
               </span>
             </div>
@@ -954,7 +971,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#334155', letterSpacing: '.05em' }}>
                 <Filter size={11} /> Filtros
               </span>
-              <span style={{ fontSize: 9.5, background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 5, fontWeight: 800 }}>
+              <span style={{ fontSize: 10, background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 5, fontWeight: 800 }}>
                 Mesa de Ayuda
               </span>
             </div>
@@ -965,7 +982,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
             <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#475569', letterSpacing: '.05em' }}>
               {!isHelpdeskMockup && <Users size={12} />} Técnicos
             </span>
-            <span style={{ fontSize: 9, fontWeight: 800, background: '#20c933', color: '#fff', padding: '2px 9px', borderRadius: isHelpdeskMockup ? 4 : 99 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, background: '#20c933', color: '#fff', padding: '2px 9px', borderRadius: isHelpdeskMockup ? 4 : 99 }}>
               {filteredTechs.filter((t) => t.is_available).length}/{filteredTechs.length} disp.
             </span>
           </div>

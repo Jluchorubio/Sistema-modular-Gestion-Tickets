@@ -61,6 +61,16 @@ export class NotificationsConsumerController {
     return this.svc.onRequestTaken(ev);
   }
 
+  @EventPattern('ticket.approval_expired')
+  onApprovalExpired(@Payload() ev: Parameters<NotificationsService['onApprovalExpired']>[0]) {
+    return this.svc.onApprovalExpired(ev);
+  }
+
+  @EventPattern('ticket.escalated')
+  onTicketEscalated(@Payload() ev: Parameters<NotificationsService['onTicketEscalated']>[0]) {
+    return this.svc.onTicketEscalated(ev);
+  }
+
   @EventPattern('meeting.scheduled')
   onMeetingScheduled(@Payload() ev: Parameters<NotificationsService['onMeetingScheduled']>[0]) {
     return this.svc.onMeetingScheduled(ev);

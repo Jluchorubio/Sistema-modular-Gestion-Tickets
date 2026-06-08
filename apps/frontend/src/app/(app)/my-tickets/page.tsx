@@ -39,7 +39,7 @@ interface TicketRowItem {
 function GroupHeader({ label, accent }: { label: string; accent: string }) {
   return (
     <div style={{ padding: '9px 18px 7px', borderBottom: '1px solid #f1f5f9' }}>
-      <span style={{ fontSize: 9.5, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '.07em' }}>
+      <span style={{ fontSize: 10, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '.07em' }}>
         {label}
       </span>
     </div>
@@ -92,7 +92,7 @@ function TicketRow({
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3, flexWrap: 'wrap' }}>
             {isApproval && (
-              <span style={{ fontSize: 9.5, fontWeight: 800, color: '#16a34a', background: '#dcfce7', padding: '1px 6px', borderRadius: 5 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: '#16a34a', background: '#dcfce7', padding: '1px 6px', borderRadius: 5 }}>
                 Revisa y califica
               </span>
             )}
@@ -231,7 +231,7 @@ export default function MyTicketsPage() {
             </span>
           )}
           {pendingApproval > 0 && (
-            <span style={{ marginLeft: 3, fontSize: 9, fontWeight: 800, background: '#22c55e', color: '#fff', borderRadius: 99, padding: '1px 5px' }}>
+            <span style={{ marginLeft: 3, fontSize: 10, fontWeight: 800, background: '#22c55e', color: '#fff', borderRadius: 99, padding: '1px 5px' }}>
               {pendingApproval}
             </span>
           )}

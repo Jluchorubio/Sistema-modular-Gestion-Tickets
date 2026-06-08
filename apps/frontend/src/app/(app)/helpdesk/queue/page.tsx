@@ -17,6 +17,7 @@ import { modulesService } from '@/services/modules.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import type { ModuleTechnician, TechAvailStatus } from '@/types/module.types';
 import { fmtDate } from '@/lib/formatters';
+import styles from './queue.module.css';
 
 /* ── Design tokens ── */
 const C = {
@@ -119,7 +120,7 @@ function TechAssignDropdown({
               >
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: ac, flexShrink: 0 }} />
                 <span style={{ flex: 1, fontSize: 11, color: '#334155' }}>{t.first_name} {t.last_name}</span>
-                <span style={{ fontSize: 9, color: ac, fontWeight: 600 }}>{TECH_AVAIL_LABELS[t.avail_status as TechAvailStatus]}</span>
+                <span style={{ fontSize: 10, color: ac, fontWeight: 600 }}>{TECH_AVAIL_LABELS[t.avail_status as TechAvailStatus]}</span>
               </button>
             );
           })}
@@ -139,6 +140,7 @@ function TicketRow({
   isAssigning,
   onAssignTo,
   canAssignOthers,
+  isRecentlyAssigned,
 }: {
   ticket: TicketListItem;
   canTake: boolean;
@@ -148,6 +150,7 @@ function TicketRow({
   isAssigning: boolean;
   onAssignTo: (ticketId: string, techId: string) => void;
   canAssignOthers: boolean;
+  isRecentlyAssigned: boolean;
 }) {
   const router    = useRouter();
   const pColor    = TICKET_PRIORITY_COLORS[ticket.priority] ?? C.muted;
@@ -156,22 +159,24 @@ function TicketRow({
   const isBreached = ticket.sla_status === 'breached';
   const isCritical = h !== null && h < 2 && ticket.sla_status === 'active';
 
+  const baseBg    = isRecentlyAssigned ? '#f0fdf4' : isBreached ? '#fef2f2' : isCritical ? '#fff7ed' : isTaking ? '#f8fafc' : '#fff';
+  const hoverBg   = isRecentlyAssigned ? '#dcfce7' : isBreached ? '#fee2e2' : isCritical ? '#ffedd5' : C.bg;
+  const leftColor = isRecentlyAssigned ? '#22c55e' : isBreached ? '#ef4444' : isCritical ? '#f97316' : pColor;
+
   return (
     <div
+      className={styles.tableGrid}
       style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 130px 90px 80px auto',
-        alignItems: 'center',
-        gap: 12,
         padding: '12px 16px',
-        background: isBreached ? '#fef2f2' : isCritical ? '#fff7ed' : '#fff',
+        background: baseBg,
         borderBottom: `1px solid ${C.border}`,
-        borderLeft: `3px solid ${isBreached ? '#ef4444' : isCritical ? '#f97316' : pColor}`,
+        borderLeft: `3px solid ${leftColor}`,
         cursor: 'pointer',
-        transition: 'background .1s',
+        transition: 'background .25s',
+        opacity: isTaking ? .75 : 1,
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = isBreached ? '#fee2e2' : isCritical ? '#ffedd5' : C.bg; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = isBreached ? '#fef2f2' : isCritical ? '#fff7ed' : '#fff'; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = hoverBg; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = baseBg; }}
       onClick={() => router.push(`/helpdesk/ticket/${ticket.id}`)}
     >
       {/* Title + meta */}
@@ -185,12 +190,12 @@ function TicketRow({
       </div>
 
       {/* Category + environment */}
-      <p style={{ margin: 0, fontSize: 11, color: C.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <p className={styles.colSede} style={{ margin: 0, fontSize: 11, color: C.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {ticket.environment_name ?? '—'}
       </p>
 
       {/* Priority */}
-      <span style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+      <span className={styles.colPriority} style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
         {TICKET_PRIORITY_LABELS[ticket.priority]}
       </span>
 
@@ -261,6 +266,7 @@ function PriorityGroup({
   assigningId,
   onAssignTo,
   canAssignOthers,
+  recentlyAssignedId,
 }: {
   group: typeof PRIORITY_GROUPS[0];
   tickets: TicketListItem[];
@@ -271,6 +277,7 @@ function PriorityGroup({
   assigningId: string | null;
   onAssignTo: (ticketId: string, techId: string) => void;
   canAssignOthers: boolean;
+  recentlyAssignedId: string | null;
 }) {
   const pColor = TICKET_PRIORITY_COLORS[group.priority];
   if (tickets.length === 0) return null;
@@ -290,9 +297,15 @@ function PriorityGroup({
       </div>
 
       {/* Table header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 90px 80px auto', gap: 12, padding: '8px 16px', background: C.bg, border: `1px solid ${C.border}`, borderBottom: 'none', borderTop: 'none' }}>
-        {['Ticket', 'Sede/Ambiente', 'Prioridad', 'SLA', 'Acción'].map((h, i) => (
-          <span key={i} style={{ fontSize: 9, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
+      <div className={styles.tableGrid} style={{ padding: '8px 16px', background: C.bg, border: `1px solid ${C.border}`, borderBottom: 'none', borderTop: 'none' }}>
+        {(['Ticket', 'Sede/Ambiente', 'Prioridad', 'SLA', 'Acción'] as const).map((h, i) => (
+          <span
+            key={i}
+            className={i === 1 ? styles.colSede : i === 2 ? styles.colPriority : undefined}
+            style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}
+          >
+            {h}
+          </span>
         ))}
       </div>
 
@@ -309,6 +322,7 @@ function PriorityGroup({
             isAssigning={assigningId === t.id}
             onAssignTo={onAssignTo}
             canAssignOthers={canAssignOthers}
+            isRecentlyAssigned={recentlyAssignedId === t.id}
           />
         ))}
       </div>
@@ -329,13 +343,15 @@ export default function QueuePage() {
   const helpdeskId   = modules?.find(isHelpdeskModule)?.id;
   useModuleNav(HELPDESK_MODULE_NAME, HELPDESK_NAV, helpdeskId);
 
-  const [search,          setSearch]          = useState('');
-  const [filterCategory,  setFilterCategory]  = useState<string | null>(null);
-  const [filterSla,       setFilterSla]       = useState<string | null>(null);
-  const [takingId,        setTakingId]        = useState<string | null>(null);
-  const [assigningId,     setAssigningId]     = useState<string | null>(null);
-  const [toast,           setToast]           = useState<string | null>(null);
-  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [search,              setSearch]              = useState('');
+  const [filterCategory,      setFilterCategory]      = useState<string | null>(null);
+  const [filterSla,           setFilterSla]           = useState<string | null>(null);
+  const [takingId,            setTakingId]            = useState<string | null>(null);
+  const [assigningId,         setAssigningId]         = useState<string | null>(null);
+  const [recentlyAssignedId,  setRecentlyAssignedId]  = useState<string | null>(null);
+  const [toast,               setToast]               = useState<string | null>(null);
+  const toastRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const assignedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function showToast(msg: string) {
     if (toastRef.current) clearTimeout(toastRef.current);
@@ -453,10 +469,15 @@ export default function QueuePage() {
     mutationFn: async ({ ticketId, techId }: { ticketId: string; techId: string }) =>
       ticketsService.addAssignment(ticketId, techId, 'owner'),
     onSuccess: (_, { ticketId, techId }) => {
-      qc.invalidateQueries({ queryKey: ['queue-unassigned', helpdeskId] });
-      qc.invalidateQueries({ queryKey: ['my-assigned-tickets', helpdeskId] });
       const techName = techs.find(t => t.id === techId);
       const name = techName ? `${techName.first_name} ${techName.last_name}` : 'el técnico';
+      setRecentlyAssignedId(ticketId);
+      if (assignedRef.current) clearTimeout(assignedRef.current);
+      assignedRef.current = setTimeout(() => {
+        setRecentlyAssignedId(null);
+        qc.invalidateQueries({ queryKey: ['queue-unassigned', helpdeskId] });
+        qc.invalidateQueries({ queryKey: ['my-assigned-tickets', helpdeskId] });
+      }, 700);
       showToast(`Ticket asignado a ${name}`);
       setAssigningId(null);
     },
@@ -504,7 +525,7 @@ export default function QueuePage() {
           ].map(s => (
             <div key={s.label} style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 16px', textAlign: 'center', minWidth: 80 }}>
               <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</p>
-              <p style={{ margin: '3px 0 0', fontSize: 9, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
+              <p style={{ margin: '3px 0 0', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
             </div>
           ))}
         </div>
@@ -617,6 +638,7 @@ export default function QueuePage() {
               assigningId={assigningId}
               onAssignTo={handleAssignTo}
               canAssignOthers={canAssignOthers}
+              recentlyAssignedId={recentlyAssignedId}
             />
           ))}
         </>

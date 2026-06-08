@@ -152,7 +152,7 @@ export function useTicketData({ ticketId, helpdeskId }: UseTicketDataProps) {
 
   /* ── Derived values ── */
   const ownerAssignment = ticket?.assignments?.find(
-    (a: { role: string; is_active: boolean }) => a.role === 'owner' && a.is_active,
+    (a: { role: string; is_active: boolean; user_id: string; user_name: string }) => a.role === 'owner' && a.is_active,
   );
 
   /* ── invalidateTimeline helper ── */

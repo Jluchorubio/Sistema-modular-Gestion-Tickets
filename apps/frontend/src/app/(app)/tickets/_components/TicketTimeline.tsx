@@ -72,7 +72,7 @@ function DaySep({ date }: { date: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
       <div style={{ flex: 1, height: 1, background: C.border }} />
-      <span style={{ fontSize: 9, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em', whiteSpace: 'nowrap' }}>
         {label}
       </span>
       <div style={{ flex: 1, height: 1, background: C.border }} />
@@ -91,7 +91,7 @@ function CommentContent({ ev }: { ev: TicketTimelineEvent }) {
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 5 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: C.navy }}>{ev.user_name ?? 'Sistema'}</span>
         {isInternal && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '1px 6px', borderRadius: 4, border: '1px solid #fde68a' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '1px 6px', borderRadius: 4, border: '1px solid #fde68a' }}>
             <Lock size={8} /> Nota interna
           </span>
         )}
@@ -212,7 +212,7 @@ function AttachmentContent({ ev }: { ev: TicketTimelineEvent }) {
           style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 6, background: '#fff', border: `1px solid ${C.border}`, fontSize: 11, color: C.navy, fontWeight: 600, textDecoration: 'none', maxWidth: 260 }}>
           <span style={{ color: '#1d4ed8', display: 'flex', flexShrink: 0 }}><FileIcon mime={meta.mime_type} /></span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.content}</span>
-          {meta.file_size && <span style={{ fontSize: 9, color: C.muted, flexShrink: 0 }}>({fmtSize(meta.file_size)})</span>}
+          {meta.file_size && <span style={{ fontSize: 10, color: C.muted, flexShrink: 0 }}>({fmtSize(meta.file_size)})</span>}
         </a>
         <span style={{ fontSize: 10, color: C.muted, marginLeft: 'auto', flexShrink: 0 }} title={fmtDate(ev.created_at)}>
           {fmtRel(ev.created_at)}

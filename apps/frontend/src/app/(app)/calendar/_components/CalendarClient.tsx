@@ -396,7 +396,7 @@ function DayEventCard({ req, onClick }: { req: AdmRequest; onClick: () => void }
       </div>
       <h4 className={styles.dayEventTitle}>{req.title}</h4>
       <div className={styles.dayEventMeta}>
-        <span style={{ color: statusColor, fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>
+        <span style={{ color: statusColor, fontSize: 10, fontWeight: 700, textTransform: 'uppercase' }}>
           {REQUEST_STATUS_LABELS[req.status] ?? req.status}
         </span>
         {req.requester_name && <span className={styles.dayEventUser}>{req.requester_name}</span>}
@@ -416,13 +416,13 @@ function TicketSlaCard({ ticket, onClick }: { ticket: TicketListItem; onClick: (
         <span className={styles.slaTag} style={{ background: `${slaColor}22`, color: slaColor, border: `1px solid ${slaColor}44` }}>
           <AlertTriangle size={8} /> SLA · {slaLabel}
         </span>
-        <span style={{ color: prioColor, fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>
+        <span style={{ color: prioColor, fontSize: 10, fontWeight: 700, textTransform: 'uppercase' }}>
           {TICKET_PRIORITY_LABELS[ticket.priority]}
         </span>
       </div>
       <h4 className={styles.dayEventTitle}>{ticket.title}</h4>
       <div className={styles.dayEventMeta}>
-        <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>{ticket.module_name}</span>
+        <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>{ticket.module_name}</span>
         {ticket.assignee_name && <span className={styles.dayEventUser}>{ticket.assignee_name}</span>}
       </div>
     </div>
@@ -789,13 +789,13 @@ function DayMeetingCard({ meeting, onClick }: { meeting: CalendarMeeting; onClic
         <span className={styles.slaTag} style={{ background: `${provColor}22`, color: provColor, border: `1px solid ${provColor}44` }}>
           📹 {PROVIDER_LABELS[meeting.provider]}
         </span>
-        <span style={{ fontSize: 9, fontWeight: 600, color: statusColor, textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: statusColor, textTransform: 'uppercase' }}>
           {MEET_STATUS_LABELS[meeting.status]}
         </span>
       </div>
       <h4 className={styles.dayEventTitle}>{meeting.reason}</h4>
       <div className={styles.dayEventMeta}>
-        <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>{meeting.module_name}</span>
+        <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>{meeting.module_name}</span>
         <span className={styles.dayEventUser}>{dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
     </div>
@@ -864,13 +864,13 @@ function DayCalEventCard({ ev, onClick }: { ev: CalendarEvent; onClick: () => vo
         <span className={styles.slaTag} style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
           📅 {typeLabel}
         </span>
-        {ev.all_day && <span style={{ fontSize: 9, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>Todo el día</span>}
+        {ev.all_day && <span style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>Todo el día</span>}
         {start       && <span className={styles.dayEventUser}>{start}</span>}
       </div>
       <h4 className={styles.dayEventTitle}>{ev.title}</h4>
       {ev.module_name && (
         <div className={styles.dayEventMeta}>
-          <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>{ev.module_name}</span>
+          <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>{ev.module_name}</span>
           <span className={styles.dayEventUser}>{ev.created_by_name}</span>
         </div>
       )}
@@ -1653,7 +1653,7 @@ export function CalendarClient() {
                   {/* Range label + export */}
                   {auditData && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                      <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600, flex: 1 }}>
+                      <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, flex: 1 }}>
                         {auditData.range.label} · {auditData.total} reg.
                       </span>
                       <button
@@ -1661,7 +1661,7 @@ export function CalendarClient() {
                         disabled={auditExporting || auditData.total === 0}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 4,
-                          padding: '4px 8px', fontSize: 9, fontWeight: 700, fontFamily: 'inherit',
+                          padding: '4px 8px', fontSize: 10, fontWeight: 700, fontFamily: 'inherit',
                           border: 'none', borderRadius: 4, cursor: auditData.total === 0 ? 'not-allowed' : 'pointer',
                           background: auditData.total === 0 ? '#e2e8f0' : '#ff5e3a',
                           color:      auditData.total === 0 ? '#94a3b8' : '#fff',
@@ -1712,7 +1712,7 @@ export function CalendarClient() {
                           }}>
                             {AUDIT_ENTITY_LABEL[entry.entity_type] ?? entry.entity_type}
                           </span>
-                          <span style={{ fontSize: 9, color: '#94a3b8', marginLeft: 'auto' }}>
+                          <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 'auto' }}>
                             {date} {time}
                           </span>
                         </div>
@@ -1724,7 +1724,7 @@ export function CalendarClient() {
                             {title}
                           </p>
                         )}
-                        <p style={{ fontSize: 9, color: isSystem ? '#8fa0af' : '#64748b', margin: '2px 0 0', fontStyle: isSystem ? 'italic' : 'normal' }}>
+                        <p style={{ fontSize: 10, color: isSystem ? '#8fa0af' : '#64748b', margin: '2px 0 0', fontStyle: isSystem ? 'italic' : 'normal' }}>
                           {isSystem ? 'Sistema' : entry.actor_name}
                           {entry.actor_email && !isSystem && (
                             <span style={{ color: '#94a3b8' }}> · {entry.actor_email}</span>

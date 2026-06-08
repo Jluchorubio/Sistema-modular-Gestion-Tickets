@@ -149,7 +149,7 @@ function TicketRow({ ticket }: { ticket: TicketListItem }) {
       </p>
 
       {/* Priority */}
-      <span style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
         {TICKET_PRIORITY_LABELS[ticket.priority]}
       </span>
 
@@ -159,7 +159,7 @@ function TicketRow({ ticket }: { ticket: TicketListItem }) {
       </span>
 
       {/* Risk badge */}
-      <span style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${riskColor}18`, color: riskColor, border: `1px solid ${riskColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${riskColor}18`, color: riskColor, border: `1px solid ${riskColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
         {RISK_LABELS[risk]}
       </span>
 
@@ -284,7 +284,7 @@ export default function SlaPage() {
               <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: complianceColor, lineHeight: 1 }}>
                 {stats.compliance_rate}%
               </p>
-              <p style={{ margin: '2px 0 0', fontSize: 9, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              <p style={{ margin: '2px 0 0', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>
                 Cumplimiento SLA
               </p>
             </div>
@@ -317,7 +317,7 @@ export default function SlaPage() {
         {/* Table header */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px 90px 110px 36px', gap: 12, padding: '10px 16px', background: C.bg, borderBottom: `1px solid ${C.border}`, borderLeft: '3px solid transparent' }}>
           {['Ticket', 'Técnico', 'Prioridad', 'Tiempo', 'Estado SLA', ''].map((h, i) => (
-            <span key={i} style={{ fontSize: 9, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
+            <span key={i} style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
           ))}
         </div>
 

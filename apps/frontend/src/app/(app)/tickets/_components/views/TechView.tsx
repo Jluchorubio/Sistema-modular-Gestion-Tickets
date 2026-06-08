@@ -113,7 +113,7 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
               const label = breached > 0 ? `${breached} vencido${breached > 1 ? 's' : ''}` : critical > 0 ? `${critical} crítico${critical > 1 ? 's' : ''}` : 'SLA al día';
               return (
                 <div style={{ background: '#fff', padding: 14, borderRadius: 14, border: `1.5px solid ${color}30`, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
-                  <p style={{ margin: '0 0 4px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>SLA mis tickets</p>
+                  <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>SLA mis tickets</p>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color }}>
                     <span style={{ width: 9, height: 9, borderRadius: '50%', background: color }} />
                     {label}
@@ -127,7 +127,7 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
 
             {/* Quick links */}
             <div style={{ background: '#fff', padding: 14, borderRadius: 14, border: '1px solid #e8edf3', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ margin: '0 0 2px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Accesos rápidos</p>
+              <p style={{ margin: '0 0 2px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Accesos rápidos</p>
               <button type="button" onClick={() => router.push(`/helpdesk/tech/${user.id}`)}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 11, fontWeight: 700, color: '#0e2235', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Mi perfil operativo →
@@ -275,15 +275,15 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
           </div>
 
           <div style={infoStyle}>
-            <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Rol en módulo</p>
+            <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Rol en módulo</p>
             <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#0e2235', display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5e3a', flexShrink: 0, display: 'inline-block' }} />
               {roleLabel}
             </p>
             {user.job_title && (
               <>
-                <p style={{ margin: '0 0 4px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Especialidad</p>
-                <span style={{ display: 'inline-block', fontSize: 9, fontWeight: 700, background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: 5 }}>
+                <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Especialidad</p>
+                <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: 5 }}>
                   {user.job_title.toUpperCase()}
                 </span>
               </>
@@ -293,12 +293,12 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
           <div style={{ ...infoStyle, display: 'flex', gap: 12 }}>
             <div style={{ flex: 1, textAlign: 'center' }}>
               <p style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 800, color: '#0e2235' }}>{previous.length + today.length}</p>
-              <p style={{ margin: 0, fontSize: 9.5, color: '#94a3b8', fontWeight: 700 }}>Pendientes</p>
+              <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>Pendientes</p>
             </div>
             <div style={{ width: 1, background: '#e8edf3' }} />
             <div style={{ flex: 1, textAlign: 'center' }}>
               <p style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 800, color: '#0e2235' }}>{ratedCount}</p>
-              <p style={{ margin: 0, fontSize: 9.5, color: '#94a3b8', fontWeight: 700 }}>Calificados</p>
+              <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>Calificados</p>
             </div>
           </div>
 

@@ -68,17 +68,17 @@ function QueueRow({ ticket, basePath }: { ticket: any; basePath: string }) {
           <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {ticket.title}
           </p>
-          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#0e2235', color: '#fff', flexShrink: 0 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#0e2235', color: '#fff', flexShrink: 0 }}>
             #{ticket.id.slice(-6).toUpperCase()}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: `${color}22`, color, border: `1px solid ${color}44` }}>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: `${color}22`, color, border: `1px solid ${color}44` }}>
             {TICKET_PRIORITY_LABELS[ticket.priority as TicketPriority]}
           </span>
           {ticket.category_name && <span style={{ fontSize: 10, color: '#94a3b8' }}>{ticket.category_name}</span>}
           {slaColor && slaLabel && (
-            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: `${slaColor}22`, color: slaColor, border: `1px solid ${slaColor}44`, display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: `${slaColor}22`, color: slaColor, border: `1px solid ${slaColor}44`, display: 'flex', alignItems: 'center', gap: 3 }}>
               <Clock size={8} />{slaLabel}
             </span>
           )}
@@ -177,7 +177,7 @@ function StatusPicker({
               <span style={{ width: 9, height: 9, borderRadius: '50%', background: opt.color, flexShrink: 0 }} />
               <span style={{ fontSize: 12, fontWeight: 700, color: opt.color }}>{opt.label}</span>
               {opt.value === currentStatus && (
-                <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 800, color: opt.color, background: `${opt.color}20`, padding: '1px 7px', borderRadius: 5 }}>ACTUAL</span>
+                <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 800, color: opt.color, background: `${opt.color}20`, padding: '1px 7px', borderRadius: 5 }}>ACTUAL</span>
               )}
             </button>
           ))}
@@ -330,7 +330,7 @@ export default function TechProcessPage() {
           {/* Badge propio perfil */}
           {isOwnProfile && (
             <div style={{ background: '#0e2235', borderRadius: 8, padding: '5px 10px', textAlign: 'center' }}>
-              <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '.08em' }}>
                 Mi perfil operativo
               </span>
             </div>
@@ -354,7 +354,7 @@ export default function TechProcessPage() {
 
           {/* Estado — solo lectura o selector según sea propio perfil */}
           <div>
-            <p style={{ margin: '0 0 7px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+            <p style={{ margin: '0 0 7px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>
               Estado operativo{isOwnProfile ? ' — cambia tu disponibilidad' : ''}
             </p>
             {isOwnProfile && helpdeskId ? (
@@ -377,7 +377,7 @@ export default function TechProcessPage() {
           {/* Rol + especialidad */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
-              <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Rol en módulo</p>
+              <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Rol en módulo</p>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 800, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '4px 10px', borderRadius: 7 }}>
                 🛠️ {roleLabel.toUpperCase()}
               </span>
@@ -385,10 +385,10 @@ export default function TechProcessPage() {
 
             {fullProfile?.job_title && (
               <div>
-                <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Especialidad</p>
+                <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Especialidad</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   {fullProfile.job_title.split(',').map((spec, i) => (
-                    <span key={i} style={{ fontSize: 9, fontWeight: 700, background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: 5, textTransform: 'uppercase', whiteSpace: 'nowrap' as const }}>
+                    <span key={i} style={{ fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: 5, textTransform: 'uppercase', whiteSpace: 'nowrap' as const }}>
                       ⚙️ {spec.trim()}
                     </span>
                   ))}
@@ -400,7 +400,7 @@ export default function TechProcessPage() {
           {/* Department */}
           {fullProfile?.department && (
             <div>
-              <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Departamento</p>
+              <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Departamento</p>
               <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#334155' }}>{fullProfile.department}</p>
             </div>
           )}
@@ -408,7 +408,7 @@ export default function TechProcessPage() {
           {/* Contact */}
           {(fullProfile?.phone || fullProfile?.email) && (
             <div>
-              <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Contacto</p>
+              <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Contacto</p>
               {fullProfile.email && <p style={{ margin: '0 0 3px', fontSize: 11, color: '#475569' }}>{fullProfile.email}</p>}
               {fullProfile.phone && <p style={{ margin: 0, fontSize: 11, color: '#475569' }}>{fullProfile.phone_prefix} {fullProfile.phone}</p>}
             </div>
@@ -418,7 +418,7 @@ export default function TechProcessPage() {
 
           {/* Rating */}
           <div style={{ textAlign: 'center' }}>
-            <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Valoración del técnico</p>
+            <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Valoración del técnico</p>
             <Stars rating={avgRating} size={16} />
           </div>
         </div>
@@ -475,7 +475,7 @@ export default function TechProcessPage() {
 
           {/* Rating */}
           <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
-            <p style={{ margin: '0 0 10px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Valoración media</p>
+            <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Valoración media</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <p style={{ margin: 0, fontSize: 34, fontWeight: 800, color: '#f59e0b', lineHeight: 1 }}>{avgRating.toFixed(1)}</p>
               <Stars rating={avgRating} size={15} />
@@ -487,7 +487,7 @@ export default function TechProcessPage() {
 
           {/* Carga actual */}
           <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
-            <p style={{ margin: '0 0 10px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Carga actual</p>
+            <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Carga actual</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {[
                 { label: 'Activos',    value: tech.active_tickets ?? 0, color: '#0e2235' },
@@ -497,7 +497,7 @@ export default function TechProcessPage() {
               ].map((s) => (
                 <div key={s.label} style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 12px', border: '1px solid #f1f5f9' }}>
                   <p style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</p>
-                  <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.04em' }}>{s.label}</p>
+                  <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.04em' }}>{s.label}</p>
                 </div>
               ))}
             </div>
@@ -515,16 +515,16 @@ export default function TechProcessPage() {
             const slaLabel = breached > 0 ? `${breached} vencido${breached > 1 ? 's' : ''}` : critical > 0 ? `${critical} crítico${critical > 1 ? 's' : ''}` : 'SLA al día';
             return (
               <div style={{ background: '#fff', border: `1.5px solid ${slaColor}28`, borderRadius: 12, padding: '16px 18px' }}>
-                <p style={{ margin: '0 0 10px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Estado SLA</p>
+                <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Estado SLA</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
                   <span style={{ width: 9, height: 9, borderRadius: '50%', background: slaColor, flexShrink: 0 }} />
                   <span style={{ fontSize: 12, fontWeight: 800, color: slaColor }}>{slaLabel}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                  {breached > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#fee2e2', color: '#ef4444' }}>{breached} vencido{breached > 1 ? 's' : ''}</span>}
-                  {critical > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#fff7ed', color: '#f97316' }}>{critical} crítico{critical > 1 ? 's' : ''}</span>}
-                  {met > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#f0fdf4', color: '#22c55e' }}>{met} cumplido{met > 1 ? 's' : ''}</span>}
-                  {breached === 0 && critical === 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#f0fdf4', color: '#22c55e' }}>Todos en tiempo</span>}
+                  {breached > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#fee2e2', color: '#ef4444' }}>{breached} vencido{breached > 1 ? 's' : ''}</span>}
+                  {critical > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#fff7ed', color: '#f97316' }}>{critical} crítico{critical > 1 ? 's' : ''}</span>}
+                  {met > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#f0fdf4', color: '#22c55e' }}>{met} cumplido{met > 1 ? 's' : ''}</span>}
+                  {breached === 0 && critical === 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: '#f0fdf4', color: '#22c55e' }}>Todos en tiempo</span>}
                 </div>
               </div>
             );
@@ -534,7 +534,7 @@ export default function TechProcessPage() {
           <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
               <History size={12} style={{ color: '#0e2235' }} />
-              <p style={{ margin: 0, fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+              <p style={{ margin: 0, fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>
                 Historial de asignaciones
               </p>
             </div>
@@ -573,30 +573,30 @@ export default function TechProcessPage() {
                         {a.title}
                       </p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
                           background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30` }}>
                           {TICKET_PRIORITY_LABELS[a.priority as TicketPriority]}
                         </span>
                         {a.is_final ? (
-                          <span style={{ fontSize: 9, fontWeight: 700, color: '#22c55e', background: '#f0fdf4', padding: '1px 6px', borderRadius: 99, border: '1px solid #bbf7d0' }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#22c55e', background: '#f0fdf4', padding: '1px 6px', borderRadius: 99, border: '1px solid #bbf7d0' }}>
                             ✓ {a.state_label}
                           </span>
                         ) : a.is_active ? (
-                          <span style={{ fontSize: 9, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', padding: '1px 6px', borderRadius: 99, border: '1px solid #bfdbfe' }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', padding: '1px 6px', borderRadius: 99, border: '1px solid #bfdbfe' }}>
                             {a.state_label}
                           </span>
                         ) : (
-                          <span style={{ fontSize: 9, color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: 99, border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: 10, color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: 99, border: '1px solid #e2e8f0' }}>
                             {a.state_label}
                           </span>
                         )}
-                        <span style={{ fontSize: 9, color: '#94a3b8', marginLeft: 'auto' }}>
+                        <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 'auto' }}>
                           <Clock size={8} style={{ display: 'inline', marginRight: 2, verticalAlign: 'middle' }} />
                           {durLabel}
                         </span>
                       </div>
                       {a.category_name && (
-                        <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>{a.category_name}</p>
+                        <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>{a.category_name}</p>
                       )}
                     </div>
                   );

@@ -139,8 +139,8 @@ export default function DocsPage() {
               {/* Content */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                  {a.category && <span style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.08em' }}>{a.category}</span>}
-                  {!a.is_published && <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#92400e' }}>BORRADOR</span>}
+                  {a.category && <span style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.08em' }}>{a.category}</span>}
+                  {!a.is_published && <span style={{ fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#92400e' }}>BORRADOR</span>}
                 </div>
                 <p style={{ margin: '0 0 3px', fontSize: 13.5, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</p>
                 <p style={{ margin: 0, fontSize: 11, color: C.sub }}>
@@ -151,7 +151,7 @@ export default function DocsPage() {
               {/* Tags */}
               {a.tags.length > 0 && (
                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                  {a.tags.slice(0, 2).map(t => <span key={t} style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>#{t}</span>)}
+                  {a.tags.slice(0, 2).map(t => <span key={t} style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>#{t}</span>)}
                 </div>
               )}
               {/* Stats */}

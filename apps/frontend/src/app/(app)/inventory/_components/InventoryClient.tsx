@@ -73,7 +73,7 @@ const LABEL: React.CSSProperties = {
   color: C.muted, display: 'block', marginBottom: 5,
 };
 const SECTION_HEAD: React.CSSProperties = {
-  fontSize: 9, fontWeight: 800, letterSpacing: '.12em',
+  fontSize: 10, fontWeight: 800, letterSpacing: '.12em',
   textTransform: 'uppercase', color: C.coral, margin: '0 0 3px',
 };
 
@@ -222,7 +222,7 @@ function BulkQrPrintModal({
                 )}
                 <p style={{ fontSize: 11, fontWeight: 700, color: C.navy, margin: '0 0 3px',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</p>
-                <p style={{ fontSize: 9, color: C.muted, margin: 0, fontFamily: 'monospace', letterSpacing: '.04em' }}>
+                <p style={{ fontSize: 10, color: C.muted, margin: 0, fontFamily: 'monospace', letterSpacing: '.04em' }}>
                   {a.qr_code}
                 </p>
               </div>
@@ -647,7 +647,7 @@ function AssetSummaryItem({
         onMouseEnter={e => (e.currentTarget.style.opacity = '.8')}
         onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
         <span style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 9, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.09em', marginBottom: 4 }}>{asset.category_name}</span>
+          <span style={{ display: 'block', fontSize: 10, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.09em', marginBottom: 4 }}>{asset.category_name}</span>
           <strong style={{ display: 'block', fontSize: 13, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 700 }}>{asset.name}</strong>
           <small style={{ display: 'block', fontSize: 10, color: C.muted, marginTop: 3, fontWeight: 500 }}>{asset.location_name}</small>
         </span>
@@ -678,7 +678,7 @@ function MetricsRow({ assets }: { assets: AssetListItem[] }) {
       {cards.map(([label, value, color, icon]) => (
         <div key={label} style={{ background: '#fff', borderRadius: 9, border: `1px solid ${C.border}`, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: C.muted, margin: 0 }}>{label}</p>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: C.muted, margin: 0 }}>{label}</p>
             <span style={{ color, opacity: .7 }}>{icon}</span>
           </div>
           <p style={{ fontSize: 26, fontWeight: 800, color, margin: 0, lineHeight: 1 }}>{value}</p>
@@ -735,7 +735,7 @@ function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDet
         <div style={{ background: C.navy, padding: '20px 20px 0', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: C.coral, margin: '0 0 5px' }}>
+              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: C.coral, margin: '0 0 5px' }}>
                 {asset?.module_name ?? 'Inventario'} · {asset?.category_name ?? '…'}
               </p>
               <h2 style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '0 0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
@@ -931,7 +931,7 @@ function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDet
                       <div key={ticket.id} style={{ border: `1px solid ${C.border}`, borderRadius: 9, padding: '12px 14px', background: '#fff' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 7 }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: C.coral, fontFamily: 'monospace' }}>#{ticket.id.slice(0, 8)}</span>
-                          <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', padding: '2px 7px', borderRadius: 4, background: ticket.is_final ? '#F0FDF4' : '#FFF7ED', color: ticket.is_final ? '#16A34A' : '#C2410C' }}>{ticket.state_label}</span>
+                          <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', padding: '2px 7px', borderRadius: 4, background: ticket.is_final ? '#F0FDF4' : '#FFF7ED', color: ticket.is_final ? '#16A34A' : '#C2410C' }}>{ticket.state_label}</span>
                         </div>
                         <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: '0 0 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.title}</p>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 10, color: C.muted }}>
@@ -1113,7 +1113,7 @@ export function InventoryClient() {
       {/* ── Page header ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
         <div>
-          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: C.coral, margin: '0 0 3px' }}>
+          <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: C.coral, margin: '0 0 3px' }}>
             Módulo · Inventario
           </p>
           <h1 style={{ fontSize: 20, fontWeight: 800, color: C.navy, margin: '0 0 4px', lineHeight: 1.2 }}>Activos operativos</h1>

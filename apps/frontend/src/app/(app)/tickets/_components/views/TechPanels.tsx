@@ -38,24 +38,24 @@ export function TechQueueItem({ ticket, basePath }: { ticket: AssignedTicket; ba
           <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {ticket.title}
           </p>
-          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#0e2235', color: '#fff', flexShrink: 0 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#0e2235', color: '#fff', flexShrink: 0 }}>
             #{ticket.id.slice(-6).toUpperCase()}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: `${color}22`, color, border: `1px solid ${color}44` }}>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: `${color}22`, color, border: `1px solid ${color}44` }}>
             {TICKET_PRIORITY_LABELS[ticket.priority as TicketPriority]}
           </span>
           {ticket.category_name && (
             <span style={{ fontSize: 10, color: '#94a3b8' }}>{ticket.category_name}</span>
           )}
           {ticket.is_pause_state && ticket.last_transition_reason && (
-            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 5, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
               ⏸ {ticket.last_transition_reason}
             </span>
           )}
           {slaLabel && slaColor && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9.5, fontWeight: 700, color: slaColor }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: slaColor }}>
               <Clock size={9} />{slaLabel}
             </span>
           )}
@@ -114,7 +114,7 @@ export function TechCard({
             {tech.username && (
               <p style={{ margin: '0 0 3px', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>@{tech.username}</p>
             )}
-            <span style={{ fontSize: 9, color: availC, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 10, color: availC, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: availC, display: 'inline-block' }} />
               {AVAIL_LABELS[availSt] ?? availSt}
             </span>
@@ -124,7 +124,7 @@ export function TechCard({
           type="button"
           onClick={onVerProcesos}
           style={{
-            fontSize: 9, fontWeight: 900,
+            fontSize: 10, fontWeight: 900,
             border: '1px solid #e2e8f0',
             padding: '5px 10px', borderRadius: 8,
             background: '#fff', color: '#1e293b',
@@ -167,7 +167,7 @@ export function TechCard({
               {tech.first_name} {tech.last_name}
             </p>
             {tech.username && (
-              <span style={{ fontSize: 9.5, color: '#94a3b8', fontWeight: 700 }}>@{tech.username}</span>
+              <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>@{tech.username}</span>
             )}
           </div>
         </div>
@@ -260,7 +260,7 @@ export function AvailabilityWidget({ userId, moduleId }: { userId: string; modul
 
   return (
     <div style={{ background: '#fff', padding: 14, borderRadius: 14, border: '1px solid #e8edf3' }}>
-      <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Mi disponibilidad</p>
+      <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Mi disponibilidad</p>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color }}>
@@ -270,7 +270,7 @@ export function AvailabilityWidget({ userId, moduleId }: { userId: string; modul
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          style={{ fontSize: 9.5, fontWeight: 700, padding: '4px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: open ? '#0e2235' : '#f8fafc', color: open ? '#fff' : '#475569', cursor: 'pointer', fontFamily: 'inherit' }}
+          style={{ fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: open ? '#0e2235' : '#f8fafc', color: open ? '#fff' : '#475569', cursor: 'pointer', fontFamily: 'inherit' }}
         >
           {open ? 'Cancelar' : 'Cambiar'}
         </button>
@@ -290,7 +290,7 @@ export function AvailabilityWidget({ userId, moduleId }: { userId: string; modul
 
           {['fuera_horario', 'ausente', 'offline'].includes(status) && (
             <div>
-              <p style={{ margin: '0 0 3px', fontSize: 9.5, fontWeight: 700, color: '#94a3b8' }}>Disponible de nuevo el</p>
+              <p style={{ margin: '0 0 3px', fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>Disponible de nuevo el</p>
               <input
                 type="datetime-local"
                 value={unavailTo}

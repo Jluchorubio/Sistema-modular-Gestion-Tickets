@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { RedisIoAdapter } from './gateway/adapters/redis-io.adapter';
 import { Transport } from '@nestjs/microservices';
 import * as helmet from 'helmet';
 import * as compression from 'compression';
@@ -24,8 +25,16 @@ async function bootstrap() {
   // Trust Railway/nginx reverse proxy so req.ip reflects the real client IP
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // WebSocket adapter (socket.io)
-  app.useWebSocketAdapter(new IoAdapter(app));
+  // WebSocket adapter — Redis when REDIS_URL set (multi-pod), else single-process IoAdapter
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    const redisAdapter = new RedisIoAdapter(app);
+    await redisAdapter.connectToRedis(redisUrl);
+    app.useWebSocketAdapter(redisAdapter);
+    console.log('  Redis Socket.IO adapter conectado.');
+  } else {
+    app.useWebSocketAdapter(new IoAdapter(app));
+  }
 
   // RabbitMQ hybrid microservice — active only when RABBITMQ_URL is set
   const rabbitmqUrl = process.env.RABBITMQ_URL;

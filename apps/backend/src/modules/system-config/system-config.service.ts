@@ -179,27 +179,38 @@ export class SystemConfigService {
           globalRoleId = gr?.id ?? null;
         }
 
-        const userId = (await this.db.query<{ id: string }[]>(
-          `INSERT INTO users.profiles
-             (first_name, last_name, display_email, phone, job_title, department,
-              primary_sede, org_node_id, position_node_id, global_role_id, username)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-           RETURNING id`,
-          [
-            row.first_name, row.last_name, row.email.toLowerCase(),
-            row.phone ?? null, row.job_title ?? null,
-            row.department ?? null, row.primary_sede ?? row.headquarters_name ?? null,
-            orgNodeId, posNodeId, globalRoleId,
-            row.username ?? row.email.split('@')[0],
-          ],
-        ))[0].id;
+        const qr = this.db.createQueryRunner();
+        await qr.connect();
+        await qr.startTransaction();
+        try {
+          const userId = ((await qr.query(
+            `INSERT INTO users.profiles
+               (first_name, last_name, display_email, phone, job_title, department,
+                primary_sede, org_node_id, position_node_id, global_role_id, username)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+             RETURNING id`,
+            [
+              row.first_name, row.last_name, row.email.toLowerCase(),
+              row.phone ?? null, row.job_title ?? null,
+              row.department ?? null, row.primary_sede ?? row.headquarters_name ?? null,
+              orgNodeId, posNodeId, globalRoleId,
+              row.username ?? row.email.split('@')[0],
+            ],
+          )) as { id: string }[])[0].id;
 
-        await this.db.query(
-          `INSERT INTO auth.credentials (user_id, email) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING`,
-          [userId, row.email.toLowerCase()],
-        );
+          await qr.query(
+            `INSERT INTO auth.credentials (user_id, email) VALUES ($1, $2)`,
+            [userId, row.email.toLowerCase()],
+          );
 
-        results.push({ email: row.email, status: 'created' });
+          await qr.commitTransaction();
+          results.push({ email: row.email, status: 'created' });
+        } catch (txErr: any) {
+          await qr.rollbackTransaction();
+          throw txErr;
+        } finally {
+          await qr.release();
+        }
       } catch (err: any) {
         results.push({ email: row.email, status: 'error', detail: err?.message });
       }

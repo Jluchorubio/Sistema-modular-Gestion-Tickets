@@ -2,9 +2,9 @@
 .workspace {
   display: flex;
   min-height: 620px;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid #E8EDF3;
+  border: 1px solid #e2e8f0;
 }
 
 .wMain {
@@ -41,8 +41,8 @@
   gap: 6px;
   padding: 6px 12px 6px 8px;
   background: #fff;
-  border: 1px solid #E2E8F0;
-  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
   color: #0e2235;
@@ -108,13 +108,13 @@
 /* ── Description block ──────────────────────────────────────────── */
 .descBlock {
   padding: 14px 16px;
-  background: #F8FAFC;
-  border-radius: 10px;
+  background: #f8fafc;
+  border-radius: 8px;
   font-size: 13px;
   color: #334155;
   line-height: 1.65;
   margin-bottom: 22px;
-  border: 1px solid #EEF2F6;
+  border: 1px solid #e2e8f0;
 }
 
 /* ── Meta grid ──────────────────────────────────────────────────── */
@@ -123,21 +123,21 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px 28px;
   padding: 14px 16px;
-  background: #F8FAFC;
-  border-radius: 10px;
-  border: 1px solid #EEF2F6;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
   margin-bottom: 22px;
 }
 .metaItem { display: flex; flex-direction: column; gap: 2px; }
 .metaLabel {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: .05em;
   text-transform: uppercase;
   color: #94A3B8;
 }
 .metaValue {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   color: #0F172A;
 }
@@ -168,8 +168,8 @@
 
 /* ── History list ───────────────────────────────────────────────── */
 .historyList {
-  border-radius: 10px;
-  border: 1px solid #F1F5F9;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
   overflow: hidden;
   margin-bottom: 22px;
 }
@@ -227,7 +227,7 @@
   padding: 7px 16px;
   background: #0e2235;
   border: none;
-  border-radius: 9px;
+  border-radius: 8px;
   color: #fff;
   font-size: 12px;
   font-weight: 600;
@@ -243,7 +243,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -267,7 +267,7 @@
 }
 .slaCardContent { flex: 1; min-width: 0; }
 .slaCardLabel {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -360,7 +360,7 @@
   padding: 6px 12px;
   background: #ff5e3a;
   border: none;
-  border-radius: 9px;
+  border-radius: 8px;
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -374,7 +374,7 @@
 .callingAnimation {
   margin-top: 8px;
   background: rgba(21,46,67,0.9);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 14px;
   text-align: center;
   border: 1px solid rgba(255,94,58,0.3);
@@ -399,7 +399,7 @@
 }
 .scheduleFld { display: flex; flex-direction: column; gap: 4px; }
 .scheduleFieldLabel {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: .05em;
   text-transform: uppercase;
@@ -438,7 +438,7 @@
   padding: 10px;
   background: #ff5e3a;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -554,7 +554,7 @@
 }
 .solutionIcon { color: rgba(255,255,255,0.3); flex-shrink: 0; margin-top: 2px; }
 .solutionRowLabel {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -573,7 +573,7 @@
   width: 100%;
   padding: 13px;
   border-radius: 12px;
-  background: #20c933;
+  background: #22c55e;
   border: none;
   color: #fff;
   font-size: 13px;
@@ -587,7 +587,7 @@
   transition: background .15s;
   flex-shrink: 0;
 }
-.actionBtn:hover { background: #1ab32b; }
+.actionBtn:hover { background: #16a34a; }
 .actionBtn:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ── Assignment items (compact, used in old workspace) ──────────── */
@@ -620,7 +620,7 @@
 .validationPanel {
   background: #f0fdf4;
   border: 1.5px solid #bbf7d0;
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 18px 20px;
   margin-bottom: 22px;
 }
@@ -636,7 +636,7 @@
 }
 
 .validationSubtitle {
-  font-size: 12.5px;
+  font-size: 13px;
   color: #166534;
   margin: 0 0 14px;
   line-height: 1.5;
@@ -645,7 +645,7 @@
 .reprocessWarning {
   background: #fef9c3;
   border: 1px solid #fde047;
-  border-radius: 9px;
+  border-radius: 8px;
   padding: 8px 12px;
   font-size: 12px;
   font-weight: 600;
@@ -656,7 +656,7 @@
 .escalationWarning {
   background: #fef2f2;
   border: 1px solid #fca5a5;
-  border-radius: 9px;
+  border-radius: 8px;
   padding: 8px 12px;
   font-size: 12px;
   font-weight: 600;
@@ -668,7 +668,7 @@
   width: 100%;
   padding: 10px 14px;
   border: 1.5px solid #86efac;
-  border-radius: 9px;
+  border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
   outline: none;
@@ -694,9 +694,9 @@
   padding: 9px 14px;
   background: #22c55e;
   border: none;
-  border-radius: 9px;
+  border-radius: 8px;
   color: #fff;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
@@ -714,9 +714,9 @@
   padding: 9px 14px;
   background: rgba(239,68,68,0.08);
   border: 1.5px solid rgba(239,68,68,0.3);
-  border-radius: 9px;
+  border-radius: 8px;
   color: #dc2626;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
@@ -738,8 +738,8 @@
   width: 100%;
   padding: 9px 12px;
   border: 1.5px solid #fca5a5;
-  border-radius: 9px;
-  font-size: 12.5px;
+  border-radius: 8px;
+  font-size: 13px;
   font-family: inherit;
   color: #0f172a;
   resize: vertical;
@@ -753,9 +753,9 @@
   padding: 8px 14px;
   background: #ef4444;
   border: none;
-  border-radius: 9px;
+  border-radius: 8px;
   color: #fff;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
@@ -784,7 +784,6 @@
 
 /* ── Full-page workspace wrapper (individual ticket, no ModuleLayout) */
 .workspacePage {
-  margin: -32px;
   background: #fff;
   display: flex;
   flex-direction: column;
@@ -812,7 +811,7 @@
   padding: 9px 18px;
   background: #ff5e3a;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -840,8 +839,8 @@
   flex: 1;
   min-width: 110px;
   background: #fff;
-  border-radius: 14px;
-  border: 1.5px solid #e8edf3;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
   padding: 14px 16px 12px;
   cursor: pointer;
   transition: box-shadow .15s, transform .12s;
@@ -857,7 +856,7 @@
   right: 0;
   height: 3px;
   background: var(--accent);
-  border-radius: 0 0 14px 14px;
+  border-radius: 0 0 12px 12px;
 }
 .statCard:hover {
   box-shadow: 0 4px 18px rgba(0,0,0,0.08);
@@ -877,7 +876,7 @@
 }
 
 .statLabel {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   color: #334155;
   margin: 0 0 2px;
@@ -945,7 +944,7 @@
   align-items: center;
   gap: 10px;
   background: #fff;
-  border: 1.5px solid #e8edf3;
+  border: 1.5px solid #e2e8f0;
   border-radius: 12px;
   padding: 10px 16px;
 }
@@ -972,7 +971,7 @@
 .filterDivider {
   width: 1px;
   height: 20px;
-  background: #e8edf3;
+  background: #e2e8f0;
   flex-shrink: 0;
 }
 
@@ -997,8 +996,8 @@
 /* ── Ticket card ─────────────────────────────────────────────────── */
 .ticketCard {
   background: #fff;
-  border: 1.5px solid #e8edf3;
-  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
   padding: 16px;
   cursor: pointer;
   transition: box-shadow .15s, transform .12s;
@@ -1066,7 +1065,7 @@
 }
 
 .cardTitle {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
@@ -1081,7 +1080,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 10.5px;
+  font-size: 11px;
   color: #94a3b8;
   flex-wrap: wrap;
 }
@@ -1110,7 +1109,7 @@
   border-radius: 50%;
   background: #e2e8f0;
   color: #475569;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -1134,7 +1133,7 @@
 }
 
 .ownerMeta {
-  font-size: 9.5px;
+  font-size: 10px;
   color: #94a3b8;
 }
 
@@ -1149,7 +1148,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -1159,7 +1158,7 @@
   padding: 2px 7px;
   background: #0e2235;
   color: #fff;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   border-radius: 6px;
   white-space: nowrap;
@@ -1168,8 +1167,8 @@
 /* ── Empty / loading states ──────────────────────────────────────── */
 .emptyState {
   background: #fff;
-  border: 1.5px solid #e8edf3;
-  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
   padding: 56px 0;
   text-align: center;
   display: flex;
@@ -1184,8 +1183,8 @@
 
 .loadingState {
   background: #fff;
-  border: 1.5px solid #e8edf3;
-  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
   padding: 56px 0;
   text-align: center;
   color: #94a3b8;
@@ -1220,8 +1219,8 @@
 /* ── Right panel cards ───────────────────────────────────────────── */
 .rpCard {
   background: #fff;
-  border: 1.5px solid #e8edf3;
-  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -1253,7 +1252,7 @@
   color: #fff;
   font-size: 10px;
   font-weight: 800;
-  border-radius: 7px;
+  border-radius: 8px;
 }
 
 .rpEmpty {
@@ -1273,7 +1272,7 @@
 .pendingItem:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
 
 .pendingItemTitle {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   color: #0f172a;
   margin: 0;
@@ -1285,7 +1284,7 @@
 }
 
 .pendingItemMeta {
-  font-size: 10.5px;
+  font-size: 11px;
   color: #94a3b8;
   margin: 0;
 }
@@ -1302,8 +1301,8 @@
   background: rgba(34,197,94,0.1);
   color: #16a34a;
   border: 1px solid rgba(34,197,94,0.25);
-  border-radius: 7px;
-  font-size: 10.5px;
+  border-radius: 8px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
@@ -1321,8 +1320,8 @@
   background: rgba(59,130,246,0.08);
   color: #2563eb;
   border: 1px solid rgba(59,130,246,0.2);
-  border-radius: 7px;
-  font-size: 10.5px;
+  border-radius: 8px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
@@ -1368,7 +1367,7 @@
 }
 
 .dueSoonTime {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -1385,7 +1384,7 @@
 }
 
 @media (max-width: 720px) {
-  .workspacePage { margin: -22px; }
+  .workspacePage { }
   .statsRow { padding: 14px 18px 0; gap: 8px; }
   .panels { padding: 14px 18px 18px; }
   .statCard { min-width: 90px; padding: 12px 12px 10px; }
@@ -1396,7 +1395,7 @@
 
 .helpdeskSubBar {
   background: #f8fafc;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #e2e8f0;
   padding: 7px 24px;
   display: flex;
   flex-wrap: wrap;
@@ -1417,7 +1416,7 @@
   background: rgba(14, 34, 53, 0.08);
   color: #0e2235;
   border-radius: 6px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1441,7 +1440,7 @@
   display: flex;
   flex: 1;
   align-items: flex-start;
-  background: #fafbfc;
+  background: #f8fafc;
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
@@ -1449,7 +1448,7 @@
   flex: 1;
   min-width: 0;
   padding: 24px 28px 40px;
-  background: #fafbfc;
+  background: #f8fafc;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -1459,7 +1458,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: #fafbfc;
+  background: #f8fafc;
   padding-bottom: 4px;
   margin-bottom: -4px;
 }
@@ -1473,7 +1472,7 @@
 
 .helpdeskStatsGrid .statCard {
   min-width: 0;
-  border: 1px solid #eef2f6;
+  border: 1px solid #e2e8f0;
   border-bottom: 2px solid var(--accent);
   border-radius: 12px;
   padding: 16px 14px;
@@ -1501,15 +1500,15 @@
 
 .helpdeskStatsGrid .statDesc {
   color: var(--accent);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
 }
 
 .helpdeskAdminShell .cardGrid { gap: 16px; }
 
 .helpdeskAdminShell .ticketCard {
-  border: 1px solid #eef2f6;
-  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   padding: 18px;
   box-shadow: 0 1px 4px rgba(15, 23, 42, .035);
   transform: none;
@@ -1546,7 +1545,7 @@
 }
 
 .helpdeskAdminShell .ownerMeta {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -1554,9 +1553,9 @@
 .helpdeskAdminShell .ticketIdBadgeSm {
   background: #0e2235;
   color: #fff;
-  border-radius: 7px;
+  border-radius: 8px;
   padding: 4px 10px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
 }
 
@@ -1565,13 +1564,13 @@
   width: 320px;
   flex-shrink: 0;
   background: #f8fafc;
-  border-left: 1px solid #eef2f6;
+  border-left: 1px solid #e2e8f0;
   padding: 20px 18px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100vh;
+  max-height: calc(100vh - 52px);
 }
 
 .helpdeskTechPanel input::placeholder { color: #9aa9b8; }
@@ -1580,10 +1579,10 @@
 /* ── Inline ticket cards (helpdeskMockup) ── */
 .helpdeskCard {
   background: #fff;
-  border-radius: 20px;
+  border-radius: 12px;
   padding: 18px 18px 14px;
-  border: 1px solid #eef2f6;
-  box-shadow: 0 1px 4px rgba(15,23,42,.06);
+  border: 1px solid #e2e8f0;
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: box-shadow .15s, transform .15s;
 }
@@ -1595,7 +1594,7 @@
 /* ── Filter panel ── */
 .helpdeskFilterPanel {
   background: #fff;
-  border: 1px solid #eef2f6;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 14px 16px;
   display: flex;
@@ -1611,7 +1610,7 @@
 
 @media (max-width: 900px) {
   .helpdeskAdminShell  { flex-direction: column; }
-  .helpdeskTechPanel   { width: 100%; border-left: 0; border-top: 1px solid #eef2f6; height: auto; }
+  .helpdeskTechPanel   { width: 100%; border-left: 0; border-top: 1px solid #e2e8f0; max-height: none; }
 }
 
 @media (max-width: 720px) {
@@ -1619,15 +1618,30 @@
   .helpdeskStatsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* ── Ticket workspace body grid (main + right sidebar) ── */
+.hwBodyGrid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  flex: 1;
+  overflow: hidden;
+}
+
+@media (max-width: 1100px) {
+  .hwBodyGrid { grid-template-columns: 1fr 260px; }
+}
+
+@media (max-width: 800px) {
+  .hwBodyGrid { grid-template-columns: 1fr 220px; }
+}
+
 /* ════════════════════════════════════════════════════════════════════
    HELPDESK WORKSPACE — ticket detail page (.hw* classes)
    ════════════════════════════════════════════════════════════════════ */
 
 .hwPage {
-  margin: -32px;
   background: #f8fafc;
   padding: 24px 28px 40px;
-  min-height: 100vh;
+  min-height: calc(100vh - 52px);
   box-sizing: border-box;
 }
 
@@ -1638,7 +1652,7 @@
   justify-content: space-between;
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 10px 16px;
   margin-bottom: 14px;
   box-shadow: 0 1px 4px rgba(15,23,42,.04);
@@ -1697,7 +1711,7 @@
   align-items: center;
   gap: 7px;
   background: rgba(255,255,255,0.1);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 5px 12px;
 }
 
@@ -1734,7 +1748,7 @@
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid rgba(226,232,240,0.8);
-  box-shadow: 0 1px 4px rgba(15,23,42,.06);
+  box-shadow: var(--shadow-sm);
   position: relative;
   min-height: 160px;
   display: flex;
@@ -1767,7 +1781,7 @@
   border-radius: 16px;
   padding: 16px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(15,23,42,.035);
+  box-shadow: var(--shadow-xs);
 }
 
 .hwHistoryCard {
@@ -1775,13 +1789,13 @@
   border-radius: 16px;
   padding: 16px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(15,23,42,.035);
+  box-shadow: var(--shadow-xs);
 }
 
 .hwHistoryItem {
   background: #f8fafc;
   padding: 7px 10px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid #f1f5f9;
   display: flex;
   align-items: center;
@@ -1824,7 +1838,7 @@
 }
 
 .hwInfoLabel {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1884,7 +1898,7 @@
   justify-content: center;
   gap: 7px;
   padding: 11px 16px;
-  background: #20c933;
+  background: #22c55e;
   border: none;
   border-radius: 12px;
   color: #fff;
@@ -1896,7 +1910,7 @@
   text-transform: uppercase;
   transition: background .15s;
 }
-.hwDoneBtn:hover { background: #1ab32b; }
+.hwDoneBtn:hover { background: #16a34a; }
 
 .hwGenericTransBtn {
   flex: 1;
@@ -2005,7 +2019,7 @@
   border-radius: 16px;
   padding: 20px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(15,23,42,.035);
+  box-shadow: var(--shadow-xs);
 }
 
 /* ── Responsive ──────────────────────────────────────────────────── */
@@ -2023,9 +2037,9 @@
 }
 
 @media (max-width: 720px) {
-  .hwPage       { margin: -22px; padding: 16px 16px 32px; }
+  .hwPage       { padding: 16px 16px 32px; }
   .hwInfoGrid   { grid-template-columns: 1fr 1fr; }
-  .hwStepLabel  { font-size: 9px; }
+  .hwStepLabel  { font-size: 10px; }
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -2037,7 +2051,7 @@
   width: 70px;
   flex-shrink: 0;
   background: #fff;
-  border-right: 1px solid #eef2f6;
+  border-right: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2075,7 +2089,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
 }
 
@@ -2096,8 +2110,8 @@
   gap: 12px;
   padding: 12px 16px;
   background: #fff;
-  border: 1px solid #eef2f6;
-  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   cursor: pointer;
   transition: box-shadow .15s, border-color .15s;
   flex-shrink: 0;
@@ -2110,7 +2124,7 @@
 /* Footer bar */
 .helpdeskFooterBar {
   padding: 10px 0;
-  border-top: 1px solid #eef2f6;
+  border-top: 1px solid #e2e8f0;
   font-size: 11px;
   color: #94a3b8;
   font-weight: 500;
@@ -2126,7 +2140,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  background: #fafbfc;
+  background: #f8fafc;
 }
 
 .helpdeskV2Header {
@@ -2135,7 +2149,7 @@
   gap: 14px;
   padding: 14px 24px;
   background: #fff;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
 }
 
@@ -2144,12 +2158,12 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   flex-shrink: 0;
   background: #fff;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .helpdeskV2MetricCell {
   padding: 12px 16px;
-  border-right: 1px solid #eef2f6;
+  border-right: 1px solid #e2e8f0;
 }
 .helpdeskV2MetricCell:last-child { border-right: none; }
 
@@ -2163,7 +2177,7 @@
 .helpdeskV2Profile {
   width: 280px;
   flex-shrink: 0;
-  border-right: 1px solid #eef2f6;
+  border-right: 1px solid #e2e8f0;
   padding: 20px;
   overflow-y: auto;
   background: #fff;
@@ -2175,12 +2189,12 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #fafbfc;
+  background: #f8fafc;
 }
 
 .helpdeskV2QueueHeader {
   padding: 12px 20px;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #e2e8f0;
   font-size: 12px;
   font-weight: 700;
   color: #0e2235;
@@ -2200,7 +2214,7 @@
 .helpdeskV2Metrics {
   width: 320px;
   flex-shrink: 0;
-  border-left: 1px solid #eef2f6;
+  border-left: 1px solid #e2e8f0;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -2217,6 +2231,6 @@
 @media (max-width: 900px) {
   .helpdeskInnerSidebar { display: none; }
   .helpdeskV2Body       { flex-direction: column; }
-  .helpdeskV2Profile    { width: 100%; border-right: none; border-bottom: 1px solid #eef2f6; }
-  .helpdeskV2Metrics    { width: 100%; border-left: none; border-top: 1px solid #eef2f6; }
+  .helpdeskV2Profile    { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
+  .helpdeskV2Metrics    { width: 100%; border-left: none; border-top: 1px solid #e2e8f0; }
 }

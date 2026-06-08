@@ -25,11 +25,12 @@ export class MessagingService {
   }
 
   emit(event: string, payload: unknown): void {
-    // Always emit in-process so @OnEvent listeners (gateway, notifications) fire
-    // regardless of transport. RabbitMQ is additive for external consumers.
-    this.events.emit(event, payload);
     if (this.useRmq) {
+      // RabbitMQ only — NotificationsConsumerController handles all handlers.
+      // Emitting to EventEmitter2 here would double-fire every notification.
       this.rmqClient!.emit(event, payload);
+    } else {
+      this.events.emit(event, payload);
     }
   }
 }

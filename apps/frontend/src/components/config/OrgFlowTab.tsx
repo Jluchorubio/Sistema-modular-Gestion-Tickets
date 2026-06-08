@@ -180,7 +180,7 @@ function OrgCard({ data, selected }: NodeProps) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <span style={{
-            fontSize: 9, fontWeight: 800, letterSpacing: '0.07em',
+            fontSize: 10, fontWeight: 800, letterSpacing: '0.07em',
             textTransform: 'uppercase', color: color,
             background: `${color}12`, padding: '1px 6px', borderRadius: 99,
             border: `1px solid ${color}25`,
@@ -188,7 +188,7 @@ function OrgCard({ data, selected }: NodeProps) {
             {typeName}
           </span>
           <span style={{
-            fontSize: 9, fontWeight: 700, color: wColor(node.weight),
+            fontSize: 10, fontWeight: 700, color: wColor(node.weight),
             background: `${wColor(node.weight)}12`, padding: '1px 5px', borderRadius: 4,
           }}>
             {node.weight}
@@ -218,12 +218,12 @@ function OrgCard({ data, selected }: NodeProps) {
           paddingTop: 4,
         }}>
           {node.city && (
-            <span style={{ fontSize: 9, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2, flex: 1, overflow: 'hidden' }}>
+            <span style={{ fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2, flex: 1, overflow: 'hidden' }}>
               <MapPin size={8} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.city}</span>
             </span>
           )}
           {!node.city && node.user_count > 0 && (
-            <span style={{ fontSize: 9, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+            <span style={{ fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
               <Users size={8} />{node.user_count}
             </span>
           )}
@@ -248,7 +248,7 @@ function OrgCard({ data, selected }: NodeProps) {
                 width: 18, height: 18, borderRadius: 4, cursor: 'pointer',
                 background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                fontSize: 9, fontWeight: 700,
+                fontSize: 10, fontWeight: 700,
               }}>
               {isCollapsed
                 ? <span style={{ display: 'flex', alignItems: 'center' }}><ChevronRight size={8} /><span style={{ fontSize: 8 }}>{childCount}</span></span>
@@ -669,7 +669,7 @@ function NodeSidebar({
 function InfoField({ label, v }: { label: string; v: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 6 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 12, color: '#0f172a', fontWeight: 600, lineHeight: 1.4 }}>{v ?? '—'}</div>
     </div>
   );
@@ -766,7 +766,7 @@ function TypesTab({ types }: { types: StructureType[] }) {
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4 }}>
                 {ICON_PRESETS.map(ic => (
                   <button key={ic} type="button" onClick={() => setNewForm(p => ({ ...p, icon: ic }))}
-                    style={{ padding: '2px 6px', fontSize: 9, borderRadius: 4, border: `1px solid ${newForm.icon === ic ? '#ff5e3a' : '#e2e8f0'}`, background: newForm.icon === ic ? '#fff5f0' : '#fff', color: newForm.icon === ic ? '#ff5e3a' : '#64748b', cursor: 'pointer', fontFamily: 'monospace' }}>
+                    style={{ padding: '2px 6px', fontSize: 10, borderRadius: 4, border: `1px solid ${newForm.icon === ic ? '#ff5e3a' : '#e2e8f0'}`, background: newForm.icon === ic ? '#fff5f0' : '#fff', color: newForm.icon === ic ? '#ff5e3a' : '#64748b', cursor: 'pointer', fontFamily: 'monospace' }}>
                     {ic}
                   </button>
                 ))}
@@ -826,7 +826,7 @@ function TypesTab({ types }: { types: StructureType[] }) {
                   <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 4 }}>
                     {ICON_PRESETS.map(ic => (
                       <button key={ic} type="button" onClick={() => setEditForm(p => ({ ...p, icon: ic }))}
-                        style={{ padding: '1px 5px', fontSize: 9, borderRadius: 3, border: `1px solid ${editForm.icon === ic ? '#ff5e3a' : '#e2e8f0'}`, background: editForm.icon === ic ? '#fff5f0' : '#fff', color: editForm.icon === ic ? '#ff5e3a' : '#64748b', cursor: 'pointer', fontFamily: 'monospace' }}>
+                        style={{ padding: '1px 5px', fontSize: 10, borderRadius: 3, border: `1px solid ${editForm.icon === ic ? '#ff5e3a' : '#e2e8f0'}`, background: editForm.icon === ic ? '#fff5f0' : '#fff', color: editForm.icon === ic ? '#ff5e3a' : '#64748b', cursor: 'pointer', fontFamily: 'monospace' }}>
                         {ic}
                       </button>
                     ))}
@@ -870,7 +870,7 @@ function TypesTab({ types }: { types: StructureType[] }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>{t.name}</div>
-                <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2, display: 'flex', gap: 8 }}>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, display: 'flex', gap: 8 }}>
                   <code style={{ fontFamily: 'monospace' }}>{t.slug}</code>
                   {t.icon && <span>ícono: <code style={{ fontFamily: 'monospace' }}>{t.icon}</code></span>}
                   {t.allows_users && <span style={{ color: '#059669', fontWeight: 600 }}>acepta usuarios</span>}
@@ -1122,7 +1122,7 @@ function ListRow({ node, depth, typeMap, expanded, toggle, onSelect, onAddChild,
         {/* Type badge */}
         <td style={{ ...cell, whiteSpace: 'nowrap' }}>
           <span style={{
-            fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
             color, background: `${color}14`, border: `1px solid ${color}28`,
             borderRadius: 4, padding: '2px 6px', letterSpacing: .3,
           }}>
@@ -1290,7 +1290,7 @@ function OrgListTab({ tree, typeMap, onSelect, onAddChild, toggleMut }: OrgListT
                       <tr key={node.id} style={{ borderBottom: '1px solid #f1f5f9', background: '#fffbf0' }}>
                         <td style={{ padding: 8, width: 1 }} />
                         <td style={{ padding: '7px 8px' }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color, background: `${color}14`, border: `1px solid ${color}28`, borderRadius: 4, padding: '2px 6px' }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color, background: `${color}14`, border: `1px solid ${color}28`, borderRadius: 4, padding: '2px 6px' }}>
                             {type?.name ?? node.type_slug}
                           </span>
                         </td>

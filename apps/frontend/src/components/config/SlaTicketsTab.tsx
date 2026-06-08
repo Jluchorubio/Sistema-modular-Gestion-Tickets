@@ -247,7 +247,7 @@ function ConditionsDisplay({
         <div key={gk} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
           {gi > 0 && (
             <span style={{
-              padding: '2px 8px', borderRadius: 99, fontSize: 9, fontWeight: 800,
+              padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 800,
               background: '#fef9c3', color: '#a16207', border: '1px solid #fde68a',
               textTransform: 'uppercase', letterSpacing: '.05em',
             }}>OR</span>
@@ -258,7 +258,7 @@ function ConditionsDisplay({
               <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 {ci > 0 && (
                   <span style={{
-                    padding: '1px 6px', borderRadius: 99, fontSize: 9, fontWeight: 800,
+                    padding: '1px 6px', borderRadius: 99, fontSize: 10, fontWeight: 800,
                     background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd',
                     textTransform: 'uppercase', letterSpacing: '.05em',
                   }}>AND</span>
@@ -808,10 +808,10 @@ export function SlaTicketsTab({ moduleId }: Props) {
           border: `1px solid ${C.border}`, fontSize: 11, color: C.sub, lineHeight: 1.7 }}>
           <strong style={{ color: C.navy }}>Cómo funciona:</strong> Reglas evaluadas en orden. Primera coincidencia define el plazo SLA.<br />
           Condiciones del mismo grupo =
-          <span style={{ margin: '0 4px', padding: '1px 6px', borderRadius: 99, fontSize: 9, fontWeight: 800,
+          <span style={{ margin: '0 4px', padding: '1px 6px', borderRadius: 99, fontSize: 10, fontWeight: 800,
             background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}>AND</span>
           · grupos distintos =
-          <span style={{ margin: '0 4px', padding: '1px 6px', borderRadius: 99, fontSize: 9, fontWeight: 800,
+          <span style={{ margin: '0 4px', padding: '1px 6px', borderRadius: 99, fontSize: 10, fontWeight: 800,
             background: '#fef9c3', color: '#a16207', border: '1px solid #fde68a' }}>OR</span>
           · operator <code>IN</code> acepta múltiples valores.
         </div>

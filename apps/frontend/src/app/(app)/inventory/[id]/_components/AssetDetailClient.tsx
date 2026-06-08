@@ -517,7 +517,7 @@ function CropModal({
       >
         <p
           style={{
-            fontSize: 9,
+            fontSize: 10,
             fontWeight: 800,
             color: C.coral,
             textTransform: "uppercase",
@@ -1202,7 +1202,7 @@ function AssignModal({
       <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 520, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <div>
-            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Responsable / Custodia</p>
+            <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Responsable / Custodia</p>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Asignar custodio{rows.length > 1 ? "s" : ""}</h3>
           </div>
           <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
@@ -1214,7 +1214,7 @@ function AssignModal({
           {rows.map((row, idx) => (
             <div key={row.id} style={{ padding: "16px 18px", background: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, position: "relative" }}>
               {rows.length > 1 && (
-                <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".1em", margin: "0 0 10px" }}>
+                <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".1em", margin: "0 0 10px" }}>
                   Custodio {idx + 1}
                 </p>
               )}
@@ -1331,7 +1331,7 @@ function DecommissionModal({
       <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <div>
-            <p style={{ fontSize: 9, fontWeight: 800, color: "#ef4444", textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Cambio de estado definitivo</p>
+            <p style={{ fontSize: 10, fontWeight: 800, color: "#ef4444", textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Cambio de estado definitivo</p>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Dar de baja</h3>
           </div>
           <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
@@ -1487,7 +1487,7 @@ function RelateAssetModal({
         <div style={{ padding: "22px 28px 0", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <div>
-              <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Relaciones</p>
+              <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Relaciones</p>
               <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Asociar dispositivo</h3>
             </div>
             <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
@@ -1707,7 +1707,7 @@ function ReportProblemModal({
       <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 480, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)", maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Soporte técnico</p>
+            <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Soporte técnico</p>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: 0 }}>Reportar problema</h3>
           </div>
           <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
@@ -1883,7 +1883,7 @@ function CameraModal({
           }}
         >
           <div>
-            <p style={{ fontSize: 9, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: 0 }}>
+            <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: 0 }}>
               Fotografía capturada
             </p>
             <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0 }}>
@@ -3122,7 +3122,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                               {asgn.user_email}
                             </p>
                             {scheduleLabel && (
-                              <span style={{ display: "inline-block", fontSize: 9, fontWeight: 700, color: "#3b82f6", background: "#eff6ff", padding: "2px 7px", borderRadius: 4, letterSpacing: ".05em", textTransform: "uppercase" as const }}>
+                              <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#3b82f6", background: "#eff6ff", padding: "2px 7px", borderRadius: 4, letterSpacing: ".05em", textTransform: "uppercase" as const }}>
                                 {scheduleLabel}
                               </span>
                             )}
@@ -3153,7 +3153,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             {/* ── Activo padre ── */}
             {asset.parent_asset_id && (
               <div style={{ marginBottom: 22 }}>
-                <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 9px" }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 9px" }}>
                   ↑ Pertenece a
                 </p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -3188,7 +3188,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             {children.length > 0 ? (
               <div>
                 {asset.parent_asset_id && (
-                  <p style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 10px" }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 10px" }}>
                     Componentes
                   </p>
                 )}
@@ -3252,10 +3252,10 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                       <div style={{ flex: 1, padding: "10px 13px", minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: C.coral, fontFamily: "monospace" }}>#{ticket.id.slice(0, 8)}</span>
-                          <span style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase" as const, color: ticket.is_final ? "#16a34a" : "#c2410c", background: ticket.is_final ? "#f0fdf4" : "#fff7ed", padding: "2px 7px", borderRadius: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase" as const, color: ticket.is_final ? "#16a34a" : "#c2410c", background: ticket.is_final ? "#f0fdf4" : "#fff7ed", padding: "2px 7px", borderRadius: 4 }}>
                             {ticket.state_label}
                           </span>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: pColor, textTransform: "uppercase" as const, marginLeft: "auto" }}>● {ticket.priority}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: pColor, textTransform: "uppercase" as const, marginLeft: "auto" }}>● {ticket.priority}</span>
                         </div>
                         <p style={{ fontSize: 12, fontWeight: 700, color: C.navy, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{ticket.title}</p>
                         <p style={{ fontSize: 10, color: C.muted, margin: 0 }}>{ticket.creator_name} · {fmtDate(ticket.created_at)}</p>

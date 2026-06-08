@@ -1,0 +1,28 @@
+/* Shared grid for table header + ticket rows */
+.tableGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px 90px 80px auto;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Medium screens: drop "Sede/Ambiente" column */
+@media (max-width: 900px) {
+  .tableGrid {
+    grid-template-columns: minmax(0, 1fr) 90px 80px auto;
+  }
+  .colSede {
+    display: none;
+  }
+}
+
+/* Small screens: drop priority column too, keep title + SLA + action */
+@media (max-width: 640px) {
+  .tableGrid {
+    grid-template-columns: minmax(0, 1fr) 60px auto;
+  }
+  .colSede,
+  .colPriority {
+    display: none;
+  }
+}

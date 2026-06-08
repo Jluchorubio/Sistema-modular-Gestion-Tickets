@@ -64,7 +64,7 @@ export function SectionLabel({
 }) {
   return (
     <p style={{
-      fontSize: 9,
+      fontSize: 10,
       fontWeight: 800,
       color,
       textTransform: 'uppercase',
@@ -187,7 +187,7 @@ export function CountBadge({ count, color = '#ff5e3a' }: { count: number; color?
       borderRadius: 99,
       background: color,
       color: '#fff',
-      fontSize: 9,
+      fontSize: 10,
       fontWeight: 800,
       padding: '0 4px',
     }}>
@@ -229,7 +229,7 @@ export function Divider({ label }: { label?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0' }}>
       <div style={{ flex: 1, height: 1, background: '#f1f5f9' }} />
-      <span style={{ fontSize: 9, fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '.08em' }}>{label}</span>
+      <span style={{ fontSize: 10, fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '.08em' }}>{label}</span>
       <div style={{ flex: 1, height: 1, background: '#f1f5f9' }} />
     </div>
   );

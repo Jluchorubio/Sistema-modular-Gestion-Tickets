@@ -107,7 +107,7 @@ export default function ForumThreadPage() {
             <h1 style={{ fontSize: 22, fontWeight: 800, color: C.navy, margin: '0 0 10px', lineHeight: 1.25 }}>{post.title}</h1>
             {post.tags.length > 0 && (
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
-                {post.tags.map(t => <span key={t} style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>#{t}</span>)}
+                {post.tags.map(t => <span key={t} style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>#{t}</span>)}
               </div>
             )}
           </div>
@@ -126,7 +126,7 @@ export default function ForumThreadPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{post.author_name}</span>
               <span style={{ fontSize: 11, color: C.muted }}>{fmtRelative(post.created_at)}</span>
-              {isAuthor && <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 5, background: '#eff6ff', color: '#1d4ed8' }}>AUTOR</span>}
+              {isAuthor && <span style={{ fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 5, background: '#eff6ff', color: '#1d4ed8' }}>AUTOR</span>}
             </div>
             <p style={{ fontSize: 14, color: '#334155', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap' }}>{post.content}</p>
           </div>
@@ -151,7 +151,7 @@ export default function ForumThreadPage() {
                       <span style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{reply.author_name}</span>
                       <span style={{ fontSize: 11, color: C.muted }}>{fmtRelative(reply.created_at)}</span>
                       {reply.is_accepted && (
-                        <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 5, background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 5, background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 4 }}>
                           <Check size={9} /> Respuesta aceptada
                         </span>
                       )}

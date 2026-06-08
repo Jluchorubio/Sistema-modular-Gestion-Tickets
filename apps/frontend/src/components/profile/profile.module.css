@@ -16,7 +16,7 @@
 }
 
 /* ── Dividers ── */
-.divider { border-top: 1px solid #E8EDF3; padding-top: 18px; margin-top: 18px; }
+.divider { border-top: 1px solid #e2e8f0; padding-top: 18px; margin-top: 18px; }
 
 /* ── Badges ── */
 .badge {
@@ -24,7 +24,7 @@
   align-items: center;
   gap: 5px;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -147,7 +147,7 @@
 .avatarCtxItem:hover { background: #F7F9FC; }
 .avatarCtxItemDanger { color: #EF4444; }
 .avatarCtxItemDanger:hover { background: #FEF2F2 !important; }
-.avatarCtxSep { height: 1px; background: #E8EDF3; margin: 2px 0; }
+.avatarCtxSep { height: 1px; background: #e2e8f0; margin: 2px 0; }
 
 /* Upload busy overlay (always visible, not hover-only) */
 .avatarOverlayVisible { opacity: 1 !important; pointer-events: none; }
@@ -265,9 +265,9 @@
   align-items: center;
   min-height: 56px;
   padding: 0 22px;
-  border-bottom: 1px solid #E8EDF3;
+  border-bottom: 1px solid #e2e8f0;
 }
-.sectionTitle { font-size: 13.5px; font-weight: 800; color: #0D1B2A; }
+.sectionTitle { font-size: 13px; font-weight: 800; color: #0D1B2A; }
 .sectionMeta  { font-size: 10px; font-weight: 800; color: #64748B; letter-spacing: .04em; }
 
 /* ── Profile info grid ── */
@@ -286,7 +286,7 @@
 }
 .editAccordionOpen { max-height: 1000px; }
 .editAccordionInner {
-  border-top: 1px solid #E8EDF3;
+  border-top: 1px solid #e2e8f0;
   margin-top: 14px;
   padding-top: 18px;
 }
@@ -356,7 +356,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 11px 14px;
-  border-radius: 7px;
+  border-radius: 8px;
   background: #F7F9FC;
   border: 1px solid #D8E0EA;
   transition: background 0.12s;
@@ -388,7 +388,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid #E8EDF3;
+  border-bottom: 1px solid #e2e8f0;
 }
 .moduleItem:last-child { border-bottom: 0; }
 
@@ -398,10 +398,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 22px;
-  border-bottom: 1px solid #E8EDF3;
+  border-bottom: 1px solid #e2e8f0;
 }
 .securityItem:last-child { border-bottom: 0; }
-.securityLabel { font-size: 13.5px; font-weight: 700; color: #0D1B2A; margin-bottom: 3px; }
+.securityLabel { font-size: 13px; font-weight: 700; color: #0D1B2A; margin-bottom: 3px; }
 .securitySub   { font-size: 12px; color: #64748B; }
 
 /* ── Preferences toggle ── */
@@ -496,7 +496,7 @@
 
 /* ── Left section title ── */
 .leftSectionTitle {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
   color: #94A3B8;
   text-transform: uppercase;
@@ -518,7 +518,7 @@
 
 .cameraModal {
   background: #ffffff;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 28px 28px 24px;
   width: 360px;
   max-width: calc(100vw - 32px);
@@ -589,7 +589,7 @@
   gap: 8px;
   background: #F7F9FC;
   border: 1px solid #D8E0EA;
-  border-radius: 7px;
+  border-radius: 8px;
   padding: 8px 10px;
   transition: border-color 0.12s;
 }
@@ -626,7 +626,7 @@
 
 .assignModal {
   background: #ffffff;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 24px;
   width: 100%;
   max-width: 380px;
@@ -652,7 +652,7 @@
 .prefixSearch {
   background: #F7F9FC;
   border: none;
-  border-bottom: 1px solid #E8EDF3;
+  border-bottom: 1px solid #e2e8f0;
   padding: 9px 12px;
   font-size: 12px;
   font-family: inherit;

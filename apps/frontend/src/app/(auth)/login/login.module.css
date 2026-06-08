@@ -2,7 +2,7 @@
   --brand-dark: #0e2235;
   --brand-darker: #061320;
   --brand-coral: #ff5e3a;
-  --brand-green: #20c933;
+  --brand-green: #22c55e;
   --brand-muted: #64748b;
   min-height: 100vh;
   display: flex;
@@ -452,7 +452,7 @@
   display: block;
   margin-bottom: 6px;
   color: #94a3b8;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.09em;
   text-transform: uppercase;

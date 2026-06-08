@@ -6,7 +6,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   ArrowLeft, ChevronRight, ChevronDown, Clock, AlertTriangle, CheckCircle2, XCircle,
   Paperclip, Star, Monitor, ChevronUp, AlertCircle, Tag,
-  Link2, Search, Unlink, Phone, X, BookOpen, ExternalLink,
+  BookOpen, ExternalLink,
+  MessageSquare, Users, FileText,
 } from 'lucide-react';
 import { TicketTimeline } from './TicketTimeline';
 import { TicketSidebar } from './TicketSidebar';
@@ -17,25 +18,18 @@ import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '../_nav';
 import {
   type TicketPriority,
   TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
-  ASSET_STATUS_COLORS, ASSET_STATUS_LABELS,
-  TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
   ticketsService,
 } from '@/services/tickets.service';
-import {
-  PROVIDER_LABELS, PROVIDER_COLORS,
-  STATUS_LABELS, STATUS_COLORS,
-} from '@/services/meetings.service';
-import { inventoryService } from '@/services/inventory.service';
-import { docsService } from '@/app/(app)/helpdesk/knowledge/_lib/knowledge.service';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
-import type { TechAvailStatus } from '@/types/module.types';
 import styles from '../tickets.module.css';
 import { useTicketData, type LocalGuest } from './hooks/useTicketData';
 import { useTicketActions } from './hooks/useTicketActions';
+import { AssetCmdbTab } from './tabs/AssetCmdbTab';
+import { ColaboracionTab } from './tabs/ColaboracionTab';
+import { DetallesTab } from './tabs/DetallesTab';
 
 /* ── Badges ──────────────────────────────────────────────────────────── */
-
 function PriorityBadge({ priority }: { priority: TicketPriority }) {
   const color = TICKET_PRIORITY_COLORS[priority];
   return (
@@ -78,694 +72,12 @@ function useApprovalCountdown(expiresAt: string | null) {
 /* ── Tab types ───────────────────────────────────────────────────────── */
 type WorkspaceTab = 'timeline' | 'activo' | 'colaboracion' | 'detalles';
 
-/* ══════════════════════════════════════════════════════════════════════
-   SUB-TABS
-   ══════════════════════════════════════════════════════════════════════ */
-
-/* ── Activo/CMDB tab ─────────────────────────────────────────────────── */
-function AssetCmdbTab({
-  ticketId,
-  linkedAssets,
-}: {
-  ticketId: string;
-  linkedAssets: ReturnType<typeof useTicketData>['linkedAssets'];
-}) {
-  const router = useRouter();
-  const [linkingAssetId, setLinkingAssetId] = useState('');
-  const [linkSearchQ,    setLinkSearchQ]    = useState('');
-  const [linkResults,    setLinkResults]    = useState<{ id: string; name: string; status: string }[]>([]);
-  const [linkSearching,  setLinkSearching]  = useState(false);
-  const [linkPending,    setLinkPending]    = useState(false);
-  const [unlinkPending,  setUnlinkPending]  = useState<string | null>(null);
-
-  const asset = linkedAssets[0];
-
-  const { data: assetDetail, isLoading: detailLoading } = useQuery({
-    queryKey: ['asset-detail', asset?.id],
-    queryFn:  () => inventoryService.getOne(asset!.id),
-    enabled:  !!asset?.id,
-    staleTime: 5 * 60_000,
-  });
-
-  const { data: custodio } = useQuery({
-    queryKey: ['asset-assignment', asset?.id],
-    queryFn:  () => inventoryService.getCurrentAssignment(asset!.id),
-    enabled:  !!asset?.id,
-    staleTime: 5 * 60_000,
-  });
-
-  const { data: prevTickets = [] } = useQuery({
-    queryKey: ['asset-prev-tickets', ticketId, asset?.id],
-    queryFn:  () => ticketsService.getAssetPrevTickets(ticketId, asset!.id),
-    enabled:  !!asset?.id,
-    staleTime: 5 * 60_000,
-  });
-
-  async function handleSearch(q: string) {
-    setLinkSearchQ(q);
-    setLinkingAssetId('');
-    if (q.trim().length < 2) { setLinkResults([]); return; }
-    setLinkSearching(true);
-    try {
-      const items = await inventoryService.getAll(undefined, undefined, q.trim());
-      setLinkResults(items.slice(0, 8).map(i => ({ id: i.id, name: i.name, status: i.status })));
-    } finally { setLinkSearching(false); }
-  }
-
-  async function handleLink() {
-    if (!linkingAssetId) return;
-    setLinkPending(true);
-    try { await ticketsService.linkAsset(ticketId, linkingAssetId); setLinkSearchQ(''); setLinkingAssetId(''); setLinkResults([]); }
-    finally { setLinkPending(false); }
-  }
-
-  async function handleUnlink(assetId: string) {
-    setUnlinkPending(assetId);
-    try { await ticketsService.unlinkAsset(ticketId, assetId); }
-    finally { setUnlinkPending(null); }
-  }
-
-  if (!asset) {
-    return (
-      <div style={{ padding: '24px' }}>
-        <div style={{ padding: '20px', borderRadius: 10, border: '2px dashed #e2e8f0', textAlign: 'center', marginBottom: 20 }}>
-          <Monitor size={28} style={{ color: '#cbd5e1', marginBottom: 8 }} />
-          <p style={{ fontSize: 12, fontWeight: 600, color: '#64748b', margin: '0 0 4px' }}>Sin activo vinculado</p>
-          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Asocia un activo del inventario para ver su contexto CMDB.</p>
-        </div>
-        <PermissionGate perm="helpdesk:tickets:edit">
-          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#0e2235', margin: '0 0 10px' }}>Vincular activo</p>
-            <div style={{ position: 'relative', marginBottom: 8 }}>
-              <Search size={11} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-              <input type="text" placeholder="Buscar por nombre…" value={linkSearchQ}
-                onChange={e => handleSearch(e.target.value)}
-                style={{ width: '100%', padding: '7px 9px 7px 26px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
-              {linkSearching && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#94a3b8' }}>…</span>}
-            </div>
-            {linkResults.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
-                {linkResults.map(r => (
-                  <button key={r.id} type="button" onClick={() => setLinkingAssetId(r.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 9px', borderRadius: 6, border: `1px solid ${linkingAssetId === r.id ? '#ff5e3a' : '#e2e8f0'}`, background: linkingAssetId === r.id ? '#fff5f3' : '#f8fafc', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                    <Monitor size={11} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: 11, color: '#334155' }}>{r.name}</span>
-                    <span style={{ fontSize: 9, color: '#94a3b8' }}>{r.status}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <button type="button" disabled={!linkingAssetId || linkPending} onClick={handleLink}
-              style={{ width: '100%', padding: '7px', borderRadius: 7, border: 'none', background: linkingAssetId && !linkPending ? '#ff5e3a' : '#e2e8f0', color: linkingAssetId ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: linkingAssetId ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-              {linkPending ? 'Vinculando…' : 'Vincular activo'}
-            </button>
-          </div>
-        </PermissionGate>
-      </div>
-    );
-  }
-
-  const sc = ASSET_STATUS_COLORS[asset.status as keyof typeof ASSET_STATUS_COLORS] ?? '#94a3b8';
-
-  return (
-    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Monitor size={18} style={{ color: '#64748b' }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 800, color: '#0e2235' }}>{asset.name}</h3>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${sc}18`, color: sc, border: `1px solid ${sc}30` }}>
-              {ASSET_STATUS_LABELS[asset.status as keyof typeof ASSET_STATUS_LABELS] ?? asset.status}
-            </span>
-            {assetDetail?.category_name && <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>{assetDetail.category_name}</span>}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <button type="button" onClick={() => router.push('/inventory/' + asset.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#475569', cursor: 'pointer', fontFamily: 'inherit' }}>
-            <ExternalLink size={10} /> Ver ficha
-          </button>
-          <PermissionGate perm="helpdesk:tickets:edit">
-            <button type="button" disabled={unlinkPending === asset.id} onClick={() => handleUnlink(asset.id)}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, padding: '5px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', cursor: 'pointer', fontFamily: 'inherit' }}>
-              <Unlink size={10} /> {unlinkPending === asset.id ? '…' : 'Desvincular'}
-            </button>
-          </PermissionGate>
-        </div>
-      </div>
-
-      {detailLoading ? (
-        <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Cargando datos CMDB…</p>
-      ) : assetDetail && (
-        <>
-          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
-            {([
-              ['N° de serie',     assetDetail.serial_number],
-              ['Ubicación',       assetDetail.location_name],
-              ['Ambiente',        assetDetail.environment_name],
-              ['Custodio actual', custodio?.user_name ?? asset.assigned_to_name ?? null],
-              ['Tickets totales', String(assetDetail.tickets_count)],
-            ] as [string, string | null][]).map(([lbl, val]) => val ? (
-              <div key={lbl}>
-                <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', margin: '0 0 1px' }}>{lbl}</p>
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: 0 }}>{val}</p>
-              </div>
-            ) : null)}
-          </div>
-
-          {assetDetail.field_schema?.length > 0 && assetDetail.specifications && (
-            <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
-              <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Especificaciones</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
-                {assetDetail.field_schema.map(f => {
-                  const val = assetDetail.specifications![f.key];
-                  if (val === undefined || val === null || val === '') return null;
-                  return (
-                    <div key={f.key}>
-                      <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', margin: '0 0 1px' }}>{f.label}</p>
-                      <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: 0 }}>{String(val)}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
-        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>
-          Incidentes en este activo{prevTickets.length > 0 ? ` (${prevTickets.length})` : ''}
-        </p>
-        {prevTickets.length === 0 ? (
-          <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Sin incidentes previos en este activo.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {prevTickets.slice(0, 8).map((pt: any) => (
-              <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 9px', borderRadius: 6, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: pt.is_final ? '#22c55e' : '#f59e0b', flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: 11, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pt.title}</span>
-                <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0 }}>{pt.state_label}</span>
-              </div>
-            ))}
-            {prevTickets.length > 8 && <p style={{ fontSize: 10, color: '#94a3b8', margin: '2px 0 0', textAlign: 'center' }}>+{prevTickets.length - 8} más</p>}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ── Colaboración tab ────────────────────────────────────────────────── */
-function ColaboracionTab({
-  ticketId, ticket, allGuests, meetings, technicians,
-  onInstantCall, onRemoveGuest,
-  onCancelMeeting, onScheduleMeeting,
-  mutPending,
-}: {
-  ticketId:          string;
-  ticket:            { is_final: boolean };
-  allGuests:         LocalGuest[];
-  meetings:          ReturnType<typeof useTicketData>['meetings'];
-  technicians:       ReturnType<typeof useTicketData>['technicians'];
-  onInstantCall:     (userId: string, setUserId: (v: string) => void, setCalling: (v: boolean) => void) => void;
-  onRemoveGuest:     (id: string) => void;
-  onCancelMeeting:   (meetingId: string) => void;
-  onScheduleMeeting: (data: { provider: string; reason: string; scheduledAt: string; url?: string }) => void;
-  mutPending:        { schedule: boolean; cancelMeet: boolean };
-}) {
-  const [selectedUserId,  setSelectedUserId]  = useState('');
-  const [isCalling,       setIsCalling]       = useState(false);
-  const [showTechPicker,  setShowTechPicker]  = useState(false);
-  const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'teams' | 'zoom' | 'internal'>('google_meet');
-  const [meetingReason,   setMeetingReason]   = useState('Asesoramiento técnico');
-  const [meetingUrl,      setMeetingUrl]      = useState('');
-  const [scheduledDate,   setScheduledDate]   = useState('');
-  const [scheduledTime,   setScheduledTime]   = useState('10:00');
-
-  return (
-    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-      {/* Participantes */}
-      <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
-        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 12px' }}>
-          Participantes ({allGuests.length})
-        </p>
-        {allGuests.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-            {allGuests.map(g => (
-              <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{g.name.charAt(0).toUpperCase()}</span>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</p>
-                  <p style={{ fontSize: 9, color: '#94a3b8', margin: 0 }}>{g.role}</p>
-                </div>
-                {g.isLocal && (
-                  <button type="button" onClick={() => onRemoveGuest(g.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', padding: 2, lineHeight: 0 }}>
-                    <X size={11} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        {!ticket.is_final && (
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 700, color: '#64748b', margin: '0 0 6px' }}>Invitar técnico</p>
-            <div style={{ position: 'relative', marginBottom: 6 }}>
-              <button type="button" onClick={() => setShowTechPicker(v => !v)}
-                style={{ width: '100%', padding: '6px 9px', borderRadius: 7, border: `1px solid ${showTechPicker ? '#0e2235' : '#e2e8f0'}`, background: '#fff', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxSizing: 'border-box', textAlign: 'left' }}>
-                {selectedUserId ? (() => {
-                  const t = technicians.find(u => u.id === selectedUserId);
-                  const ac = TECH_AVAIL_COLORS[t?.avail_status ?? 'offline'];
-                  return t ? (
-                    <><span style={{ width: 7, height: 7, borderRadius: '50%', background: ac, flexShrink: 0 }} /><span style={{ flex: 1, color: '#334155' }}>{t.first_name} {t.last_name}</span></>
-                  ) : <span style={{ color: '#94a3b8', flex: 1 }}>Seleccionar…</span>;
-                })() : <span style={{ color: '#94a3b8', flex: 1 }}>Seleccionar técnico…</span>}
-                <ChevronDown size={11} style={{ color: '#94a3b8', flexShrink: 0, transform: showTechPicker ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
-              </button>
-              {showTechPicker && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 8px 24px rgba(14,34,53,.12)', marginTop: 2, maxHeight: 200, overflowY: 'auto' }}>
-                  {[...technicians].sort((a, b) => { const o: Record<string,number> = {disponible:0,ocupado:1,en_reunion:2,ausente:3,fuera_horario:4,offline:5}; return (o[a.avail_status]??9)-(o[b.avail_status]??9); }).map(u => {
-                    const ac = TECH_AVAIL_COLORS[u.avail_status ?? 'offline'];
-                    const sel = selectedUserId === u.id;
-                    return (
-                      <button key={u.id} type="button" onClick={() => { setSelectedUserId(u.id); setShowTechPicker(false); }}
-                        style={{ width: '100%', padding: '7px 10px', border: 'none', background: sel ? '#f0f4ff' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'inherit', textAlign: 'left' }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: ac, flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 11, color: '#334155', fontWeight: sel ? 700 : 400 }}>{u.first_name} {u.last_name}</span>
-                        <span style={{ fontSize: 9, color: ac, fontWeight: 600 }}>{TECH_AVAIL_LABELS[u.avail_status as TechAvailStatus]}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <button type="button" disabled={!selectedUserId || isCalling}
-              onClick={() => { onInstantCall(selectedUserId, setSelectedUserId, setIsCalling); setShowTechPicker(false); }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', padding: '7px', borderRadius: 7, border: 'none', background: selectedUserId && !isCalling ? '#0e2235' : '#e2e8f0', color: selectedUserId ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: selectedUserId ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-              <Phone size={11} /> {isCalling ? 'Invitando…' : 'Invitar al ticket'}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Reuniones */}
-      <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
-        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 12px' }}>
-          Reuniones{meetings.length > 0 ? ` (${meetings.length})` : ''}
-        </p>
-        {meetings.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-            {meetings.map(m => {
-              const pc  = PROVIDER_COLORS[m.provider] ?? '#64748b';
-              const sc2 = STATUS_COLORS[m.status]    ?? '#64748b';
-              const dt  = new Date(m.scheduled_at);
-              return (
-                <div key={m.id} style={{ padding: '9px 11px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', opacity: m.status === 'cancelled' ? .5 : 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: pc, textTransform: 'uppercase' }}>{PROVIDER_LABELS[m.provider]}</span>
-                    <span style={{ fontSize: 9, fontWeight: 600, color: sc2 }}>{STATUS_LABELS[m.status]}</span>
-                  </div>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: '#334155', margin: '0 0 1px' }}>{m.reason}</p>
-                  <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>
-                    {dt.toLocaleDateString('es', { day: 'numeric', month: 'short' })} · {dt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                  {m.meeting_url && m.status !== 'cancelled' && (
-                    <a href={m.meeting_url} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 10, color: pc, textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>Unirse</a>
-                  )}
-                  {m.status === 'scheduled' && (
-                    <button type="button" disabled={mutPending.cancelMeet} onClick={() => onCancelMeeting(m.id)}
-                      style={{ display: 'block', marginTop: 3, fontSize: 9, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                      Cancelar
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {!ticket.is_final && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: '#64748b', margin: 0 }}>Programar reunión</p>
-            <select value={meetingProvider} onChange={e => setMeetingProvider(e.target.value as typeof meetingProvider)}
-              style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', boxSizing: 'border-box' }}>
-              <option value="google_meet">Google Meet</option>
-              <option value="teams">Microsoft Teams</option>
-              <option value="zoom">Zoom</option>
-              <option value="internal">Enlace interno</option>
-            </select>
-            <input value={meetingReason} onChange={e => setMeetingReason(e.target.value)} placeholder="Motivo *"
-              style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
-                style={{ padding: '6px 7px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', outline: 'none' }} />
-              <select value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
-                style={{ padding: '6px 7px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#fff' }}>
-                {['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => <option key={t}>{t}</option>)}
-              </select>
-            </div>
-            <input value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} placeholder="URL de reunión (opcional)"
-              style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} />
-            <button type="button"
-              disabled={!scheduledDate || !meetingReason.trim() || mutPending.schedule}
-              onClick={() => onScheduleMeeting({ provider: meetingProvider, reason: meetingReason.trim(), scheduledAt: new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString(), url: meetingUrl.trim() || undefined })}
-              style={{ width: '100%', padding: '7px', borderRadius: 7, border: 'none', background: scheduledDate && meetingReason.trim() ? '#ff5e3a' : '#e2e8f0', color: scheduledDate && meetingReason.trim() ? '#fff' : '#94a3b8', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-              {mutPending.schedule ? 'Programando…' : 'Programar reunión'}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ── KB suggestions ─────────────────────────────────────────────────── */
-function KbSuggestions({ moduleId, query }: { moduleId: string; query: string }) {
-  const router = useRouter();
-  const { data: articles = [], isLoading } = useQuery({
-    queryKey: ['kb-suggest', moduleId, query],
-    queryFn:  () => docsService.getArticles(moduleId, query),
-    enabled:  !!moduleId && !!query,
-    staleTime: 5 * 60_000,
-    select: (data: any[]) => data.filter(a => a.is_published).slice(0, 4),
-  });
-  if (isLoading) return <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Buscando…</p>;
-  if (articles.length === 0) return <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Sin artículos relacionados.</p>;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      {articles.map((a: any) => (
-        <button key={a.id} type="button" onClick={() => router.push(`/helpdesk/knowledge/docs/${a.id}`)}
-          style={{ display: 'flex', alignItems: 'flex-start', gap: 7, padding: '7px 9px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#eff6ff'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}>
-          <BookOpen size={11} style={{ color: '#6366f1', marginTop: 1, flexShrink: 0 }} />
-          <span style={{ fontSize: 11, color: '#334155', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
-          <ExternalLink size={9} style={{ color: '#94a3b8', flexShrink: 0 }} />
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/* ── Detalles tab ────────────────────────────────────────────────────── */
-function DetallesTab({
-  ticketId, ticket, relations, linkedAssets,
-  onAddRelation, onRemoveRelation, onSearchTickets,
-  mutPending,
-}: {
-  ticketId:         string;
-  ticket: {
-    module_id: string; module_name: string; category_name: string | null;
-    environment_name?: string | null;
-    damage_type_label?: string | null; priority: string; urgency: string; impact: string;
-    created_at: string; reprocess_count: number; is_final: boolean;
-    creator_name: string;
-    assignments: { id: string; user_name: string; role: string; is_active: boolean; assigned_at: string }[];
-    id: string;
-    escalated?:      boolean;
-    escalation_note?: string | null;
-    history?:        { id: string; transitioned_at: string; from_label: string; to_label: string; actor_name: string; transition_reason: string | null }[];
-  };
-  linkedAssets:     { id: string; name: string }[];
-  relations:        ReturnType<typeof useTicketData>['relations'];
-  onAddRelation:    (targetId: string, relationType: string, notes?: string) => Promise<void>;
-  onRemoveRelation: (relId: string) => void;
-  onSearchTickets:  (q: string, exclude: string) => Promise<{ id: string; title: string; priority: string; state_label: string; is_final: boolean }[]>;
-  mutPending:       { addRel: boolean; removeRel: boolean };
-}) {
-  const router = useRouter();
-  const [showRelForm,  setShowRelForm]  = useState(false);
-  const [relSearch,    setRelSearch]    = useState('');
-  const [relType,      setRelType]      = useState('related');
-  const [relNotes,     setRelNotes]     = useState('');
-  const [relTarget,    setRelTarget]    = useState<{ id: string; title: string } | null>(null);
-  const [relResults,   setRelResults]   = useState<{ id: string; title: string; priority: string; state_label: string; is_final: boolean }[]>([]);
-  const [relSearching, setRelSearching] = useState(false);
-
-  async function handleRelSearch(q: string) {
-    setRelSearch(q);
-    setRelTarget(null);
-    if (q.trim().length < 2) { setRelResults([]); return; }
-    setRelSearching(true);
-    try { setRelResults(await onSearchTickets(q.trim(), ticketId)); }
-    finally { setRelSearching(false); }
-  }
-
-  async function handleAddRelation() {
-    if (!relTarget) return;
-    await onAddRelation(relTarget.id, relType, relNotes.trim() || undefined);
-    setShowRelForm(false); setRelSearch(''); setRelTarget(null); setRelResults([]); setRelNotes('');
-  }
-
-  const techHistory = ticket.assignments.filter(a => a.role === 'owner');
-
-  return (
-    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-      {/* Solicitante */}
-      <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
-        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Solicitante</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{ticket.creator_name?.charAt(0).toUpperCase()}</span>
-          </div>
-          <div>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: 0 }}>{ticket.creator_name}</p>
-            <p style={{ fontSize: 10, color: '#94a3b8', margin: '1px 0 0' }}>Creó el ticket</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Historial de asignaciones */}
-      {techHistory.length > 0 && (
-        <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
-          <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Historial de asignaciones</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {techHistory.map(a => (
-              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                <div style={{ width: 26, height: 26, borderRadius: '50%', background: a.is_active ? '#ff5e3a' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: a.is_active ? '#fff' : '#94a3b8' }}>{a.user_name?.charAt(0).toUpperCase()}</span>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: a.is_active ? '#0e2235' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.user_name}</p>
-                  <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>{fmtRelative(a.assigned_at)}</p>
-                </div>
-                {a.is_active && (
-                  <span style={{ fontSize: 8, fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: '#fff5f3', color: '#ff5e3a', border: '1px solid #ffd0c4', flexShrink: 0 }}>ACTUAL</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Detalles del ticket */}
-      <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
-        <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Detalles del ticket</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          {([
-            ['Módulo',       ticket.module_name],
-            ['Categoría',    ticket.category_name],
-            ['Ambiente',     ticket.environment_name],
-            ['Tipo de daño', ticket.damage_type_label],
-            ['Prioridad',    ticket.priority],
-            ['Urgencia',     ticket.urgency],
-            ['Impacto',      ticket.impact],
-            ['Creado',       fmtDate(ticket.created_at)],
-            ['ID',           '#' + ticket.id.slice(0, 8).toUpperCase()],
-            ...(ticket.reprocess_count > 0 ? [['Reaperturas', String(ticket.reprocess_count)]] : []),
-          ] as [string, string | null | undefined][]).map(([lbl, val]) => val ? (
-            <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, flexShrink: 0 }}>{lbl}</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{val}</span>
-            </div>
-          ) : null)}
-        </div>
-      </div>
-
-      {/* Relacionados */}
-      {(relations.length > 0 || !ticket.is_final) && (
-        <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
-          <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>
-            Tickets relacionados{relations.length > 0 ? ` (${relations.length})` : ''}
-          </p>
-          {relations.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
-              {relations.map(r => (
-                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: '#0e2235', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.related_title ?? r.id.slice(0, 8)}</p>
-                    <p style={{ fontSize: 9, color: '#94a3b8', margin: '1px 0 0' }}>{r.relation_type}</p>
-                  </div>
-                  <button type="button" onClick={() => router.push('/helpdesk/ticket/' + r.related_id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, lineHeight: 0 }}>
-                    <ChevronRight size={11} />
-                  </button>
-                  {!ticket.is_final && (
-                    <button type="button" disabled={mutPending.removeRel} onClick={() => onRemoveRelation(r.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', padding: 0, lineHeight: 0 }}>
-                      <Unlink size={10} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {!ticket.is_final && !showRelForm && (
-            <button type="button" onClick={() => setShowRelForm(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#64748b', background: 'none', border: '1px dashed #e2e8f0', borderRadius: 7, padding: '7px 12px', cursor: 'pointer', fontFamily: 'inherit', width: '100%', justifyContent: 'center' }}>
-              <Link2 size={11} /> Vincular ticket
-            </button>
-          )}
-          {!ticket.is_final && showRelForm && (
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '11px 12px' }}>
-              <div style={{ position: 'relative', marginBottom: 6 }}>
-                <Search size={10} style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                <input type="text" placeholder="Buscar ticket…" value={relSearch}
-                  onChange={e => handleRelSearch(e.target.value)}
-                  style={{ width: '100%', padding: '6px 7px 6px 22px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
-                {relSearching && <span style={{ fontSize: 9, color: '#94a3b8', marginLeft: 6 }}>…</span>}
-              </div>
-              {relResults.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 6 }}>
-                  {relResults.map(r => (
-                    <button key={r.id} type="button" onClick={() => setRelTarget(r)}
-                      style={{ fontSize: 11, padding: '5px 8px', borderRadius: 5, border: `1px solid ${relTarget?.id === r.id ? '#6366f1' : '#e2e8f0'}`, background: relTarget?.id === r.id ? '#eef2ff' : '#fff', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      #{r.id.slice(0, 6)} — {r.title}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <select value={relType} onChange={e => setRelType(e.target.value)}
-                style={{ width: '100%', padding: '5px 7px', borderRadius: 5, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', marginBottom: 5, boxSizing: 'border-box' }}>
-                <option value="related">Relacionado</option>
-                <option value="duplicado">Duplicado</option>
-                <option value="bloquea">Bloquea</option>
-                <option value="bloqueado_por">Bloqueado por</option>
-              </select>
-              <div style={{ display: 'flex', gap: 5 }}>
-                <button type="button" onClick={() => { setShowRelForm(false); setRelSearch(''); setRelTarget(null); setRelResults([]); }}
-                  style={{ flex: 1, padding: '6px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
-                  Cancelar
-                </button>
-                <button type="button" disabled={!relTarget || mutPending.addRel} onClick={handleAddRelation}
-                  style={{ flex: 1, padding: '6px', borderRadius: 5, border: 'none', background: relTarget ? '#6366f1' : '#e2e8f0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: relTarget ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-                  {mutPending.addRel ? '…' : 'Vincular'}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Fase 4B — Escalation history */}
-      {ticket.escalated && (() => {
-        const escalEvents = (ticket.history ?? []).filter(h =>
-          h.to_label.toLowerCase().includes('escal') ||
-          (h.transition_reason ?? '').toLowerCase().includes('escal') ||
-          (h.transition_reason ?? '').toLowerCase().includes('auto-escal')
-        );
-        return (
-          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #fed7aa', padding: '14px 16px' }}>
-            <p style={{ fontSize: 9, fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Historial de escalaciones</p>
-            {escalEvents.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {escalEvents.map(ev => (
-                  <div key={ev.id} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#f97316', marginTop: 4, flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: '0 0 1px', fontSize: 11, fontWeight: 700, color: '#9a3412' }}>
-                        {ev.from_label} → {ev.to_label}
-                      </p>
-                      {ev.transition_reason && (
-                        <p style={{ margin: '0 0 1px', fontSize: 10, color: '#c2410c' }}>"{ev.transition_reason}"</p>
-                      )}
-                      <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>
-                        {ev.actor_name} · {fmtDate(ev.transitioned_at)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <AlertTriangle size={12} style={{ color: '#f97316', flexShrink: 0, marginTop: 1 }} />
-                <div>
-                  <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 700, color: '#9a3412' }}>Ticket escalado</p>
-                  {ticket.escalation_note && <p style={{ margin: 0, fontSize: 10, color: '#c2410c' }}>"{ticket.escalation_note}"</p>}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* Fase 4C — Recurrence context */}
-      {(() => {
-        const firstAsset = linkedAssets[0] ?? null;
-        const { data: prevTickets } = useQuery({
-          queryKey: ['prev-tickets', ticketId, firstAsset?.id],
-          queryFn:  () => ticketsService.getAssetPrevTickets(ticketId, firstAsset!.id),
-          enabled:  !!firstAsset,
-          staleTime: 60_000,
-        });
-        const reprocess = ticket.reprocess_count ?? 0;
-        const prevCount = prevTickets?.length ?? 0;
-        if (reprocess === 0 && prevCount === 0) return null;
-        return (
-          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e0e7ff', padding: '14px 16px' }}>
-            <p style={{ fontSize: 9, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Contexto de recurrencia</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {reprocess > 0 && (
-                <div style={{ display: 'flex', gap: 8, padding: '7px 9px', background: '#eef2ff', borderRadius: 7 }}>
-                  <span style={{ fontSize: 16 }}>🔁</span>
-                  <div>
-                    <p style={{ margin: '0 0 1px', fontSize: 11, fontWeight: 700, color: '#4338ca' }}>
-                      Reabierto {reprocess} {reprocess === 1 ? 'vez' : 'veces'}
-                    </p>
-                    <p style={{ margin: 0, fontSize: 9, color: '#6366f1' }}>Este ticket fue reabierto después de marcar como resuelto</p>
-                  </div>
-                </div>
-              )}
-              {firstAsset && prevCount > 0 && (
-                <div style={{ display: 'flex', gap: 8, padding: '7px 9px', background: '#fdf4ff', borderRadius: 7 }}>
-                  <span style={{ fontSize: 16 }}>📌</span>
-                  <div>
-                    <p style={{ margin: '0 0 1px', fontSize: 11, fontWeight: 700, color: '#7e22ce' }}>
-                      {prevCount} ticket{prevCount !== 1 ? 's' : ''} anterior{prevCount !== 1 ? 'es' : ''} en {firstAsset.name}
-                    </p>
-                    <p style={{ margin: 0, fontSize: 9, color: '#9333ea' }}>
-                      {prevCount >= 3 ? '⚠ Activo con incidencias repetidas' : 'Historial de incidencias en este activo'}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Base de conocimiento */}
-      {(ticket.category_name || ticket.damage_type_label) && (
-        <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
-          <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 8px' }}>Base de conocimiento</p>
-          <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 10px' }}>
-            Artículos relacionados con <strong style={{ color: '#475569' }}>{ticket.damage_type_label ?? ticket.category_name}</strong>
-          </p>
-          <KbSuggestions moduleId={ticket.module_id} query={ticket.damage_type_label ?? ticket.category_name ?? ''} />
-        </div>
-      )}
-
-    </div>
-  );
-}
+const TAB_ICONS: Record<WorkspaceTab, React.ReactNode> = {
+  timeline:     <MessageSquare size={12} />,
+  activo:       <Monitor       size={12} />,
+  colaboracion: <Users         size={12} />,
+  detalles:     <FileText      size={12} />,
+};
 
 /* ══════════════════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -821,6 +133,15 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const myModuleRole = currentUser?.module_roles?.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
   const canEditKb = (currentUser?.is_superadmin ?? false) || ['admin_modulo', 'jefe_tecnico'].includes(myModuleRole ?? '');
 
+  const isAssignedOwner = !!ownerAssignment && ownerAssignment.user_id === currentUser?.id;
+  const capChip = (() => {
+    if (isAssignedOwner)                    return { label: 'Técnico asignado',  bg: 'rgba(14,34,53,.08)', color: '#0e2235' };
+    if (myModuleRole === 'admin_modulo')    return { label: 'Administrador',     bg: 'rgba(255,94,58,.08)', color: '#c2410c' };
+    if (myModuleRole === 'jefe_tecnico')    return { label: 'Jefe técnico',      bg: '#fffbeb', color: '#92400e' };
+    if (myModuleRole === 'tecnico')         return { label: 'Técnico — observando', bg: '#f1f5f9', color: '#64748b' };
+    return                                         { label: 'Solicitante',       bg: '#f0fdf4', color: '#166534' };
+  })();
+
   const toArticleMut = useMutation({
     mutationFn: (dto: { module_id: string; title: string; content: string }) =>
       ticketsService.convertToArticle(ticket!.id, dto),
@@ -853,8 +174,8 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
   const TABS: { id: WorkspaceTab; label: string; badge?: number }[] = [
     { id: 'timeline',     label: 'Timeline' },
-    { id: 'activo',       label: 'Activo / CMDB',  badge: linkedAssets.length || undefined },
-    { id: 'colaboracion', label: 'Colaboración',   badge: (meetings.length + allGuests.length) || undefined },
+    { id: 'activo',       label: 'Activo',        badge: linkedAssets.length || undefined },
+    { id: 'colaboracion', label: 'Colaboración',  badge: (meetings.length + allGuests.length) || undefined },
     { id: 'detalles',     label: 'Detalles' },
   ];
 
@@ -933,6 +254,9 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               U: <strong style={{ color: '#64748b' }}>{ticket.urgency}</strong>
               {'  '}I: <strong style={{ color: '#64748b' }}>{ticket.impact}</strong>
             </span>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 9999, background: capChip.bg, color: capChip.color, border: `1px solid ${capChip.color}30`, whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              {capChip.label}
+            </span>
             {ticket.created_at && (
               <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
                 {fmtRelative(ticket.created_at)}
@@ -941,7 +265,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
           </div>
 
           {/* 2-COLUMN BODY */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', flex: 1, overflow: 'hidden' }}>
+          <div className={styles.hwBodyGrid}>
 
             {/* MAIN */}
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e2e8f0' }}>
@@ -1224,16 +548,35 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               )}
 
               {/* TAB BAR */}
-              <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', display: 'flex', gap: 0, flexShrink: 0 }}>
-                {TABS.map(tab => (
-                  <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-                    style={{ padding: '10px 14px', fontSize: 11, fontWeight: activeTab === tab.id ? 700 : 500, color: activeTab === tab.id ? '#0e2235' : '#94a3b8', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === tab.id ? '#ff5e3a' : 'transparent'}`, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, transition: 'color .15s' }}>
-                    {tab.label}
-                    {tab.badge ? (
-                      <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 8, background: activeTab === tab.id ? '#ff5e3a' : '#e2e8f0', color: activeTab === tab.id ? '#fff' : '#64748b' }}>{tab.badge}</span>
-                    ) : null}
-                  </button>
-                ))}
+              <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 16px', display: 'flex', gap: 0, flexShrink: 0 }}>
+                {TABS.map(tab => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
+                      style={{
+                        padding: '11px 12px',
+                        fontSize: 12,
+                        fontWeight: active ? 700 : 500,
+                        color: active ? '#0e2235' : '#94a3b8',
+                        background: active ? 'rgba(255,94,58,.04)' : 'none',
+                        border: 'none',
+                        borderBottom: `2.5px solid ${active ? '#ff5e3a' : 'transparent'}`,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        transition: 'color .15s, background .15s',
+                        whiteSpace: 'nowrap',
+                      }}>
+                      {TAB_ICONS[tab.id]}
+                      {tab.label}
+                      {tab.badge ? (
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 8, background: active ? '#ff5e3a' : '#e2e8f0', color: active ? '#fff' : '#64748b' }}>{tab.badge}</span>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* TAB CONTENT */}
@@ -1242,7 +585,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 {activeTab === 'timeline' && (
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
-                      <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 12px' }}>Actividad</p>
+                      <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 12px' }}>Actividad</p>
                       <TicketTimeline events={timeline} isLoading={timelineLoading} autoScroll />
                     </div>
                     <PermissionGate perm="helpdesk:comments:add">
@@ -1274,7 +617,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                                 </button>
                                 {uploadError && <span style={{ fontSize: 10, color: '#dc2626' }}>{uploadError}</span>}
                                 <div style={{ flex: 1 }} />
-                                <span style={{ fontSize: 9, color: '#94a3b8' }}>Ctrl+Enter para enviar</span>
+                                <span style={{ fontSize: 10, color: '#94a3b8' }}>Ctrl+Enter para enviar</span>
                                 <button type="button" disabled={!replyText.trim() || addCommentMut.isPending} onClick={() => addCommentMut.mutate()}
                                   style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: replyText.trim() && !addCommentMut.isPending ? '#0e2235' : '#cbd5e1', color: '#fff', fontSize: 11, fontWeight: 700, cursor: replyText.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
                                   {addCommentMut.isPending ? 'Enviando...' : 'Enviar →'}

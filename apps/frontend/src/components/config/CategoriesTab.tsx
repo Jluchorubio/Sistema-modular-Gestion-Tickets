@@ -124,7 +124,7 @@ function FieldSchemaPanel({
           </div>
 
           <span style={{
-            fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 2,
+            fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 2,
             background: TYPE_COLOR[f.type] + '18', color: TYPE_COLOR[f.type],
             textTransform: 'uppercase', flexShrink: 0,
           }}>
@@ -133,7 +133,7 @@ function FieldSchemaPanel({
 
           {f.required && (
             <span style={{
-              fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 2,
+              fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 2,
               background: '#fef2f2', color: '#ef4444', textTransform: 'uppercase', flexShrink: 0,
             }}>req</span>
           )}
@@ -171,7 +171,7 @@ function FieldSchemaPanel({
                 onKeyDown={e => { if (e.key === 'Enter') confirmAdd(); if (e.key === 'Escape') setAdding(false); }}
               />
               {fieldLabel.trim() && (
-                <span style={{ fontSize: 9, color: keyConflict ? '#ef4444' : '#94a3b8' }}>
+                <span style={{ fontSize: 10, color: keyConflict ? '#ef4444' : '#94a3b8' }}>
                   clave: {slugKey(fieldLabel)}{keyConflict ? ' — ya existe' : ''}
                 </span>
               )}

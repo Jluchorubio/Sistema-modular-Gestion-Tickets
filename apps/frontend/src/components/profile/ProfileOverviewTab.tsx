@@ -317,11 +317,11 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
               ))}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, justifyContent: 'flex-end' }}>
-              <span style={{ fontSize: 9, color: '#94a3b8' }}>Menos</span>
+              <span style={{ fontSize: 10, color: '#94a3b8' }}>Menos</span>
               {['#f1f5f9', '#c7d2fe', '#818cf8', '#4f46e5'].map(c => (
                 <div key={c} style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
               ))}
-              <span style={{ fontSize: 9, color: '#94a3b8' }}>Más</span>
+              <span style={{ fontSize: 10, color: '#94a3b8' }}>Más</span>
             </div>
           </div>
         </div>

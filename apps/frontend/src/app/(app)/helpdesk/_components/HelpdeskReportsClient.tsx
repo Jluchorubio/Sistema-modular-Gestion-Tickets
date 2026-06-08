@@ -186,11 +186,11 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                 <TrendMini trend={trend} />
                 {trend.length > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span style={{ fontSize: 9, color: C.muted }}>{fmtDay(trend[0].day)}</span>
-                    <span style={{ fontSize: 9, color: C.muted, fontWeight: 700 }}>
+                    <span style={{ fontSize: 10, color: C.muted }}>{fmtDay(trend[0].day)}</span>
+                    <span style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>
                       {trend.reduce((s, d) => s + n(d.created), 0)} tickets en total
                     </span>
-                    <span style={{ fontSize: 9, color: C.muted }}>{fmtDay(trend[trend.length - 1].day)}</span>
+                    <span style={{ fontSize: 10, color: C.muted }}>{fmtDay(trend[trend.length - 1].day)}</span>
                   </div>
                 )}
               </div>
@@ -240,7 +240,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', gap: 12, padding: '10px 18px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
                     {['Técnico', 'Asignados', 'Resueltos', 'Reprocesos', 'Tiempo prom.', 'Calificación'].map((h, i) => (
-                      <span key={i} style={{ fontSize: 9, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
+                      <span key={i} style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
                     ))}
                   </div>
                   {byTech.map((tech: HelpdeskTechnician) => {
@@ -259,7 +259,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                           <div style={{ height: 4, background: C.bg, borderRadius: 2, overflow: 'hidden', marginTop: 3 }}>
                             <div style={{ height: '100%', width: `${resolvePct}%`, background: '#22c55e', borderRadius: 2 }} />
                           </div>
-                          <p style={{ margin: '2px 0 0', fontSize: 9, color: C.muted }}>{resolvePct}% resolución</p>
+                          <p style={{ margin: '2px 0 0', fontSize: 10, color: C.muted }}>{resolvePct}% resolución</p>
                         </div>
                         {/* Asignados */}
                         <span style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{assigned}</span>
@@ -275,7 +275,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                         <div>
                           <Stars score={rating} />
                           {n(tech.total_ratings) > 0 && (
-                            <p style={{ margin: '2px 0 0', fontSize: 9, color: C.muted }}>{tech.total_ratings} reseña{n(tech.total_ratings) !== 1 ? 's' : ''}</p>
+                            <p style={{ margin: '2px 0 0', fontSize: 10, color: C.muted }}>{tech.total_ratings} reseña{n(tech.total_ratings) !== 1 ? 's' : ''}</p>
                           )}
                         </div>
                       </div>
@@ -319,7 +319,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                   <>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 100px', gap: 12, padding: '9px 18px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
                       {['Prioridad', 'Total', 'Vencidos', 'SLA prom.'].map((h, i) => (
-                        <span key={i} style={{ fontSize: 9, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
+                        <span key={i} style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
                       ))}
                     </div>
                     {sla!.by_priority.map(row => {

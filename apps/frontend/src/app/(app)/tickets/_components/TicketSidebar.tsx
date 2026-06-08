@@ -55,7 +55,7 @@ export interface TicketSidebarProps {
 function SideSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
-      <p style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>{label}</p>
+      <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>{label}</p>
       {children}
     </div>
   );
@@ -211,7 +211,7 @@ export function TicketSidebar({
                   Tiempo acumulado en pausa: <strong>{fmtPauseMinutes(ticket.pause_minutes!)}</strong>
                 </p>
               )}
-              <p style={{ fontSize: 9, color: '#ca8a04', margin: '2px 0 0' }}>El tiempo de SLA no corre mientras esté pausado.</p>
+              <p style={{ fontSize: 10, color: '#ca8a04', margin: '2px 0 0' }}>El tiempo de SLA no corre mientras esté pausado.</p>
             </div>
           </div>
         )}
@@ -299,9 +299,9 @@ export function TicketSidebar({
                   >
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: ac, flexShrink: 0 }} />
                     <span style={{ flex: 1, fontSize: 11, color: '#334155', textAlign: 'left' }}>{t.first_name} {t.last_name}</span>
-                    <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>{t.active_tickets} activos</span>
-                    <span style={{ fontSize: 9, color: ac, fontWeight: 600 }}>{TECH_AVAIL_LABELS[t.avail_status as TechAvailStatus]}</span>
-                    {isCurrentOwner && <span style={{ fontSize: 9, color: '#94a3b8' }}>actual</span>}
+                    <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{t.active_tickets} activos</span>
+                    <span style={{ fontSize: 10, color: ac, fontWeight: 600 }}>{TECH_AVAIL_LABELS[t.avail_status as TechAvailStatus]}</span>
+                    {isCurrentOwner && <span style={{ fontSize: 10, color: '#94a3b8' }}>actual</span>}
                   </button>
                 );
               })}

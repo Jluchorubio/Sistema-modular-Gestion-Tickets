@@ -54,7 +54,7 @@
 
 .filterBtn {
   padding: 5px 12px;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
   border: 1px solid #e2e8f0;
@@ -82,11 +82,11 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   padding: 16px;
-  border-radius: 4px;
+  border-radius: 12px;
 }
 
 .metricLabel {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
   color: #94a3b8;
   text-transform: uppercase;
@@ -102,7 +102,7 @@
   line-height: 1;
 }
 
-.metricValueGreen  { color: #20c933; }
+.metricValueGreen  { color: #22c55e; }
 .metricValueDark   { color: #0e2235; }
 .metricValueCoral  { color: #ff5e3a; }
 
@@ -118,7 +118,7 @@
   display: inline-block;
   width: 6px;
   height: 6px;
-  background: #20c933;
+  background: #22c55e;
   border-radius: 50%;
   margin-right: 4px;
   vertical-align: middle;
@@ -139,7 +139,7 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   padding: 20px;
-  border-radius: 4px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -189,7 +189,7 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   padding: 20px;
-  border-radius: 4px;
+  border-radius: 12px;
 }
 
 .sectionTitle {
@@ -205,7 +205,7 @@
 .auditWrap {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -227,12 +227,12 @@
 }
 
 .auditBadge {
-  font-size: 9px;
+  font-size: 10px;
   background: #e2e8f0;
   color: #475569;
   font-weight: 900;
   padding: 2px 10px;
-  border-radius: 4px;
+  border-radius: 6px;
   letter-spacing: 0.04em;
 }
 
@@ -256,7 +256,7 @@
 
 .auditTable thead th {
   padding: 10px 16px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
   color: #64748b;
   text-transform: uppercase;
@@ -291,8 +291,8 @@
 
 .auditCatBadge {
   padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 9px;
+  border-radius: 6px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
   border: 1px solid;

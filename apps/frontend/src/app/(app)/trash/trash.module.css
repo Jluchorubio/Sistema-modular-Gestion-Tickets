@@ -65,7 +65,7 @@
   font-weight: 700;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #64748b;
   cursor: pointer;
   transition: border-color .15s, color .15s, background .15s;
@@ -92,7 +92,7 @@
 .card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 12px;
   padding: 14px 18px;
   display: flex;
   align-items: center;
@@ -153,10 +153,10 @@
 /* ── Type badge ── */
 .typeBadge {
   display: inline-block;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: 6px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   border: 1px solid;
@@ -173,7 +173,7 @@
   font-size: 10px;
   font-weight: 700;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   background: #fef3c7;
   color: #92400e;
   white-space: nowrap;
@@ -189,7 +189,7 @@
 /* ── Action buttons ── */
 .btnSecondary {
   padding: 6px 12px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
   border: 1px solid #e2e8f0;
@@ -206,7 +206,7 @@
 
 .btnDanger {
   padding: 6px 12px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
   border: 1px solid #e2e8f0;
@@ -267,7 +267,7 @@
   text-align: center;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 12px;
 }
 
 .errorMsg { color: #ef4444; font-size: 13px; padding: 20px; }

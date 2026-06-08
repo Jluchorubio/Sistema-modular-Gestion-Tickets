@@ -7,7 +7,7 @@
 .textarea {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 7px;
+  border-radius: 8px;
   padding: 8px 12px;
   font-size: 13px;
   font-family: inherit;
@@ -85,7 +85,7 @@
   display: flex;
   align-items: center;
   padding: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: color .12s, background .12s;
 }
 .removeImgBtn:hover { color: #ef4444; background: #fef2f2; }
@@ -95,7 +95,7 @@
 .btnCancel {
   padding: 8px 18px;
   border: 1px solid #e2e8f0;
-  border-radius: 7px;
+  border-radius: 8px;
   background: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -109,7 +109,7 @@
 .btnSubmit {
   padding: 8px 20px;
   border: none;
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--app-coral);
   color: #fff;
   font-size: 13px;

@@ -114,11 +114,11 @@ function TechCard({ tech, basePath }: { tech: ModuleTechnician; basePath: string
             {fullName}
           </p>
           <div>
-            <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${ac}18`, color: ac, border: `1px solid ${ac}35` }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: `${ac}18`, color: ac, border: `1px solid ${ac}35` }}>
               {AVAIL_LABELS[tech.avail_status ?? 'offline']}
             </span>
             {tech.avail_status === 'offline' && tech.last_seen_at && (
-              <p style={{ margin: '3px 0 0', fontSize: 9, color: C.muted }}>
+              <p style={{ margin: '3px 0 0', fontSize: 10, color: C.muted }}>
                 visto {fmtRelativeCompact(tech.last_seen_at)}
               </p>
             )}
@@ -129,7 +129,7 @@ function TechCard({ tech, basePath }: { tech: ModuleTechnician; basePath: string
 
       {/* Role badge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 5, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 5, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', textTransform: 'uppercase' }}>
           {roleLabel}
         </span>
       </div>
@@ -137,7 +137,7 @@ function TechCard({ tech, basePath }: { tech: ModuleTechnician; basePath: string
       {/* Workload */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Ticket size={9} /> Carga activa
           </span>
         </div>
@@ -281,7 +281,7 @@ export default function TechniciansPage() {
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
                 )}
                 {s === 'all' ? 'Todos' : AVAIL_LABELS[s]}
-                <span style={{ fontSize: 9, opacity: .7 }}>({count})</span>
+                <span style={{ fontSize: 10, opacity: .7 }}>({count})</span>
               </button>
             );
           })}

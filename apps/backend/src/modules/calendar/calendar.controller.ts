@@ -5,6 +5,7 @@ import {
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { ProfileCompleteGuard } from '../../gateway/guards/profile-complete.guard';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { CalendarService, type CreateCalendarEventDto, type UpdateCalendarEventDto } from './calendar.service';
 
 @ApiTags('calendar')
@@ -55,6 +56,7 @@ export class CalendarController {
   }
 
   @Get('audit')
+  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Auditoría de actividad del calendario.' })
   getAudit(
     @Req()              req:       any,

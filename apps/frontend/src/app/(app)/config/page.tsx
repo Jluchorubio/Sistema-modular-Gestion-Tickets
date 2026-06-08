@@ -81,14 +81,14 @@ function QuickLinks() {
       {links.map(({ href, Icon, label, desc }) => (
         <Link key={href} href={href} style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-          background: '#fff', border: '1px solid #e2e8f0', borderRadius: 2,
+          background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
           textDecoration: 'none', color: 'inherit', flex: '1 1 200px',
           transition: 'border-color .15s',
         }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,94,58,.4)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; }}
         >
-          <div style={{ width: 36, height: 36, borderRadius: 2, background: '#f8fafc',
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#f8fafc',
             border: '1px solid #e2e8f0',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Icon size={15} style={{ color: '#0e2235' }} />
@@ -154,7 +154,7 @@ function SetupChecklist({ setTab }: { setTab: (t: Tab) => void }) {
   const headerBg    = allDone ? '#f0fdf4' : pending === checks.length ? '#fef2f2' : '#fffbeb';
 
   return (
-    <div style={{ marginBottom: 20, border: `1px solid ${borderColor}`, borderRadius: 2, overflow: 'hidden' }}>
+    <div style={{ marginBottom: 20, border: `1px solid ${borderColor}`, borderRadius: 8, overflow: 'hidden' }}>
       {/* Header */}
       <button
         onClick={() => setOpen(v => !v)}
@@ -199,7 +199,7 @@ function SetupChecklist({ setTab }: { setTab: (t: Tab) => void }) {
                   onClick={() => setTab(c.tab)}
                   style={{
                     padding: '4px 12px', background: '#fff7ed', color: '#d97706',
-                    border: '1px solid #fed7aa', borderRadius: 2, fontSize: 11,
+                    border: '1px solid #fed7aa', borderRadius: 8, fontSize: 11,
                     fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
                   }}>
                   Configurar →
@@ -260,7 +260,7 @@ function validateCompanyForm(form: Partial<Company>): CompanyFormErrors {
 const fRow:   React.CSSProperties = { marginBottom: 14 };
 const fLabel: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 4 };
 const fInput: React.CSSProperties = {
-  width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2,
+  width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8,
   fontSize: 13, fontFamily: 'inherit', color: '#0e2235', boxSizing: 'border-box',
 };
 const fError: React.CSSProperties = { fontSize: 11, color: '#ef4444', marginTop: 3 };
@@ -366,7 +366,7 @@ function CompanyTab() {
         <div className={styles.sectionHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
-              width: 56, height: 56, borderRadius: 2, border: '1px solid #e2e8f0',
+              width: 56, height: 56, borderRadius: 8, border: '1px solid #e2e8f0',
               overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: '#f8fafc', flexShrink: 0,
             }}>
@@ -412,7 +412,7 @@ function CompanyTab() {
 
       {pending.hasStaged('empresa') && (
         <div style={{ marginBottom: 14, padding: '10px 14px', background: '#fff7ed',
-          border: '1px solid #fed7aa', borderRadius: 2, fontSize: 12, color: '#9a3412',
+          border: '1px solid #fed7aa', borderRadius: 8, fontSize: 12, color: '#9a3412',
           display: 'flex', alignItems: 'center', gap: 6 }}>
           <AlertTriangle size={13} />
           Cambio en cola — aplícalo desde la barra inferior para guardar en la base de datos.
@@ -425,7 +425,7 @@ function CompanyTab() {
         <div
           onClick={() => !logoUploading && logoInputRef.current?.click()}
           style={{
-            width: 72, height: 72, borderRadius: 2, border: '2px dashed #cbd5e1',
+            width: 72, height: 72, borderRadius: 8, border: '2px dashed #cbd5e1',
             overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: '#fff', flexShrink: 0, cursor: logoUploading ? 'wait' : 'pointer',
           }}>
@@ -437,7 +437,7 @@ function CompanyTab() {
           <button type="button" disabled={logoUploading} onClick={() => logoInputRef.current?.click()}
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
-              border: '1px solid #e2e8f0', borderRadius: 2, background: '#fff',
+              border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff',
               fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', color: '#0e2235', fontWeight: 600,
             }}>
             <Upload size={13} /> {logoUploading ? 'Subiendo…' : 'Cambiar logo'}
@@ -463,7 +463,7 @@ function CompanyTab() {
           <input type="color" value={currentColor}
             onChange={e => handleColorPickerChange(e.target.value)}
             style={{ width: 40, height: 36, padding: 2, border: '1px solid #e2e8f0',
-              borderRadius: 2, cursor: 'pointer', background: '#fff' }} />
+              borderRadius: 8, cursor: 'pointer', background: '#fff' }} />
           <input style={{ ...fInput, width: 120, borderColor: colorValid ? '#e2e8f0' : '#ef4444' }}
             value={hexInput} placeholder="#0e2235"
             onChange={e => handleHexInputChange(e.target.value)} />
@@ -664,18 +664,18 @@ function PrioridadTab() {
   if (isLoading) return <Spinner />;
 
   const tInput: React.CSSProperties = {
-    width: 64, padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 2,
+    width: 64, padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 8,
     fontSize: 12, fontFamily: 'inherit', textAlign: 'center',
   };
   const num: React.CSSProperties = {
     fontSize: 12, fontWeight: 800, minWidth: 38, textAlign: 'center',
-    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 2, padding: '3px 6px',
+    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '3px 6px',
   };
 
   return (
     <div>
       {/* ── Formula weights ── */}
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 2, padding: 20, marginBottom: 16 }}>
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -711,7 +711,7 @@ function PrioridadTab() {
         {/* Weight cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
           {WEIGHT_META.map(({ key, label, desc: metaDesc, color }) => (
-            <div key={key} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 2, padding: 14 }}>
+            <div key={key} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: '#0e2235', marginBottom: 2 }}>{label}</div>
               <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 12, lineHeight: 1.4 }}>{metaDesc}</div>
               <div style={{ fontSize: 28, fontWeight: 900, color, textAlign: 'center', lineHeight: 1, marginBottom: 10 }}>
@@ -723,18 +723,18 @@ function PrioridadTab() {
               <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                 <button
                   onClick={() => setW(p => ({ ...p, [key]: Math.max(0, p[key] - 5) }))}
-                  style={{ width: 32, height: 28, border: '1px solid #e2e8f0', borderRadius: 2,
+                  style={{ width: 32, height: 28, border: '1px solid #e2e8f0', borderRadius: 8,
                     background: '#fff', fontSize: 18, lineHeight: 1, fontWeight: 700, cursor: 'pointer',
                     color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   −
                 </button>
                 <input type="number" min={0} max={100} value={w[key]}
                   onChange={e => setW(p => ({ ...p, [key]: Math.min(100, Math.max(0, +e.target.value)) }))}
-                  style={{ width: 52, textAlign: 'center', border: `1px solid ${color}60`, borderRadius: 2,
+                  style={{ width: 52, textAlign: 'center', border: `1px solid ${color}60`, borderRadius: 8,
                     fontSize: 13, fontWeight: 700, fontFamily: 'inherit', padding: '3px 4px', color }} />
                 <button
                   onClick={() => setW(p => ({ ...p, [key]: Math.min(100, p[key] + 5) }))}
-                  style={{ width: 32, height: 28, border: '1px solid #e2e8f0', borderRadius: 2,
+                  style={{ width: 32, height: 28, border: '1px solid #e2e8f0', borderRadius: 8,
                     background: '#fff', fontSize: 18, lineHeight: 1, fontWeight: 700, cursor: 'pointer',
                     color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   +
@@ -752,7 +752,7 @@ function PrioridadTab() {
       </div>
 
       {/* ── Thresholds ── */}
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 2, padding: 20, marginBottom: 16 }}>
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
         <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
           Umbrales de prioridad
         </div>
@@ -798,7 +798,7 @@ function PrioridadTab() {
           style={{
             padding: '8px 20px',
             background: !wValid ? '#e2e8f0' : pending.hasStaged('prioridad') ? '#20c933' : '#0e2235',
-            color: wValid ? '#fff' : '#94a3b8', border: 'none', borderRadius: 2,
+            color: wValid ? '#fff' : '#94a3b8', border: 'none', borderRadius: 8,
             fontSize: 12, fontWeight: 700, cursor: wValid ? 'pointer' : 'not-allowed',
             fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
           }}>
@@ -810,7 +810,7 @@ function PrioridadTab() {
       </div>
 
       {/* ── Live Simulator ── */}
-      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 2, padding: 20 }}>
+      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
           <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Simulador de prioridad
@@ -865,7 +865,7 @@ function PrioridadTab() {
         {preview && (
           <div style={{
             background: '#fff', border: `2px solid ${PRIORITY_COLOR[preview.priority]}30`,
-            borderRadius: 2, overflow: 'hidden',
+            borderRadius: 8, overflow: 'hidden',
           }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 16, padding: '12px 16px',
@@ -887,7 +887,7 @@ function PrioridadTab() {
               </div>
               <div style={{ marginLeft: 'auto' }}>
                 <span style={{
-                  fontSize: 15, fontWeight: 900, padding: '5px 16px', borderRadius: 2,
+                  fontSize: 15, fontWeight: 900, padding: '5px 16px', borderRadius: 8,
                   background: `${PRIORITY_COLOR[preview.priority]}18`,
                   color: PRIORITY_COLOR[preview.priority],
                   border: `1.5px solid ${PRIORITY_COLOR[preview.priority]}40`,
@@ -961,7 +961,7 @@ function SyncColombiaBtn({ onSync }: { onSync: () => void }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px',
         background: mut.isPending ? '#f8fafc' : '#fff', border: '1px solid #e2e8f0',
-        borderRadius: 2, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+        borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
         fontFamily: 'inherit', color: result ? '#22c55e' : '#475569',
       }}>
       {mut.isPending
@@ -1197,7 +1197,7 @@ function AuditoriaTab() {
       </div>
 
       {logs.length === 0 ? (
-        <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 2, border: '1px dashed #e2e8f0' }}>
+        <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
           Sin registros de auditoría aún.
         </div>
       ) : (
@@ -1208,7 +1208,7 @@ function AuditoriaTab() {
             return (
               <div key={log.id} style={{
                 padding: '12px 16px', background: '#fff', border: '1px solid #e2e8f0',
-                borderRadius: 2, marginBottom: 8,
+                borderRadius: 8, marginBottom: 8,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 4, ...aStyle }}>
@@ -1313,7 +1313,7 @@ function SeguridadTab() {
 
   const card: React.CSSProperties = {
     background: '#fff', border: '1px solid #e2e8f0',
-    borderRadius: 2, padding: 16, marginBottom: 12,
+    borderRadius: 8, padding: 16, marginBottom: 12,
   };
   const sectionTitle: React.CSSProperties = {
     fontSize: 11, fontWeight: 900, color: '#0e2235',
@@ -1330,7 +1330,7 @@ function SeguridadTab() {
             <div key={p.key} style={{
               display: 'flex', alignItems: 'flex-start', gap: 10,
               padding: '10px 12px', background: '#f0fdf4',
-              border: '1px solid #bbf7d0', borderRadius: 2,
+              border: '1px solid #bbf7d0', borderRadius: 8,
             }}>
               <ShieldCheck size={16} style={{ color: '#22c55e', flexShrink: 0, marginTop: 1 }} />
               <div>
@@ -1352,7 +1352,7 @@ function SeguridadTab() {
           {CRITICAL_OPS.map(op => (
             <span key={op} style={{
               padding: '3px 10px', background: 'rgba(255,94,58,.06)',
-              border: '1px solid rgba(255,94,58,.2)', borderRadius: 2,
+              border: '1px solid rgba(255,94,58,.2)', borderRadius: 8,
               fontSize: 10, fontWeight: 700, color: '#ff5e3a',
               textTransform: 'uppercase', letterSpacing: '0.04em',
             }}>
@@ -1372,7 +1372,7 @@ function SeguridadTab() {
           <Spinner />
         ) : criticalLogs.length === 0 ? (
           <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: 12,
-            background: '#f8fafc', borderRadius: 2, border: '1px dashed #e2e8f0' }}>
+            background: '#f8fafc', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
             Sin operaciones críticas registradas aún.
           </div>
         ) : (
@@ -1381,7 +1381,7 @@ function SeguridadTab() {
               <div key={log.id} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '8px 12px', background: '#f8fafc',
-                border: '1px solid #e2e8f0', borderRadius: 2,
+                border: '1px solid #e2e8f0', borderRadius: 8,
               }}>
                 <ShieldCheck size={13} style={{ color: '#22c55e', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1454,7 +1454,7 @@ function OrgRequiredScreen({ onConfigure }: { onConfigure: () => void }) {
         onClick={onConfigure}
         style={{
           padding: '9px 22px', background: '#0e2235', color: '#fff',
-          border: 'none', borderRadius: 2, fontSize: 13, fontWeight: 700,
+          border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700,
           cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex',
           alignItems: 'center', gap: 6,
         }}>

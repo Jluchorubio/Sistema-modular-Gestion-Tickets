@@ -134,10 +134,10 @@ export default function AssetTicketsPage() {
                   <div style={{ flex: 1, padding: "14px 18px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" as const }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: C.coral, fontFamily: "monospace" }}>#{ticket.id.slice(0, 8)}</span>
-                      <span style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase" as const, color: ticket.is_final ? "#16a34a" : "#c2410c", background: ticket.is_final ? "#f0fdf4" : "#fff7ed", padding: "2px 8px", borderRadius: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase" as const, color: ticket.is_final ? "#16a34a" : "#c2410c", background: ticket.is_final ? "#f0fdf4" : "#fff7ed", padding: "2px 8px", borderRadius: 4 }}>
                         {ticket.state_label}
                       </span>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: pColor, textTransform: "uppercase" as const, marginLeft: "auto" }}>● {ticket.priority}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: pColor, textTransform: "uppercase" as const, marginLeft: "auto" }}>● {ticket.priority}</span>
                     </div>
                     <p style={{ fontSize: 14, fontWeight: 700, color: C.navy, margin: "0 0 4px" }}>{ticket.title}</p>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
