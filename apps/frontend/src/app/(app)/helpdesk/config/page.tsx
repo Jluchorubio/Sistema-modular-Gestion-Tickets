@@ -43,6 +43,7 @@ export default function HelpdeskConfigPage() {
     queryKey: ['module', helpdeskRef?.id],
     queryFn:  () => modulesService.getModule(helpdeskRef!.id),
     enabled:  !!helpdeskRef?.id,
+    staleTime: 5 * 60_000,
   });
 
   if (!allowed || modsLoading || modLoading || !helpdeskRef || !mod) return <Spinner />;

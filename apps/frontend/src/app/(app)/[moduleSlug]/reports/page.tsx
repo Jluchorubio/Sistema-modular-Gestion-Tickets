@@ -20,6 +20,7 @@ export default function ModuleSlugReportsPage() {
   const { data: allModules, isLoading } = useQuery({
     queryKey: ['modules'],
     queryFn:  () => modulesService.getModules(),
+    staleTime: 5 * 60_000,
   });
   const moduleRef = allModules?.find((m) => m.slug === moduleSlug);
 
