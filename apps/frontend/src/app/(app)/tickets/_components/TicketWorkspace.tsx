@@ -230,7 +230,10 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               <ChevronRight size={10} />
               <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#ff5e3a', letterSpacing: '.03em' }}>#{ticket.id.slice(0, 8).toUpperCase()}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' }}>
+            <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 13, fontWeight: 700, color: '#0e2235', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {ticket.title}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <StateBadge
                 label={ticket.state_label}
                 isFinal={ticket.is_final}
@@ -243,17 +246,12 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               )}
               {(ticket.reprocess_count ?? 0) > 0 && (
                 <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #e9d5ff' }}>
-                  REINCIDENTE ×{ticket.reprocess_count}
+                  ×{ticket.reprocess_count}
                 </span>
               )}
               {ticket.is_pause_state && ticket.history?.[0]?.transition_reason && (
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 4 }}>
                   ⏸ {ticket.history[0].transition_reason}
-                </span>
-              )}
-              {slaCountdown && slaCfg && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: slaCfg.bg, color: slaCfg.text, border: `1px solid ${slaCfg.border}`, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Clock size={9} /> {slaCountdown}
                 </span>
               )}
             </div>
@@ -283,6 +281,20 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               </span>
             )}
           </div>
+
+          {/* SLA STRIP */}
+          {ticket.sla_deadline_tracked && !ticket.is_final && slaCountdown && slaCfg && (
+            <div style={{ background: slaCfg.bg, borderBottom: `1px solid ${slaCfg.border}`, padding: '8px 20px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Clock size={13} style={{ color: slaCfg.text, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 800, color: slaCfg.text }}>{slaCountdown}</span>
+              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 700, background: 'rgba(255,255,255,0.55)', color: slaCfg.text, border: `1px solid ${slaCfg.border}` }}>
+                {slaLabel}
+              </span>
+              {ticket.sla_status === 'breached' && (
+                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: slaCfg.text, animation: 'pulse 1.2s ease-in-out infinite' }} />
+              )}
+            </div>
+          )}
 
           {/* 2-COLUMN BODY */}
           <div className={styles.hwBodyGrid}>

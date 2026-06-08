@@ -28,6 +28,14 @@ function isToday(d: string) {
   return dt.getFullYear() === n.getFullYear() && dt.getMonth() === n.getMonth() && dt.getDate() === n.getDate();
 }
 
+function fmtAge(created: string): string {
+  const ms = Date.now() - new Date(created).getTime();
+  const h = ms / 3_600_000;
+  if (h < 1) return `${Math.round(h * 60)}m`;
+  if (h < 24) return `${h.toFixed(0)}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
 function hoursLeft(d: string | null): number | null {
   if (!d) return null;
   return (new Date(d).getTime() - Date.now()) / 3_600_000;
@@ -133,7 +141,10 @@ export default function WorkspacePage() {
           </div>
 
           <div>
-            <p className={styles.eyebrow}>Mi espacio de trabajo</p>
+            <p className={styles.eyebrow}>
+              Mi espacio de trabajo
+              {stats.today > 0 && <span style={{ marginLeft: 8, fontWeight: 700, color: '#0e2235', background: 'rgba(14,34,53,.08)', borderRadius: 4, padding: '1px 6px', letterSpacing: 0 }}>+{stats.today} hoy</span>}
+            </p>
             <h1 className={styles.name}>{user?.first_name} {user?.last_name}</h1>
             <div className={styles.badges}>
               <span className={styles.roleBadge}>{roleLabel}</span>
@@ -191,6 +202,24 @@ export default function WorkspacePage() {
         </div>
       )}
 
+      {/* Priority distribution */}
+      {sorted.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', flexShrink: 0 }}>Cola activa · {sorted.length}</span>
+          {(['critica', 'alta', 'media', 'baja'] as TicketPriority[]).map(p => {
+            const count = sorted.filter(t => t.priority === p).length;
+            if (!count) return null;
+            const cfg = getPriorityConfig(p);
+            return (
+              <span key={p} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 8, background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`, color: cfg.color, border: `1px solid color-mix(in srgb, ${cfg.color} 22%, transparent)` }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
+                {count} {cfg.label}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* SLA alerts */}
       {(stats.breached > 0 || stats.critical > 0) && (
         <div className={styles.slaAlert}>
@@ -242,6 +271,8 @@ export default function WorkspacePage() {
                   <p className={styles.ticketMeta}>
                     #{t.id.slice(-6).toUpperCase()} · {t.creator_name} ·{' '}
                     <span style={{ color: isBreached ? '#ef4444' : isCrit ? '#f97316' : '#94a3b8' }}>{t.state_name}</span>
+                    {' · '}
+                    <span style={{ color: '#94a3b8' }}>{fmtAge(t.created_at)}</span>
                     {t.is_pause_state && t.last_transition_reason && (
                       <span style={{ marginLeft: 6, color: '#92400e', fontWeight: 600 }}>⏸ {t.last_transition_reason}</span>
                     )}
