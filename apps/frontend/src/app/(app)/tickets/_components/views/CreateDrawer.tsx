@@ -10,6 +10,7 @@ import {
   type TicketPriority,
 } from '@/services/tickets.service';
 import { systemConfigService, type DamageType } from '@/services/system-config.service';
+import { modulesService, type ModuleLocation } from '@/services/modules.service';
 import { docsService, type Article } from '@/app/(app)/helpdesk/knowledge/_lib/knowledge.service';
 
 const PRIORITIES = TICKET_PRIORITIES;
@@ -20,9 +21,11 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   /* ── Data loaders ── */
   const { data: moduleCategories } = useQuery({ queryKey: ['ticket-module-categories', moduleId], queryFn: () => ticketsService.getCategories(moduleId), staleTime: 5 * 60_000 });
   const { data: damageCategories } = useQuery({ queryKey: ['damage-categories'], queryFn: () => systemConfigService.getTicketCategories(), staleTime: 10 * 60_000 });
+  const { data: locations = [] }   = useQuery<ModuleLocation[]>({ queryKey: ['module-locations', moduleId], queryFn: () => modulesService.getModuleLocations(moduleId), staleTime: 5 * 60_000 });
 
   /* ── Form state ── */
   const [form, setForm] = useState<Partial<CreateTicketDto>>({ module_id: moduleId, priority: 'media', urgency: 'media', impact: 'medio' });
+  const [selectedLocationId,     setSelectedLocationId]     = useState('');
   const [selectedDamageCategory, setSelectedDamageCategory] = useState('');
   const [selectedDamageType,     setSelectedDamageType]     = useState<DamageType | null>(null);
   const [assetSearch,            setAssetSearch]            = useState('');
@@ -66,6 +69,15 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
     staleTime: 60_000,
     select: (data) => data.slice(0, 4),
   });
+
+  const activeLocations  = locations.filter(l => l.is_active !== false);
+  const selectedLocation = activeLocations.find(l => l.id === selectedLocationId);
+  const activeEnvs       = (selectedLocation?.environments ?? []).filter(e => e.is_active !== false);
+
+  function handleLocationChange(locId: string) {
+    setSelectedLocationId(locId);
+    setForm(f => ({ ...f, environment_id: undefined }));
+  }
 
   function selectDamageType(dt: DamageType | null) {
     setSelectedDamageType(dt);
@@ -174,6 +186,34 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
                 {(moduleCategories ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
+
+            {/* Ubicación */}
+            {activeLocations.length > 0 && (
+              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 4 }}>
+                <p style={{ margin: '0 0 12px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '.06em' }}>Ubicación</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={lbl}>Sede</label>
+                    <select value={selectedLocationId} onChange={e => handleLocationChange(e.target.value)} style={inp}>
+                      <option value="">Sin especificar</option>
+                      {activeLocations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={lbl}>Ambiente</label>
+                    <select
+                      value={form.environment_id ?? ''}
+                      onChange={e => setForm(f => ({ ...f, environment_id: e.target.value || undefined }))}
+                      disabled={!selectedLocationId || activeEnvs.length === 0}
+                      style={{ ...inp, opacity: selectedLocationId ? 1 : 0.5 }}
+                    >
+                      <option value="">Sin especificar</option>
+                      {activeEnvs.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Divider */}
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 4 }}>

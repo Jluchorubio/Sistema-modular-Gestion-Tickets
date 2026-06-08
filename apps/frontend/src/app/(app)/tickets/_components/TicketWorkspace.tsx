@@ -483,6 +483,7 @@ function DetallesTab({
   ticketId:         string;
   ticket: {
     module_id: string; module_name: string; category_name: string | null;
+    environment_name?: string | null;
     damage_type_label?: string | null; priority: string; urgency: string; impact: string;
     created_at: string; reprocess_count: number; is_final: boolean;
     creator_name: string;
@@ -572,6 +573,7 @@ function DetallesTab({
           {([
             ['Módulo',       ticket.module_name],
             ['Categoría',    ticket.category_name],
+            ['Ambiente',     ticket.environment_name],
             ['Tipo de daño', ticket.damage_type_label],
             ['Prioridad',    ticket.priority],
             ['Urgencia',     ticket.urgency],
@@ -883,7 +885,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
           {/* HEADER */}
           <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', height: 56, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <button type="button" onClick={() => router.push('/helpdesk')}
+            <button type="button" onClick={() => router.back()}
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 11, fontWeight: 600, color: '#475569', cursor: 'pointer', flexShrink: 0 }}>
               <ArrowLeft size={12} /> Volver
             </button>

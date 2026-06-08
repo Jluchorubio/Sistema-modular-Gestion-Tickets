@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   Search, SlidersHorizontal, ChevronDown,
-  Plus, Eye, ShieldCheck, Lock, Trash2, UserPlus, X,
+  Eye, ShieldCheck, Lock, Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { socketService } from '@/services/socket.service';
@@ -23,13 +23,6 @@ import styles from '@/app/(app)/users/users.module.css';
 import mstyles from '@/components/ui/modal.module.css';
 
 /* ── Schemas ── */
-const createSchema = z.object({
-  first_name:    z.string().min(1, 'Requerido'),
-  last_name:     z.string().min(1, 'Requerido'),
-  email:         z.string().min(1, 'El email es requerido').email('Email inválido'),
-  is_superadmin: z.boolean(),
-});
-
 const editSchema = z.object({
   first_name:    z.string().min(1, 'Requerido'),
   last_name:     z.string().min(1, 'Requerido'),
@@ -42,8 +35,7 @@ const editSchema = z.object({
   is_superadmin: z.boolean(),
 });
 
-type CreateForm = z.infer<typeof createSchema>;
-type EditForm   = z.infer<typeof editSchema>;
+type EditForm = z.infer<typeof editSchema>;
 
 /* ── Helpers ── */
 type ConnStatus = 'online' | 'away' | 'offline';
@@ -130,7 +122,6 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
   }, [updatePresence]);
 
   /* ── Modal states ── */
-  const [createOpen,  setCreateOpen]  = useState(false);
   const [editUser,    setEditUser]    = useState<UserListItem | null>(null);
   const [deleteUser,  setDeleteUser]  = useState<UserListItem | null>(null);
   const [deleteInput, setDeleteInput] = useState('');
@@ -174,18 +165,6 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
     onSuccess: () => { setDeleteUser(null); setDeleteInput(''); invalidate(); },
   });
 
-  const createMut = useMutation({
-    mutationFn: (vals: CreateForm) => usersService.createUser(vals),
-    onSuccess: () => {
-      setModalMsg({ type: 'ok', text: 'Usuario creado exitosamente' });
-      setTimeout(() => { setCreateOpen(false); setModalMsg(null); invalidate(); }, 800);
-    },
-    onError: (e: unknown) => setModalMsg({
-      type: 'err',
-      text: (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al crear',
-    }),
-  });
-
   const updateMut = useMutation({
     mutationFn: ({ id, vals }: { id: string; vals: EditForm }) => usersService.updateUser(id, vals),
     onSuccess: () => {
@@ -199,11 +178,6 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
   });
 
   /* ── Forms ── */
-  const createForm = useForm<CreateForm>({
-    resolver: zodResolver(createSchema),
-    defaultValues: { first_name: '', last_name: '', email: '', is_superadmin: false },
-  });
-
   const editForm = useForm<EditForm>({
     resolver: zodResolver(editSchema),
     defaultValues: { first_name: '', last_name: '', phone: '', username: '', job_title: '', department: '', primary_sede: '', address: '', is_superadmin: false },
@@ -229,12 +203,6 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
       address:      (u as any).address      ?? '',
       is_superadmin: u.is_superadmin,
     });
-  }
-
-  function openCreate() {
-    setCreateOpen(true);
-    setModalMsg(null);
-    createForm.reset({ first_name: '', last_name: '', email: '', is_superadmin: false });
   }
 
   /* ── Client-side filter + sort ── */
@@ -276,12 +244,6 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
               {rawUsers.length} usuario{rawUsers.length !== 1 ? 's' : ''} en este módulo
             </p>
           </div>
-          {canAct && (
-            <button type="button" className={styles.btnCreate} onClick={openCreate}>
-              <Plus size={11} />
-              <span>Crear usuario</span>
-            </button>
-          )}
         </div>
 
         {/* ── Filter card ── */}
@@ -455,83 +417,6 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
           </div>
         )}
       </div>
-
-      {/* ── CREATE MODAL ── */}
-      {createOpen && (
-        <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setCreateOpen(false)}>
-          <div className={styles.modalBox}>
-            <div className={styles.modalHeader}>
-              <div className={styles.modalHeaderLeft}>
-                <UserPlus size={20} className={styles.modalHeaderIcon} style={{ color: '#ff5e3a' }} />
-                <h3 className={styles.modalTitle}>Crear Nuevo Usuario</h3>
-              </div>
-              <button type="button" className={styles.modalClose} onClick={() => setCreateOpen(false)}>
-                <X size={16} />
-              </button>
-            </div>
-            <form onSubmit={createForm.handleSubmit((v) => createMut.mutate(v))}>
-              <div className={styles.modalBody}>
-                <div className={styles.formRow2}>
-                  <div>
-                    <label className={styles.fieldLabel}>Nombre *</label>
-                    <input className={styles.fieldInput} placeholder="Ej: Natalia" {...createForm.register('first_name')} />
-                    {createForm.formState.errors.first_name && (
-                      <p className={styles.fieldError}>{createForm.formState.errors.first_name.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className={styles.fieldLabel}>Apellido *</label>
-                    <input className={styles.fieldInput} placeholder="Ej: López" {...createForm.register('last_name')} />
-                    {createForm.formState.errors.last_name && (
-                      <p className={styles.fieldError}>{createForm.formState.errors.last_name.message}</p>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <label className={styles.fieldLabel}>Correo Electrónico *</label>
-                  <input
-                    className={styles.fieldInput}
-                    type="email"
-                    placeholder="Ej: natalia.lopez@empresa.co"
-                    autoComplete="off"
-                    {...createForm.register('email')}
-                  />
-                  {createForm.formState.errors.email && (
-                    <p className={styles.fieldError}>{createForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-                <div className={styles.formRow2}>
-                  <div>
-                    <label className={styles.fieldLabel}>Rol Global *</label>
-                    <select
-                      className={styles.fieldSelect}
-                      value={createForm.watch('is_superadmin') ? 'superadmin' : 'usuario'}
-                      onChange={(e) => createForm.setValue('is_superadmin', e.target.value === 'superadmin')}
-                    >
-                      <option value="usuario">usuario</option>
-                      <option value="superadmin">superadmin</option>
-                    </select>
-                  </div>
-                </div>
-                <p className={styles.fieldHint}>
-                  El usuario recibirá el email para acceder. Contraseña inicial: <strong>Ticket2026!</strong>
-                </p>
-                {modalMsg && (
-                  <p className={modalMsg.type === 'ok' ? styles.msgOk : styles.msgErr}>{modalMsg.text}</p>
-                )}
-              </div>
-              <div className={styles.modalFooter}>
-                <button type="button" className={styles.modalBtnCancel} onClick={() => setCreateOpen(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className={styles.modalBtnSave} disabled={createMut.isPending}>
-                  {createMut.isPending ? 'Guardando…' : 'Guardar Usuario'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ── EDIT MODAL ── */}
       <Modal open={!!editUser} title="Editar usuario" onClose={() => { setEditUser(null); setModalMsg(null); }}>

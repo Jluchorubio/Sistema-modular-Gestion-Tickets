@@ -599,7 +599,7 @@ export default function QueuePage() {
         </div>
       ) : (
         <>
-          {!canTake && (
+          {!canTake && !canAssignOthers && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, marginBottom: 14 }}>
               <Inbox size={13} style={{ color: '#1d4ed8' }} />
               <span style={{ fontSize: 11, color: '#1e3a8a' }}>Modo visualización — solo técnicos y administradores pueden tomar tickets.</span>
