@@ -12,10 +12,9 @@ import { useAuthStore } from '@/stores/auth.store';
 import {
   ticketsService,
   type TicketListItem, type TicketPriority, type SlaStatus,
-  TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
-  SLA_STATUS_LABELS, SLA_STATUS_COLORS,
   TICKET_PRIORITY_ORDER, TICKET_PRIORITIES,
 } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
@@ -182,9 +181,10 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
     return (
       <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
         {tickets.map((t, idx) => {
-          const pColor  = TICKET_PRIORITY_COLORS[t.priority];
-          const slaC    = t.sla_status ? (SLA_STATUS_COLORS[t.sla_status] ?? '#94a3b8') : null;
-          const slaL    = t.sla_status ? (SLA_STATUS_LABELS[t.sla_status] ?? null) : null;
+          const pColor  = getPriorityConfig(t.priority).color;
+          const slaCfg  = t.sla_status ? getSlaStatusConfig(t.sla_status) : null;
+          const slaC    = slaCfg?.text ?? null;
+          const slaL    = slaCfg?.label ?? null;
           const breached = t.sla_status === 'breached';
           return (
             <div key={t.id}
@@ -236,7 +236,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </div>
 
               {/* State badge */}
-              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: t.is_final ? '#f0fdf4' : '#eef2ff', color: t.is_final ? '#16a34a' : '#4338ca', border: `1px solid ${t.is_final ? '#bbf7d0' : '#c7d2fe'}`, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: t.is_final ? '#f0fdf4' : 'var(--status-info-bg)', color: t.is_final ? '#16a34a' : 'var(--status-info-text)', border: `1px solid ${t.is_final ? '#bbf7d0' : 'var(--status-info-border)'}`, flexShrink: 0 }}>
                 {t.state_label}
               </span>
 
@@ -270,7 +270,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
     const breachedCount  = allTickets.filter(t => t.sla_status === 'breached' && !t.is_final).length;
     const compliancePct  = activeCount > 0 ? Math.round(((activeCount - breachedCount) / activeCount) * 100) : 100;
     const byPriorityStats = PRIORITIES.slice().reverse().map(p => ({
-      p, count: allTickets.filter(t => t.priority === p && !t.is_final).length, color: TICKET_PRIORITY_COLORS[p],
+      p, count: allTickets.filter(t => t.priority === p && !t.is_final).length, color: getPriorityConfig(p).color,
     }));
     const topTechs = (techs ?? [])
       .map(t => ({ ...t, cnt: t.active_tickets }))
@@ -379,13 +379,13 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                   <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Prioridad</p>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {PRIORITIES.map((p) => {
-                      const c = TICKET_PRIORITY_COLORS[p];
+                      const c = getPriorityConfig(p).color;
                       const active = priorityFilter === p;
                       return (
                         <button key={p} type="button"
                           onClick={() => setPriorityFilter(active ? '' : p)}
-                          style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 99, border: `1px solid ${active ? c : c + '60'}`, background: active ? c : `${c}15`, color: active ? '#fff' : c, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {TICKET_PRIORITY_LABELS[p]}
+                          style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 99, border: `1px solid color-mix(in srgb, ${c} ${active ? 100 : 40}%, transparent)`, background: active ? c : `color-mix(in srgb, ${c} 15%, transparent)`, color: active ? '#fff' : c, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {getPriorityConfig(p).label}
                         </button>
                       );
                     })}
@@ -539,7 +539,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 {byPriorityStats.map(({ p, count, color }) => (
                   <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 11, color: '#334155', fontWeight: 600, flex: 1 }}>{TICKET_PRIORITY_LABELS[p]}</span>
+                    <span style={{ fontSize: 11, color: '#334155', fontWeight: 600, flex: 1 }}>{getPriorityConfig(p).label}</span>
                     <div style={{ position: 'relative', height: 4, width: 60, borderRadius: 2, background: '#f1f5f9', overflow: 'hidden', flexShrink: 0 }}>
                       <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${activeCount > 0 ? Math.round((count / activeCount) * 100) : 0}%`, borderRadius: 2, background: color }} />
                     </div>
@@ -571,14 +571,14 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                         ? { label: 'VENCIDO', color: '#ef4444', bg: '#fef2f2' }
                         : t.is_approval_state
                         ? { label: 'APROBAR', color: '#92400e', bg: '#fef3c7' }
-                        : { label: 'SIN ASIGNAR', color: '#6366f1', bg: '#eef2ff' };
+                        : { label: 'SIN ASIGNAR', color: 'var(--status-info-text)', bg: 'var(--status-info-bg)' };
                       return (
                         <button key={t.id} type="button"
                           onClick={() => router.push(`${basePath}/ticket/${t.id}`)}
                           style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 8px', borderRadius: 7, border: '1px solid #f1f5f9', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
                           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}>
-                          <div style={{ width: 4, height: 28, borderRadius: 2, background: TICKET_PRIORITY_COLORS[t.priority], flexShrink: 0 }} />
+                          <div style={{ width: 4, height: 28, borderRadius: 2, background: getPriorityConfig(t.priority).color, flexShrink: 0 }} />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: '#0e2235', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</p>
                             <span style={{ fontSize: 8, fontWeight: 800, padding: '1px 5px', borderRadius: 4, background: tag.bg, color: tag.color }}>{tag.label}</span>
@@ -627,7 +627,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </button>
               <button type="button" onClick={() => router.push(`${basePath}/sla`)}
                 style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                <Clock size={11} style={{ color: '#6366f1', flexShrink: 0 }} /> Monitor SLA
+                <Clock size={11} style={{ color: '#1d4ed8', flexShrink: 0 }} /> Monitor SLA
               </button>
               <button type="button" onClick={() => router.push(`${basePath}/technicians`)}
                 style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
@@ -784,7 +784,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                   <div style={{ background: '#fff', borderRadius: 12, padding: '12px 16px', border: '1.5px solid #ffe8e3', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                     <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value as TicketPriority | ''); setPage(1); }} style={selStyle}>
                       <option value="">Prioridad</option>
-                      {PRIORITIES.map((p) => <option key={p} value={p}>{TICKET_PRIORITY_LABELS[p]}</option>)}
+                      {PRIORITIES.map((p) => <option key={p} value={p}>{getPriorityConfig(p).label}</option>)}
                     </select>
 
                     <select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setPage(1); }} style={selStyle}>
@@ -807,7 +807,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                     <select value={slaFilter} onChange={(e) => { setSlaFilter(e.target.value as SlaStatus | ''); setPage(1); }} style={selStyle}>
                       <option value="">SLA</option>
                       {(['active', 'paused', 'met', 'breached'] as SlaStatus[]).map((s) => (
-                        <option key={s} value={s}>{SLA_STATUS_LABELS[s]}</option>
+                        <option key={s} value={s}>{getSlaStatusConfig(s).label}</option>
                       ))}
                     </select>
 
@@ -858,7 +858,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               {Array.from(ticketsByState.entries()).map(([stateLabel, stTickets]: [string, TicketListItem[]]) => (
                 <div key={stateLabel}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '.07em', padding: '2px 8px', background: '#eef2ff', borderRadius: 5, border: '1px solid #c7d2fe' }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--status-info-text)', textTransform: 'uppercase', letterSpacing: '.07em', padding: '2px 8px', background: 'var(--status-info-bg)', borderRadius: 5, border: '1px solid var(--status-info-border)' }}>
                       {stateLabel}
                     </span>
                     <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{stTickets.length}</span>

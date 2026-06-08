@@ -122,13 +122,13 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #312e81;
+  background: #0e2235;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: #c7d2fe;
+  color: #bfdbfe;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -160,7 +160,7 @@
   font-weight: 500;
 }
 
-.roleAdmin   { background: #312e81; color: #c7d2fe; }
+.roleAdmin   { background: #0e2235; color: #bfdbfe; }
 .roleJefe    { background: #2d1f3d; color: #d8b4fe; }
 .roleTecnico { background: #1e3a5f; color: #93c5fd; }
 .roleUsuario { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }

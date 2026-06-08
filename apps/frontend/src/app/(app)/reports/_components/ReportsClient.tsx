@@ -8,12 +8,12 @@ import { useUIStore } from '@/stores/ui.store';
 import { ADMIN_ROLES } from '@/constants/roles';
 import { reportingService, type DailyTrend, type SlaByPriority, type AuditEntry } from '@/services/reporting.service';
 import api from '@/services/api';
-import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
+import { getPriorityConfig } from '@/constants/status';
 import { fmtDay } from '@/lib/formatters';
 import styles from '../reports.module.css';
 
-const PRIORITY_COLORS = TICKET_PRIORITY_COLORS as Record<string, string>;
-const PRIORITY_LABELS = TICKET_PRIORITY_LABELS as Record<string, string>;
+const PRIORITY_COLORS = Object.fromEntries(['baja','media','alta','critica'].map(p => [p, getPriorityConfig(p).color]));
+const PRIORITY_LABELS = Object.fromEntries(['baja','media','alta','critica'].map(p => [p, getPriorityConfig(p).label]));
 
 function num(v: string | null | undefined): number {
   return v ? parseFloat(v) : 0;
@@ -410,7 +410,7 @@ export function ReportsClient() {
                           label={s.state_label}
                           value={num(s.total)}
                           total={totalTickets}
-                          color={s.is_final ? '#22c55e' : '#4f46e5'}
+                          color={s.is_final ? '#22c55e' : 'var(--status-info-text, #1d4ed8)'}
                         />
                       ))
                     }

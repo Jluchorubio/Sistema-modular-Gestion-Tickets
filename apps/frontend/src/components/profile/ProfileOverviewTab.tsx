@@ -11,7 +11,7 @@ import styles from './profile.module.css';
 
 // login events intentionally excluded — they belong in the Security tab (sessions)
 const FEED_EVENT_CONFIG: Record<string, { icon: typeof Ticket; color: string; label: string }> = {
-  ticket_created:      { icon: Ticket,     color: '#6366F1', label: 'Ticket creado'      },
+  ticket_created:      { icon: Ticket,     color: '#1d4ed8', label: 'Ticket creado'      },
   request_pending:     { icon: FileText,   color: '#F59E0B', label: 'Solicitud enviada'  },
   request_approved:    { icon: Star,       color: '#22C55E', label: 'Solicitud aprobada' },
   request_rejected:    { icon: FileText,   color: '#EF4444', label: 'Solicitud rechazada'},
@@ -133,9 +133,9 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
 
   const heatColor = useCallback((count: number): string => {
     if (count === 0) return '#f1f5f9';
-    if (count <= 2)  return '#c7d2fe';
-    if (count <= 5)  return '#818cf8';
-    return '#4f46e5';
+    if (count <= 2)  return '#bfdbfe';
+    if (count <= 5)  return '#60a5fa';
+    return '#1d4ed8';
   }, []);
 
   // operational feed excludes login/session events (those live in Security tab)
@@ -249,7 +249,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
       {canSeeOps && stats && (
         <div className={styles.ticketStatGrid} style={{ marginBottom: 22 }}>
           {([
-            ['Tickets creados', stats.tickets_total,                        '#6366F1'],
+            ['Tickets creados', stats.tickets_total,                        '#1d4ed8'],
             ['Solicitudes',     stats.requests_total,                       '#0D1B2A'],
             ['Aprobadas',       stats.requests_by_status['approved']  ?? 0, '#22C55E'],
             ['Pendientes',      stats.requests_by_status['pending']   ?? 0, '#F59E0B'],
@@ -318,7 +318,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, justifyContent: 'flex-end' }}>
               <span style={{ fontSize: 10, color: '#94a3b8' }}>Menos</span>
-              {['#f1f5f9', '#c7d2fe', '#818cf8', '#4f46e5'].map(c => (
+              {['#f1f5f9', '#bfdbfe', '#60a5fa', '#1d4ed8'].map(c => (
                 <div key={c} style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
               ))}
               <span style={{ fontSize: 10, color: '#94a3b8' }}>Más</span>
@@ -334,7 +334,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
             <p className={styles.sectionTitle}>Últimos tickets</p>
             {isOwnProfile && (
               <button
-                style={{ fontSize: 11, color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', padding: 0 }}
+                style={{ fontSize: 11, color: '#0e2235', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', padding: 0 }}
                 onClick={() => router.push('/my-tickets')}
               >
                 Ver más →
@@ -365,7 +365,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
                     <span className={styles.badge} style={{ fontSize: 10, background: `${pColor[t.priority] ?? '#94A3B8'}22`, color: pColor[t.priority] ?? '#94A3B8', border: `1px solid ${pColor[t.priority] ?? '#94A3B8'}44` }}>
                       {t.priority}
                     </span>
-                    <span className={styles.badge} style={{ fontSize: 10, background: t.is_final ? '#22C55E22' : '#6366F122', color: t.is_final ? '#22C55E' : '#6366F1', border: `1px solid ${t.is_final ? '#22C55E44' : '#6366F144'}` }}>
+                    <span className={styles.badge} style={{ fontSize: 10, background: t.is_final ? '#22C55E22' : 'var(--status-info-bg)', color: t.is_final ? '#22C55E' : 'var(--status-info-text)', border: `1px solid ${t.is_final ? '#22C55E44' : 'var(--status-info-border)'}` }}>
                       {t.state_label}
                     </span>
                   </div>

@@ -298,7 +298,7 @@ export function DamageTypesTab() {
 
                         <div style={{ flex: 1 }}>
                           <span style={{ fontSize: 13, fontWeight: 600, color: C.navy }}>{dt.label}</span>
-                          {dt.is_other && <span style={{ fontSize: 11, color: '#6366f1' }}> · libre</span>}
+                          {dt.is_other && <span style={{ fontSize: 11, color: 'var(--status-info-text, #1d4ed8)' }}> · libre</span>}
                           {!dt.is_active && <span style={{ fontSize: 10, color: C.muted, marginLeft: 6 }}>inactivo</span>}
                         </div>
 
@@ -311,7 +311,7 @@ export function DamageTypesTab() {
 
                         {!isEditing && (
                           <button
-                            style={{ display: 'flex', alignItems: 'center', padding: '5px 8px', background: 'transparent', color: '#4f46e5', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit' }}
+                            style={{ display: 'flex', alignItems: 'center', padding: '5px 8px', background: 'transparent', color: '#0e2235', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit' }}
                             onClick={() => { setEditId(dt.id); setEditForm({ label: dt.label, weight: dt.weight }); }}>
                             <Pencil size={12} />
                           </button>

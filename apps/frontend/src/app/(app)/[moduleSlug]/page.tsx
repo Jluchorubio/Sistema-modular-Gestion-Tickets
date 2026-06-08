@@ -57,7 +57,7 @@ export default function ModuleSlugPage() {
           type="button"
           onClick={() => router.push('/dashboard')}
           style={{
-            marginTop: 8, padding: '10px 24px', background: '#6366f1', color: '#fff',
+            marginTop: 8, padding: '10px 24px', background: '#0e2235', color: '#fff',
             border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
         >
@@ -75,7 +75,7 @@ export default function ModuleSlugPage() {
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'center', minHeight: '60vh', textAlign: 'center', gap: 16,
       }}>
-        <PackageSearch size={56} color="#6366f1" strokeWidth={1.5} />
+        <PackageSearch size={56} color="#0e2235" strokeWidth={1.5} />
         <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', margin: 0 }}>
           {mod.name}
         </h2>
@@ -87,7 +87,7 @@ export default function ModuleSlugPage() {
           type="button"
           onClick={() => router.push('/dashboard')}
           style={{
-            marginTop: 8, padding: '10px 24px', background: '#6366f1', color: '#fff',
+            marginTop: 8, padding: '10px 24px', background: '#0e2235', color: '#fff',
             border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
         >

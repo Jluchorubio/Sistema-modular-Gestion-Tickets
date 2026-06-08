@@ -39,7 +39,7 @@
   align-items: center;
   gap: 5px;
   padding: 7px 14px;
-  background: #6366F1;
+  background: var(--app-navy, #0e2235);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -50,7 +50,7 @@
   transition: background .12s;
 }
 
-.btnRestore:hover:not(:disabled) { background: #4F46E5; }
+.btnRestore:hover:not(:disabled) { background: rgba(14,34,53,0.85); }
 .btnRestore:disabled { opacity: .5; cursor: not-allowed; }
 
 .btnClear {
@@ -100,8 +100,8 @@
 }
 
 .rowSelected {
-  border-color: #6366F1;
-  background: #eef2ff;
+  border-color: var(--app-navy, #0e2235);
+  background: var(--app-border-soft, #f1f5f9);
 }
 
 .check { cursor: pointer; }
@@ -163,7 +163,7 @@
   transition: all .12s;
 }
 
-.btnRestoreSingle:hover:not(:disabled) { border-color: #6366F1; color: #6366F1; }
+.btnRestoreSingle:hover:not(:disabled) { border-color: var(--app-navy, #0e2235); color: var(--app-navy, #0e2235); }
 .btnRestoreSingle:disabled { opacity: .5; cursor: not-allowed; }
 
 .empty {

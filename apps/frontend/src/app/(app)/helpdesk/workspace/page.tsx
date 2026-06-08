@@ -11,10 +11,10 @@ import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import {
   type TicketPriority,
-  TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS,
-  SLA_STATUS_COLORS, TICKET_PRIORITY_ORDER,
+  TICKET_PRIORITY_ORDER,
   TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
 } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { usersService } from '@/services/users.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import { MODULE_ROLE_LABELS } from '@/constants/roles';
@@ -221,9 +221,9 @@ export default function WorkspacePage() {
           </div>
 
           {sorted.map(t => {
-            const pColor     = TICKET_PRIORITY_COLORS[t.priority as TicketPriority] ?? '#94a3b8';
+            const pColor     = getPriorityConfig(t.priority).color;
             const slaSt      = (t as any).sla_status as string | null;
-            const slaColor   = slaSt ? (SLA_STATUS_COLORS[slaSt as keyof typeof SLA_STATUS_COLORS] ?? null) : null;
+            const slaColor   = slaSt ? getSlaStatusConfig(slaSt).text : null;
             const h          = hoursLeft((t as any).sla_deadline_tracked ?? null);
             const isBreached = slaSt === 'breached';
             const isCrit     = slaSt === 'active' && h !== null && h < 2;
@@ -248,8 +248,8 @@ export default function WorkspacePage() {
                   </p>
                 </div>
                 <span className={styles.ticketCategory}>{t.category_name}</span>
-                <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30`, textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const }}>
-                  {TICKET_PRIORITY_LABELS[t.priority as TicketPriority]}
+                <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `color-mix(in srgb, ${pColor} 15%, transparent)`, color: pColor, border: `1px solid color-mix(in srgb, ${pColor} 25%, transparent)`, textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const }}>
+                  {getPriorityConfig(t.priority).label}
                 </span>
                 <span className={styles.slaTime} style={{ color: slaColor ?? '#94a3b8' }}>
                   {h !== null ? fmtHours(h) : '—'}

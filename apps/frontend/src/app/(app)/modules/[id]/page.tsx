@@ -105,7 +105,7 @@ function SlaSection({ moduleId }: { moduleId: string }) {
                   </td>
                   <td>
                     {rule.is_override ? (
-                      <span style={{ background: '#312e81', color: '#c7d2fe', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500 }}>
+                      <span style={{ background: '#0e2235', color: '#bfdbfe', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500 }}>
                         Override
                       </span>
                     ) : (
@@ -128,7 +128,7 @@ function SlaSection({ moduleId }: { moduleId: string }) {
                             { onSuccess: () => setEditing((prev) => { const n = { ...prev }; delete n[rule.priority]; return n; }) },
                           );
                         }}
-                        style={{ padding: '4px 10px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                        style={{ padding: '4px 10px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                       >
                         Guardar
                       </button>
@@ -253,7 +253,7 @@ export default function ModuleDetailPage() {
           type="button"
           onClick={() => router.push('/dashboard')}
           style={{
-            marginTop: 8, padding: '10px 24px', background: '#6366f1', color: '#fff',
+            marginTop: 8, padding: '10px 24px', background: '#0e2235', color: '#fff',
             border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600,
             cursor: 'pointer',
           }}
@@ -292,8 +292,8 @@ export default function ModuleDetailPage() {
             type="button"
             onClick={() => setShowBulkImport(true)}
             style={{
-              padding: '8px 14px', background: 'none', color: '#6366f1',
-              border: '1px solid #6366f1', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              padding: '8px 14px', background: 'none', color: '#0e2235',
+              border: '1px solid #0e2235', borderRadius: 8, fontSize: 13, fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
@@ -303,7 +303,7 @@ export default function ModuleDetailPage() {
             type="button"
             onClick={() => setShowAssign(true)}
             style={{
-              padding: '8px 16px', background: '#6366f1', color: '#fff',
+              padding: '8px 16px', background: '#0e2235', color: '#fff',
               border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
             }}

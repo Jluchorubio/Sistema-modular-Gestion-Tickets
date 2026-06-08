@@ -14,7 +14,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: #6366F1;
+  background: var(--app-navy, #0e2235);
   color: #fff;
   border: none;
   border-radius: 9px;
@@ -26,7 +26,7 @@
   transition: background .12s;
 }
 
-.btnPrimary:hover { background: #4F46E5; }
+.btnPrimary:hover { background: rgba(14,34,53,0.85); }
 
 .title {
   font-size: 18px;
@@ -64,7 +64,7 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: #6366F1;
+  background: var(--app-navy, #0e2235);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,8 +101,8 @@
 .roleBadge {
   font-size: 11px;
   font-weight: 600;
-  color: #6366F1;
-  background: #eef2ff;
+  color: var(--app-navy, #0e2235);
+  background: var(--app-border-soft, #f1f5f9);
   border-radius: 6px;
   padding: 3px 9px;
   white-space: nowrap;
@@ -126,7 +126,7 @@
   font-family: inherit;
 }
 
-.btnAction:hover { border-color: #6366F1; color: #6366F1; background: #eef2ff; }
+.btnAction:hover { border-color: var(--app-navy, #0e2235); color: var(--app-navy, #0e2235); background: var(--app-border-soft, #f1f5f9); }
 
 /* Empty / Error */
 .empty {
@@ -198,7 +198,7 @@
   appearance: none;
 }
 
-.select:focus { outline: none; border-color: #6366F1; }
+.select:focus { outline: none; border-color: var(--app-navy, #0e2235); }
 
 .selectIcon {
   position: absolute;
@@ -217,7 +217,7 @@
 
 .btnPrimary {
   padding: 9px 20px;
-  background: #6366F1;
+  background: var(--app-navy, #0e2235);
   color: #fff;
   border: none;
   border-radius: 9px;
@@ -228,7 +228,7 @@
   transition: background .12s;
 }
 
-.btnPrimary:hover:not(:disabled) { background: #4F46E5; }
+.btnPrimary:hover:not(:disabled) { background: rgba(14,34,53,0.85); }
 .btnPrimary:disabled { opacity: .5; cursor: not-allowed; }
 
 .btnSecondary {

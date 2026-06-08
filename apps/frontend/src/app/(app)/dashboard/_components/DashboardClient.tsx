@@ -36,7 +36,7 @@ const INVENTORY_DEFAULTS: SystemModule = {
 const GESTION_DEFAULTS: SystemModule = {
   id: '__gestion__', name: 'Gestión Administrativa', slug: 'gestion',
   description: 'Solicitudes de acceso, cambio de rol, corrección de perfil y escalaciones',
-  type: 'gestion', image_url: null, color: '#6366F1',
+  type: 'gestion', image_url: null, color: '#0e2235',
   is_active: true, has_access: true, access_mode: 'open',
   maintenance_mode: false, maintenance_since: null, maintenance_message: null,
   created_at: new Date(0).toISOString(), deleted_at: null,

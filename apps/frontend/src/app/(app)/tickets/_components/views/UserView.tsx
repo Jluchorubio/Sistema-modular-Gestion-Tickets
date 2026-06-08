@@ -8,8 +8,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import {
   ticketsService,
   type TicketListItem, type TicketPriority,
-  TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS, SLA_STATUS_COLORS,
 } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import styles from '../../tickets.module.css';
 import { isToday, TicketCard } from './shared';
@@ -49,10 +49,10 @@ function portalStateBadge(t: TicketListItem): { label: string; bg: string; color
 /* ── Active ticket card ── */
 function ActiveCard({ ticket, basePath }: { ticket: TicketListItem; basePath: string }) {
   const router  = useRouter();
-  const pColor  = TICKET_PRIORITY_COLORS[ticket.priority as TicketPriority] ?? C.muted;
+  const pColor  = getPriorityConfig(ticket.priority).color;
   const badge   = portalStateBadge(ticket);
   const h       = hoursLeft(ticket.sla_deadline_tracked ?? ticket.sla_deadline ?? null);
-  const slaColor = ticket.sla_status ? (SLA_STATUS_COLORS[ticket.sla_status] ?? null) : null;
+  const slaColor = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status).text : null;
   const breached = ticket.sla_status === 'breached';
 
   return (

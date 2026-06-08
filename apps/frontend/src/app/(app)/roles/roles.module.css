@@ -245,8 +245,8 @@
 }
 
 .criticalRule {
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
+  background: var(--app-border-soft, #f1f5f9);
+  border: 1px solid var(--app-border, #e2e8f0);
   padding: 10px;
   font-size: 10px;
   color: #3730a3;

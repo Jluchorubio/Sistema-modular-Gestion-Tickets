@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BarChart2, Users, Clock, Star, TrendingUp, RefreshCw, Download } from 'lucide-react';
 import { reportingService, type HelpdeskTechnician } from '@/services/reporting.service';
 import api from '@/services/api';
-import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS } from '@/services/tickets.service';
+import { getPriorityConfig } from '@/constants/status';
 import { fmtDay } from '@/lib/formatters';
 
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
@@ -169,7 +169,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                 <KpiCard label="Total tickets"    value={n(kpis?.total)}     sub="histórico"        color={C.navy} />
                 <KpiCard label="Activos"          value={n(kpis?.open)}      sub="en este momento"  color={C.coral} />
-                <KpiCard label="Esta semana"      value={n(kpis?.this_week)} sub="últimos 7 días"   color="#6366f1" />
+                <KpiCard label="Esta semana"      value={n(kpis?.this_week)} sub="últimos 7 días"   color="var(--status-info-text, #1d4ed8)" />
                 <KpiCard label="Rechazados"       value={n(kpis?.rechazados)} sub="total histórico" color={n(kpis?.rechazados) > 0 ? '#f59e0b' : '#22c55e'} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
@@ -323,13 +323,13 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                       ))}
                     </div>
                     {sla!.by_priority.map(row => {
-                      const color   = (TICKET_PRIORITY_COLORS as Record<string, string>)[row.priority] ?? C.muted;
+                      const color   = getPriorityConfig(row.priority).color;
                       const breach  = n(row.breached);
                       return (
                         <div key={row.priority} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 100px', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: `1px solid ${C.border}` }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 600, color: C.navy }}>
                             <span style={{ width: 9, height: 9, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                            {(TICKET_PRIORITY_LABELS as Record<string, string>)[row.priority] ?? row.priority}
+                            {getPriorityConfig(row.priority).label}
                           </span>
                           <span style={{ fontSize: 12, fontWeight: 700, color: C.navy }}>{n(row.total)}</span>
                           <span style={{ fontSize: 12, fontWeight: 700, color: breach > 0 ? '#ef4444' : '#22c55e' }}>{breach}</span>

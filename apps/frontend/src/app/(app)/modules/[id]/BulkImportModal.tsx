@@ -262,7 +262,7 @@ export function BulkImportModal({ moduleId, moduleName, onClose }: Props) {
         {/* Footer */}
         <div style={{ padding: '14px 20px', borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           {result ? (
-            <button type="button" onClick={onClose} style={{ padding: '8px 20px', background: '#6366F1', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button type="button" onClick={onClose} style={{ padding: '8px 20px', background: '#0e2235', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               Cerrar
             </button>
           ) : (
@@ -274,7 +274,7 @@ export function BulkImportModal({ moduleId, moduleName, onClose }: Props) {
                 type="button"
                 onClick={() => importMut.mutate()}
                 disabled={!canSubmit}
-                style={{ padding: '8px 18px', background: canSubmit ? '#6366F1' : '#A5B4FC', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: canSubmit ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
+                style={{ padding: '8px 18px', background: canSubmit ? '#0e2235' : '#94a3b8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: canSubmit ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
               >
                 {importMut.isPending ? 'Importando…' : `Importar ${validRows.length} usuario${validRows.length !== 1 ? 's' : ''}`}
               </button>

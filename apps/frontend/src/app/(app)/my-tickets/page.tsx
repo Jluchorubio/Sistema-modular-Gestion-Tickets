@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Clock, Ticket, ArrowLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { usersService } from '@/services/users.service';
-import { TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS, SLA_STATUS_LABELS, TICKET_PRIORITY_ORDER } from '@/services/tickets.service';
+import { TICKET_PRIORITY_ORDER } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { fmtRelativeCompact } from '@/lib/formatters';
 
 type Tab = 'created' | 'assigned';
@@ -53,10 +54,12 @@ function TicketRow({
   onClick: () => void;
   isApproval?: boolean;
 }) {
-  const pColor   = (TICKET_PRIORITY_COLORS as Record<string, string>)[t.priority] ?? '#94a3b8';
-  const pLabel   = (TICKET_PRIORITY_LABELS as Record<string, string>)[t.priority] ?? t.priority;
-  const slaColor = t.sla_status ? ((SLA_STATUS_COLORS as Record<string, string>)[t.sla_status] ?? null) : null;
-  const slaLabel = t.sla_status ? ((SLA_STATUS_LABELS as Record<string, string>)[t.sla_status] ?? null) : null;
+  const pCfg   = getPriorityConfig(t.priority);
+  const pColor = pCfg.color;
+  const pLabel = pCfg.label;
+  const slaCfg   = t.sla_status ? getSlaStatusConfig(t.sla_status) : null;
+  const slaColor = slaCfg?.text ?? null;
+  const slaLabel = slaCfg?.label ?? null;
 
   return (
     <div
@@ -105,7 +108,7 @@ function TicketRow({
             )}
             {t.assignment_role && !isApproval && (
               <><span style={{ fontSize: 11, color: '#cbd5e1' }}>·</span>
-              <span style={{ fontSize: 10, color: '#6366f1', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              <span style={{ fontSize: 10, color: 'var(--status-info-text)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>
                 {t.assignment_role}
               </span></>
             )}
@@ -114,21 +117,21 @@ function TicketRow({
       </div>
 
       <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
-        {slaLabel && slaColor && !t.is_final && !t.is_approval_state && (
-          <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: `${slaColor}18`, color: slaColor, display: 'flex', alignItems: 'center', gap: 3, fontWeight: 600 }}>
+        {slaLabel && slaCfg && !t.is_final && !t.is_approval_state && (
+          <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: slaCfg.bg, color: slaCfg.text, border: `1px solid ${slaCfg.border}`, display: 'flex', alignItems: 'center', gap: 3, fontWeight: 600 }}>
             <Clock size={9} />{slaLabel}
           </span>
         )}
         {!isApproval && (
-          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30` }}>
+          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: `color-mix(in srgb, ${pColor} 15%, transparent)`, color: pColor, border: `1px solid color-mix(in srgb, ${pColor} 25%, transparent)` }}>
             {pLabel}
           </span>
         )}
         <span style={{
           fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600, whiteSpace: 'nowrap',
-          background: t.is_final ? '#22c55e18' : isApproval ? '#22c55e18' : '#6366f118',
-          color:      t.is_final ? '#22c55e'   : isApproval ? '#22c55e'   : '#6366f1',
-          border:     `1px solid ${t.is_final ? '#22c55e30' : isApproval ? '#22c55e30' : '#6366f130'}`,
+          background: (t.is_final || isApproval) ? 'var(--status-success-bg)' : 'var(--status-info-bg)',
+          color:      (t.is_final || isApproval) ? 'var(--status-success-text)' : 'var(--status-info-text)',
+          border:     `1px solid ${(t.is_final || isApproval) ? 'var(--status-success-border)' : 'var(--status-info-border)'}`,
         }}>
           {t.state_label}
         </span>

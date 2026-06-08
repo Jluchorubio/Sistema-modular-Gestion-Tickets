@@ -34,7 +34,7 @@ const s = {
     marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
     padding: '4px 10px', border: '1px solid #e2e8f0', borderRadius: 4,
     fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-    background: '#fff', color: '#4f46e5',
+    background: '#fff', color: '#0e2235',
   } satisfies React.CSSProperties,
   btnSave: {
     display: 'flex', alignItems: 'center', gap: 4,
@@ -147,8 +147,8 @@ export function ModuleCalendarioTab({ moduleId }: Props) {
     <div>
       {noModuleHours && (
         <div style={{ padding: '10px 14px', marginBottom: 16,
-          background: 'rgba(99,102,241,.04)', border: '1px solid #e0e7ff',
-          borderRadius: 6, fontSize: 12, color: '#6366f1' }}>
+          background: 'rgba(14,34,53,.04)', border: '1px solid #e2e8f0',
+          borderRadius: 6, fontSize: 12, color: 'var(--status-info-text, #1d4ed8)' }}>
           Sin configuración específica — este módulo hereda el calendario global.
           Configura aquí para sobreescribirlo.
         </div>

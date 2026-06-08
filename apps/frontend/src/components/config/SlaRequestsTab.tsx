@@ -190,8 +190,8 @@ export function SlaRequestsTab() {
                     <span style={{ fontSize: 12, color: '#f59e0b', flex: 1 }}>Sin regla global</span>
                   )}
                   {overrides.length > 0 && (
-                    <span style={{ fontSize: 10, color: '#ff5e3a', background: 'rgba(99,102,241,.08)',
-                      padding: '2px 8px', borderRadius: 4, border: '1px solid #c7d2fe' }}>
+                    <span style={{ fontSize: 10, color: '#ff5e3a', background: 'rgba(14,34,53,.06)',
+                      padding: '2px 8px', borderRadius: 4, border: '1px solid #e2e8f0' }}>
                       {overrides.length} override{overrides.length > 1 ? 's' : ''}
                     </span>
                   )}
@@ -239,8 +239,8 @@ export function SlaRequestsTab() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8,
                               marginBottom: editId === r.id ? 4 : 6 }}>
                               <span style={{ fontSize: 11, color: '#0e2235', fontFamily: 'monospace',
-                                background: 'rgba(79,70,229,.06)', padding: '1px 6px', borderRadius: 4,
-                                border: '1px solid #c7d2fe' }}>
+                                background: 'rgba(14,34,53,.06)', padding: '1px 6px', borderRadius: 4,
+                                border: '1px solid #e2e8f0' }}>
                                 {r.request_type}
                               </span>
                               {!r.is_active && (
@@ -383,8 +383,8 @@ export function SlaRequestsTab() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: editId === r.id ? 4 : 0 }}>
                       <span style={pStyle}>{PRIORITY_LABEL[r.priority]}</span>
                       <span style={{ fontSize: 11, color: '#0e2235', fontFamily: 'monospace',
-                        background: 'rgba(79,70,229,.06)', padding: '1px 6px', borderRadius: 4,
-                        border: '1px solid #c7d2fe' }}>
+                        background: 'rgba(14,34,53,.06)', padding: '1px 6px', borderRadius: 4,
+                        border: '1px solid #e2e8f0' }}>
                         {r.request_type}
                       </span>
                     </div>

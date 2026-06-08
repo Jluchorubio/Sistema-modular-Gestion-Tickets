@@ -162,8 +162,8 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
               onClick={downloadTemplate}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '8px 16px', background: '#EEF2FF', color: '#4F46E5',
-                border: '1px solid #C7D2FE', borderRadius: 8, fontSize: 12,
+                padding: '8px 16px', background: '#f1f5f9', color: '#0e2235',
+                border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12,
                 fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
               }}
             >

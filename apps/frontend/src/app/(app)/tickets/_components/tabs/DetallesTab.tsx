@@ -27,7 +27,7 @@ function KbSuggestions({ moduleId, query }: { moduleId: string; query: string })
           style={{ display: 'flex', alignItems: 'flex-start', gap: 7, padding: '7px 9px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#eff6ff'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}>
-          <BookOpen size={11} style={{ color: '#6366f1', marginTop: 1, flexShrink: 0 }} />
+          <BookOpen size={11} style={{ color: '#1d4ed8', marginTop: 1, flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: '#334155', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
           <ExternalLink size={9} style={{ color: '#94a3b8', flexShrink: 0 }} />
         </button>
@@ -207,7 +207,7 @@ export function DetallesTab({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 6 }}>
                   {relResults.map(r => (
                     <button key={r.id} type="button" onClick={() => setRelTarget(r)}
-                      style={{ fontSize: 11, padding: '5px 8px', borderRadius: 5, border: `1px solid ${relTarget?.id === r.id ? '#6366f1' : '#e2e8f0'}`, background: relTarget?.id === r.id ? '#eef2ff' : '#fff', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      style={{ fontSize: 11, padding: '5px 8px', borderRadius: 5, border: `1px solid ${relTarget?.id === r.id ? '#0e2235' : '#e2e8f0'}`, background: relTarget?.id === r.id ? '#f1f5f9' : '#fff', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       #{r.id.slice(0, 6)} — {r.title}
                     </button>
                   ))}
@@ -226,7 +226,7 @@ export function DetallesTab({
                   Cancelar
                 </button>
                 <button type="button" disabled={!relTarget || mutPending.addRel} onClick={handleAddRelation}
-                  style={{ flex: 1, padding: '6px', borderRadius: 5, border: 'none', background: relTarget ? '#6366f1' : '#e2e8f0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: relTarget ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                  style={{ flex: 1, padding: '6px', borderRadius: 5, border: 'none', background: relTarget ? '#0e2235' : '#e2e8f0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: relTarget ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
                   {mutPending.addRel ? '…' : 'Vincular'}
                 </button>
               </div>
@@ -283,17 +283,17 @@ export function DetallesTab({
         const prevCount = prevTickets?.length ?? 0;
         if (reprocess === 0 && prevCount === 0) return null;
         return (
-          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e0e7ff', padding: '14px 16px' }}>
-            <p style={{ fontSize: 10, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Contexto de recurrencia</p>
+          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+            <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--status-info-text)', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Contexto de recurrencia</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {reprocess > 0 && (
-                <div style={{ display: 'flex', gap: 8, padding: '7px 9px', background: '#eef2ff', borderRadius: 7 }}>
+                <div style={{ display: 'flex', gap: 8, padding: '7px 9px', background: 'var(--status-info-bg)', borderRadius: 7 }}>
                   <span style={{ fontSize: 16 }}>🔁</span>
                   <div>
-                    <p style={{ margin: '0 0 1px', fontSize: 11, fontWeight: 700, color: '#4338ca' }}>
+                    <p style={{ margin: '0 0 1px', fontSize: 11, fontWeight: 700, color: 'var(--status-info-text)' }}>
                       Reabierto {reprocess} {reprocess === 1 ? 'vez' : 'veces'}
                     </p>
-                    <p style={{ margin: 0, fontSize: 10, color: '#6366f1' }}>Este ticket fue reabierto después de marcar como resuelto</p>
+                    <p style={{ margin: 0, fontSize: 10, color: 'var(--status-info-text)' }}>Este ticket fue reabierto después de marcar como resuelto</p>
                   </div>
                 </div>
               )}

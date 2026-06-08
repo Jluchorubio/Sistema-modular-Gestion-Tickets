@@ -173,7 +173,7 @@ function StatusChangeContent({ ev }: { ev: TicketTimelineEvent }) {
 }
 
 /* ─── ASSIGNMENT ────────────────────────────────────────── */
-const ROLE_COLORS: Record<string, string> = { owner: '#1d4ed8', collaborator: '#6366f1', observer: '#64748b' };
+const ROLE_COLORS: Record<string, string> = { owner: '#1d4ed8', collaborator: '#3b82f6', observer: '#64748b' };
 const ROLE_LABELS: Record<string, string> = { owner: 'responsable', collaborator: 'colaborador', observer: 'observador' };
 function AssignmentDot({ ev }: { ev: TicketTimelineEvent }) {
   const role  = (ev.metadata ?? {}).role ?? ev.subtype ?? 'owner';

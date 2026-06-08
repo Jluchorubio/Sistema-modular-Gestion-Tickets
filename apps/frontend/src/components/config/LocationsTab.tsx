@@ -111,7 +111,7 @@ function EnvironmentRow({
               {env.is_active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
             </button>
             <button type="button" onClick={() => setEditing(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', background: 'transparent', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', background: 'transparent', color: '#0e2235', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Pencil size={10} />
             </button>
             <button type="button"
@@ -229,7 +229,7 @@ function LocationCard({
               {loc.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
             </button>
             <button type="button" onClick={() => setEditingLoc(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'transparent', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: 'transparent', color: '#0e2235', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
               <Pencil size={11} />
             </button>
             <button type="button"

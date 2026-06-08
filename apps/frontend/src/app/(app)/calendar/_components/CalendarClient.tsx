@@ -26,11 +26,8 @@ import {
 import {
   ticketsService,
   type TicketListItem,
-  TICKET_PRIORITY_LABELS,
-  TICKET_PRIORITY_COLORS,
-  SLA_STATUS_LABELS,
-  SLA_STATUS_COLORS,
 } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import {
   meetingsService,
   type CalendarMeeting,
@@ -65,6 +62,14 @@ import {
 } from '@/constants/requests';
 import { exportCalendarAuditPdf } from '@/utils/calendar-pdf';
 import styles from '../calendar.module.css';
+
+/* Hex colors for FullCalendar (CSS vars don't work in library context) */
+const SLA_CALENDAR_HEX: Record<string, string> = {
+  active:   '#1d4ed8',
+  paused:   '#6d28d9',
+  met:      '#15803d',
+  breached: '#dc2626',
+};
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 type CalendarRole = 'superadmin' | 'admin' | 'jefe' | 'user';
@@ -174,7 +179,7 @@ function getReqDateStr(req: AdmRequest): string {
 }
 
 /* ── Source colors ─────────────────────────────────────────────────────────── */
-const SRC_COLORS = { system_task: '#8B5CF6', user_task: '#6366F1' };
+const SRC_COLORS = { system_task: '#8B5CF6', user_task: '#0e2235' };
 
 function eventColor(req: AdmRequest): string {
   if (req.type === 'task') return req.task_source === 'system' ? SRC_COLORS.system_task : SRC_COLORS.user_task;
@@ -407,17 +412,20 @@ function DayEventCard({ req, onClick }: { req: AdmRequest; onClick: () => void }
 
 /* ── Ticket SLA card ───────────────────────────────────────────────────────── */
 function TicketSlaCard({ ticket, onClick }: { ticket: TicketListItem; onClick: () => void }) {
-  const slaColor  = ticket.sla_status ? SLA_STATUS_COLORS[ticket.sla_status]      : '#94a3b8';
-  const slaLabel  = ticket.sla_status ? SLA_STATUS_LABELS[ticket.sla_status]       : 'Sin SLA';
-  const prioColor = TICKET_PRIORITY_COLORS[ticket.priority];
+  const slaCfg    = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status) : null;
+  const slaColor  = slaCfg?.text ?? '#94a3b8';
+  const slaBg     = slaCfg?.bg ?? 'transparent';
+  const slaBorder = slaCfg?.border ?? '#94a3b8';
+  const slaLabel  = slaCfg?.label ?? 'Sin SLA';
+  const prioColor = getPriorityConfig(ticket.priority).color;
   return (
     <div className={`${styles.dayEventCard} ${styles.ticketCard}`} onClick={onClick}>
       <div className={styles.dayEventTop}>
-        <span className={styles.slaTag} style={{ background: `${slaColor}22`, color: slaColor, border: `1px solid ${slaColor}44` }}>
+        <span className={styles.slaTag} style={{ background: slaBg, color: slaColor, border: `1px solid ${slaBorder}` }}>
           <AlertTriangle size={8} /> SLA · {slaLabel}
         </span>
         <span style={{ color: prioColor, fontSize: 10, fontWeight: 700, textTransform: 'uppercase' }}>
-          {TICKET_PRIORITY_LABELS[ticket.priority]}
+          {getPriorityConfig(ticket.priority).label}
         </span>
       </div>
       <h4 className={styles.dayEventTitle}>{ticket.title}</h4>
@@ -431,9 +439,12 @@ function TicketSlaCard({ ticket, onClick }: { ticket: TicketListItem; onClick: (
 
 /* ── Ticket SLA popup (read-only) ──────────────────────────────────────────── */
 function TicketSlaPopup({ ticket, onClose }: { ticket: TicketListItem; onClose: () => void }) {
-  const slaColor  = ticket.sla_status ? SLA_STATUS_COLORS[ticket.sla_status]  : '#94a3b8';
-  const slaLabel  = ticket.sla_status ? SLA_STATUS_LABELS[ticket.sla_status]  : 'Sin SLA';
-  const prioColor = TICKET_PRIORITY_COLORS[ticket.priority];
+  const slaCfg    = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status) : null;
+  const slaColor  = slaCfg?.text ?? '#94a3b8';
+  const slaBg     = slaCfg?.bg ?? 'transparent';
+  const slaBorder = slaCfg?.border ?? '#94a3b8';
+  const slaLabel  = slaCfg?.label ?? 'Sin SLA';
+  const prioColor = getPriorityConfig(ticket.priority).color;
   const deadline  = ticket.sla_deadline
     ? new Date(ticket.sla_deadline).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : null;
@@ -449,11 +460,11 @@ function TicketSlaPopup({ ticket, onClose }: { ticket: TicketListItem; onClose: 
         <div className={styles.popupTitle}>{ticket.title}</div>
 
         <div className={styles.badgeRow}>
-          <span className={styles.badge} style={{ background: `${slaColor}22`, color: slaColor, border: `1px solid ${slaColor}44` }}>
+          <span className={styles.badge} style={{ background: slaBg, color: slaColor, border: `1px solid ${slaBorder}` }}>
             SLA: {slaLabel}
           </span>
-          <span className={styles.badge} style={{ background: `${prioColor}22`, color: prioColor, border: `1px solid ${prioColor}44` }}>
-            {TICKET_PRIORITY_LABELS[ticket.priority]}
+          <span className={styles.badge} style={{ background: `color-mix(in srgb, ${prioColor} 15%, transparent)`, color: prioColor, border: `1px solid color-mix(in srgb, ${prioColor} 25%, transparent)` }}>
+            {getPriorityConfig(ticket.priority).label}
           </span>
           <span className={styles.badge} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
             {ticket.state_label}
@@ -552,7 +563,7 @@ function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, onAudit 
   const [endTime,    setEndTime]    = useState('10:00');
   const [allDay,     setAllDay]     = useState(false);
   const [eventType,  setEventType]  = useState<CalEventType>('personal');
-  const [color,      setColor]      = useState('#6366f1');
+  const [color,      setColor]      = useState('#0e2235');
   const [error,      setError]      = useState('');
 
   const mut = useMutation({
@@ -1183,7 +1194,7 @@ export function CalendarClient() {
     });
 
     const ticketEvts = slaTickets.map((t) => {
-      const color = t.sla_status ? SLA_STATUS_COLORS[t.sla_status] : '#94a3b8';
+      const color = t.sla_status ? (SLA_CALENDAR_HEX[t.sla_status] ?? '#94a3b8') : '#94a3b8';
       return {
         id:              `sla-${t.id}`,
         title:           `🎫 ${t.title}`,
@@ -1324,7 +1335,7 @@ export function CalendarClient() {
               { label: 'Solicitudes', value: stats.total,    color: '#0e2235' },
               { label: 'Pendientes',  value: stats.pending,  color: REQUEST_STATUS_COLORS.pending },
               { label: 'En proceso',  value: stats.inProg,   color: REQUEST_STATUS_COLORS.in_progress },
-              { label: 'SLA activos', value: stats.slaOpen,  color: SLA_STATUS_COLORS.active },
+              { label: 'SLA activos', value: stats.slaOpen,  color: getSlaStatusConfig('active').text },
               { label: 'Reuniones',   value: stats.meetings, color: '#34a853' },
               { label: 'Eventos',     value: stats.eventos,  color: '#8b5cf6' },
             ].map(({ label, value, color }) => (

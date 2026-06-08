@@ -45,7 +45,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
 // Color per action category
 export const AUDIT_ACTION_COLOR: Record<string, string> = {
   'calendar.event.created':               '#8b5cf6',
-  'calendar.event.updated':               '#6366f1',
+  'calendar.event.updated':               '#1d4ed8',
   'calendar.event.deleted':               '#ef4444',
   'calendar.request.approved':            '#20c933',
   'calendar.request.rejected':            '#ef4444',

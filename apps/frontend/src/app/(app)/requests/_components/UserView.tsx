@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { usePermission } from '@/hooks/usePermission';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui';
+import { MetricCard } from '@/components/ui/MetricCard';
 import { RequestCard } from './RequestCard';
 import { CreateRequestModal } from './CreateRequestModal';
 import { CancelRequestModal } from './CancelRequestModal';
@@ -18,17 +19,6 @@ interface UserViewProps {
   isSuperadmin: boolean;
 }
 
-function MyStatPill({ label, value, color, icon }: {
-  label: string; value: number; color: string; icon: React.ReactNode;
-}) {
-  return (
-    <div className={styles.myStatPill}>
-      <span className={styles.myStatIcon} style={{ color }}>{icon}</span>
-      <span className={styles.myStatValue} style={{ color }}>{value}</span>
-      <span className={styles.myStatLabel}>{label}</span>
-    </div>
-  );
-}
 
 export function UserView({ isSuperadmin }: UserViewProps) {
   const qc           = useQueryClient();
@@ -81,9 +71,9 @@ export function UserView({ isSuperadmin }: UserViewProps) {
       <div className={styles.statsRow}>
         {myStats && (
           <div className={styles.myStats}>
-            <MyStatPill label="Pendientes"  value={myStats.pending}     color="#b45309" icon={<Clock size={14} />} />
-            <MyStatPill label="En proceso"  value={myStats.in_progress} color="#7c3aed" icon={<Loader2 size={14} />} />
-            <MyStatPill label="Completadas" value={myStats.completed}   color="#15803d" icon={<CheckCircle2 size={14} />} />
+            <MetricCard size="sm" label="Pendientes"  value={myStats.pending}     color="#b45309" icon={<Clock size={14} />} />
+            <MetricCard size="sm" label="En proceso"  value={myStats.in_progress} color="#7c3aed" icon={<Loader2 size={14} />} />
+            <MetricCard size="sm" label="Completadas" value={myStats.completed}   color="#15803d" icon={<CheckCircle2 size={14} />} />
           </div>
         )}
 

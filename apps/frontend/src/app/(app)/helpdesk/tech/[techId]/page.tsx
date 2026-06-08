@@ -14,12 +14,11 @@ import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import {
-  TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS,
-  SLA_STATUS_COLORS, SLA_STATUS_LABELS,
   TICKET_PRIORITY_ORDER, TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
   ticketsService,
 } from '@/services/tickets.service';
 import type { TicketPriority } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import type { TechAvailStatus } from '@/types/module.types';
 import { MODULE_ROLE_LABELS } from '@/constants/roles';
 import { fmtRelativeCompact } from '@/lib/formatters';
@@ -52,9 +51,9 @@ function Stars({ rating, size = 13 }: { rating: number; size?: number }) {
 /* ── Ticket queue row ── */
 function QueueRow({ ticket, basePath }: { ticket: any; basePath: string }) {
   const router    = useRouter();
-  const color     = TICKET_PRIORITY_COLORS[ticket.priority as TicketPriority] ?? '#94a3b8';
-  const slaColor  = ticket.sla_status ? (SLA_STATUS_COLORS[ticket.sla_status as keyof typeof SLA_STATUS_COLORS] ?? '#94a3b8') : null;
-  const slaLabel  = ticket.sla_status ? (SLA_STATUS_LABELS[ticket.sla_status as keyof typeof SLA_STATUS_LABELS] ?? null) : null;
+  const color     = getPriorityConfig(ticket.priority).color;
+  const slaColor  = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status).text : null;
+  const slaLabel  = ticket.sla_status ? (getSlaStatusConfig(ticket.sla_status).label ?? null) : null;
   return (
     <div
       onClick={() => router.push(`${basePath}/ticket/${ticket.id}`)}
@@ -74,7 +73,7 @@ function QueueRow({ ticket, basePath }: { ticket: any; basePath: string }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: `${color}22`, color, border: `1px solid ${color}44` }}>
-            {TICKET_PRIORITY_LABELS[ticket.priority as TicketPriority]}
+            {getPriorityConfig(ticket.priority).label}
           </span>
           {ticket.category_name && <span style={{ fontSize: 10, color: '#94a3b8' }}>{ticket.category_name}</span>}
           {slaColor && slaLabel && (
@@ -289,7 +288,7 @@ export default function TechProcessPage() {
     { label: 'Esperando',      value: previous.length,    fg: '#64748b', bg: '#fafafa'  },
     { label: 'Asignados',      value: all.length,         fg: '#1d4ed8', bg: '#eff6ff'  },
     { label: 'Aprobaciones',   value: approvalCount,      fg: '#64748b', bg: '#fafafa'  },
-    { label: 'Hoy',            value: today.length,       fg: '#4338ca', bg: '#eef2ff'  },
+    { label: 'Hoy',            value: today.length,       fg: '#1d4ed8', bg: '#eff6ff'  },
     { label: 'En espera',      value: pausedCount,        fg: '#b45309', bg: '#fffbeb'  },
     { label: 'Colaboraciones', value: collaborationCount, fg: '#64748b', bg: '#fafafa'  },
   ];
@@ -491,7 +490,7 @@ export default function TechProcessPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {[
                 { label: 'Activos',    value: tech.active_tickets ?? 0, color: '#0e2235' },
-                { label: 'Asignados', value: all.length,                color: '#6366f1' },
+                { label: 'Asignados', value: all.length,                color: '#1d4ed8' },
                 { label: 'Hoy',        value: today.length,             color: '#ff5e3a' },
                 { label: 'Anteriores', value: previous.length,          color: '#f59e0b' },
               ].map((s) => (
@@ -546,7 +545,7 @@ export default function TechProcessPage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {assignmentHistory.map(a => {
-                  const pColor = TICKET_PRIORITY_COLORS[a.priority as TicketPriority] ?? '#94a3b8';
+                  const pColor = getPriorityConfig(a.priority).color;
                   const hoursHeld = typeof a.hours_held === 'number' ? a.hours_held : parseFloat(String(a.hours_held ?? 0));
                   const durLabel  = hoursHeld < 1
                     ? `${Math.round(hoursHeld * 60)}min`
@@ -574,8 +573,8 @@ export default function TechProcessPage() {
                       </p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
-                          background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30` }}>
-                          {TICKET_PRIORITY_LABELS[a.priority as TicketPriority]}
+                          background: `color-mix(in srgb, ${pColor} 15%, transparent)`, color: pColor, border: `1px solid color-mix(in srgb, ${pColor} 25%, transparent)` }}>
+                          {getPriorityConfig(a.priority).label}
                         </span>
                         {a.is_final ? (
                           <span style={{ fontSize: 10, fontWeight: 700, color: '#22c55e', background: '#f0fdf4', padding: '1px 6px', borderRadius: 99, border: '1px solid #bbf7d0' }}>

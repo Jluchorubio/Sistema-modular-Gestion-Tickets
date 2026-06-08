@@ -12,6 +12,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { EmptyState } from '@/components/ui';
+import { MetricCard } from '@/components/ui/MetricCard';
 import { RequestCard } from './RequestCard';
 import { CreateRequestModal } from './CreateRequestModal';
 import { RejectRequestModal } from './RejectRequestModal';
@@ -25,16 +26,6 @@ interface AdminViewProps {
   isSuperadmin: boolean;
 }
 
-function StatPill({
-  label, value, color,
-}: { label: string; value: number; color: string }) {
-  return (
-    <div className={styles.statPill}>
-      <p className={styles.statValue} style={{ color }}>{value}</p>
-      <p className={styles.statLabel}>{label}</p>
-    </div>
-  );
-}
 
 export function AdminView({ isSuperadmin }: AdminViewProps) {
   const qc = useQueryClient();
@@ -134,12 +125,12 @@ export function AdminView({ isSuperadmin }: AdminViewProps) {
       {/* Stats bar */}
       {stats && (
         <div className={styles.statsBar}>
-          <StatPill label="Total"      value={stats.total}       color="var(--app-navy, #0e2235)" />
-          <StatPill label="Pendientes" value={stats.pending}     color="#b45309"   />
-          <StatPill label="Tomadas"    value={stats.taken}       color="#1d4ed8"   />
-          <StatPill label="En proceso" value={stats.in_progress} color="#7c3aed"   />
-          <StatPill label="Escaladas"  value={stats.escalated}   color="#ea580c"   />
-          <StatPill label="SLA vencido" value={stats.sla_breached} color="#dc2626" />
+          <MetricCard size="sm" label="Total"      value={stats.total}         color="var(--app-navy, #0e2235)" />
+          <MetricCard size="sm" label="Pendientes" value={stats.pending}       color="#b45309"   />
+          <MetricCard size="sm" label="Tomadas"    value={stats.taken}         color="#1d4ed8"   />
+          <MetricCard size="sm" label="En proceso" value={stats.in_progress}   color="#7c3aed"   />
+          <MetricCard size="sm" label="Escaladas"  value={stats.escalated}     color="#ea580c"   />
+          <MetricCard size="sm" label="SLA vencido" value={stats.sla_breached} color="#dc2626"   />
         </div>
       )}
 

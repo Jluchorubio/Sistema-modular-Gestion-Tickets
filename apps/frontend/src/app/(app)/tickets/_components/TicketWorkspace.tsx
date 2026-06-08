@@ -326,7 +326,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                     </p>
                     {ticket.description.length > 180 && (
                       <button type="button" onClick={() => setDescExpanded(v => !v)}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 4, fontSize: 10, fontWeight: 700, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 4, fontSize: 10, fontWeight: 700, color: '#0e2235', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
                         {descExpanded ? <><ChevronUp size={10} /> Mostrar menos</> : <><ChevronDown size={10} /> Ver descripción completa</>}
                       </button>
                     )}

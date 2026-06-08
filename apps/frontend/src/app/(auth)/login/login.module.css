@@ -172,7 +172,7 @@
   margin-top: 8px;
 }
 
-.ticketMid { border-left-color: #6366f1 !important; }
+.ticketMid { border-left-color: var(--status-warning-text, #d97706) !important; }
 .ticketLow { border-left-color: var(--brand-green) !important; }
 
 .slaRing {

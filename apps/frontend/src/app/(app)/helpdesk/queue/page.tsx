@@ -12,7 +12,8 @@ import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { usePermission } from '@/hooks/usePermission';
-import { ticketsService, type TicketListItem, type TicketPriority, TICKET_PRIORITY_COLORS, TICKET_PRIORITY_LABELS, SLA_STATUS_COLORS, TICKET_PRIORITY_ORDER, TECH_AVAIL_COLORS, TECH_AVAIL_LABELS } from '@/services/tickets.service';
+import { ticketsService, type TicketListItem, type TicketPriority, TICKET_PRIORITY_ORDER, TECH_AVAIL_COLORS, TECH_AVAIL_LABELS } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { modulesService } from '@/services/modules.service';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import type { ModuleTechnician, TechAvailStatus } from '@/types/module.types';
@@ -153,9 +154,9 @@ function TicketRow({
   isRecentlyAssigned: boolean;
 }) {
   const router    = useRouter();
-  const pColor    = TICKET_PRIORITY_COLORS[ticket.priority] ?? C.muted;
+  const pColor    = getPriorityConfig(ticket.priority).color;
   const h         = hoursLeft(ticket.sla_deadline_tracked ?? ticket.sla_deadline);
-  const slaColor  = ticket.sla_status ? (SLA_STATUS_COLORS[ticket.sla_status] ?? null) : null;
+  const slaColor  = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status).text : null;
   const isBreached = ticket.sla_status === 'breached';
   const isCritical = h !== null && h < 2 && ticket.sla_status === 'active';
 
@@ -195,8 +196,8 @@ function TicketRow({
       </p>
 
       {/* Priority */}
-      <span className={styles.colPriority} style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${pColor}18`, color: pColor, border: `1px solid ${pColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-        {TICKET_PRIORITY_LABELS[ticket.priority]}
+      <span className={styles.colPriority} style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `color-mix(in srgb, ${pColor} 15%, transparent)`, color: pColor, border: `1px solid color-mix(in srgb, ${pColor} 25%, transparent)`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+        {getPriorityConfig(ticket.priority).label}
       </span>
 
       {/* SLA time */}
@@ -279,19 +280,19 @@ function PriorityGroup({
   canAssignOthers: boolean;
   recentlyAssignedId: string | null;
 }) {
-  const pColor = TICKET_PRIORITY_COLORS[group.priority];
+  const pColor = getPriorityConfig(group.priority).color;
   if (tickets.length === 0) return null;
 
   return (
     <div style={{ marginBottom: 20 }}>
       {/* Group header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: `${pColor}08`, borderRadius: '10px 10px 0 0', border: `1px solid ${pColor}25`, borderBottom: 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: `color-mix(in srgb, ${pColor} 8%, transparent)`, borderRadius: '10px 10px 0 0', border: `1px solid color-mix(in srgb, ${pColor} 20%, transparent)`, borderBottom: 'none' }}>
         <span style={{ width: 9, height: 9, borderRadius: '50%', background: pColor, flexShrink: 0 }} />
         <span style={{ fontSize: 11, fontWeight: 800, color: pColor, textTransform: 'uppercase', letterSpacing: '.07em' }}>
           {group.label}
         </span>
         <span style={{ fontSize: 10, color: pColor, opacity: .7 }}>— {group.urgency}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: pColor, background: `${pColor}18`, padding: '2px 8px', borderRadius: 5, border: `1px solid ${pColor}30` }}>
+        <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: pColor, background: `color-mix(in srgb, ${pColor} 15%, transparent)`, padding: '2px 8px', borderRadius: 5, border: `1px solid color-mix(in srgb, ${pColor} 25%, transparent)` }}>
           {tickets.length}
         </span>
       </div>

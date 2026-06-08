@@ -171,7 +171,7 @@ export function GestionReportsClient({ moduleId }: { moduleId: string }) {
                 .map(([type, count]) => (
                   <div key={type} className={styles.barRow}>
                     <div className={styles.barLabel}>
-                      <span className={styles.barIcon} style={{ color: '#6366f1' }}>
+                      <span className={styles.barIcon} style={{ color: 'var(--status-info-text, #1d4ed8)' }}>
                         <BarChart2 size={14} />
                       </span>
                       <span>{REQUEST_TYPE_LABELS[type as RequestType] ?? type}</span>
@@ -179,7 +179,7 @@ export function GestionReportsClient({ moduleId }: { moduleId: string }) {
                     <div className={styles.barTrack}>
                       <div
                         className={styles.barFill}
-                        style={{ width: `${(count / maxType) * 100}%`, background: '#6366f1' }}
+                        style={{ width: `${(count / maxType) * 100}%`, background: 'var(--status-info-text, #1d4ed8)' }}
                       />
                     </div>
                     <span className={styles.barCount}>{count}</span>

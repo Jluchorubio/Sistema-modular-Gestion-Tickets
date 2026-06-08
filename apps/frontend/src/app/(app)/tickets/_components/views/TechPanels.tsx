@@ -6,10 +6,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, ChevronRight } from 'lucide-react';
 import {
   type TicketPriority,
-  TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
-  SLA_STATUS_COLORS, SLA_STATUS_LABELS,
   TECH_AVAIL_COLORS, TECH_AVAIL_LABELS,
 } from '@/services/tickets.service';
+import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { usersService } from '@/services/users.service';
 import type { ModuleTechnician, TechAvailStatus } from '@/types/module.types';
 import { initials, Stars, type AssignedTicket } from './shared';
@@ -21,9 +20,10 @@ const AVAIL_LABELS = TECH_AVAIL_LABELS;
 
 export function TechQueueItem({ ticket, basePath }: { ticket: AssignedTicket; basePath: string }) {
   const router   = useRouter();
-  const color    = TICKET_PRIORITY_COLORS[ticket.priority as TicketPriority] ?? '#94a3b8';
-  const slaColor = ticket.sla_status ? (SLA_STATUS_COLORS[ticket.sla_status as keyof typeof SLA_STATUS_COLORS] ?? '#94a3b8') : null;
-  const slaLabel = ticket.sla_status ? (SLA_STATUS_LABELS[ticket.sla_status as keyof typeof SLA_STATUS_LABELS] ?? null) : null;
+  const color    = getPriorityConfig(ticket.priority).color;
+  const slaCfg   = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status) : null;
+  const slaColor = slaCfg?.text ?? null;
+  const slaLabel = slaCfg?.label ?? null;
 
   return (
     <div
@@ -43,8 +43,8 @@ export function TechQueueItem({ ticket, basePath }: { ticket: AssignedTicket; ba
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: `${color}22`, color, border: `1px solid ${color}44` }}>
-            {TICKET_PRIORITY_LABELS[ticket.priority as TicketPriority]}
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: `color-mix(in srgb, ${color} 15%, transparent)`, color, border: `1px solid color-mix(in srgb, ${color} 25%, transparent)` }}>
+            {getPriorityConfig(ticket.priority).label}
           </span>
           {ticket.category_name && (
             <span style={{ fontSize: 10, color: '#94a3b8' }}>{ticket.category_name}</span>
