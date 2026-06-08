@@ -461,14 +461,15 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                 ))}
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 56px" }}>
-                {fieldSchema.map((f) => {
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 40px" }}>
+                {fieldSchema.map((f, idx) => {
                   const rawVal = asset.specifications?.[f.key];
                   const hasValue = rawVal !== undefined && rawVal !== null && rawVal !== "";
+                  const isEven = idx % 2 === 0;
                   return (
-                    <div key={f.key} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
-                      <span style={{ fontSize: 12, color: C.sub, flexShrink: 0, lineHeight: 1.5, minWidth: 100 }}>{f.label}</span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: hasValue ? C.navy : C.muted, fontStyle: hasValue ? "normal" : "italic", textAlign: "right" }}>{hasValue ? String(rawVal) : "—"}</span>
+                    <div key={f.key} style={{ display: "grid", gridTemplateColumns: "130px 1fr", alignItems: "baseline", gap: 8, padding: "9px 10px", borderBottom: `1px solid ${C.border}`, borderRadius: 4, background: isEven ? "transparent" : `${C.bg}` }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: C.muted, lineHeight: 1.5, textTransform: "uppercase" as const, letterSpacing: ".05em" }}>{f.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: hasValue ? C.navy : C.muted, fontStyle: hasValue ? "normal" : "italic", fontFamily: hasValue ? "monospace" : "inherit", letterSpacing: hasValue ? ".02em" : "normal" }}>{hasValue ? String(rawVal) : "—"}</span>
                     </div>
                   );
                 })}

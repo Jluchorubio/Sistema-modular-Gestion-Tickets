@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ArrowLeft, Clock, Search } from "lucide-react";
 import { useModules } from "@/hooks/useModules";
 import { useModuleNav } from "@/hooks/useModuleNav";
@@ -59,6 +59,38 @@ export default function AssetHistoryPage() {
     enabled: !!id,
   });
 
+  function relativeTime(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor(diff / 60000);
+    if (d > 30) return "";
+    if (d > 1)  return `hace ${d}d`;
+    if (h > 0)  return `hace ${h}h`;
+    return `hace ${Math.max(m, 1)}min`;
+  }
+
+  function dayLabel(dateStr: string): string {
+    const d = new Date(dateStr);
+    d.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+    const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+    if (d.getTime() === today.getTime()) return "Hoy";
+    if (d.getTime() === yesterday.getTime()) return "Ayer";
+    if (d.getTime() >= weekAgo.getTime()) return d.toLocaleDateString("es-ES", { weekday: "long" });
+    return d.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  const actionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    history.forEach(h => {
+      counts[h.action] = (counts[h.action] ?? 0) + 1;
+      if (h.action === "desasociado") counts["asociado"] = (counts["asociado"] ?? 0) + 1;
+    });
+    return counts;
+  }, [history]);
+
   const filtered = history.filter((h) => {
     const matchSearch = !search.trim() ||
       (ASSET_ACTION_LABELS[h.action] ?? h.action).toLowerCase().includes(search.toLowerCase()) ||
@@ -110,12 +142,24 @@ export default function AssetHistoryPage() {
               style={{ width: "100%", padding: "9px 12px 9px 30px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, background: "#fff" }} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-            {ACTION_FILTERS.map(f => (
-              <button key={f.value} type="button" onClick={() => setActionFilter(f.value)}
-                style={{ padding: "7px 13px", borderRadius: 8, border: `1.5px solid ${actionFilter === f.value ? C.coral : C.border}`, background: actionFilter === f.value ? `${C.coral}08` : "#fff", color: actionFilter === f.value ? C.coral : C.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                {f.label}
-              </button>
-            ))}
+            {ACTION_FILTERS.map(f => {
+              const count = f.value === ""
+                ? history.length
+                : f.value === "asociado"
+                  ? ((actionCounts["asociado"] ?? 0))
+                  : (actionCounts[f.value] ?? 0);
+              return (
+                <button key={f.value} type="button" onClick={() => setActionFilter(f.value)}
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 8, border: `1.5px solid ${actionFilter === f.value ? C.coral : C.border}`, background: actionFilter === f.value ? `${C.coral}08` : "#fff", color: actionFilter === f.value ? C.coral : C.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  {f.label}
+                  {count > 0 && (
+                    <span style={{ fontSize: 10, fontWeight: 800, padding: "1px 5px", borderRadius: 5, background: actionFilter === f.value ? C.coral : C.border, color: actionFilter === f.value ? "#fff" : C.sub, minWidth: 18, textAlign: "center" }}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -130,43 +174,65 @@ export default function AssetHistoryPage() {
             </p>
           </div>
         ) : (
-          <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 14, padding: "24px 28px" }}>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {filtered.map((h, i) => {
-                const color = ASSET_ACTION_COLORS[h.action] ?? C.muted;
-                const label = ASSET_ACTION_LABELS[h.action] ?? h.action;
-                const isLast = i === filtered.length - 1;
-                return (
-                  <div key={h.id} style={{ display: "flex", gap: 16, paddingBottom: isLast ? 0 : 20, position: "relative" }}>
-                    {!isLast && (
-                      <div style={{ position: "absolute", left: 13, top: 26, width: 2, height: "calc(100% - 8px)", background: C.border }} />
-                    )}
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${color}14`, border: `2px solid ${color}40`, display: "grid", placeItems: "center", flexShrink: 0, zIndex: 1 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
-                    </div>
-                    <div style={{ flex: 1, paddingTop: 3, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: "0 0 3px" }}>
-                          {label}
-                          {h.user_name && h.user_name !== h.actor_name ? (
-                            <span style={{ fontWeight: 500, color: C.sub }}> {h.user_name}</span>
-                          ) : null}
-                        </p>
-                        <span style={{ fontSize: 10, color: C.muted, whiteSpace: "nowrap" as const, flexShrink: 0 }}>
-                          {fmtDate(h.created_at)}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: 12, color: C.sub, margin: "0 0 2px" }}>
-                        por {h.actor_name || "Sistema"}
-                      </p>
-                      {h.reason && (
-                        <p style={{ fontSize: 11, color: C.muted, margin: 0, fontStyle: "italic" }}>{h.reason}</p>
-                      )}
-                    </div>
+          <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden" }}>
+            {(() => {
+              const groups: { label: string; events: typeof filtered }[] = [];
+              filtered.forEach(h => {
+                const lbl = dayLabel(h.created_at);
+                const last = groups[groups.length - 1];
+                if (!last || last.label !== lbl) groups.push({ label: lbl, events: [h] });
+                else last.events.push(h);
+              });
+              return groups.map((g, gi) => (
+                <div key={g.label}>
+                  {/* Date group header */}
+                  <div style={{ padding: "10px 28px", background: C.bg, borderBottom: `1px solid ${C.border}`, borderTop: gi > 0 ? `1px solid ${C.border}` : undefined, display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: C.navy, textTransform: "uppercase" as const, letterSpacing: ".1em" }}>{g.label}</span>
+                    <span style={{ fontSize: 10, color: C.muted }}>{g.events.length} evento{g.events.length !== 1 ? "s" : ""}</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div style={{ padding: "20px 28px", display: "flex", flexDirection: "column" }}>
+                    {g.events.map((h, i) => {
+                      const color = ASSET_ACTION_COLORS[h.action] ?? C.muted;
+                      const label = ASSET_ACTION_LABELS[h.action] ?? h.action;
+                      const isLast = i === g.events.length - 1;
+                      const rel = relativeTime(h.created_at);
+                      return (
+                        <div key={h.id} style={{ display: "flex", gap: 16, paddingBottom: isLast ? 0 : 20, position: "relative" }}>
+                          {!isLast && (
+                            <div style={{ position: "absolute", left: 13, top: 26, width: 2, height: "calc(100% - 8px)", background: C.border }} />
+                          )}
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${color}14`, border: `2px solid ${color}40`, display: "grid", placeItems: "center", flexShrink: 0, zIndex: 1 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
+                          </div>
+                          <div style={{ flex: 1, paddingTop: 3, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: "0 0 3px" }}>
+                                {label}
+                                {h.user_name && h.user_name !== h.actor_name ? (
+                                  <span style={{ fontWeight: 500, color: C.sub }}> {h.user_name}</span>
+                                ) : null}
+                              </p>
+                              <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                                {rel && <span style={{ fontSize: 10, color: C.muted, whiteSpace: "nowrap" as const }}>{rel}</span>}
+                                <span style={{ fontSize: 10, color: C.muted, whiteSpace: "nowrap" as const, fontFamily: "monospace" }}>
+                                  {new Date(h.created_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              </div>
+                            </div>
+                            <p style={{ fontSize: 12, color: C.sub, margin: "0 0 2px" }}>
+                              por {h.actor_name || "Sistema"}
+                            </p>
+                            {h.reason && (
+                              <p style={{ fontSize: 11, color: C.muted, margin: 0, fontStyle: "italic" }}>{h.reason}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
         )}
       </div>
