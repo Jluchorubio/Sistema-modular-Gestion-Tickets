@@ -243,68 +243,77 @@ export class InventoryService {
       throw new BadRequestException('Para asignar usa el endpoint /assign');
     }
 
-    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+    const qr = this.db.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      await qr.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
 
-    if (asset.status === 'asignado' && dto.status !== 'disponible') {
-      const closedAssignments = await this.db.query<{ id: string; user_id: string }[]>(
-        `UPDATE inventory.asset_assignments
-         SET status = 'devuelto', unassigned_at = now()
-         WHERE asset_id = $1 AND status = 'activo'
-         RETURNING id, user_id`,
-        [assetId],
-      );
-      const histAction = dto.status === 'dado_de_baja' ? 'dado_de_baja' : 'reparacion';
-      for (const a of closedAssignments) {
-        await this.db.query(
+      if (asset.status === 'asignado' && dto.status !== 'disponible') {
+        const closedAssignments: { id: string; user_id: string }[] = await qr.query(
+          `UPDATE inventory.asset_assignments
+           SET status = 'devuelto', unassigned_at = now()
+           WHERE asset_id = $1 AND status = 'activo'
+           RETURNING id, user_id`,
+          [assetId],
+        );
+        const histAction = dto.status === 'dado_de_baja' ? 'dado_de_baja' : 'reparacion';
+        for (const a of closedAssignments) {
+          await qr.query(
+            `INSERT INTO inventory.asset_assignment_history
+               (asset_id, user_id, assigned_by, assignment_id, action, reason)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [assetId, a.user_id, actorId, a.id, histAction, dto.reason ?? null],
+          );
+        }
+      } else {
+        const actionMap: Record<string, string> = {
+          en_reparacion: 'reparacion',
+          dado_de_baja:  'dado_de_baja',
+          disponible:    'devuelto',
+        };
+        const histAction = actionMap[dto.status] ?? dto.status;
+        await qr.query(
           `INSERT INTO inventory.asset_assignment_history
-             (asset_id, user_id, assigned_by, assignment_id, action, reason)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [assetId, a.user_id, actorId, a.id, histAction, dto.reason ?? null],
+             (asset_id, user_id, assigned_by, action, reason)
+           VALUES ($1, NULL, $2, $3, $4)`,
+          [assetId, actorId, histAction, dto.reason ?? null],
         );
       }
-    } else {
-      const actionMap: Record<string, string> = {
-        en_reparacion: 'reparacion',
-        dado_de_baja:  'dado_de_baja',
-        disponible:    'devuelto',
-      };
-      const histAction = actionMap[dto.status] ?? dto.status;
-      await this.db.query(
-        `INSERT INTO inventory.asset_assignment_history
-           (asset_id, user_id, assigned_by, action, reason)
-         VALUES ($1, NULL, $2, $3, $4)`,
-        [assetId, actorId, histAction, dto.reason ?? null],
+
+      await qr.query(
+        `UPDATE inventory.assets SET status = $1 WHERE id = $2`,
+        [dto.status, assetId],
       );
-    }
 
-    await this.db.query(
-      `UPDATE inventory.assets SET status = $1 WHERE id = $2`,
-      [dto.status, assetId],
-    );
-
-    /* When decommissioning: unlink parent + all children to avoid dangling relations */
-    if (dto.status === 'dado_de_baja') {
-      /* Clear this asset's parent (if any) */
-      await this.db.query(
-        `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now()
-         WHERE id = $1 AND parent_asset_id IS NOT NULL`,
-        [assetId],
-      ).catch(() => {});
-      /* Unlink any children pointing to this asset */
-      const children = await this.db.query<{ id: string }[]>(
-        `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now()
-         WHERE parent_asset_id = $1 AND deleted_at IS NULL
-         RETURNING id`,
-        [assetId],
-      ).catch(() => [] as any[]);
-      /* Best-effort history entries for unlinked children */
-      for (const child of (children ?? [])) {
-        await this.db.query(
-          `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
-           VALUES ($1, $2, $2, 'desasociado', 'Padre dado de baja')`,
-          [child.id, actorId],
-        ).catch(() => {});
+      /* When decommissioning: unlink parent + all children atomically */
+      if (dto.status === 'dado_de_baja') {
+        await qr.query(
+          `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now()
+           WHERE id = $1 AND parent_asset_id IS NOT NULL`,
+          [assetId],
+        );
+        const children: { id: string }[] = await qr.query(
+          `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now()
+           WHERE parent_asset_id = $1 AND deleted_at IS NULL
+           RETURNING id`,
+          [assetId],
+        );
+        for (const child of children) {
+          await qr.query(
+            `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+             VALUES ($1, $2, $2, 'desasociado', 'Padre dado de baja')`,
+            [child.id, actorId],
+          );
+        }
       }
+
+      await qr.commitTransaction();
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.release();
     }
 
     return { ok: true, status: dto.status };
