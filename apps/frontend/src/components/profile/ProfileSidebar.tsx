@@ -61,11 +61,13 @@ const editSchema = z.object({
   gender:                  z.enum(GENDERS).optional().or(z.literal('')),
   birth_date:              z.string().optional().refine((val) => {
     if (!val) return true;
-    const birth = new Date(val);
-    const cutoff = new Date();
-    cutoff.setFullYear(cutoff.getFullYear() - 16);
+    const birth  = new Date(val);
+    const today  = new Date(); today.setHours(0, 0, 0, 0);
+    const cutoff = new Date(today); cutoff.setFullYear(today.getFullYear() - 16);
+    if (birth >= today)           return false;
+    if (birth.getFullYear() < 1900) return false;
     return birth <= cutoff;
-  }, { message: 'Debes tener al menos 16 años' }),
+  }, { message: 'Fecha inválida o debes tener al menos 16 años' }),
   national_id:             z.string().max(50).optional(),
   phone_prefix:            z.string().max(10).optional(),
   phone:                   z.string().max(30).optional(),
@@ -623,7 +625,7 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label className={styles.formLabel}>Fecha de nacimiento</label>
-                    <input className={styles.formInput} type="date" max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 16); return d.toISOString().split('T')[0]; })()} {...regEdit('birth_date')} />
+                    <input className={styles.formInput} type="date" min="1900-01-01" max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 16); return d.toISOString().split('T')[0]; })()} {...regEdit('birth_date')} />
                   </div>
                   <div className={styles.formGroup}>
                     <label className={styles.formLabel}>Nro. documento</label>

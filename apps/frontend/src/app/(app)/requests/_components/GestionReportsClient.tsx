@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { BarChart2, TrendingUp, Clock, CheckCircle2, AlertCircle, Users, XCircle } from 'lucide-react';
 import { requestsService, type RequestStatus, type RequestType } from '@/services/requests.service';
 import { usersService } from '@/services/users.service';
+import { useAuthStore } from '@/stores/auth.store';
+import { MODULE_ROLES } from '@/constants/roles';
 import { REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS, REQUEST_TYPE_LABELS } from '@/constants/requests';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from './moduleReports.module.css';
@@ -23,6 +25,13 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
 /* ── Main ───────────────────────────────────────────────────────────────────── */
 
 export function GestionReportsClient({ moduleId }: { moduleId: string }) {
+  const { user } = useAuthStore();
+  const isSuperadmin   = user?.is_superadmin ?? false;
+  const isAdminModulo  = user?.module_roles?.some(
+    r => r.module_id === moduleId && r.status === 'active' && r.role_name === MODULE_ROLES.ADMIN_MODULO,
+  ) ?? false;
+  const canViewMembers = isSuperadmin || isAdminModulo;
+
   const { data: reqData, isLoading: loadingReqs } = useQuery({
     queryKey: ['gestion-reports-requests'],
     queryFn:  () => requestsService.getAll({ limit: 500 }),
@@ -32,12 +41,14 @@ export function GestionReportsClient({ moduleId }: { moduleId: string }) {
   const { data: moduleUsers = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['module-users', moduleId],
     queryFn:  () => usersService.getModuleUsers(moduleId),
+    enabled:  canViewMembers,
     staleTime: 60_000,
   });
 
   const { data: allUsersData, isLoading: loadingAll } = useQuery({
     queryKey: ['users-list-roles'],
     queryFn:  () => usersService.getUsers({ limit: 500 }),
+    enabled:  canViewMembers,
     staleTime: 60_000,
   });
 

@@ -168,10 +168,12 @@ export class ProfileService {
     if (dto.city                    !== undefined) add('city',                    dto.city);
     if (dto.birth_date !== undefined) {
       if (dto.birth_date) {
-        const birth = new Date(dto.birth_date);
-        const cutoff = new Date();
-        cutoff.setFullYear(cutoff.getFullYear() - 16);
-        if (birth > cutoff) throw new BadRequestException('Debes tener al menos 16 años');
+        const birth  = new Date(dto.birth_date);
+        const today  = new Date(); today.setHours(0, 0, 0, 0);
+        const cutoff = new Date(today); cutoff.setFullYear(today.getFullYear() - 16);
+        if (birth >= today)                     throw new BadRequestException('La fecha de nacimiento no puede ser hoy ni una fecha futura');
+        if (birth.getFullYear() < 1900)         throw new BadRequestException('Fecha de nacimiento no válida');
+        if (birth > cutoff)                     throw new BadRequestException('Debes tener al menos 16 años');
       }
       add('birth_date', dto.birth_date);
     }

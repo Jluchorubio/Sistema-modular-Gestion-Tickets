@@ -383,11 +383,12 @@ export class TicketsController {
   @Get('knowledge')
   @RequirePermission('helpdesk:tickets:view')
   getKnowledgeArticles(
-    @Query('module_id')      moduleId: string,
+    @Query('module_id')      moduleId?: string,
     @Query('q')              q?: string,
     @Query('include_drafts') includeDrafts?: string,
   ) {
-    if (!moduleId) return [];
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!moduleId || !UUID_RE.test(moduleId)) return [];
     return this.knowledge.getArticles(moduleId, q, includeDrafts === 'true');
   }
 

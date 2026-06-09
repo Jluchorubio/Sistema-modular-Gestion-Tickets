@@ -59,7 +59,9 @@ export function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, o
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (title.trim().length < 3) { setError('Título mínimo 3 caracteres.'); return; }
-    if (!startDate) { setError('Fecha de inicio requerida.'); return; }
+    if (!startDate)               { setError('Fecha de inicio requerida.'); return; }
+    if (startDate < today)        { setError('No se pueden crear eventos en fechas pasadas.'); return; }
+    if (endDate && endDate < startDate) { setError('La fecha de fin no puede ser anterior al inicio.'); return; }
     setError('');
     mut.mutate();
   }

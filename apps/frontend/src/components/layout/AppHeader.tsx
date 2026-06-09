@@ -305,6 +305,18 @@ export function AppHeader({ noSidebar = false }: Props) {
                   );
                 })}
               </div>
+
+              {/* Footer link */}
+              <div style={{ borderTop: '1px solid #e2e8f0', padding: '8px 12px' }}>
+                <Link
+                  href="/notifications"
+                  className={styles.notifMarkAll}
+                  style={{ display: 'block', textAlign: 'center', width: '100%' }}
+                  onClick={() => setNotifOpen(false)}
+                >
+                  Ver todas las notificaciones
+                </Link>
+              </div>
             </div>
           </div>
 

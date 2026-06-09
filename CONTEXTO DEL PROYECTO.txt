@@ -78,38 +78,64 @@ Pero la arquitectura debe permitir escalar posteriormente.
 
 El sistema debe sentirse:
 
-* moderno
+* enterprise
 * operacional
 * profesional
-* limpio
-* modular
-* dinámico
-* intuitivo
+* sobrio
+* corporativo serio
+* denso pero organizado
 
 Inspiraciones visuales:
 
-* GitHub
-* Linear
-* Notion
-* ClickUp
-* Miro
-* Gemini
-* Jira moderno
+* Jira Service Management
+* ServiceNow
+* GLPI
+* Freshservice
+* ManageEngine
 
 NO debe sentirse:
 
+* como un SaaS moderno con glassmorphism
 * como un CRUD genérico
 * como un ERP antiguo
-* como un panel saturado
 * como tablas administrativas planas
+
+## Reglas visuales estrictas
+
+NO:
+
+* glassmorphism
+* sombras exageradas
+* bordes excesivamente redondeados (max 4px en cards)
+* tonos grises oscuros dominando
+* rediseños futuristas
+* redesign de header global
+* redesign de sidebar global
+
+SÍ:
+
+* blanco puro #FFFFFF como actor principal de fondo
+* layout respirable con spacing consistente
+* separación visual clara entre secciones
+* padding consistente en todas las páginas
+* tablas limpias y profesionales (sin pegar al contenedor)
+* tablas con headers sticky en listas largas
+* cards con bordes MUY poco redondeados
+* jerarquía visual fuerte
+* modo día prioritario
+
+Problema visual recurrente a evitar:
+tablas pegadas a contenedores, divs flotando sin margin, pérdida del "aire" enterprise.
+La solución correcta: mantener el estilo visual actual PERO recuperar spacing/padding profesional.
 
 Paleta de colores del sistema:
 
-* Navy: #0e2235
-* Coral/Acento: #ff5e3a
-* Bordes: #e2e8f0
+* Fondo principal: #FFFFFF (blanco puro — actor principal)
+* Acento primario / acción: #ff5e3a (naranja fosforescente)
+* Estado positivo / success: verde fosforescente
+* Color secundario de apoyo: #0e2235 (azul oscuro — solo complementario)
+* Bordes sutiles: #e2e8f0
 * Muted: #94a3b8
-* Fondo: #f8fafc
 
 ---
 
@@ -291,17 +317,65 @@ Es:
 
 # ROLES GLOBALES
 
-Roles globales actuales:
+Roles globales:
 
-* Usuario
-* Superadmin
+* superadmin — acceso total, bypass permisos, config global, usuarios, auditoría, reportes globales
+* usuario — rol base de cualquier empleado: crea tickets/solicitudes, consume servicios, accede solo a sus datos
 
-Roles por módulo (Helpdesk):
+---
 
-* usuario
-* tecnico
-* jefe_tecnico
-* admin_modulo
+# ROLES POR MÓDULO
+
+El sistema opera con superposición de 3 capas:
+
+```
+ROL GLOBAL  +  ROL POR MÓDULO  +  PERMISOS GRANULARES
+```
+
+Un mismo usuario puede tener roles distintos en módulos distintos:
+
+```
+Global:       usuario
+Helpdesk:     tecnico
+Inventario:   usuario
+Gestión Adm:  jefe_area
+```
+
+## Roles módulo Helpdesk
+
+* usuario — crea tickets, responde comentarios públicos, aprueba/rechaza resolución, ve sus tickets
+* tecnico — trabaja tickets, cambia estados, comentarios internos, workspace SLA
+* jefe_tecnico — supervisa técnicos, reasigna, escalaciones, métricas operacionales, control SLA
+* admin_modulo — configuración del módulo, workflows, automatizaciones, categorías, permisos internos
+
+## Roles módulo Inventario
+
+* usuario — ve activos asignados, solicita activos, reporta daños
+* tecnico — gestiona activos, mantenimiento, asignaciones, movimientos
+* jefe_tecnico — supervisión inventario, aprobaciones, métricas, auditoría operativa
+* admin_modulo — config CMDB, tipos de activos, relaciones, proveedores, reglas
+
+## Roles módulo Gestión Administrativa (/requests)
+
+* usuario — crea solicitudes, consulta estado, adjunta documentos
+* gestor — procesa solicitudes, aprueba/rechaza, cambia estados
+* jefe_area — supervisa gestores, escalaciones, aprobaciones críticas
+* admin_modulo — configura flujos, formularios, categorías, reglas
+
+---
+
+# ROLES ORGANIZACIONALES (estructura — separados de permisos técnicos)
+
+Ejemplos: director, coordinador, líder, analista, auxiliar
+
+NO reemplazan permisos técnicos. Son parte de:
+
+* organigrama visual
+* jerarquía visual
+* flujos de aprobación
+* contexto empresarial
+
+Se configuran en /config → Organigrama.
 
 ---
 
@@ -322,11 +396,25 @@ La arquitectura soporta:
 
 ## Estado actual del RBAC
 
-60 permisos definidos en DB.
+60 permisos definidos en DB (global:31, gestion:17, helpdesk:8, inventario:4).
 
 PermissionGate implementado en frontend.
 
 Guards en backend: JwtAuthGuard + PermissionGuard + RolesGuard.
+Todos los controllers cubiertos con @RequirePermission().
+
+Grants por rol:
+* superadmin: 60 (bypass directo vía is_superadmin=true, no consulta grants)
+* usuario: 12 (acceso básico + requests create/view + tickets create/view + comments + inventario view)
+
+Sidebar:
+* HELPDESK_NAV items: filtrados por allowedRoles
+* GESTION_NAV items: filtrados por permKey vía usePermissionsStore
+* superadmin bypassa ambos checks
+
+Invalidación de caché:
+* Backend: cache 60s TTL con invalidateUser() / invalidateAll()
+* Frontend: invalidateQueries(['permissions-mine']) post-cambio roles
 
 El superadmin:
 
@@ -1047,6 +1135,92 @@ Desde inventario:
 
 ---
 
+---
+
+# MÓDULO GESTIÓN ADMINISTRATIVA — ESTADO ACTUAL
+
+Hub central administrativo de la organización.
+
+## Estado: PARCIALMENTE IMPLEMENTADO
+
+Ruta base: /requests
+
+---
+
+# PROPÓSITO
+
+Centraliza solicitudes administrativas que no son tickets técnicos.
+
+Todos los usuarios acceden y ven sus propias solicitudes.
+
+Solo superadmin y admin_modulo ven: todos los usuarios del módulo, métricas completas, gestión de roles.
+
+---
+
+# TIPOS DE SOLICITUDES
+
+* role_change — cambio de rol
+* module_access — solicitud acceso a módulo
+* info_correction — corrección de datos
+* sede_change — cambio de sede/área
+* permission_assignment — asignación de permiso
+* account_issue — problema de cuenta
+* reactivation — reactivar cuenta
+* task — tarea administrativa
+* other — otro
+
+---
+
+# VISTAS POR ROL EN /requests
+
+## Usuario
+
+* Ve sus solicitudes propias
+* Crea nuevas solicitudes
+* Consulta estado
+* Adjunta documentos
+
+## Gestor
+
+* Procesa solicitudes asignadas
+* Aprueba o rechaza con justificación
+* Cambia estados
+
+## Jefe de Área
+
+* Supervisa gestores
+* Escalaciones
+* Aprobaciones críticas que requieren jerarquía
+
+## Admin módulo + Superadmin
+
+* Vista completa de todas las solicitudes
+* Gestión de usuarios del módulo
+* Configuración de flujos, categorías y reglas
+
+---
+
+# FLUJO DE SOLICITUDES
+
+Si la solicitud corresponde a módulo específico → va al admin de ese módulo.
+
+Si el módulo no tiene admin → escala automáticamente al superadmin.
+
+Los admins pueden escalar o reenviar al superadmin.
+
+Todo mantiene: auditoría, historial, estado, responsable.
+
+---
+
+# PENDIENTE EN GESTIÓN ADMINISTRATIVA
+
+* Completar flujo create para rol usuario (permisos grants ya aplicados)
+* Sidebar funcional para roles gestor y jefe_area
+* Configuración de formularios dinámicos por tipo solicitud
+* Motor de aprobación multi-nivel
+
+---
+
 # CALENDARIO DEL SISTEMA
 
 Transversal a todos los módulos.
@@ -1099,11 +1273,13 @@ Eventos activos:
 
 Canales:
 
-* in-app (bell en header)
+* in-app (bell en header con dropdown)
 * email (SMTP)
 * WhatsApp (futuro)
 
-Migración a RabbitMQ pendiente para escala.
+Pendiente: página /notifications dedicada con historial completo, agrupación leídas/no leídas, navegación al origen del evento.
+
+Migración a RabbitMQ pendiente para escala (MessagingService dual-mode ya implementado).
 
 ---
 
@@ -1113,42 +1289,62 @@ Migración a RabbitMQ pendiente para escala.
 
 ## Implementado y funcional
 
-* Auth completa (JWT, OAuth Google, TOTP 2FA, recuperación contraseña)
+* Auth completa (JWT propio, OAuth Google, TOTP 2FA, recuperación contraseña)
 * Setup Wizard para superadmin
 * Dashboard principal con módulos
-* Sidebar global y modular
-* Sistema de permisos RBAC 60 permisos
-* PermissionGate en frontend
-* Organigrama visual (React Flow)
-* Config global (empresa, sedes, calendario SLA, tipos estructura)
-* Config por módulo (SLA, categorías, tipos daño, asignación)
+* Sidebar global y modular (HELPDESK_NAV por allowedRoles, GESTION_NAV por permKey)
+* Sistema de permisos RBAC: 60 permisos, usuario=12 grants, superadmin bypass, PermissionGuard en todos los controllers
+* PermissionGate en frontend + usePermissionsStore con invalidación live
+* Organigrama visual (React Flow + Dagre layout)
+* Config global (empresa, sedes, calendario SLA, tipos estructura, motor prioridad)
+* Config por módulo (SLA, categorías, tipos daño, sedes/ambientes, asignación)
 * Módulo Helpdesk completo:
   - Portal usuario (portal cliente con stats)
-  - Workspace técnico con disponibilidad
-  - Cola de trabajo
-  - SLA dashboard
-  - Centro técnicos
+  - Workspace técnico con disponibilidad en tiempo real
+  - Cola de trabajo agrupada por prioridad
+  - SLA dashboard (breached/critical/warning/ok/met)
+  - Centro técnicos con workload y rating
   - Workspace del ticket (timeline unificada, FSM, adjuntos, reuniones, rating)
   - FSM con transition_rules validados por rol en API
   - Knowledge base con permisos por rol
-  - Reportes específicos (operación, técnicos, SLA)
-* Módulo Inventario completo (CMDB, QR, bulk import, custodia, integración tickets)
-* Calendario redesign
-* Reportes globales
-* Papelera con soft-delete 90 días
-* Notificaciones in-app + email
+  - Reportes específicos (operación, técnicos, SLA) + export CSV
+* Módulo Inventario completo (CMDB, QR, bulk import, custodia, integración tickets bidireccional)
+* Módulo Gestión Administrativa parcial (solicitudes base, flujo create, escalación automática)
+* Calendario redesign (custom month grid, two-panel, filtros módulo)
+* Reportes globales (SLA, tickets, inventario, auditoría, helpdesk)
+* Papelera con soft-delete 90 días + bulk + re-auth
+* Notificaciones in-app + email (bell header + eventos ticket/request/meeting)
 * Sistema online/offline usuarios
+* SLA countdown real (ventana calculada desde created_at, no hardcoded)
+* Profile settings (language/timezone/notifications con persistencia real)
 
-## Pendiente / Futuro
+## Pendiente operacional (bugs y features conocidos)
 
-* Gestión Administrativa — módulo en construcción
-* Permisos backend por rol dentro del módulo (validación API granular)
-* RabbitMQ para notificaciones a escala
-* Theming real con design tokens (actualmente colores hardcodeados)
-* PWA / app de escritorio
+### 500 / 403 pendientes
+* /users/{id}/recent-tickets → 500 (columna inexistente en query, similar a skills bug)
+* /roles → inspección de permisos en UI no impacta visual/rutas en tiempo real (requiere reload completo)
+* knowledge?module_id=#{id} → 400 (query param handling pendiente)
+
+### UX pendiente
+* /notifications — página dedicada con historial completo, leídas/no leídas, navegación a origen
+* SLA visual countdown circular enterprise (actualmente solo badge textual)
+* /complete-profile dropdowns dinámicos: departamento → área → bloque → ambiente (depende de org.nodes poblado)
+* Password UX en complete-profile: feedback progresivo en tiempo real mientras escribe
+* Calendar: no permitir crear eventos en fechas pasadas (validación frontend falta)
+* Calendar: notificaciones previas al evento (15min/1h antes)
+* Gestión Administrativa: completar flujo create y sidebar para roles gestor/jefe_area
+
+### Superadmin profile
+* Edición completa: todos los campos, contraseña, foto de perfil
+
+### Features futuros
+* RabbitMQ para notificaciones a escala (MessagingService dual-mode ya preparado)
 * WhatsApp notificaciones
-* Websockets tiempo real para estados y comentarios
-* Redis para caché de permisos
+* Websockets tiempo real para estados y comentarios en vivo
+* Redis para caché de permisos (actualmente cache in-memory 60s)
+* PWA / app de escritorio
+* Theming real con design tokens
+* Reportes globales con visualización enterprise real (KPIs, gráficas, exports)
 
 ---
 
@@ -1237,14 +1433,55 @@ Integración actual: Google Meet API + Google Calendar API.
 
 La implementación es modular para permitir reemplazar proveedor posteriormente.
 
+Proveedores soportados:
+* Google Meet — genera link automáticamente
+* Microsoft Teams — NO genera link automático. El usuario debe pegar el link manualmente.
+* Zoom — NO genera link automático. El usuario debe pegar el link manualmente.
+
+La UI debe indicar claramente cuando el proveedor requiere link manual.
+
 Usos:
 
 * Colaboración entre técnicos
 * Atención directa al usuario (opcional, activable por módulo)
 
-Las reuniones quedan en el timeline del ticket.
+Las reuniones quedan en el timeline del ticket y se reflejan en el calendario del sistema.
 
 ---
+
+---
+
+# VALIDACIONES CRÍTICAS DEL SISTEMA
+
+## Usuarios
+
+* Edad mínima: 16 años (validado en birthdate frontend + backend)
+* Birthdate: no fechas futuras, no antes de 1900
+* Múltiples sesiones simultáneas: SÍ permitidas
+* Sesiones activas: mostrar ubicación aproximada (ciudad/país), NO mostrar IP real
+* Contraseña: mínimo 8 caracteres, una mayúscula, una minúscula, un número
+
+## Complete Profile
+
+* La contraseña temporal por defecto es Ticket2026!
+* Al ingresar por primera vez el usuario debe completar perfil + cambiar contraseña
+* Dropdowns dinámicos: empresa → departamento → área → bloque → ambiente (cascading desde org.nodes)
+* Si la DB no tiene org.nodes poblados, los dropdowns estarán vacíos — es comportamiento correcto
+
+## Contraseña — política backend
+
+* min 8 caracteres
+* al menos 1 mayúscula
+* al menos 1 minúscula
+* al menos 1 número
+
+La validación frontend (securitySchema) debe ser IDÉNTICA a la política backend.
+
+## Tickets
+
+* NO se eliminan ni van a papelera
+* Solo se Cancelan o Archivan
+* Preserva trazabilidad, SLA histórico, métricas, auditoría
 
 ---
 

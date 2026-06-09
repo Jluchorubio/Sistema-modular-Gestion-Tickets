@@ -245,7 +245,7 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
   }, [deptNodes, areaNodes]);
 
   /* ── Sedes (locations) ── */
-  const { data: locations = [] } = useQuery({
+  const { data: locations = [], isLoading: locationsLoading } = useQuery({
     queryKey: ['locations'],
     queryFn: modulesService.getLocations,
     staleTime: Infinity,
@@ -480,28 +480,44 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
             <label className={styles.fieldLabel} htmlFor="primary_sede">
               Sede principal <span className={styles.req}>*</span>
             </label>
-            <div className={styles.inputWrap}>
-              <select
-                {...register('primary_sede')}
-                id="primary_sede"
-                className={`${styles.fieldInput} ${styles.fieldSelect} ${errors.primary_sede ? styles.isErr : ''}`}
-              >
-                <option value="">
-                  {locations.length === 0 ? 'Cargando sedes...' : 'Seleccionar sede...'}
-                </option>
-                {useOptgroups
-                  ? locationGroups.map(([group, locs]) => (
-                      <optgroup key={group} label={group}>
-                        {locs.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
-                      </optgroup>
-                    ))
-                  : (locationGroups[0]?.[1] ?? []).map(loc => (
-                      <option key={loc.id} value={loc.id}>{loc.name}</option>
-                    ))}
-              </select>
-              <span className={styles.fieldIcon}><MapPin size={15} /></span>
-              <span className={styles.selectArrow}><ChevronDown size={14} /></span>
-            </div>
+            {!locationsLoading && locations.length === 0 ? (
+              <>
+                <div className={styles.inputWrap}>
+                  <input
+                    {...register('primary_sede')}
+                    id="primary_sede"
+                    type="text"
+                    placeholder="Ej: Sede Central"
+                    className={`${styles.fieldInput} ${errors.primary_sede ? styles.isErr : ''}`}
+                  />
+                  <span className={styles.fieldIcon}><MapPin size={15} /></span>
+                </div>
+                <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
+                  No hay sedes configuradas. Escribe el nombre de tu sede.
+                </span>
+              </>
+            ) : (
+              <div className={styles.inputWrap}>
+                <select
+                  {...register('primary_sede')}
+                  id="primary_sede"
+                  className={`${styles.fieldInput} ${styles.fieldSelect} ${errors.primary_sede ? styles.isErr : ''}`}
+                >
+                  <option value="">{locationsLoading ? 'Cargando…' : 'Seleccionar sede…'}</option>
+                  {useOptgroups
+                    ? locationGroups.map(([group, locs]) => (
+                        <optgroup key={group} label={group}>
+                          {locs.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                        </optgroup>
+                      ))
+                    : (locationGroups[0]?.[1] ?? []).map(loc => (
+                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                      ))}
+                </select>
+                <span className={styles.fieldIcon}><MapPin size={15} /></span>
+                <span className={styles.selectArrow}><ChevronDown size={14} /></span>
+              </div>
+            )}
             {errors.primary_sede && <span className={styles.fieldError}>{errors.primary_sede.message}</span>}
           </div>
 

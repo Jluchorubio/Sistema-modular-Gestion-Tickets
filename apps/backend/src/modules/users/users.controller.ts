@@ -193,8 +193,6 @@ export class UsersController {
   }
 
   @Get('module/:moduleId')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:users:view')
   @ApiOperation({ summary: 'Usuarios activos de un módulo con sus roles.' })
   getUsersByModule(
@@ -348,8 +346,6 @@ export class UsersController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Ver usuario por ID.' })
   getOne(@Param('id', ParseUUIDPipe) id: string) {

@@ -180,7 +180,7 @@ export class SkillService {
                     'id',            tcs.id,
                     'category_id',   tcs.category_id,
                     'category_name', cat.name,
-                    'category_slug', cat.slug
+                    'category_slug', NULL::text
                   )
                 ) FILTER (WHERE tcs.id IS NOT NULL AND tcs.is_active = true),
                 '[]'
