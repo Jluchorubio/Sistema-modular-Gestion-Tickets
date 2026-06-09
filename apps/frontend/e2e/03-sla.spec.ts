@@ -1,20 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { loginAs } from './helpers';
 
 test.describe('SLA — indicadores visuales', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page);
-  });
 
   test('queue muestra columna SLA o indicador de vencimiento', async ({ page }) => {
     await page.goto('/helpdesk/queue');
     await page.waitForLoadState('networkidle', { timeout: 15_000 });
 
     // The queue page renders SLA countdown pills per ticket
-    // Even with 0 tickets, the table header with SLA label should exist
-    const slaIndicator = page.locator(
-      '[class*="sla"], [class*="SLA"], text=/SLA|Vencimiento|vence/i'
-    ).first();
+    // Even with 0 tickets, SLA text appears in the table header area
+    const slaIndicator = page
+      .locator('[class*="sla"], [class*="SLA"]')
+      .or(page.getByText(/SLA/i))
+      .first();
     await expect(slaIndicator).toBeVisible({ timeout: 8_000 });
   });
 

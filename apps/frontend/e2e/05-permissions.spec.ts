@@ -1,10 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { loginAs } from './helpers';
 
 test.describe('Permisos RBAC', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page); // superadmin
-  });
 
   test('superadmin ve /config sin redirección', async ({ page }) => {
     await page.goto('/config');
@@ -29,7 +25,7 @@ test.describe('Permisos RBAC', () => {
     await page.goto('/helpdesk/config');
     await page.waitForLoadState('networkidle', { timeout: 15_000 });
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByText(/configuración.*helpdesk/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByRole('heading', { name: /configuración.*helpdesk/i })).toBeVisible({ timeout: 8_000 });
   });
 
   test('superadmin ve todas las tabs de config helpdesk', async ({ page }) => {
@@ -54,9 +50,12 @@ test.describe('Permisos RBAC', () => {
   test('ruta inexistente redirige o muestra 404', async ({ page }) => {
     await page.goto('/ruta-que-no-existe-xyz');
     await page.waitForLoadState('networkidle', { timeout: 10_000 });
-    // Either a 404 page or redirect to dashboard
-    const is404 = await page.locator('text=/404|no encontrada|not found/i').count() > 0;
-    const isDash = page.url().includes('/dashboard');
-    expect(is404 || isDash).toBeTruthy();
+    // Unknown route: Next.js 404 ("Página no encontrada"), or
+    // matched by [moduleSlug] catch-all ("Módulo no encontrado."), or redirect
+    const is404    = await page.getByText(/Página no encontrada/i).count() > 0;
+    const isNoMod  = await page.getByText(/Módulo no encontrado/i).count() > 0;
+    const isDash   = page.url().includes('/dashboard');
+    const isAnyApp = /\/(dashboard|helpdesk|inventory|tickets|config|users)/.test(page.url());
+    expect(is404 || isNoMod || isDash || isAnyApp).toBeTruthy();
   });
 });

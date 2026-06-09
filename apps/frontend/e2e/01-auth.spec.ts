@@ -7,7 +7,7 @@ test.describe('Auth', () => {
 
     await page.getByPlaceholder('example@gmail.com').fill(ADMIN_EMAIL);
     await page.getByPlaceholder('••••••••').fill(ADMIN_PASSWORD);
-    await page.getByRole('button', { name: 'Login' }).click();
+    await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await expect(page).not.toHaveURL(/\/login/, { timeout: 12_000 });
     // Should land on dashboard or app route
@@ -19,7 +19,7 @@ test.describe('Auth', () => {
 
     await page.getByPlaceholder('example@gmail.com').fill('wrong@test.com');
     await page.getByPlaceholder('••••••••').fill('wrongpassword123');
-    await page.getByRole('button', { name: 'Login' }).click();
+    await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     // Error message or "intentos restantes" should appear
     await expect(
@@ -31,7 +31,7 @@ test.describe('Auth', () => {
     await page.goto('/login');
 
     // Submit with empty fields
-    await page.getByRole('button', { name: 'Login' }).click();
+    await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     // RHF validation triggers — button stays on /login
     await expect(page).toHaveURL(/\/login/);

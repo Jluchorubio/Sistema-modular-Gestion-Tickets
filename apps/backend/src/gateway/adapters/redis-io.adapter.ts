@@ -7,12 +7,11 @@ export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor!: ReturnType<typeof createAdapter>;
 
   async connectToRedis(url: string): Promise<void> {
-    const pubClient = new Redis(url);
+    const opts = { lazyConnect: true, connectTimeout: 3_000, maxRetriesPerRequest: 0, retryStrategy: () => null };
+    const pubClient = new Redis(url, opts);
     const subClient = pubClient.duplicate();
-    await Promise.all([
-      new Promise<void>((res, rej) => pubClient.once('ready', res).once('error', rej)),
-      new Promise<void>((res, rej) => subClient.once('ready', res).once('error', rej)),
-    ]);
+    await pubClient.connect();
+    await subClient.connect();
     this.adapterConstructor = createAdapter(pubClient, subClient);
   }
 

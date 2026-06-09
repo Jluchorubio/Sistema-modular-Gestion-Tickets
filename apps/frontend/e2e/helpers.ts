@@ -7,15 +7,17 @@ export async function loginAs(page: Page, email = ADMIN_EMAIL, password = ADMIN_
   await page.goto('/login');
   await page.getByPlaceholder('example@gmail.com').fill(email);
   await page.getByPlaceholder('••••••••').fill(password);
-  await page.getByRole('button', { name: 'Login' }).click();
+  await page.getByRole('button', { name: 'Login', exact: true }).click();
   await expect(page).not.toHaveURL(/\/login/, { timeout: 12_000 });
 }
 
 export async function logout(page: Page) {
-  // Open profile dropdown (aria-expanded button in AppHeader)
-  const profileTrigger = page.locator('[class*="trigger"][aria-expanded]').first();
-  await profileTrigger.click();
-  await page.getByRole('button', { name: /cerrar sesión/i }).click();
+  // Click profile trigger inside profileWrap (AppHeader)
+  await page.locator('[class*="profileWrap"] > button').click();
+  // Wait for dropdown to become visible (.dropdownOpen = display:block)
+  await page.locator('[class*="dropdownOpen"]').waitFor({ state: 'visible', timeout: 5_000 });
+  // Click logout button (ddDanger class)
+  await page.locator('[class*="ddDanger"]').click();
   await expect(page).toHaveURL(/\/login/, { timeout: 8_000 });
 }
 

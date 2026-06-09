@@ -28,10 +28,15 @@ async function bootstrap() {
   // WebSocket adapter — Redis when REDIS_URL set (multi-pod), else single-process IoAdapter
   const redisUrl = process.env.REDIS_URL;
   if (redisUrl) {
-    const redisAdapter = new RedisIoAdapter(app);
-    await redisAdapter.connectToRedis(redisUrl);
-    app.useWebSocketAdapter(redisAdapter);
-    console.log('  Redis Socket.IO adapter conectado.');
+    try {
+      const redisAdapter = new RedisIoAdapter(app);
+      await redisAdapter.connectToRedis(redisUrl);
+      app.useWebSocketAdapter(redisAdapter);
+      console.log('  Redis Socket.IO adapter conectado.');
+    } catch (err) {
+      console.warn(`  Redis no disponible (${(err as Error).message}) — usando IoAdapter local.`);
+      app.useWebSocketAdapter(new IoAdapter(app));
+    }
   } else {
     app.useWebSocketAdapter(new IoAdapter(app));
   }

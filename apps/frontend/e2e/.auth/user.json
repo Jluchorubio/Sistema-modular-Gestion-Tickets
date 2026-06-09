@@ -1,0 +1,29 @@
+{
+  "cookies": [
+    {
+      "name": "has_session",
+      "value": "1",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1781571587.216613,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "refresh_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyODRiOGE5YS00NjllLTRhYzEtODdiMC0xYTQwNmJjNzZmMmQiLCJlbWFpbCI6Impvc2VsdS5ydWJpbzIwMDhAZ21haWwuY29tIiwiaWF0IjoxNzgwOTY2Nzg2LCJleHAiOjE3ODE1NzE1ODZ9.veZ2jrst0afT1QfUHaEEZvCgqr_VPdduhjWmpkzphwE"
+        },
+        {
+          "name": "access_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyODRiOGE5YS00NjllLTRhYzEtODdiMC0xYTQwNmJjNzZmMmQiLCJlbWFpbCI6Impvc2VsdS5ydWJpbzIwMDhAZ21haWwuY29tIiwiaWF0IjoxNzgwOTY2Nzg2LCJleHAiOjE3ODA5Njc2ODZ9.uTpgeggSG1WJkF8xSVpQWb_pRa5L3TdtLBgnGuRkQrw"
+        }
+      ]
+    }
+  ]
+}

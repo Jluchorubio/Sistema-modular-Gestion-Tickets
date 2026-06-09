@@ -16,7 +16,27 @@ export default defineConfig({
   },
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Setup: log in once and save auth state
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+    // Auth tests: no stored state (test login/logout from scratch)
+    {
+      name: 'auth-tests',
+      testMatch: /01-auth\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // All other tests: reuse saved auth state — avoids throttle
+    {
+      name: 'app-tests',
+      testMatch: /0[2-9]-.*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
   ],
 
   webServer: process.env.PLAYWRIGHT_NO_SERVER

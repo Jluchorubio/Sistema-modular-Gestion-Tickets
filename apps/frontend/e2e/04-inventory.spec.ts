@@ -1,10 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { loginAs } from './helpers';
 
 test.describe('Inventario', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page);
-  });
 
   test('carga la lista de activos', async ({ page }) => {
     await page.goto('/inventory');
