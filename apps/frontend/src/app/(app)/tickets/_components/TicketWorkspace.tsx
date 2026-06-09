@@ -28,6 +28,7 @@ import { useTicketActions } from './hooks/useTicketActions';
 import { AssetCmdbTab } from './tabs/AssetCmdbTab';
 import { ColaboracionTab } from './tabs/ColaboracionTab';
 import { DetallesTab } from './tabs/DetallesTab';
+import { SkeletonWorkspace } from '@/components/ui/Skeleton';
 
 /* ── Badges ──────────────────────────────────────────────────────────── */
 function PriorityBadge({ priority }: { priority: TicketPriority }) {
@@ -197,9 +198,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
 
   return (
     <div className={styles.hwPage}>
-      {isLoading && (
-        <div style={{ padding: '80px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>Cargando ticket…</div>
-      )}
+      {isLoading && <SkeletonWorkspace />}
 
       {isError && (
         <div style={{ padding: '80px 0', textAlign: 'center' }}>

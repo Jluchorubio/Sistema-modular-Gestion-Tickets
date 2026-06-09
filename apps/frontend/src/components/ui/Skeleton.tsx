@@ -344,6 +344,113 @@ export function SkeletonTicketsList({ rows = 8 }: { rows?: number }) {
   );
 }
 
+export function SkeletonWorkspace() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#f8fafc' }}>
+
+      {/* Header — 56px sticky */}
+      <div style={{ height: 56, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        <Skeleton height={28} width={72} style={{ borderRadius: 7, flexShrink: 0 }} />
+        <Skeleton height={12} width={160} style={{ borderRadius: 4, flexShrink: 0 }} />
+        <Skeleton height={14} style={{ flex: 1, maxWidth: 380, borderRadius: 4 }} />
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <Skeleton height={20} width={74} style={{ borderRadius: 99 }} />
+          <Skeleton height={20} width={52} style={{ borderRadius: 99 }} />
+        </div>
+      </div>
+
+      {/* Context strip — 34px */}
+      <div style={{ height: 34, background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        <Skeleton height={10} width={100} style={{ borderRadius: 4 }} />
+        <Skeleton height={10} width={60} style={{ borderRadius: 4 }} />
+        <Skeleton height={18} width={80} style={{ borderRadius: 99 }} />
+      </div>
+
+      {/* Body grid — flex 1 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', flex: 1, overflow: 'hidden' }}>
+
+        {/* Main column */}
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e2e8f0' }}>
+
+          {/* Ticket detail card */}
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
+            <Skeleton height={20} width="70%" style={{ marginBottom: 12, borderRadius: 4 }} />
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+              <Skeleton height={18} width={50} style={{ borderRadius: 99 }} />
+              <Skeleton height={18} width={70} style={{ borderRadius: 99 }} />
+              <Skeleton height={18} width={60} style={{ borderRadius: 99 }} />
+            </div>
+            <Skeleton height={12} width="90%" style={{ marginBottom: 6 }} />
+            <Skeleton height={12} width="75%" />
+          </div>
+
+          {/* Tab bar */}
+          <div style={{ height: 40, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            {[90, 64, 84, 64].map((w, i) => (
+              <Skeleton key={i} height={26} width={w} style={{ borderRadius: 7 }} />
+            ))}
+          </div>
+
+          {/* Timeline content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {Array.from({ length: 5 }, (_, i) => (
+              <div key={i} style={{ display: 'flex', gap: 12 }}>
+                <Skeleton circle width={32} height={32} style={{ flexShrink: 0, marginTop: 2 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                    <Skeleton height={12} width={100} style={{ borderRadius: 4 }} />
+                    <Skeleton height={12} width={60} style={{ borderRadius: 4 }} />
+                  </div>
+                  <Skeleton height={11} width={i % 2 === 0 ? '80%' : '55%'} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right sidebar */}
+        <div style={{ padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', background: '#fff' }}>
+          {/* SLA block */}
+          <div style={{ borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 14px' }}>
+            <Skeleton height={10} width={80} style={{ marginBottom: 10 }} />
+            <Skeleton height={22} width="60%" style={{ marginBottom: 6 }} />
+            <Skeleton height={8} style={{ borderRadius: 99 }} />
+          </div>
+          {/* Transitions */}
+          <div style={{ borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 14px' }}>
+            <Skeleton height={10} width={110} style={{ marginBottom: 10 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {Array.from({ length: 3 }, (_, i) => (
+                <Skeleton key={i} height={34} style={{ borderRadius: 8 }} />
+              ))}
+            </div>
+          </div>
+          {/* Assignee block */}
+          <div style={{ borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 14px' }}>
+            <Skeleton height={10} width={90} style={{ marginBottom: 10 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Skeleton circle width={34} height={34} />
+              <div style={{ flex: 1 }}>
+                <Skeleton height={13} width="70%" style={{ marginBottom: 5 }} />
+                <Skeleton height={10} width="50%" />
+              </div>
+            </div>
+          </div>
+          {/* Extra info */}
+          <div style={{ borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i}>
+                <Skeleton height={9} width={70} style={{ marginBottom: 4 }} />
+                <Skeleton height={12} width={i === 0 ? '80%' : i === 1 ? '55%' : '65%'} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SkeletonProfileRight() {
   return (
     <div style={{ flex: 1 }}>
