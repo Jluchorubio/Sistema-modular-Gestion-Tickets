@@ -3,12 +3,24 @@ import { AutoCloseService } from './auto-close.service';
 
 const NOOP_MESSAGING = { emit: jest.fn() };
 
+function makeQr(queryImpl?: () => any) {
+  const qr = {
+    connect:             jest.fn().mockResolvedValue(undefined),
+    startTransaction:    jest.fn().mockResolvedValue(undefined),
+    commitTransaction:   jest.fn().mockResolvedValue(undefined),
+    rollbackTransaction: jest.fn().mockResolvedValue(undefined),
+    release:             jest.fn().mockResolvedValue(undefined),
+    query:               jest.fn().mockImplementation(queryImpl ?? (() => Promise.resolve(undefined))),
+  };
+  return qr;
+}
+
 describe('AutoCloseService', () => {
   let service: AutoCloseService;
-  let mockDb: { query: jest.Mock };
+  let mockDb: { query: jest.Mock; createQueryRunner: jest.Mock };
 
   beforeEach(() => {
-    mockDb = { query: jest.fn() };
+    mockDb = { query: jest.fn(), createQueryRunner: jest.fn() };
     service = new AutoCloseService(mockDb as any, NOOP_MESSAGING as any);
     jest.clearAllMocks();
   });
@@ -35,10 +47,11 @@ describe('AutoCloseService', () => {
 
     it('emits ticket.state_changed for each closed ticket', async () => {
       const ticket = { ticket_id: 'tid-1', title: 'Test', created_by: 'uid-1', close_state_id: 'state-closed' };
-      mockDb.query
-        .mockResolvedValueOnce([ticket])              // SELECT tickets
-        .mockResolvedValueOnce(undefined)             // set_config
-        .mockResolvedValueOnce(undefined);            // UPDATE
+      mockDb.query.mockResolvedValueOnce([ticket]);  // SELECT tickets
+
+      // QueryRunner: set_config, UPDATE tickets, UPDATE sla_tracking
+      const qr = makeQr();
+      mockDb.createQueryRunner.mockReturnValue(qr);
 
       await (service as any).closeExpiredResolved();
 
@@ -53,12 +66,20 @@ describe('AutoCloseService', () => {
         { ticket_id: 'tid-1', title: 'A', created_by: 'u1', close_state_id: 's1' },
         { ticket_id: 'tid-2', title: 'B', created_by: 'u2', close_state_id: 's2' },
       ];
-      mockDb.query
-        .mockResolvedValueOnce(tickets)                   // SELECT
-        .mockResolvedValueOnce(undefined)                 // set_config tid-1
-        .mockRejectedValueOnce(new Error('DB error'))     // UPDATE tid-1 → throws
-        .mockResolvedValueOnce(undefined)                 // set_config tid-2
-        .mockResolvedValueOnce(undefined);                // UPDATE tid-2
+      mockDb.query.mockResolvedValueOnce(tickets);  // SELECT
+
+      let callCount = 0;
+      // tid-1 qr: set_config OK, UPDATE throws
+      const qr1 = makeQr(() => {
+        callCount++;
+        if (callCount === 2) return Promise.reject(new Error('DB error'));
+        return Promise.resolve(undefined);
+      });
+      // tid-2 qr: all OK
+      const qr2 = makeQr();
+      mockDb.createQueryRunner
+        .mockReturnValueOnce(qr1)
+        .mockReturnValueOnce(qr2);
 
       await expect((service as any).closeExpiredResolved()).resolves.not.toThrow();
       // Only tid-2 emits (tid-1 failed)

@@ -80,9 +80,9 @@ describe('SlaEvaluatorService', () => {
     it('= operator: match', () => expect(pass('priority', '=', 'alta')).toBe(true));
     it('= operator: no match', () => expect(pass('priority', '=', 'baja')).toBe(false));
     it('!= operator: returns true when values differ', () => expect(pass('priority', '!=', 'baja')).toBe(true));
-    it('IN operator with JSON array: match', () => expect(pass('priority', 'IN', '["alta","critica"]')).toBe(true));
-    it('IN operator: no match', () => expect(pass('priority', 'IN', '["baja","media"]')).toBe(false));
-    it('IN operator: invalid JSON returns false', () => expect(pass('priority', 'IN', 'not-json')).toBe(false));
+    it('IN operator with CSV: match', () => expect(pass('priority', 'IN', 'alta,critica')).toBe(true));
+    it('IN operator: no match', () => expect(pass('priority', 'IN', 'baja,media')).toBe(false));
+    it('IN operator: single value match', () => expect(pass('priority', 'IN', 'alta')).toBe(true));
     it('> operator: numeric comparison', () => expect(pass('priority', '>', '3', { priority: '5' })).toBe(true));
     it('< operator: numeric comparison', () => expect(pass('priority', '<', '10', { priority: '5' })).toBe(true));
     it('unknown field returns false', () => expect(pass('nonexistent', '=', 'x')).toBe(false));
