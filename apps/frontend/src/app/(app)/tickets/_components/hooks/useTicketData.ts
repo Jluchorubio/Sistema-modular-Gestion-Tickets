@@ -114,12 +114,27 @@ export function useTicketData({ ticketId, helpdeskId }: UseTicketDataProps) {
     staleTime: 60_000,
   });
 
-  /* ── SLA countdown clock ── */
+  /* ── SLA countdown clock — adaptive interval ── */
   const [now, setNow] = useState(() => Date.now());
+
+  // Compute urgency threshold so the interval only recreates on threshold crossings
+  const slaThreshold = useMemo(() => {
+    const deadline = ticket?.sla_deadline_tracked;
+    const status   = ticket?.sla_status;
+    if (!deadline || status === 'met' || status === 'paused') return 'normal';
+    const remaining = new Date(deadline).getTime() - now;
+    if (remaining > 0 && remaining <= 30 * 60_000)   return 'critical'; // < 30 min → 10s
+    if (remaining > 0 && remaining <= 2 * 3_600_000) return 'warning';  // < 2 h  → 30s
+    return 'normal';
+  }, [ticket?.sla_deadline_tracked, ticket?.sla_status, now]);
+
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
+    const ms = slaThreshold === 'critical' ? 10_000
+             : slaThreshold === 'warning'  ? 30_000
+             : 60_000;
+    const id = setInterval(() => setNow(Date.now()), ms);
     return () => clearInterval(id);
-  }, []);
+  }, [slaThreshold]);
 
   const slaCfg: StatusConfig | null = ticket?.sla_status
     ? getSlaStatusConfig(ticket.sla_status)

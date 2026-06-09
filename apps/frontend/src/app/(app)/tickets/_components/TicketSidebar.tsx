@@ -18,7 +18,7 @@ import { fmtDate } from '@/lib/formatters';
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
 interface TransitionItem {
-  id: string; variant?: string; to_label: string; to_is_pause_state: boolean;
+  id: string; name: string; variant?: string; to_label: string; to_is_pause_state: boolean;
 }
 
 interface SlaInfo {
@@ -141,9 +141,12 @@ export function TicketSidebar({
                   <div key={tr.id}>
                     <button type="button"
                       onClick={() => { setActiveTransId(isAct ? null : tr.id); setTransReason(''); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 7, border: 'none', background: isAct ? '#475569' : bg, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%' }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 7, border: 'none', background: isAct ? '#475569' : bg, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%' }}>
                       {tr.variant === 'success' ? <CheckCircle2 size={12} /> : tr.variant === 'danger' ? <XCircle size={12} /> : <ChevronRight size={12} />}
-                      {tr.to_label}
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 11, fontWeight: 700 }}>{tr.name}</span>
+                        <span style={{ display: 'block', fontSize: 9, fontWeight: 500, opacity: 0.7, marginTop: 1 }}>→ {tr.to_label}</span>
+                      </span>
                     </button>
                     {isAct && (
                       <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 5 }}>

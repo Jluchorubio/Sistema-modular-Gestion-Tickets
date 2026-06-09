@@ -245,11 +245,17 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               {ticket.escalated && (
                 <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>ESCALADO</span>
               )}
-              {(ticket.reprocess_count ?? 0) > 0 && (
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #e9d5ff' }}>
-                  ×{ticket.reprocess_count}
-                </span>
-              )}
+              {(ticket.reprocess_count ?? 0) > 0 && (() => {
+                const rc     = ticket.reprocess_count ?? 0;
+                const bg     = rc >= 4 ? '#fef2f2' : rc >= 2 ? '#fff7ed' : '#fdf4ff';
+                const color  = rc >= 4 ? '#991b1b' : rc >= 2 ? '#c2410c' : '#7e22ce';
+                const border = rc >= 4 ? '#fecaca' : rc >= 2 ? '#fed7aa' : '#e9d5ff';
+                return (
+                  <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: bg, color, border: `1px solid ${border}`, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    {rc >= 2 && <AlertTriangle size={8} />}×{rc}
+                  </span>
+                );
+              })()}
               {ticket.is_pause_state && ticket.history?.[0]?.transition_reason && (
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 4 }}>
                   ⏸ {ticket.history[0].transition_reason}
