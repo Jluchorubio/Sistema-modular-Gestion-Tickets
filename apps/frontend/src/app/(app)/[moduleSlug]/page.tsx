@@ -19,6 +19,7 @@ export default function ModuleSlugPage() {
   const { data: allModules } = useQuery({
     queryKey: ['modules'],
     queryFn:  () => modulesService.getModules(),
+    staleTime: 5 * 60_000,
   });
 
   const moduleRef = allModules?.find((m) => m.slug === moduleSlug);
@@ -27,6 +28,7 @@ export default function ModuleSlugPage() {
     queryKey: ['module', moduleRef?.id],
     queryFn:  () => modulesService.getModule(moduleRef!.id),
     enabled:  !!moduleRef?.id,
+    staleTime: 5 * 60_000,
   });
 
   if (!allModules || isLoading) return <Spinner />;
