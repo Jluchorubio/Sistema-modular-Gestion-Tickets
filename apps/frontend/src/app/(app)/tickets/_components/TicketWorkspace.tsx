@@ -80,7 +80,7 @@ function useApprovalCountdown(expiresAt: string | null) {
       setLabel(h > 0 ? `${h}h ${m}m` : `${m}m`);
     };
     tick();
-    const id = setInterval(tick, 60000);
+    const id = setInterval(tick, 30_000);
     return () => clearInterval(id);
   }, [expiresAt]);
   return { label, urgent };

@@ -57,7 +57,8 @@ export class AssignmentService {
         technicianId = lockedRows[0]?.user_id ?? null;
       }
 
-      // Fallback to round-robin with FOR UPDATE SKIP LOCKED
+      // Round-robin: pick the technician who was assigned a ticket the longest ago
+      // (NULL = never assigned → goes first). Ensures fair rotation, not just load balance.
       if (!technicianId) {
         const rrRows = await qr.query(
           `SELECT umr.user_id
@@ -67,16 +68,11 @@ export class AssignmentService {
              AND mr.name       IN ('tecnico', 'jefe_tecnico')
              AND umr.is_active = true
            ORDER BY (
-             SELECT COUNT(*)
+             SELECT MAX(ta.assigned_at)
              FROM   tickets.ticket_assignments ta
-             JOIN   tickets.tickets            tk ON tk.id = ta.ticket_id
-             JOIN   tickets.states             st ON st.id = tk.current_state_id
-             WHERE  ta.user_id   = umr.user_id
-               AND  ta.role      = 'owner'
-               AND  ta.is_active = true
-               AND  st.is_final  = false
-               AND  tk.deleted_at IS NULL
-           ) ASC
+             WHERE  ta.user_id = umr.user_id
+               AND  ta.role    = 'owner'
+           ) ASC NULLS FIRST
            LIMIT 1
            FOR UPDATE OF umr SKIP LOCKED`,
           [moduleId],

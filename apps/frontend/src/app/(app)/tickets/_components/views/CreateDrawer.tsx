@@ -35,6 +35,7 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   const [selectedAsset,          setSelectedAsset]          = useState<AssetSearchResult | null>(null);
   const [assetSearching,         setAssetSearching]         = useState(false);
   const [error,                  setError]                  = useState('');
+  const [warning,                setWarning]                = useState('');
   const [kbQuery,                setKbQuery]               = useState('');
 
   /* ── Damage types cascade ── */
@@ -92,7 +93,16 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
 
   const createMut = useMutation({
     mutationFn: () => ticketsService.create(form as CreateTicketDto),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tickets'] }); qc.invalidateQueries({ queryKey: ['my-assigned-tickets'] }); onClose(); },
+    onSuccess: (ticket) => {
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+      qc.invalidateQueries({ queryKey: ['my-assigned-tickets'] });
+      if (!ticket.assignee_name) {
+        setWarning('Ticket creado. No hay técnicos disponibles en este módulo — quedará sin asignar hasta que un jefe técnico lo asigne manualmente.');
+        setTimeout(onClose, 3500);
+      } else {
+        onClose();
+      }
+    },
     onError: (e: any) => setError(e?.response?.data?.message ?? 'Error al crear el ticket.'),
   });
 
@@ -322,6 +332,7 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
 
         {/* ── Footer ── */}
         <div className={styles.footer}>
+          {warning && <p className={styles.warningMsg}>{warning}</p>}
           {error && <p className={styles.errorMsg}>{error}</p>}
           <div className={styles.footerActions}>
             <button type="button" onClick={onClose} className={styles.btnCancel}>

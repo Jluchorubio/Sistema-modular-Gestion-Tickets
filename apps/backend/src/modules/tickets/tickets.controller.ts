@@ -218,7 +218,7 @@ export class TicketsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
   ) {
-    return this.svc.deleteAttachment(req.user.sub, attachmentId);
+    return this.svc.deleteAttachment(req.user.sub, id, attachmentId);
   }
 
   /* ── Comments ─────────────────────────────────────────────────────────── */

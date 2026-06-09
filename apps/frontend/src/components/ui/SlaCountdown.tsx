@@ -76,7 +76,7 @@ export function SlaCountdown({ sla_due_at, created_at }: { sla_due_at: string; c
           stroke={stroke}
           strokeWidth={4}
           strokeDasharray={C}
-          strokeDashoffset={overdue ? 0 : dash}
+          strokeDashoffset={dash}
           strokeLinecap="round"
           style={{ transition: 'stroke-dashoffset 0.5s linear, stroke 0.5s' }}
         />

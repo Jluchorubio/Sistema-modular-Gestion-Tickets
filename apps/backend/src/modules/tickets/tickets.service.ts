@@ -601,6 +601,20 @@ export class TicketsService {
         );
       }
 
+      // 5. Persist transition reason on the history row created by trigger
+      if (dto.reason) {
+        await qr.query(
+          `UPDATE tickets.ticket_state_history
+           SET transition_reason = $1
+           WHERE ticket_id = $2 AND to_state_id = $3
+             AND transitioned_at = (
+               SELECT MAX(transitioned_at) FROM tickets.ticket_state_history
+               WHERE ticket_id = $2 AND to_state_id = $3
+             )`,
+          [dto.reason, ticketId, trans.to_state_id],
+        );
+      }
+
       await qr.commitTransaction();
     } catch (err) {
       await qr.rollbackTransaction();
@@ -711,7 +725,7 @@ export class TicketsService {
 
     const reopenCount = (ticket.reprocess_count ?? 0) + 1;
     const shouldEscalate = reopenCount >= 3 && ticket.priority !== 'critica';
-    const newPriority    = shouldEscalate ? 'alta' : ticket.priority;
+    const newPriority    = shouldEscalate ? this.priorityEngine.escalatePriority(ticket.priority) : ticket.priority;
 
     await this.db.query(
       `UPDATE tickets.tickets
@@ -767,7 +781,7 @@ export class TicketsService {
 
     const reopenCount    = (ticket.reprocess_count ?? 0) + 1;
     const shouldEscalate = reopenCount >= 3 && ticket.priority !== 'critica';
-    const newPriority    = shouldEscalate ? 'alta' : ticket.priority;
+    const newPriority    = shouldEscalate ? this.priorityEngine.escalatePriority(ticket.priority) : ticket.priority;
 
     const qr = this.db.createQueryRunner();
     await qr.connect();
@@ -864,12 +878,13 @@ export class TicketsService {
     return row;
   }
 
-  async deleteAttachment(userId: string, attachmentId: string) {
+  async deleteAttachment(userId: string, ticketId: string, attachmentId: string) {
     const [att] = await this.db.query<any[]>(
-      `SELECT id, uploaded_by FROM tickets.ticket_attachments WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT id, uploaded_by, ticket_id FROM tickets.ticket_attachments WHERE id = $1 AND deleted_at IS NULL`,
       [attachmentId],
     );
     if (!att) throw new NotFoundException('Attachment not found');
+    if (att.ticket_id !== ticketId) throw new ForbiddenException('El adjunto no pertenece a este ticket');
     if (att.uploaded_by !== userId) throw new ForbiddenException('Solo el autor puede eliminar este adjunto');
     await this.db.query(
       `UPDATE tickets.ticket_attachments SET deleted_at = now() WHERE id = $1`,

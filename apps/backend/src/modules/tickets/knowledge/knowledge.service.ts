@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { CreateKnowledgeArticleDto, UpdateKnowledgeArticleDto } from '../dto/knowledge-article.dto';
@@ -92,7 +92,9 @@ export class KnowledgeService {
     return { ok: true };
   }
 
-  async voteArticle(userId: string, articleId: string, value: 1 | -1) {
+  async voteArticle(userId: string, articleId: string, value: number) {
+    if (value !== 1 && value !== -1) throw new BadRequestException('El valor del voto debe ser 1 o -1');
+
     await this.db.query(
       `INSERT INTO tickets.knowledge_votes (user_id, entity_id, entity_type, value)
        VALUES ($1, $2, 'article', $3)

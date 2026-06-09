@@ -351,7 +351,8 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
               {recentTickets.map((t, i, arr) => (
                 <div
                   key={t.id}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 22px', borderBottom: i < arr.length - 1 ? '1px solid #F1F5F9' : undefined, gap: 12 }}
+                  onClick={() => router.push(`/helpdesk/ticket/${t.id}`)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 22px', borderBottom: i < arr.length - 1 ? '1px solid #F1F5F9' : undefined, gap: 12, cursor: 'pointer' }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 13, fontWeight: 500, color: '#0F172A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

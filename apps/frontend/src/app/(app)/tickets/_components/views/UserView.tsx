@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Ticket, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Search, Ticket, ChevronRight, CheckCircle2, Clock, Star } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   ticketsService,
@@ -108,13 +108,15 @@ function ApprovalCard({
 }: {
   ticket: TicketListItem;
   basePath: string;
-  onApprove: (id: string) => void;
+  onApprove: (id: string, score: number) => void;
   onReject:  (id: string, reason: string) => void;
   isApproving: string | null;
 }) {
   const router = useRouter();
-  const [showReject, setShowReject] = useState(false);
-  const [reason, setReason]         = useState('');
+  const [showReject,   setShowReject]   = useState(false);
+  const [reason,       setReason]       = useState('');
+  const [ratingScore,  setRatingScore]  = useState(0);
+  const [ratingHover,  setRatingHover]  = useState(0);
   const busy = isApproving === ticket.id;
 
   return (
@@ -147,20 +149,37 @@ function ApprovalCard({
 
       {/* Notice */}
       <p style={{ margin: 0, fontSize: 11.5, color: '#c2410c', fontWeight: 600 }}>
-        ¿El problema fue resuelto? Acepta para cerrar o rechaza para reabrirlo.
+        ¿El problema fue resuelto? Califica la atención y acepta, o rechaza para reabrirlo.
       </p>
+
+      {/* Star rating */}
+      {!showReject && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {[1,2,3,4,5].map(s => (
+            <button key={s} type="button"
+              onClick={() => setRatingScore(s)}
+              onMouseEnter={() => setRatingHover(s)}
+              onMouseLeave={() => setRatingHover(0)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0 }}>
+              <Star size={20} fill={(ratingHover || ratingScore) >= s ? '#f59e0b' : 'none'} stroke={(ratingHover || ratingScore) >= s ? '#f59e0b' : '#d1d5db'} />
+            </button>
+          ))}
+          {ratingScore > 0 && <span style={{ fontSize: 11, color: '#92400e', fontWeight: 700, marginLeft: 4 }}>{['','Muy malo','Malo','Regular','Bueno','Excelente'][ratingScore]}</span>}
+        </div>
+      )}
 
       {/* Actions */}
       {!showReject ? (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button
             type="button"
-            disabled={busy}
-            onClick={() => onApprove(ticket.id)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, border: 'none', background: busy ? C.muted : '#16a34a', color: '#fff', fontSize: 11, fontWeight: 700, cursor: busy ? 'wait' : 'pointer', fontFamily: 'inherit' }}
+            disabled={busy || ratingScore === 0}
+            onClick={() => onApprove(ticket.id, ratingScore)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, border: 'none', background: busy || ratingScore === 0 ? C.muted : '#16a34a', color: '#fff', fontSize: 11, fontWeight: 700, cursor: busy || ratingScore === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
           >
             <CheckCircle2 size={12} /> {busy ? 'Procesando…' : 'Aceptar'}
           </button>
+          {ratingScore === 0 && <span style={{ fontSize: 10, color: '#a16207', fontWeight: 600 }}>↑ Selecciona estrellas para aceptar</span>}
           <button
             type="button"
             disabled={busy}
@@ -330,9 +349,17 @@ export function UserView({
     },
   });
 
-  function handleApprove(id: string) {
+  async function handleApprove(id: string, score: number) {
     setApprovingId(id);
-    approveMut.mutate(id);
+    try {
+      if (score > 0) {
+        await ticketsService.rate(id, { score_overall: score });
+      }
+      await ticketsService.approve(id, '');
+      qc.invalidateQueries({ queryKey: ['tickets', moduleId, 'mine'] });
+    } finally {
+      setApprovingId(null);
+    }
   }
 
   function handleReject(id: string, reason: string) {
