@@ -90,7 +90,7 @@ function QueueRow({ ticket, basePath }: { ticket: any; basePath: string }) {
 
 /* ── StatusPicker — solo visible para el propio técnico ── */
 const STATUS_OPTIONS: { value: TechAvailStatus; label: string; color: string; emoji: string }[] = [
-  { value: 'disponible',    label: 'Disponible',       color: '#20c933', emoji: '🟢' },
+  { value: 'disponible',    label: 'Disponible',       color: '#22c55e', emoji: '🟢' },
   { value: 'ocupado',       label: 'Ocupado',          color: '#f59e0b', emoji: '🟡' },
   { value: 'en_reunion',    label: 'En reunión',       color: '#3b82f6', emoji: '🔵' },
   { value: 'fuera_horario', label: 'Fuera de horario', color: '#94a3b8', emoji: '⚫' },
