@@ -12,6 +12,7 @@ import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { usersService } from '@/services/users.service';
 import type { ModuleTechnician, TechAvailStatus } from '@/types/module.types';
 import { initials, Stars, type AssignedTicket } from './shared';
+import styles from '../../tickets.module.css';
 
 const AVAIL_COLORS = TECH_AVAIL_COLORS;
 const AVAIL_LABELS = TECH_AVAIL_LABELS;
@@ -19,16 +20,24 @@ const AVAIL_LABELS = TECH_AVAIL_LABELS;
 /* ─────────────────── TechQueueItem ─────────────────────────────────────── */
 
 export function TechQueueItem({ ticket, basePath }: { ticket: AssignedTicket; basePath: string }) {
-  const router   = useRouter();
-  const color    = getPriorityConfig(ticket.priority).color;
-  const slaCfg   = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status) : null;
-  const slaColor = slaCfg?.text ?? null;
-  const slaLabel = slaCfg?.label ?? null;
+  const router    = useRouter();
+  const color     = getPriorityConfig(ticket.priority).color;
+  const breached  = ticket.sla_status === 'breached';
+  const hoursLeft = ticket.sla_deadline_tracked && !breached
+    ? (new Date(ticket.sla_deadline_tracked).getTime() - Date.now()) / 3_600_000
+    : null;
+  const critical  = !breached && hoursLeft !== null && hoursLeft < 2;
+  const slaCfg    = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status) : null;
+  const slaColor  = slaCfg?.text ?? null;
+  const slaLabel  = slaCfg?.label ?? null;
+
+  const rowBg     = breached ? '#fff5f5' : '#f8fafc';
+  const rowBorder = breached ? '1.5px solid #fecaca' : '1px solid #e2e8f0';
 
   return (
     <div
       onClick={() => router.push(`${basePath}/ticket/${ticket.id}`)}
-      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'box-shadow .15s, transform .12s' }}
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 14px', background: rowBg, borderRadius: 10, border: rowBorder, cursor: 'pointer', transition: 'box-shadow .15s, transform .12s' }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)'; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = ''; (e.currentTarget as HTMLDivElement).style.transform = ''; }}
     >
@@ -54,11 +63,21 @@ export function TechQueueItem({ ticket, basePath }: { ticket: AssignedTicket; ba
               ⏸ {ticket.last_transition_reason}
             </span>
           )}
-          {slaLabel && slaColor && (
+          {/* SLA indicators — breached pulse, critical orange, or normal label */}
+          {breached ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: '#ef4444', background: '#fef2f2', padding: '1px 7px', borderRadius: 99, border: '1px solid #fecaca' }}>
+              <span className={styles.slaPulseDot} />
+              SLA vencido
+            </span>
+          ) : critical ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 800, color: '#f97316', background: '#fff7ed', padding: '1px 7px', borderRadius: 99, border: '1px solid #fed7aa' }}>
+              <Clock size={9} /> {hoursLeft !== null && hoursLeft < 1 ? `${Math.round(hoursLeft * 60)}min` : `${hoursLeft?.toFixed(1)}h`}
+            </span>
+          ) : slaLabel && slaColor ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: slaColor }}>
               <Clock size={9} />{slaLabel}
             </span>
-          )}
+          ) : null}
           <span style={{ fontSize: 10, color: '#cbd5e1', marginLeft: 'auto' }}>
             por {ticket.creator_name}
           </span>

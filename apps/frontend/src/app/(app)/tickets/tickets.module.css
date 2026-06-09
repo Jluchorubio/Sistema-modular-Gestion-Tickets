@@ -1,3 +1,18 @@
+/* ── SLA pulse animation ────────────────────────────────────────── */
+@keyframes slaPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .4; transform: scale(1.4); }
+}
+.slaPulseDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: slaPulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
 /* ── Two-panel workspace ────────────────────────────────────────── */
 .workspace {
   display: flex;

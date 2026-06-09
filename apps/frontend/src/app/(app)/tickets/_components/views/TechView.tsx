@@ -67,8 +67,13 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
     for (const t of all) {
       (isToday(t.created_at) ? tod : prev).push(t as AssignedTicket);
     }
-    const byPriority = (a: AssignedTicket, b: AssignedTicket) =>
-      PRIORITY_ORDER[a.priority as TicketPriority] - PRIORITY_ORDER[b.priority as TicketPriority];
+    const byPriority = (a: AssignedTicket, b: AssignedTicket) => {
+      const pDiff = PRIORITY_ORDER[a.priority as TicketPriority] - PRIORITY_ORDER[b.priority as TicketPriority];
+      if (pDiff !== 0) return pDiff;
+      const aD = a.sla_deadline_tracked ? new Date(a.sla_deadline_tracked).getTime() : Infinity;
+      const bD = b.sla_deadline_tracked ? new Date(b.sla_deadline_tracked).getTime() : Infinity;
+      return aD - bD;
+    };
     prev.sort(byPriority);
     tod.sort(byPriority);
     return { previous: prev, today: tod };

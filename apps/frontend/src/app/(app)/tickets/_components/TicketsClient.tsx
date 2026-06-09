@@ -28,7 +28,7 @@ export function TicketsClient({
   forcedModuleSlug,
   forcedModuleName,
   forcedModuleDesc,
-  visualVariant = 'default',
+  visualVariant = 'helpdeskMockup',
 }: TicketsClientProps = {}) {
   const { modules } = useModules();
   const isForced    = !!forcedModuleId;
