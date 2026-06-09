@@ -6,8 +6,10 @@ import {
   Plus, Pencil, Trash2, Shield, Check, X,
 } from 'lucide-react';
 import { modulesService } from '@/services/modules.service';
+import { useAuthStore } from '@/stores/auth.store';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from './gestionRoles.module.css';
+import mgmt  from '@/styles/mgmt.module.css';
 
 interface Props { moduleId: string }
 
@@ -62,7 +64,9 @@ function RoleForm({
 }
 
 export function GestionRolesClient({ moduleId }: Props) {
-  const qc = useQueryClient();
+  const qc           = useQueryClient();
+  const authUser     = useAuthStore((s) => s.user);
+  const isSuperadmin = authUser?.is_superadmin ?? false;
 
   const { data: roles = [], isLoading: loadingRoles } = useQuery({
     queryKey: ['module-roles-mgmt', moduleId],
@@ -94,6 +98,8 @@ export function GestionRolesClient({ moduleId }: Props) {
   if (loadingRoles) return <Spinner />;
 
   return (
+    <div className={mgmt.pageWrap}>
+    <div className={mgmt.pageContent}>
     <div className={styles.wrap}>
 
       {/* ── Roles section ── */}
@@ -103,7 +109,7 @@ export function GestionRolesClient({ moduleId }: Props) {
             <div className={styles.sectionTitle}><Shield size={14} /> Roles del módulo</div>
             <div className={styles.sectionSub}>Define qué roles existen en este módulo</div>
           </div>
-          {!showCreateRole && (
+          {isSuperadmin && !showCreateRole && (
             <button className={styles.btnPrimary} onClick={() => setShowCreateRole(true)}>
               <Plus size={13} /> Crear rol
             </button>
@@ -137,6 +143,7 @@ export function GestionRolesClient({ moduleId }: Props) {
                       <div className={styles.roleName}>{role.name}</div>
                       {role.description && <div className={styles.roleDesc}>{role.description}</div>}
                     </div>
+                    {isSuperadmin && (
                     <div className={styles.roleActions}>
                       <button
                         type="button"
@@ -156,6 +163,7 @@ export function GestionRolesClient({ moduleId }: Props) {
                         <Trash2 size={13} />
                       </button>
                     </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -163,6 +171,8 @@ export function GestionRolesClient({ moduleId }: Props) {
           </div>
         )}
       </div>
+    </div>
+    </div>
     </div>
   );
 }

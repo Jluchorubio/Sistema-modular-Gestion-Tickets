@@ -4,19 +4,17 @@ import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
-import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { ReportingService } from './reporting.service';
 
 @ApiTags('reporting')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('superadmin', 'admin_modulo', 'jefe_tecnico')
+@Roles('superadmin', 'admin_modulo')
 @Controller('reporting')
 export class ReportingController {
   constructor(private readonly service: ReportingService) {}
 
   @Get('sla')
-  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Métricas de SLA: cumplimiento global y por prioridad.' })
   @ApiQuery({ name: 'moduleId',  required: false })
   @ApiQuery({ name: 'dateFrom',  required: false })
@@ -30,7 +28,6 @@ export class ReportingController {
   }
 
   @Get('tickets')
-  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Resumen de tickets: totales, por estado, prioridad y tendencia 30 días.' })
   @ApiQuery({ name: 'moduleId',  required: false })
   @ApiQuery({ name: 'dateFrom',  required: false })
@@ -44,7 +41,6 @@ export class ReportingController {
   }
 
   @Get('inventory')
-  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Métricas de inventario: totales por estado y categoría.' })
   @ApiQuery({ name: 'moduleId', required: false })
   inventorySummary(@Query('moduleId') moduleId?: string) {
@@ -52,7 +48,6 @@ export class ReportingController {
   }
 
   @Get('audit')
-  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Log de auditoría: últimas N entradas del event_log.' })
   @ApiQuery({ name: 'limit',       required: false })
   @ApiQuery({ name: 'entity_type', required: false })
@@ -64,7 +59,6 @@ export class ReportingController {
   }
 
   @Get('helpdesk')
-  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Métricas específicas de Helpdesk: KPIs, técnicos, categorías, SLA.' })
   @ApiQuery({ name: 'moduleId', required: true })
   helpdeskMetrics(@Query('moduleId') moduleId: string) {
@@ -72,7 +66,6 @@ export class ReportingController {
   }
 
   @Get('export/tickets')
-  @RequirePermission('global:reports:view')
   @ApiOperation({ summary: 'Exportar tickets a CSV (máx 5000 filas).' })
   @ApiQuery({ name: 'moduleId', required: false })
   async exportTicketsCsv(

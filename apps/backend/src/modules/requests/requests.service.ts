@@ -142,7 +142,7 @@ export class RequestsService {
     const limit  = Math.min(100, Math.max(1, opts.limit ?? 20));
     const offset = (page - 1) * limit;
 
-    // Determine scope: superadmin sees all; admin_modulo sees only their modules' requests
+    // Determine scope: superadmin sees all; module staff see requests for their module(s)
     const [profile] = await this.db.query<{ is_superadmin: boolean }[]>(
       `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
       [userId],
@@ -154,15 +154,14 @@ export class RequestsService {
 
     if (!isSuperadmin) {
       params.push(userId);
+      // Any active module role (admin or staff) scopes visibility to that module's requests
       conditions.push(`(
         r.assigned_to = $${params.length}
         OR r.metadata->>'module_id' IN (
           SELECT umr.module_id::text
           FROM   modules.user_module_roles umr
-          JOIN   modules.module_roles      mr ON mr.id = umr.role_id
           WHERE  umr.user_id   = $${params.length}
             AND  umr.is_active = true
-            AND  mr.is_admin   = true
         )
       )`);
     }
@@ -429,8 +428,7 @@ export class RequestsService {
         OR r.metadata->>'module_id' IN (
           SELECT umr.module_id::text
           FROM   modules.user_module_roles umr
-          JOIN   modules.module_roles      mr ON mr.id = umr.role_id
-          WHERE  umr.user_id = $1 AND umr.is_active = TRUE AND mr.is_admin = TRUE
+          WHERE  umr.user_id = $1 AND umr.is_active = TRUE
         )
       )`;
     const params = isSuperadmin ? [] : [userId];

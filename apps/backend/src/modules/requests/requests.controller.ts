@@ -58,8 +58,6 @@ export class RequestsController {
   }
 
   @Get('stats')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:view_all')
   @ApiOperation({ summary: 'Stats de solicitudes para admin/superadmin.' })
   getStats(@Req() req: any) {
@@ -74,18 +72,14 @@ export class RequestsController {
   }
 
   @Get('user/:id')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:view_all')
-  @ApiOperation({ summary: 'Solicitudes de un usuario específico. Superadmin / admin_modulo.' })
+  @ApiOperation({ summary: 'Solicitudes de un usuario específico.' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   findByUser(@Param('id') id: string, @Query('limit') limit?: string) {
     return this.service.findByUser(id, limit ? parseInt(limit, 10) : 10);
   }
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:view_all')
   @ApiOperation({ summary: 'Listar todas las solicitudes. Superadmin / admin_modulo.' })
   @ApiQuery({ name: 'status',    required: false })
@@ -109,8 +103,6 @@ export class RequestsController {
   }
 
   @Patch(':id/review')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:approve')
   @ApiOperation({ summary: 'Revisar solicitud (aprobar / rechazar / en revisión). Superadmin / admin_modulo.' })
   review(
@@ -122,8 +114,6 @@ export class RequestsController {
   }
 
   @Post(':id/take')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:take')
   @ApiOperation({ summary: 'Tomar solicitud pendiente — inicia SLA de 4 horas.' })
   take(@Req() req: any, @Param('id') id: string) {
@@ -131,8 +121,6 @@ export class RequestsController {
   }
 
   @Patch(':id/progress')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:progress')
   @ApiOperation({ summary: 'Actualizar progreso: in_progress | completed.' })
   updateProgress(
@@ -144,8 +132,6 @@ export class RequestsController {
   }
 
   @Post(':id/escalate')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:escalate')
   @ApiOperation({ summary: 'Escalar solicitud al superadmin.' })
   escalate(

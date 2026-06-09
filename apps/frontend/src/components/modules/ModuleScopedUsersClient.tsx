@@ -20,6 +20,7 @@ import { getInitials } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
 import styles from '@/app/(app)/users/users.module.css';
+import mgmt   from '@/styles/mgmt.module.css';
 import mstyles from '@/components/ui/modal.module.css';
 
 /* ── Schemas ── */
@@ -233,8 +234,8 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
   const deleteMatch  = deleteInput === deleteTarget;
 
   return (
-    <div className={styles.pageWrap}>
-      <div className={styles.mainContent}>
+    <div className={mgmt.pageWrap}>
+      <div className={mgmt.pageContent}>
 
         {/* ── Header ── */}
         <div className={styles.header}>

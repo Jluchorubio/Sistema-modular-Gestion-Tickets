@@ -7,6 +7,7 @@ import { reportingService, type HelpdeskTechnician } from '@/services/reporting.
 import api from '@/services/api';
 import { getPriorityConfig } from '@/constants/status';
 import { fmtDay } from '@/lib/formatters';
+import mgmt from '@/styles/mgmt.module.css';
 
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
 type Tab = 'operacion' | 'tecnicos' | 'sla';
@@ -123,6 +124,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
   ];
 
   return (
+    <div className={mgmt.pageWrap}>
+    <div className={mgmt.pageContent}>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* Header */}
@@ -346,6 +349,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
           )}
         </>
       )}
+    </div>
+    </div>
     </div>
   );
 }

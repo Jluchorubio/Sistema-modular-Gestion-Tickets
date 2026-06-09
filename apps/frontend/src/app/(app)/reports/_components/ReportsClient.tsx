@@ -176,28 +176,34 @@ export function ReportsClient() {
   const from     = dateFrom || undefined;
   const to       = dateTo   || undefined;
 
+  const canViewReports = isSuperadmin || adminModules.length > 0;
+
   const { data: sla, isLoading: slaLoading } = useQuery({
     queryKey:  ['reports-sla', moduleId, from, to],
     queryFn:   () => reportingService.getSlaMetrics(moduleId, from, to),
     staleTime: 2 * 60_000,
+    enabled:   canViewReports,
   });
 
   const { data: tickets, isLoading: ticketsLoading } = useQuery({
     queryKey:  ['reports-tickets', moduleId, from, to],
     queryFn:   () => reportingService.getTicketsSummary(moduleId, from, to),
     staleTime: 2 * 60_000,
+    enabled:   canViewReports,
   });
 
   const { data: inventory } = useQuery({
     queryKey:  ['reports-inventory', moduleId],
     queryFn:   () => reportingService.getInventorySummary(moduleId),
     staleTime: 2 * 60_000,
+    enabled:   canViewReports,
   });
 
   const { data: auditLog } = useQuery({
     queryKey:  ['reports-audit'],
     queryFn:   () => reportingService.getAuditLog(50),
     staleTime: 60_000,
+    enabled:   isSuperadmin,
   });
 
   const isLoading = slaLoading || ticketsLoading;

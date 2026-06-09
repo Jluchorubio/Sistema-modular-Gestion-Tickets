@@ -19,7 +19,6 @@ export class AdminController {
 
   @Get('trash')
   @Roles('superadmin', 'admin_modulo')
-  @RequirePermission('global:trash:view')
   @ApiOperation({ summary: 'Vista unificada de papelera. type: module|user|role|request. moduleId filtra solo requests del módulo.' })
   getTrash(
     @Query('type')     type?: string,
@@ -31,7 +30,7 @@ export class AdminController {
   }
 
   @Post('trash/restore')
-  @RequirePermission('global:trash:restore')
+  @Roles('superadmin', 'admin_modulo')
   @ApiOperation({ summary: 'Restaurar items de la papelera.' })
   restore(@Body() body: { type: string; ids: string[] }) {
     return this.service.restoreItems(body.type, body.ids);

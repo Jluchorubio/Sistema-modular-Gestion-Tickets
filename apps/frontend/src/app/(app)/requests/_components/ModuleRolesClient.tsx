@@ -3,13 +3,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { ShieldCheck, Users } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from './moduleRoles.module.css';
 
 export function ModuleRolesClient() {
-  const moduleId = useUIStore((s) => s.moduleId);
+  const moduleId     = useUIStore((s) => s.moduleId);
+  const authUser     = useAuthStore((s) => s.user);
+  const isSuperadmin = authUser?.is_superadmin ?? false;
+  const isAdminModulo = !!moduleId && !!authUser?.module_roles?.some(
+    (r) => r.module_id === moduleId && r.status === 'active' && r.role_name === 'admin_modulo',
+  );
+  const canViewMembers = isSuperadmin || isAdminModulo;
 
   const { data: roles = [], isLoading: loadingRoles } = useQuery({
     queryKey: ['module-roles', moduleId],
@@ -20,7 +27,7 @@ export function ModuleRolesClient() {
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['module-users', moduleId],
     queryFn:  () => usersService.getModuleUsers(moduleId!),
-    enabled:  !!moduleId,
+    enabled:  !!moduleId && canViewMembers,
   });
 
   const isLoading = loadingRoles || loadingUsers;

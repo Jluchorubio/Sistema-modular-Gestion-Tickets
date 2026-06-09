@@ -15,8 +15,9 @@ export function useLoadPermissions() {
     queryKey: ['permissions-mine'],
     queryFn:  permissionsService.getMyPermissions,
     enabled:  isAuthenticated,
-    staleTime: 60_000,
-    gcTime:    120_000,
+    staleTime: 15_000,
+    gcTime:    60_000,
+    refetchInterval: 30_000,
   });
 
   useEffect(() => {

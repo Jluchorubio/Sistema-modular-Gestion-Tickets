@@ -294,8 +294,6 @@ export class UsersController {
   }
 
   @Get(':id/activity')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Gráfica de actividad de un usuario — últimas 26 semanas.' })
   getUserActivity(@Param('id', ParseUUIDPipe) id: string) {
@@ -303,8 +301,6 @@ export class UsersController {
   }
 
   @Get(':id/recent-tickets')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Últimos tickets de un usuario. ?limit=N (default 6).' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -313,8 +309,6 @@ export class UsersController {
   }
 
   @Get(':id/activity-feed')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Feed de actividad de un usuario — últimos 20 eventos.' })
   getUserActivityFeed(@Param('id', ParseUUIDPipe) id: string) {
@@ -322,8 +316,6 @@ export class UsersController {
   }
 
   @Get(':id/request-stats')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Estadísticas de solicitudes y tickets de un usuario.' })
   getUserRequestStats(@Param('id', ParseUUIDPipe) id: string) {
@@ -331,8 +323,6 @@ export class UsersController {
   }
 
   @Get(':id/assigned-tickets')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo', 'jefe_tecnico')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Tickets asignados a un técnico (vista de admin/jefe técnico).' })
   @ApiQuery({ name: 'module_id', required: false, type: String })
@@ -373,8 +363,6 @@ export class UsersController {
   // ─── Roles por módulo ────────────────────────────────────────────────────────
 
   @Get(':id/roles')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Roles de un usuario en todos sus módulos.' })
   getRoles(@Param('id', ParseUUIDPipe) id: string) {

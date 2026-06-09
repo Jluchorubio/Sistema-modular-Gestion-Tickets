@@ -1,7 +1,7 @@
 'use client';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
-import { MODULE_ROLES } from '@/constants/roles';
+import { usePermission } from '@/hooks/usePermission';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useModules } from '@/hooks/useModules';
 import { GESTION_NAV, GESTION_MODULE_NAME, isGestionModule } from './_nav';
@@ -13,12 +13,10 @@ export default function RequestsPage() {
   const gestionId = modules?.find(isGestionModule)?.id;
   useModuleNav(GESTION_MODULE_NAME, GESTION_NAV, gestionId);
 
-  const { user }      = useAuthStore();
-  const isSuperadmin  = user?.is_superadmin ?? false;
-  const isAdminModulo = user?.module_roles?.some(
-    (r) => r.status === 'active' && r.role_name === MODULE_ROLES.ADMIN_MODULO,
-  ) ?? false;
-  const hasAdminAccess = isSuperadmin || isAdminModulo;
+  const { user }        = useAuthStore();
+  const isSuperadmin    = user?.is_superadmin ?? false;
+  const canViewAll      = usePermission('gestion:requests:view_all');
+  const hasAdminAccess  = isSuperadmin || canViewAll;
 
   return (
     <ModuleLayout

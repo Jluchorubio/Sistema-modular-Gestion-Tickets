@@ -6,6 +6,7 @@ import { Trash2, RotateCcw, X, Clock } from 'lucide-react';
 import { adminService, type TrashItem } from '@/services/users.service';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from './moduleTrash.module.css';
+import mgmt  from '@/styles/mgmt.module.css';
 
 function daysLabel(days: number | null) {
   if (days === null) return 'Sin fecha';
@@ -48,6 +49,8 @@ export function GestionTrashClient({ moduleId }: { moduleId: string }) {
   }
 
   return (
+    <div className={mgmt.pageWrap}>
+    <div className={mgmt.pageContent}>
     <div className={styles.wrap}>
       <div className={styles.header}>
         <div>
@@ -138,6 +141,8 @@ export function GestionTrashClient({ moduleId }: { moduleId: string }) {
           </div>
         </>
       )}
+    </div>
+    </div>
     </div>
   );
 }

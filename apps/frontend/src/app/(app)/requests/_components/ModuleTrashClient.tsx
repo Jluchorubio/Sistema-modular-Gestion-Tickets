@@ -7,6 +7,7 @@ import { useUIStore } from '@/stores/ui.store';
 import { adminService, type TrashItem } from '@/services/users.service';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from './moduleTrash.module.css';
+import mgmt  from '@/styles/mgmt.module.css';
 
 function daysLabel(days: number | null) {
   if (days === null) return 'Sin fecha';
@@ -56,6 +57,8 @@ export function ModuleTrashClient({ itemType = 'request' }: Props) {
   );
 
   return (
+    <div className={mgmt.pageWrap}>
+    <div className={mgmt.pageContent}>
     <div className={styles.wrap}>
       <div className={styles.header}>
         <div>
@@ -144,6 +147,8 @@ export function ModuleTrashClient({ itemType = 'request' }: Props) {
           </div>
         </>
       )}
+    </div>
+    </div>
     </div>
   );
 }

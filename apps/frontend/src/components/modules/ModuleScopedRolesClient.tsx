@@ -9,6 +9,7 @@ import {
 } from '@/services/permissions.service';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from '@/app/(app)/roles/roles.module.css';
+import mgmt  from '@/styles/mgmt.module.css';
 
 /* ── Risk helpers (identical to global RolesClient) ── */
 type RiskLevel = 'root' | 'high' | 'medium' | 'low';
@@ -154,7 +155,7 @@ export function ModuleScopedRolesClient({ moduleId, moduleName }: Props) {
                        Array.from(savedGrants).some(k => !localGrants.has(k));
 
   return (
-    <div className={styles.pageWrap}>
+    <div className={mgmt.pageWrap}>
       <div className={styles.mainContent}>
 
         <div className={styles.header}>

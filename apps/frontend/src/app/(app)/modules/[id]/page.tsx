@@ -200,7 +200,7 @@ export default function ModuleDetailPage() {
   } = useQuery({
     queryKey: ['module-members', id],
     queryFn:  () => usersService.getModuleUsers(id),
-    enabled:  !!id,
+    enabled:  !!id && (isSuperadmin || isAdminModulo),
   });
 
   const techs  = members?.filter((m) =>

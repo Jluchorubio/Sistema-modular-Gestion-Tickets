@@ -25,6 +25,7 @@ import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import styles from '../tickets.module.css';
 import { useTicketData, type LocalGuest } from './hooks/useTicketData';
 import { useTicketActions } from './hooks/useTicketActions';
+import { SlaCountdown } from '@/components/ui/SlaCountdown';
 import { AssetCmdbTab } from './tabs/AssetCmdbTab';
 import { ColaboracionTab } from './tabs/ColaboracionTab';
 import { DetallesTab } from './tabs/DetallesTab';
@@ -292,7 +293,10 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
           {ticket.sla_deadline_tracked && !ticket.is_final && slaCountdown && slaCfg && (
             <div style={{ background: slaCfg.bg, borderBottom: `1px solid ${slaCfg.border}`, padding: '8px 20px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
               <Clock size={13} style={{ color: slaCfg.text, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 800, color: slaCfg.text }}>{slaCountdown}</span>
+              {(ticket.sla_status === 'active' || ticket.sla_status === 'breached')
+                ? <SlaCountdown sla_due_at={ticket.sla_deadline_tracked} created_at={ticket.created_at} />
+                : <span style={{ fontSize: 13, fontWeight: 800, color: slaCfg.text }}>{slaCountdown}</span>
+              }
               <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 700, background: 'rgba(255,255,255,0.55)', color: slaCfg.text, border: `1px solid ${slaCfg.border}` }}>
                 {slaLabel}
               </span>

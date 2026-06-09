@@ -5,11 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 import { BarChart2, TrendingUp, Clock, CheckCircle2, AlertCircle, Users, XCircle } from 'lucide-react';
 import { requestsService, type RequestStatus, type RequestType } from '@/services/requests.service';
 import { usersService } from '@/services/users.service';
-import { useAuthStore } from '@/stores/auth.store';
-import { MODULE_ROLES } from '@/constants/roles';
+import { usePermission } from '@/hooks/usePermission';
 import { REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS, REQUEST_TYPE_LABELS } from '@/constants/requests';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from './moduleReports.module.css';
+import mgmt  from '@/styles/mgmt.module.css';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────────── */
 
@@ -25,12 +25,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
 /* ── Main ───────────────────────────────────────────────────────────────────── */
 
 export function GestionReportsClient({ moduleId }: { moduleId: string }) {
-  const { user } = useAuthStore();
-  const isSuperadmin   = user?.is_superadmin ?? false;
-  const isAdminModulo  = user?.module_roles?.some(
-    r => r.module_id === moduleId && r.status === 'active' && r.role_name === MODULE_ROLES.ADMIN_MODULO,
-  ) ?? false;
-  const canViewMembers = isSuperadmin || isAdminModulo;
+  const canViewMembers = usePermission('gestion:users:view');
 
   const { data: reqData, isLoading: loadingReqs } = useQuery({
     queryKey: ['gestion-reports-requests'],
@@ -88,6 +83,8 @@ export function GestionReportsClient({ moduleId }: { moduleId: string }) {
   const maxType   = Math.max(...Object.values(byType), 1);
 
   return (
+    <div className={mgmt.pageWrap}>
+    <div className={mgmt.pageContent}>
     <div className={styles.wrap}>
       <div className={styles.header}>
         <h2 className={styles.title}>Reportes — Gestión Administrativa</h2>
@@ -200,6 +197,8 @@ export function GestionReportsClient({ moduleId }: { moduleId: string }) {
           </div>
         </>
       )}
+    </div>
+    </div>
     </div>
   );
 }
