@@ -1,16 +1,3 @@
-/* ── Page shell ── */
-.pageWrap {
-  width: 100%;
-  min-height: calc(100vh - 52px);
-  background: #ffffff;
-}
-
-.mainContent {
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
 /* ── Header ── */
 .header {
   display: flex;
@@ -18,8 +5,9 @@
   align-items: flex-start;
   justify-content: space-between;
   border-bottom: 1px solid #e2e8f0;
-  padding: 20px 24px;
+  padding-bottom: 16px;
   gap: 12px;
+  margin-bottom: 20px;
 }
 
 @media (min-width: 768px) {
@@ -100,8 +88,8 @@
 .card:hover { border-color: #cbd5e1; }
 
 .cardSelected {
-  background: rgba(79,70,229,.03);
-  border-color: #a5b4fc;
+  background: rgba(14,34,53,.03);
+  border-color: #94a3b8;
 }
 
 .cardInfo { flex: 1; min-width: 0; }

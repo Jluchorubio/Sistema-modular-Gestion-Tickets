@@ -12,6 +12,7 @@ import {
 } from '@/services/permissions.service';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from '../roles.module.css';
+import mgmt   from '@/styles/mgmt.module.css';
 
 /* ── Risk helpers ── */
 type RiskLevel = 'root' | 'high' | 'medium' | 'low';
@@ -170,16 +171,16 @@ export function RolesClient() {
   if (status === 'loading') return null;
   if (status === 'unauthorized') return null;
   if (loaded && !canView) return (
-    <div className={styles.pageWrap}>
-      <div className={styles.mainContent}>
+    <div className={mgmt.pageWrap}>
+      <div className={mgmt.pageContent}>
         <p className={styles.errorMsg}>No tienes permiso para ver esta sección.</p>
       </div>
     </div>
   );
 
   return (
-    <div className={styles.pageWrap}>
-      <div className={styles.mainContent}>
+    <div className={mgmt.pageWrap}>
+      <div className={mgmt.pageContent}>
 
         {/* ── Header ── */}
         <div className={styles.header}>

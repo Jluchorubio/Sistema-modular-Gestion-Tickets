@@ -12,6 +12,7 @@ import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { usePermission } from '@/hooks/usePermission';
 import { usePermissionsStore } from '@/stores/permissions.store';
 import styles from '../trash.module.css';
+import mgmt   from '@/styles/mgmt.module.css';
 import mstyles from '@/components/ui/modal.module.css';
 
 const TABS: { label: string; value: TrashType }[] = [
@@ -137,8 +138,8 @@ export function TrashClient() {
   }
 
   if (loaded && !canView) return (
-    <div className={styles.pageWrap}>
-      <div className={styles.mainContent}>
+    <div className={mgmt.pageWrap}>
+      <div className={mgmt.pageContent}>
         <p className={styles.errorMsg}>No tienes permiso para ver esta sección.</p>
       </div>
     </div>
@@ -147,8 +148,8 @@ export function TrashClient() {
   const bulkPending = bulkRestoreMut.isPending;
 
   return (
-    <div className={styles.pageWrap}>
-      <div className={styles.mainContent}>
+    <div className={mgmt.pageWrap}>
+      <div className={mgmt.pageContent}>
 
       <div className={styles.header}>
         <div>

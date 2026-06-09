@@ -11,6 +11,7 @@ import api from '@/services/api';
 import { getPriorityConfig } from '@/constants/status';
 import { fmtDay } from '@/lib/formatters';
 import styles from '../reports.module.css';
+import mgmt   from '@/styles/mgmt.module.css';
 
 const PRIORITY_COLORS = Object.fromEntries(['baja','media','alta','critica'].map(p => [p, getPriorityConfig(p).color]));
 const PRIORITY_LABELS = Object.fromEntries(['baja','media','alta','critica'].map(p => [p, getPriorityConfig(p).label]));
@@ -211,8 +212,8 @@ export function ReportsClient() {
   const hasData      = totalTickets > 0;
 
   return (
-    <div className={styles.pageWrap}>
-      <div className={styles.mainContent}>
+    <div className={mgmt.pageWrap}>
+      <div className={mgmt.pageContent}>
 
         {/* ── Header ── */}
         <div className={styles.header}>
