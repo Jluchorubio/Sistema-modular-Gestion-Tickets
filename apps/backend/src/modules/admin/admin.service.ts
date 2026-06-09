@@ -203,6 +203,33 @@ export class AdminService {
       total += n;
     }
 
+    // Auth table cleanup — rows accumulate indefinitely, no other service purges them
+    const [rtRow] = await this.db.query<{ count: string }[]>(
+      `WITH deleted AS (
+         DELETE FROM auth.refresh_tokens
+         WHERE expires_at < now() - INTERVAL '7 days'
+         RETURNING id
+       ) SELECT COUNT(*) AS count FROM deleted`,
+    );
+    const [sessRow] = await this.db.query<{ count: string }[]>(
+      `WITH deleted AS (
+         DELETE FROM auth.sessions
+         WHERE ended_at IS NOT NULL AND ended_at < now() - INTERVAL '30 days'
+         RETURNING id
+       ) SELECT COUNT(*) AS count FROM deleted`,
+    );
+    const [otpRow] = await this.db.query<{ count: string }[]>(
+      `WITH deleted AS (
+         DELETE FROM auth.email_otp
+         WHERE used_at IS NOT NULL OR expires_at < now()
+         RETURNING id
+       ) SELECT COUNT(*) AS count FROM deleted`,
+    );
+    detail['auth.refresh_tokens'] = parseInt(rtRow?.count ?? '0', 10);
+    detail['auth.sessions']       = parseInt(sessRow?.count ?? '0', 10);
+    detail['auth.email_otp']      = parseInt(otpRow?.count ?? '0', 10);
+    total += detail['auth.refresh_tokens'] + detail['auth.sessions'] + detail['auth.email_otp'];
+
     this.logger.log(`Purge expired: ${total} items removed — ${JSON.stringify(detail)}`);
     return { purged: total, detail };
   }
