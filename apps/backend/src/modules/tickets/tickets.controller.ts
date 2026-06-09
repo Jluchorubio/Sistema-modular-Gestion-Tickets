@@ -15,6 +15,7 @@ import { RolesGuard } from '../../gateway/guards/roles.guard';
 import { Roles } from '../../gateway/decorators/roles.decorator';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { TransitionTicketDto } from './dto/transition-ticket.dto';
+import { Throttle } from '@nestjs/throttler';
 import { CreateKnowledgeArticleDto, UpdateKnowledgeArticleDto } from './dto/knowledge-article.dto';
 import { AddCommentDto, AddAttachmentDto, ApproveTicketDto, RejectTicketDto, AddAssignmentDto, AddRelationDto, RateTicketDto } from './dto/ticket-actions.dto';
 
@@ -115,6 +116,7 @@ export class TicketsController {
   }
 
   @Post()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @RequirePermission('helpdesk:tickets:create')
   create(@Req() req: RequestWithUser, @Body() dto: CreateTicketDto) {
     return this.svc.create(req.user.sub, dto);
@@ -228,6 +230,7 @@ export class TicketsController {
   }
 
   @Post(':id/comments')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @RequirePermission('helpdesk:comments:add')
   addComment(
     @Req() req: RequestWithUser,

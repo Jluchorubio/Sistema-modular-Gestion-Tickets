@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { MessagingService } from '../../shared/messaging/messaging.service';
@@ -1201,6 +1201,9 @@ export class TicketsService {
     if (!valid.includes(dto.relation_type)) {
       throw new BadRequestException(`Tipo de relación inválido: ${dto.relation_type}`);
     }
+    if (ticketId === dto.target_ticket_id) {
+      throw new BadRequestException('Un ticket no puede relacionarse consigo mismo');
+    }
 
     const [target] = await this.db.query<any[]>(
       `SELECT id FROM tickets.tickets WHERE id = $1`,
@@ -1208,10 +1211,18 @@ export class TicketsService {
     );
     if (!target) throw new NotFoundException('Ticket relacionado no encontrado');
 
+    // Bidirectional duplicate check — (A→B) and (B→A) are the same relationship
+    const [existing] = await this.db.query<any[]>(
+      `SELECT id FROM tickets.ticket_relations
+       WHERE (source_ticket_id = $1 AND target_ticket_id = $2)
+          OR (source_ticket_id = $2 AND target_ticket_id = $1)`,
+      [ticketId, dto.target_ticket_id],
+    );
+    if (existing) throw new ConflictException('Ya existe una relación entre estos tickets');
+
     const [row] = await this.db.query<any[]>(
       `INSERT INTO tickets.ticket_relations (source_ticket_id, target_ticket_id, relation_type, notes, created_by)
        VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (source_ticket_id, target_ticket_id) DO NOTHING
        RETURNING id`,
       [ticketId, dto.target_ticket_id, dto.relation_type, dto.notes ?? null, actorId],
     );
