@@ -172,10 +172,10 @@ export interface AssetHistoryEntry {
 }
 
 export const ASSET_STATUS_COLORS: Record<string, string> = {
-  disponible:    '#22C55E',
-  asignado:      '#3B82F6',
-  en_reparacion: '#F59E0B',
-  dado_de_baja:  '#EF4444',
+  disponible:    '#22c55e',
+  asignado:      '#3b82f6',
+  en_reparacion: '#f59e0b',
+  dado_de_baja:  '#ef4444',
 };
 
 export const ASSET_STATUS_LABELS: Record<string, string> = {
@@ -308,7 +308,7 @@ export const TICKET_PRIORITY_ORDER: Record<TicketPriority, number> = {
 export const TICKET_PRIORITIES: TicketPriority[] = ['baja', 'media', 'alta', 'critica'];
 
 export const TECH_AVAIL_COLORS: Record<string, string> = {
-  disponible:    '#20c933',
+  disponible:    '#22c55e',
   ocupado:       '#f59e0b',
   en_reunion:    '#3b82f6',
   fuera_horario: '#94a3b8',

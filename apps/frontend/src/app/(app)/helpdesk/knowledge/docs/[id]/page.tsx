@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Download, Trash2, Eye, Calendar, User, Tag, FileText, File, Image, Film } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, Eye, Calendar, User, Tag, FileText, File, Image, Film, Globe } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
@@ -78,6 +78,14 @@ export default function DocDetailPage() {
     },
   });
 
+  const publishMut = useMutation({
+    mutationFn: () => docsService.updateArticle(id, { is_published: true }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['knowledge-article', id] });
+      qc.invalidateQueries({ queryKey: ['knowledge-docs'] });
+    },
+  });
+
   if (isLoading) {
     return (
       <ModuleLayout moduleId={helpdeskId} title="Mesa de Ayuda" description="" isSuperadmin={isSuperadmin} hideInfo>
@@ -113,6 +121,16 @@ export default function DocDetailPage() {
         </button>
         {canEdit && (
           <div style={{ display: 'flex', gap: 8 }}>
+            {!article.is_published && (
+              <button
+                type="button"
+                onClick={() => publishMut.mutate()}
+                disabled={publishMut.isPending}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700, cursor: publishMut.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: publishMut.isPending ? 0.7 : 1 }}
+              >
+                <Globe size={12} /> Publicar
+              </button>
+            )}
             {isFile && article.file_url && (
               <a href={article.file_url} download={article.file_name ?? true}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: C.navy, color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>
