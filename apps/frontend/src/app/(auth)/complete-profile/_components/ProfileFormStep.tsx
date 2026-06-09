@@ -29,19 +29,53 @@ type ProfileForm = {
 type CountryOption = { name: string; dialCode: string; flag: string };
 let _cache: CountryOption[] | null = null;
 
+const FALLBACK_COUNTRIES: CountryOption[] = [
+  { name: 'Colombia',          dialCode: '+57',  flag: '🇨🇴' },
+  { name: 'México',            dialCode: '+52',  flag: '🇲🇽' },
+  { name: 'Argentina',         dialCode: '+54',  flag: '🇦🇷' },
+  { name: 'Chile',             dialCode: '+56',  flag: '🇨🇱' },
+  { name: 'Perú',              dialCode: '+51',  flag: '🇵🇪' },
+  { name: 'Venezuela',         dialCode: '+58',  flag: '🇻🇪' },
+  { name: 'Ecuador',           dialCode: '+593', flag: '🇪🇨' },
+  { name: 'Bolivia',           dialCode: '+591', flag: '🇧🇴' },
+  { name: 'Paraguay',          dialCode: '+595', flag: '🇵🇾' },
+  { name: 'Uruguay',           dialCode: '+598', flag: '🇺🇾' },
+  { name: 'España',            dialCode: '+34',  flag: '🇪🇸' },
+  { name: 'Estados Unidos',    dialCode: '+1',   flag: '🇺🇸' },
+  { name: 'Brasil',            dialCode: '+55',  flag: '🇧🇷' },
+  { name: 'Costa Rica',        dialCode: '+506', flag: '🇨🇷' },
+  { name: 'Panamá',            dialCode: '+507', flag: '🇵🇦' },
+  { name: 'Honduras',          dialCode: '+504', flag: '🇭🇳' },
+  { name: 'Guatemala',         dialCode: '+502', flag: '🇬🇹' },
+  { name: 'El Salvador',       dialCode: '+503', flag: '🇸🇻' },
+  { name: 'Nicaragua',         dialCode: '+505', flag: '🇳🇮' },
+  { name: 'República Dominicana', dialCode: '+1',  flag: '🇩🇴' },
+  { name: 'Cuba',              dialCode: '+53',  flag: '🇨🇺' },
+  { name: 'Puerto Rico',       dialCode: '+1',   flag: '🇵🇷' },
+  { name: 'Portugal',          dialCode: '+351', flag: '🇵🇹' },
+  { name: 'Reino Unido',       dialCode: '+44',  flag: '🇬🇧' },
+  { name: 'Canadá',            dialCode: '+1',   flag: '🇨🇦' },
+].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
 async function loadCountries(): Promise<CountryOption[]> {
   if (_cache) return _cache;
-  const res = await fetch('https://restcountries.com/v3.1/all?fields=name,idd,flag');
-  const raw: Array<{ name: { common: string }; idd: { root: string; suffixes: string[] }; flag: string }> = await res.json();
-  _cache = raw
-    .filter(c => c.idd?.root && c.idd?.suffixes?.length)
-    .map(c => ({
-      name:     c.name.common,
-      dialCode: c.idd.suffixes.length === 1 ? `${c.idd.root}${c.idd.suffixes[0]}` : c.idd.root,
-      flag:     c.flag,
-    }))
-    .filter(c => /^\+\d/.test(c.dialCode))
-    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  try {
+    const res = await fetch('https://restcountries.com/v3.1/all?fields=name,idd,flag');
+    if (!res.ok) throw new Error('HTTP error');
+    const raw: Array<{ name: { common: string }; idd: { root: string; suffixes: string[] }; flag: string }> = await res.json();
+    const parsed = raw
+      .filter(c => c.idd?.root && c.idd?.suffixes?.length)
+      .map(c => ({
+        name:     c.name.common,
+        dialCode: c.idd.suffixes.length === 1 ? `${c.idd.root}${c.idd.suffixes[0]}` : c.idd.root,
+        flag:     c.flag,
+      }))
+      .filter(c => /^\+\d/.test(c.dialCode))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    _cache = parsed;
+  } catch {
+    _cache = FALLBACK_COUNTRIES;
+  }
   return _cache;
 }
 

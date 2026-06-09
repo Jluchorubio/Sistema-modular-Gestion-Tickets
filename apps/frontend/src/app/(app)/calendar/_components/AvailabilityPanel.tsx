@@ -1,15 +1,23 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '@/stores/auth.store';
 import { usersService } from '@/services/users.service';
 import { ROLE_DISPLAY, ROLE_AVAIL_COLOR } from './_types';
 import styles from '../calendar.module.css';
 
 export function AvailabilityPanel({ moduleId }: { moduleId?: string }) {
+  const authUser = useAuthStore((s) => s.user);
+  const canViewMembers = !!authUser?.is_superadmin || (
+    !!moduleId && !!authUser?.module_roles?.some(
+      (r) => r.module_id === moduleId && r.status === 'active' && r.role_name === 'admin_modulo',
+    )
+  );
+
   const { data: members } = useQuery({
     queryKey: ['calendar-module-users', moduleId],
     queryFn:  () => usersService.getModuleUsers(moduleId!),
-    enabled:  !!moduleId,
+    enabled:  !!moduleId && canViewMembers,
     staleTime: 5 * 60_000,
   });
 

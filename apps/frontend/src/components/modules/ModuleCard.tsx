@@ -74,11 +74,11 @@ export const ModuleCard = memo(function ModuleCard({
   const hasMenu  = isSuperadmin && (!!onEdit || !!onToggleActive || !!onToggleMaintenance || !!onDelete);
   const inMaint  = !!m.maintenance_mode;
 
-  /* ── Admin fetch ── */
+  /* ── Admin fetch (superadmin only — endpoint requires superadmin/admin_modulo) ── */
   const { data: members } = useQuery({
     queryKey:  ['module-members', m.id],
     queryFn:   () => usersService.getModuleUsers(m.id),
-    enabled:   isRealId,
+    enabled:   isRealId && isSuperadmin,
     staleTime: 5 * 60_000,
   });
   const admin         = (members as any[])?.find((mb) => mb.role_name === 'admin_modulo') ?? null;

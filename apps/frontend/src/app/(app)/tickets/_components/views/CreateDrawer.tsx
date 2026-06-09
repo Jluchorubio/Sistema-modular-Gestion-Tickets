@@ -67,7 +67,7 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   const { data: kbArticles = [] } = useQuery<Article[]>({
     queryKey: ['kb-suggest', moduleId, kbQuery],
     queryFn:  () => docsService.getArticles(moduleId, kbQuery),
-    enabled:  kbQuery.length >= 3,
+    enabled:  !!moduleId && kbQuery.length >= 3,
     staleTime: 60_000,
     select: (data) => data.slice(0, 4),
   });

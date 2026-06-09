@@ -386,7 +386,7 @@ export function RequestDetailModal({
           </div>
 
           {hasSla && (
-            <div><SlaCountdown sla_due_at={request.sla_due_at!} /></div>
+            <div><SlaCountdown sla_due_at={request.sla_due_at!} created_at={request.created_at} /></div>
           )}
 
           {/* Description */}

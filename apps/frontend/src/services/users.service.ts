@@ -228,8 +228,6 @@ export const usersService = {
     module_name: string; module_slug: string | null;
     state_label: string; state_name: string;
     is_final: boolean; is_pause_state: boolean; is_approval_state: boolean;
-    sla_status: string | null; sla_deadline_tracked: string | null;
-    approval_expires_at: string | null;
   }[]> {
     const { data } = await api.get('/users/me/recent-tickets', { params: { limit } });
     return data;
@@ -421,6 +419,16 @@ export const usersService = {
   }): Promise<TechnicianAvailability[]> {
     const { data } = await api.put(`/users/${userId}/availability`, dto);
     return data;
+  },
+
+  async upsertPreferences(payload: {
+    language?:              string;
+    timezone?:              string;
+    notification_email?:    boolean;
+    notification_whatsapp?: boolean;
+    notification_in_app?:   boolean;
+  }): Promise<void> {
+    await api.put('/users/me/preferences', payload);
   },
 
   async bulkImportAndAssign(

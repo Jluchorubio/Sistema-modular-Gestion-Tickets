@@ -2,14 +2,19 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Clock } from 'lucide-react';
 
-function diffPct(sla_due_at: string): number {
-  const total = 4 * 3_600_000;
-  const left  = new Date(sla_due_at).getTime() - Date.now();
-  return Math.max(0, left / total);
+function diffPct(sla_due_at: string, created_at?: string): number {
+  const due  = new Date(sla_due_at).getTime();
+  const now  = Date.now();
+  const left = due - now;
+  if (left <= 0) return 0;
+  /* Use created_at → due window; fallback to 4-hour default if unavailable */
+  const start = created_at ? new Date(created_at).getTime() : due - 4 * 3_600_000;
+  const total = Math.max(due - start, 1);
+  return left / total;
 }
 
-export function SlaCountdown({ sla_due_at }: { sla_due_at: string }) {
-  const [label,  setLabel]  = useState('');
+export function SlaCountdown({ sla_due_at, created_at }: { sla_due_at: string; created_at?: string }) {
+  const [label,   setLabel]   = useState('');
   const [overdue, setOverdue] = useState(false);
 
   useEffect(() => {
@@ -34,7 +39,7 @@ export function SlaCountdown({ sla_due_at }: { sla_due_at: string }) {
     return () => clearInterval(id);
   }, [sla_due_at]);
 
-  const pct = diffPct(sla_due_at);
+  const pct    = diffPct(sla_due_at, created_at);
   const urgent = pct < 0.25;
   const color  = overdue ? 'var(--status-breached-text)' : urgent ? 'var(--status-warning-text)' : 'var(--status-success-text)';
   const bg     = overdue ? 'var(--status-breached-bg)'   : urgent ? 'var(--status-warning-bg)'   : 'var(--status-success-bg)';

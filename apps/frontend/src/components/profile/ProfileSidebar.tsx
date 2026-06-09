@@ -59,7 +59,13 @@ const editSchema = z.object({
   last_name:               z.string().min(1, 'Requerido'),
   username:                z.string().optional(),
   gender:                  z.enum(GENDERS).optional().or(z.literal('')),
-  birth_date:              z.string().optional(),
+  birth_date:              z.string().optional().refine((val) => {
+    if (!val) return true;
+    const birth = new Date(val);
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 16);
+    return birth <= cutoff;
+  }, { message: 'Debes tener al menos 16 años' }),
   national_id:             z.string().max(50).optional(),
   phone_prefix:            z.string().max(10).optional(),
   phone:                   z.string().max(30).optional(),
@@ -137,15 +143,22 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
   });
   const isOnline = sessionsData?.is_online ?? false;
 
-  /* ── Org dropdowns ── */
-  const { data: allOrgNodes = [] } = useQuery({
-    queryKey: ['org-nodes-active'],
-    queryFn:  () => systemConfigService.getOrgNodes({ active: true }),
+  /* ── Org dropdowns (uses public by-slug endpoint — no superadmin needed) ── */
+  const { data: activePositions = [] } = useQuery({
+    queryKey: ['org-nodes', 'cargo'],
+    queryFn:  () => systemConfigService.getOrgNodesBySlug('cargo'),
     staleTime: 5 * 60_000,
   });
-  const activePositions = allOrgNodes.filter(n => n.type_slug === 'cargo');
-  const areas           = allOrgNodes.filter(n => n.type_slug === 'area');
-  const activeHQ        = allOrgNodes.filter(n => n.type_slug === 'sede');
+  const { data: areas = [] } = useQuery({
+    queryKey: ['org-nodes', 'area'],
+    queryFn:  () => systemConfigService.getOrgNodesBySlug('area'),
+    staleTime: 5 * 60_000,
+  });
+  const { data: activeHQ = [] } = useQuery({
+    queryKey: ['org-nodes', 'sede'],
+    queryFn:  () => systemConfigService.getOrgNodesBySlug('sede'),
+    staleTime: 5 * 60_000,
+  });
 
   const fullName      = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre';
   const initials      = getInitials(user.first_name || '?', user.last_name || '?');
@@ -610,7 +623,7 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label className={styles.formLabel}>Fecha de nacimiento</label>
-                    <input className={styles.formInput} type="date" {...regEdit('birth_date')} />
+                    <input className={styles.formInput} type="date" max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 16); return d.toISOString().split('T')[0]; })()} {...regEdit('birth_date')} />
                   </div>
                   <div className={styles.formGroup}>
                     <label className={styles.formLabel}>Nro. documento</label>

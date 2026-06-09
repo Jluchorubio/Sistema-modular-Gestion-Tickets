@@ -746,9 +746,9 @@ export class SystemConfigService {
 
   /* ── Dynamic org: nodes ─────────────────────────────────────────────────── */
 
-  async getOrgNodesBySlug(slug: string): Promise<{ id: string; name: string; parent_id: string | null; parent_name: string | null }[]> {
+  async getOrgNodesBySlug(slug: string): Promise<{ id: string; name: string; parent_id: string | null; parent_name: string | null; city: string | null }[]> {
     return this.db.query<any[]>(
-      `SELECT n.id, n.name, n.parent_id, p.name AS parent_name
+      `SELECT n.id, n.name, n.parent_id, p.name AS parent_name, n.city
        FROM   org.nodes n
        JOIN   org.structure_types t ON t.id = n.type_id
        LEFT JOIN org.nodes p ON p.id = n.parent_id

@@ -81,15 +81,23 @@ export function AppSidebar() {
     return pathname === href || pathname.startsWith(href + '/');
   }
 
+  const hasModulePerm = usePermissionsStore((s) => s.hasPermission);
+  const permsLoaded   = usePermissionsStore((s) => s.loaded);
+
   function renderModuleItem(item: ModuleNavItem) {
     const active = isActive(item.href, item.key);
 
-    /* Role-based gating (mirrors ModuleSubNav) */
+    /* Role-based gating */
     if (item.allowedRoles && !isSuperadmin) {
       if (!userModuleRole || !item.allowedRoles.includes(userModuleRole)) return null;
     }
 
-    const link = (
+    /* Permission-based gating */
+    if (!isSuperadmin && item.permKey && permsLoaded && !hasModulePerm(item.permKey)) {
+      return null;
+    }
+
+    return (
       <Link
         key={item.key}
         href={item.href}
@@ -101,14 +109,6 @@ export function AppSidebar() {
         <span className={styles.navLabel}>{item.label}</span>
       </Link>
     );
-
-    /* If allowedRoles passed → role already validated, no permKey needed */
-    if (item.allowedRoles) return link;
-
-    /* Fallback: permKey-based gate */
-    return item.permKey
-      ? null /* permKey without allowedRoles is not used — items should declare allowedRoles */
-      : link;
   }
 
   function globalNavLink(

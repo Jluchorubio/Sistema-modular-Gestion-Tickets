@@ -166,7 +166,15 @@ export class ProfileService {
     if (dto.country                 !== undefined) add('country',                 dto.country);
     if (dto.state_province          !== undefined) add('state_province',          dto.state_province);
     if (dto.city                    !== undefined) add('city',                    dto.city);
-    if (dto.birth_date              !== undefined) add('birth_date',              dto.birth_date);
+    if (dto.birth_date !== undefined) {
+      if (dto.birth_date) {
+        const birth = new Date(dto.birth_date);
+        const cutoff = new Date();
+        cutoff.setFullYear(cutoff.getFullYear() - 16);
+        if (birth > cutoff) throw new BadRequestException('Debes tener al menos 16 años');
+      }
+      add('birth_date', dto.birth_date);
+    }
     if (dto.national_id             !== undefined) add('national_id',             dto.national_id);
     if (dto.gender                  !== undefined) add('gender',                  dto.gender);
     if (dto.emergency_contact_name  !== undefined) add('emergency_contact_name',  dto.emergency_contact_name);
@@ -336,18 +344,14 @@ export class ProfileService {
       `SELECT t.id, t.title, t.priority, t.created_at, t.updated_at,
               m.name  AS module_name,
               m.slug  AS module_slug,
-              s.label            AS state_label,
-              s.name             AS state_name,
+              s.label AS state_label,
+              s.name  AS state_name,
               s.is_final,
               s.is_pause_state,
-              s.is_approval_state,
-              st.status          AS sla_status,
-              st.deadline_at     AS sla_deadline_tracked,
-              st.approval_expires_at
+              s.is_approval_state
        FROM   tickets.tickets t
-       JOIN   modules.modules  m  ON m.id = t.module_id
-       JOIN   tickets.states   s  ON s.id = t.current_state_id
-       LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
+       JOIN   modules.modules m ON m.id = t.module_id
+       JOIN   tickets.states  s ON s.id = t.current_state_id
        WHERE  t.created_by = $1
        ORDER  BY t.created_at DESC
        LIMIT  $2`,

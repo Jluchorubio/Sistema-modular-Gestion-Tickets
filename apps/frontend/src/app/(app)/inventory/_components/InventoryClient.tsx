@@ -696,6 +696,11 @@ interface DrawerProps {
 }
 function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDetail }: DrawerProps) {
   const qc = useQueryClient();
+  const drawerUser = useAuthStore(s => s.user);
+  const drawerCanViewMembers = !!drawerUser?.is_superadmin || !!drawerUser?.module_roles?.some(
+    (r) => r.module_id === moduleId && r.status === 'active' && r.role_name === 'admin_modulo',
+  );
+
   const [tab,            setTab]            = useState<DrawerTab>('general');
   const [showQr,         setShowQr]         = useState(false);
   const [editing,        setEditing]        = useState(false);
@@ -715,7 +720,7 @@ function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDet
 
   const { data: asset, isLoading } = useQuery<AssetDetail>({ queryKey: ['asset-detail', assetId], queryFn: () => inventoryService.getOne(assetId), staleTime: 30_000 });
   const { data: assignment }       = useQuery<AssetAssignment | null>({ queryKey: ['asset-assignment', assetId], queryFn: () => inventoryService.getCurrentAssignment(assetId), staleTime: 30_000, enabled: tab === 'general' && asset?.status === 'asignado' });
-  const { data: moduleUsers = [] } = useQuery({ queryKey: ['module-members', moduleId], queryFn: () => usersService.getModuleUsers(moduleId), staleTime: 5 * 60_000, enabled: tab === 'general' && canEdit && asset?.status === 'disponible' });
+  const { data: moduleUsers = [] } = useQuery({ queryKey: ['module-members', moduleId], queryFn: () => usersService.getModuleUsers(moduleId), staleTime: 5 * 60_000, enabled: tab === 'general' && canEdit && drawerCanViewMembers && asset?.status === 'disponible' });
   const { data: history = [] }     = useQuery<AssetHistoryEntry[]>({ queryKey: ['asset-history', assetId], queryFn: () => inventoryService.getHistory(assetId), staleTime: 30_000, enabled: tab === 'historial' });
   const { data: assetTickets = [] } = useQuery<AssetTicket[]>({ queryKey: ['asset-tickets', assetId], queryFn: () => inventoryService.getAssetTickets(assetId), staleTime: 60_000, enabled: tab === 'tickets' });
 
@@ -1007,11 +1012,15 @@ export function InventoryClient() {
   const canEdit   = usePermission('inventario:items:edit');
   const canDelete = usePermission('inventario:items:delete');
 
+  const isAdminModulo = !!user?.module_roles?.some(
+    (r) => r.status === 'active' && r.role_name === 'admin_modulo',
+  );
+
   /* ── Module admin info (for contact button) ── */
   const { data: inventoryMembers } = useQuery({
     queryKey: ['inventory-module-admin', inventoryId],
     queryFn:  () => usersService.getModuleUsers(inventoryId!),
-    enabled:  !!inventoryId && canEdit,
+    enabled:  !!inventoryId && (isSuperadmin || isAdminModulo),
     staleTime: 10 * 60_000,
   });
   const inventoryAdmin = (inventoryMembers as any[] | undefined)?.find(

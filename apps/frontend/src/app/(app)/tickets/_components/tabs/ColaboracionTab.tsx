@@ -28,6 +28,7 @@ export function ColaboracionTab({
   const [selectedUserId,  setSelectedUserId]  = useState('');
   const [isCalling,       setIsCalling]       = useState(false);
   const [showTechPicker,  setShowTechPicker]  = useState(false);
+  const today = new Date().toISOString().split('T')[0];
   const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'teams' | 'zoom' | 'internal'>('google_meet');
   const [meetingReason,   setMeetingReason]   = useState('Asesoramiento técnico');
   const [meetingUrl,      setMeetingUrl]      = useState('');
@@ -153,15 +154,22 @@ export function ColaboracionTab({
             <input value={meetingReason} onChange={e => setMeetingReason(e.target.value)} placeholder="Motivo *"
               style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
+              <input type="date" value={scheduledDate} min={today} onChange={e => setScheduledDate(e.target.value)}
                 style={{ padding: '6px 7px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', outline: 'none' }} />
               <select value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
                 style={{ padding: '6px 7px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', outline: 'none', background: '#fff' }}>
                 {['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
-            <input value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} placeholder="URL de reunión (opcional)"
-              style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} />
+            <div>
+              <input value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} placeholder="URL de reunión (opcional)"
+                style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} />
+              {(meetingProvider === 'teams' || meetingProvider === 'zoom') && (
+                <p style={{ fontSize: 10, color: '#64748b', margin: '3px 0 0', lineHeight: 1.4 }}>
+                  {meetingProvider === 'teams' ? 'Teams' : 'Zoom'} no genera reuniones automáticamente. Crea la reunión en la plataforma y pega aquí el enlace de invitación.
+                </p>
+              )}
+            </div>
             <button type="button"
               disabled={!scheduledDate || !meetingReason.trim() || mutPending.schedule}
               onClick={() => onScheduleMeeting({ provider: meetingProvider, reason: meetingReason.trim(), scheduledAt: new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString(), url: meetingUrl.trim() || undefined })}

@@ -37,7 +37,15 @@ const profileSchema = z.object({
 });
 
 const securitySchema = z.object({
-  newPassword:     z.string().optional().refine((v) => !v || v.length >= 8, 'Mínimo 8 caracteres'),
+  newPassword: z.string().optional().refine(
+    (v) => !v || (
+      v.length >= 8 &&
+      /[A-Z]/.test(v) &&
+      /[a-z]/.test(v) &&
+      /[0-9]/.test(v)
+    ),
+    'Mínimo 8 caracteres, una mayúscula, una minúscula y un número',
+  ),
   confirmPassword: z.string().optional(),
 }).refine((d) => !d.newPassword || d.newPassword === d.confirmPassword, {
   message: 'Las contraseñas no coinciden',

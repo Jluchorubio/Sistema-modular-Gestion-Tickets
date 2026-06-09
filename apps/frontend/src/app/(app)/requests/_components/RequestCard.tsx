@@ -90,7 +90,7 @@ export function RequestCard({
               <><span>·</span><span style={{ fontSize: 11, color: '#8B5CF6' }}>Tomado por {req.taken_by_name}</span></>
             )}
           </div>
-          {hasSla && <div style={{ marginTop: 6 }}><SlaCountdown sla_due_at={req.sla_due_at!} /></div>}
+          {hasSla && <div style={{ marginTop: 6 }}><SlaCountdown sla_due_at={req.sla_due_at!} created_at={req.created_at} /></div>}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>

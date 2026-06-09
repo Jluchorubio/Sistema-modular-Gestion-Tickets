@@ -117,12 +117,16 @@ export function useTicketActions({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] });
       qc.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] });
+      qc.invalidateQueries({ queryKey: ['calendar-meetings'] });
     },
   });
 
   const cancelMeetMut = useMutation({
     mutationFn: (meetingId: string) => meetingsService.cancelMeeting(meetingId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket-meetings', ticketId] });
+      qc.invalidateQueries({ queryKey: ['calendar-meetings'] });
+    },
   });
 
   /* ── Sidebar: relations ──────────────────────────────────────────── */

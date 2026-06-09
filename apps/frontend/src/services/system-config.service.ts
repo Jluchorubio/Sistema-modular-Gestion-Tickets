@@ -332,7 +332,7 @@ export const systemConfigService = {
 
   /* ── Dynamic org: nodes ── */
   getOrgNodesBySlug: (slug: string) =>
-    api.get<{ id: string; name: string; parent_id: string | null; parent_name: string | null }[]>(
+    api.get<{ id: string; name: string; parent_id: string | null; parent_name: string | null; city: string | null }[]>(
       `${BASE}/org/nodes/by-slug`, { params: { slug } },
     ).then(r => r.data),
   getOrgNodes: (params?: { type_id?: string; parent_id?: string; active?: boolean }) =>

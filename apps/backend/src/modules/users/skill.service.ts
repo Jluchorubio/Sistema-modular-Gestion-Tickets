@@ -156,6 +156,14 @@ export class SkillService {
   async getSkills(userId: string) {
     await this.assertUserExists(userId);
 
+    const [exists] = await this.db.query<{ ex: boolean }[]>(
+      `SELECT EXISTS (
+         SELECT 1 FROM information_schema.tables
+         WHERE  table_schema = 'tickets' AND table_name = 'technician_profiles'
+       ) AS ex`,
+    );
+    if (!exists?.ex) return [];
+
     return this.db.query<any[]>(
       `SELECT tp.id,
               tp.module_id,

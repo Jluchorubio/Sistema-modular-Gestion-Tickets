@@ -30,8 +30,8 @@ interface TicketRowItem {
   is_final: boolean;
   is_pause_state: boolean;
   is_approval_state: boolean;
-  sla_status: string | null;
-  sla_deadline_tracked: string | null;
+  sla_status?: string | null;
+  sla_deadline_tracked?: string | null;
   approval_expires_at?: string | null;
   assignment_role?: string;
   last_transition_reason?: string | null;

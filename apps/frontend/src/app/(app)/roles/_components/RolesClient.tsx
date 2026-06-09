@@ -154,6 +154,7 @@ export function RolesClient() {
       ]);
       setSavedGrants(new Set(localGrants));
       qc.invalidateQueries({ queryKey: ['role-grants', activeRoleId, roleType] });
+      qc.invalidateQueries({ queryKey: ['permissions-mine'] });
       setSaveStatus('ok');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch {

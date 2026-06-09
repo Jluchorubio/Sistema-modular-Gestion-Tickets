@@ -18,15 +18,13 @@ export default function ChangePasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState('');
 
-  const strength = (() => {
-    if (newPw.length === 0) return 0;
-    let s = 0;
-    if (newPw.length >= 8)               s++;
-    if (/[A-Z]/.test(newPw))             s++;
-    if (/[0-9]/.test(newPw))             s++;
-    if (/[^A-Za-z0-9]/.test(newPw))      s++;
-    return s;
-  })();
+  const reqs = [
+    { label: 'Al menos 8 caracteres',  ok: newPw.length >= 8 },
+    { label: 'Una letra mayúscula',     ok: /[A-Z]/.test(newPw) },
+    { label: 'Una letra minúscula',     ok: /[a-z]/.test(newPw) },
+    { label: 'Un número',               ok: /[0-9]/.test(newPw) },
+  ];
+  const strength = reqs.filter(r => r.ok).length;
   const strengthLabel = ['', 'Débil', 'Regular', 'Buena', 'Fuerte'][strength];
   const strengthColor = ['', '#ef4444', '#f59e0b', '#3b82f6', '#22c55e'][strength];
 
@@ -34,8 +32,9 @@ export default function ChangePasswordPage() {
     e.preventDefault();
     setError('');
 
-    if (newPw.length < 8) {
-      setError('La nueva contraseña debe tener al menos 8 caracteres.');
+    const failing = reqs.filter(r => !r.ok);
+    if (failing.length > 0) {
+      setError(`Requisitos pendientes: ${failing.map(r => r.label.toLowerCase()).join(', ')}.`);
       return;
     }
     if (newPw !== confirmPw) {
@@ -151,7 +150,7 @@ export default function ChangePasswordPage() {
             </div>
             {newPw.length > 0 && (
               <div style={{ marginTop: 8 }}>
-                <div style={{ display: 'flex', gap: 4 }}>
+                <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
                   {[1,2,3,4].map((i) => (
                     <div key={i} style={{
                       flex: 1, height: 4, borderRadius: 2,
@@ -160,9 +159,16 @@ export default function ChangePasswordPage() {
                     }} />
                   ))}
                 </div>
-                <span style={{ fontSize: 12, color: strengthColor, marginTop: 4, display: 'block' }}>
+                <span style={{ fontSize: 12, color: strengthColor, display: 'block', marginBottom: 6 }}>
                   {strengthLabel}
                 </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {reqs.map((r) => (
+                    <span key={r.label} style={{ fontSize: 11, color: r.ok ? '#22c55e' : '#94a3b8', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontWeight: 700 }}>{r.ok ? '✓' : '○'}</span> {r.label}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>

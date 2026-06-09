@@ -18,6 +18,7 @@ interface CreateModalProps {
 
 export function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, onAudit }: CreateModalProps) {
   const qc = useQueryClient();
+  const today = new Date().toISOString().split('T')[0];
   const [title,     setTitle]     = useState('');
   const [desc,      setDesc]      = useState('');
   const [priority,  setPriority]  = useState<RequestPriority>('media');
@@ -100,7 +101,7 @@ export function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, o
           <div className={styles.fRow2}>
             <div>
               <label className={styles.fLabel}>Inicio *</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={styles.fInput} />
+              <input type="date" value={startDate} min={today} onChange={(e) => setStartDate(e.target.value)} className={styles.fInput} />
               {!allDay && (
                 <select value={startTime} onChange={(e) => setStartTime(e.target.value)} className={styles.fSelect} style={{ marginTop: 4 }}>
                   {['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'].map((t) => <option key={t} value={t}>{t}</option>)}
@@ -109,7 +110,7 @@ export function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, o
             </div>
             <div>
               <label className={styles.fLabel}>Fin</label>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={styles.fInput} />
+              <input type="date" value={endDate} min={startDate || today} onChange={(e) => setEndDate(e.target.value)} className={styles.fInput} />
               {!allDay && (
                 <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className={styles.fSelect} style={{ marginTop: 4 }}>
                   {['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'].map((t) => <option key={t} value={t}>{t}</option>)}

@@ -387,6 +387,7 @@ export class TicketsController {
     @Query('q')              q?: string,
     @Query('include_drafts') includeDrafts?: string,
   ) {
+    if (!moduleId) return [];
     return this.knowledge.getArticles(moduleId, q, includeDrafts === 'true');
   }
 
@@ -453,6 +454,7 @@ export class TicketsController {
     @Query('q')         q?: string,
     @Query('filter')    filter?: string,
   ) {
+    if (!moduleId) return [];
     return this.knowledge.getPosts(moduleId, q, filter);
   }
 
