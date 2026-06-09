@@ -223,8 +223,8 @@ export class TicketsController {
 
   @Get(':id/comments')
   @RequirePermission('helpdesk:tickets:view')
-  getComments(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.getComments(id);
+  getComments(@Req() req: RequestWithUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.getComments(id, req.user.sub);
   }
 
   @Post(':id/comments')

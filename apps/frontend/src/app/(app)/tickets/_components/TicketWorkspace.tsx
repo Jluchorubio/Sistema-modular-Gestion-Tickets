@@ -146,6 +146,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [articleDone,   setArticleDone]   = useState<string | null>(null);
 
   const myModuleRole = currentUser?.module_roles?.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
+  const isStaff = (currentUser?.is_superadmin ?? false) || ['tecnico', 'jefe_tecnico', 'admin_modulo', 'admin_sistema'].includes(myModuleRole ?? '');
   const canEditKb = (currentUser?.is_superadmin ?? false) || ['admin_modulo', 'jefe_tecnico'].includes(myModuleRole ?? '');
 
   const isAssignedOwner = !!ownerAssignment && ownerAssignment.user_id === currentUser?.id;
@@ -644,11 +645,13 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                                 onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && replyText.trim()) { e.preventDefault(); addCommentMut.mutate(); } }}
                               />
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
-                                <select value={commentType} onChange={e => setCommentType(e.target.value as 'public' | 'internal')}
-                                  style={{ fontSize: 10, padding: '3px 7px', borderRadius: 6, border: `1px solid ${commentType === 'internal' ? '#f59e0b' : '#e2e8f0'}`, background: commentType === 'internal' ? '#fef3c7' : '#f8fafc', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, color: commentType === 'internal' ? '#92400e' : '#475569' }}>
-                                  <option value="public">📢 Público</option>
-                                  <option value="internal">🔒 Interno</option>
-                                </select>
+                                {isStaff && (
+                                  <select value={commentType} onChange={e => setCommentType(e.target.value as 'public' | 'internal')}
+                                    style={{ fontSize: 10, padding: '3px 7px', borderRadius: 6, border: `1px solid ${commentType === 'internal' ? '#f59e0b' : '#e2e8f0'}`, background: commentType === 'internal' ? '#fef3c7' : '#f8fafc', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, color: commentType === 'internal' ? '#92400e' : '#475569' }}>
+                                    <option value="public">📢 Público</option>
+                                    <option value="internal">🔒 Interno</option>
+                                  </select>
+                                )}
                                 <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadMut.isPending}
                                   style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
                                   <Paperclip size={10} /> {uploadMut.isPending ? 'Subiendo...' : 'Adjuntar'}

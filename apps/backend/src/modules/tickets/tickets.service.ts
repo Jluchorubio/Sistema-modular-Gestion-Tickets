@@ -295,6 +295,25 @@ export class TicketsService {
     });
   }
 
+  private async isStaffInModule(userId: string, moduleId: string): Promise<boolean> {
+    const STAFF_ROLES = ['tecnico', 'jefe_tecnico', 'admin_modulo', 'admin_sistema'];
+    const [actor] = await this.db.query<{ is_superadmin: boolean; role_name: string | null }[]>(
+      `SELECT u.is_superadmin,
+              mr.name AS role_name
+       FROM   users.profiles u
+       LEFT JOIN modules.user_module_roles umr
+             ON umr.user_id   = u.id
+            AND umr.module_id = $2
+            AND umr.is_active = true
+       LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
+       WHERE  u.id = $1
+       LIMIT  1`,
+      [userId, moduleId],
+    );
+    if (!actor) return false;
+    return actor.is_superadmin || STAFF_ROLES.includes(actor.role_name ?? '');
+  }
+
   /* ── Create ─────────────────────────────────────────────────────────────── */
 
   async searchAssets(q: string) {
@@ -990,7 +1009,15 @@ export class TicketsService {
     );
   }
 
-  async getComments(ticketId: string) {
+  async getComments(ticketId: string, requesterId: string) {
+    const [ticket] = await this.db.query<{ module_id: string }[]>(
+      `SELECT module_id FROM tickets.tickets WHERE id = $1`,
+      [ticketId],
+    );
+    if (!ticket) return [];
+
+    const isStaff = await this.isStaffInModule(requesterId, ticket.module_id);
+
     return this.db.query<any[]>(
       `SELECT tc.id, tc.comment_type, tc.content, tc.created_at,
               p.id         AS user_id,
@@ -998,20 +1025,23 @@ export class TicketsService {
               p.first_name || ' ' || p.last_name AS author_name
        FROM   tickets.ticket_comments tc
        JOIN   users.profiles p ON p.id = tc.user_id
-       WHERE  tc.ticket_id = $1 AND tc.deleted_at IS NULL
+       WHERE  tc.ticket_id = $1
+         AND  tc.deleted_at IS NULL
+         AND  ($2::boolean OR tc.comment_type != 'internal')
        ORDER  BY tc.created_at ASC`,
-      [ticketId],
+      [ticketId, isStaff],
     );
   }
 
   async addComment(userId: string, ticketId: string, dto: { content: string; comment_type?: string }) {
-    const [ticket] = await this.db.query<{ id: string; title: string; created_by: string }[]>(
-      `SELECT id, title, created_by FROM tickets.tickets WHERE id = $1`,
+    const [ticket] = await this.db.query<{ id: string; title: string; created_by: string; module_id: string }[]>(
+      `SELECT id, title, created_by, module_id FROM tickets.tickets WHERE id = $1`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
 
-    const commentType = dto.comment_type ?? 'public';
+    const isStaff = await this.isStaffInModule(userId, ticket.module_id);
+    const commentType = isStaff ? (dto.comment_type ?? 'public') : 'public';
     const [row] = await this.db.query<any[]>(
       `INSERT INTO tickets.ticket_comments (ticket_id, user_id, comment_type, content)
        VALUES ($1, $2, $3, $4)
