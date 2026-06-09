@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { Cron } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
 import { MessagingService } from '../../../shared/messaging/messaging.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 @Injectable()
 export class ApprovalExpiryService {
@@ -11,15 +12,67 @@ export class ApprovalExpiryService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
     private readonly messaging: MessagingService,
+    private readonly notifications: NotificationsService,
   ) {}
 
-  /** Every 5 min — expire pending approvals past their deadline and reopen tickets. */
+  /** Every 5 min — send 24h-before-expiry reminders, then expire past-deadline approvals. */
   @Cron('*/5 * * * *', { name: 'approval-expiry' })
   async run(): Promise<void> {
     try {
+      await this.sendApprovalReminders();
       await this.expireApprovals();
     } catch (err: any) {
       this.logger.error(`Approval expiry cycle failed: ${err.message}`);
+    }
+  }
+
+  private async sendApprovalReminders(): Promise<void> {
+    const pending = await this.db.query<{
+      approval_id: string;
+      ticket_id:   string;
+      title:       string;
+      created_by:  string;
+      expires_at:  string;
+    }[]>(`
+      SELECT ap.id AS approval_id,
+             t.id  AS ticket_id,
+             t.title,
+             t.created_by,
+             ap.expires_at
+      FROM   tickets.ticket_approvals ap
+      JOIN   tickets.tickets t ON t.id = ap.ticket_id
+      JOIN   tickets.states  s ON s.id = t.current_state_id AND s.is_approval_state = true
+      WHERE  ap.status           = 'pending'
+        AND  ap.reminder_sent_at IS NULL
+        AND  ap.expires_at BETWEEN now() AND now() + INTERVAL '24 hours'
+        AND  t.deleted_at IS NULL
+      LIMIT  100
+    `);
+
+    if (!pending.length) return;
+    this.logger.log(`Sending ${pending.length} approval reminder(s)`);
+
+    for (const ap of pending) {
+      try {
+        const diff = new Date(ap.expires_at).getTime() - Date.now();
+        const h    = Math.max(1, Math.round(diff / 3600000));
+
+        await this.notifications.notifyUser({
+          userId:    ap.created_by,
+          eventType: 'ticket.approval_expiring_soon',
+          subject:   `Recuerda validar: ${ap.title}`,
+          body:      `Tu ticket "${ap.title}" está marcado como resuelto y espera tu confirmación. Tienes aproximadamente ${h} hora${h !== 1 ? 's' : ''} para aprobar o rechazar la solución antes de que se cierre automáticamente.`,
+          channels:  ['in_app', 'email'],
+          meta:      { ticketId: ap.ticket_id },
+        });
+
+        await this.db.query(
+          `UPDATE tickets.ticket_approvals SET reminder_sent_at = now() WHERE id = $1`,
+          [ap.approval_id],
+        );
+      } catch (err: any) {
+        this.logger.error(`Approval reminder ${ap.approval_id}: ${err.message}`);
+      }
     }
   }
 

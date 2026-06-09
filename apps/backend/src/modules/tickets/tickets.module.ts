@@ -10,6 +10,7 @@ import { SlaEvaluatorService } from './sla/sla-evaluator.service';
 import { SlaBreachService } from './sla/sla-breach.service';
 import { AutoCloseService } from './sla/auto-close.service';
 import { ApprovalExpiryService } from './sla/approval-expiry.service';
+import { WaitingTimeoutService } from './sla/waiting-timeout.service';
 import { PriorityEngineService } from './priority/priority-engine.service';
 import { AssignmentService } from './assignment/assignment.service';
 import { RoundRobinStrategy } from './assignment/strategies/round-robin.strategy';
@@ -21,7 +22,7 @@ import { MessagingModule } from '../../shared/messaging/messaging.module';
   imports: [
     MessagingModule,TypeOrmModule.forFeature([]), NotificationsModule],
   controllers: [TicketsController, MeetingsController],
-  providers: [TicketsService, KnowledgeService, MeetingsService, SlaService, SlaEvaluatorService, SlaBreachService, AutoCloseService, ApprovalExpiryService, PriorityEngineService, AssignmentService, RoundRobinStrategy, SkillBasedStrategy],
+  providers: [TicketsService, KnowledgeService, MeetingsService, SlaService, SlaEvaluatorService, SlaBreachService, AutoCloseService, ApprovalExpiryService, WaitingTimeoutService, PriorityEngineService, AssignmentService, RoundRobinStrategy, SkillBasedStrategy],
   exports: [TicketsService, KnowledgeService, MeetingsService, SlaService, SlaEvaluatorService, PriorityEngineService],
 })
 export class TicketsModule {}
