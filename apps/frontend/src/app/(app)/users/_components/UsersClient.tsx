@@ -24,6 +24,7 @@ import { Modal } from '@/components/ui/Modal';
 import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { BulkImportModal } from './BulkImportModal';
 import styles from '../users.module.css';
+import mgmt   from '@/styles/mgmt.module.css';
 import mstyles from '@/components/ui/modal.module.css';
 
 /* ── Schemas ── */
@@ -256,142 +257,138 @@ export function UsersClient() {
     });
 
   return (
-    <div className={styles.pageWrap}>
-      <div className={styles.mainContent}>
+    <div className={mgmt.pageWrap}>
+      <div className={mgmt.pageContent}>
 
-        {/* ── Header ── */}
-        <div className={styles.header}>
-          <div>
-            <h1 className={styles.title}>Usuarios</h1>
-            <p className={styles.count}>
-              {meta ? `${meta.total} usuario${meta.total !== 1 ? 's' : ''} registrado${meta.total !== 1 ? 's' : ''} en el sistema` : '—'}
-            </p>
+        {/* ── Unified surface card ── */}
+        <div className={mgmt.surface}>
+
+          {/* Header: title + actions */}
+          <div className={mgmt.surfaceHeader}>
+            <div>
+              <h1 className={mgmt.surfaceTitle}>Usuarios</h1>
+              <p className={mgmt.surfaceCount}>
+                {meta ? `${meta.total} usuario${meta.total !== 1 ? 's' : ''} registrado${meta.total !== 1 ? 's' : ''} en el sistema` : '—'}
+              </p>
+            </div>
+            {canCreate && (
+              <div className={mgmt.surfaceActions}>
+                <button
+                  type="button"
+                  className={styles.btnImport}
+                  onClick={() => setImportOpen(true)}
+                >
+                  <FileSpreadsheet size={13} style={{ color: '#16a34a' }} />
+                  <span>Importar CSV / Excel</span>
+                </button>
+                <button type="button" className={styles.btnCreate} onClick={openCreate}>
+                  <Plus size={11} />
+                  <span>Crear usuario</span>
+                </button>
+              </div>
+            )}
           </div>
-          {canCreate && (
-            <div className={styles.headerActions}>
-              <button
-                type="button"
-                className={styles.btnImport}
-                onClick={() => setImportOpen(true)}
-              >
-                <FileSpreadsheet size={13} style={{ color: '#16a34a' }} />
-                <span>Importar CSV / Excel</span>
-              </button>
-              <button type="button" className={styles.btnCreate} onClick={openCreate}>
-                <Plus size={11} />
-                <span>Crear usuario</span>
-              </button>
-            </div>
-          )}
-        </div>
 
-        {/* ── Filter card ── */}
-        <div className={styles.filterCard}>
-          <div className={styles.filterTopRow}>
-            {/* Search input with icon */}
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} />
-              <input
-                type="text"
-                className={styles.searchInput}
-                placeholder="Buscar por nombre, email, iniciales de usuario..."
-                onChange={onSearchChange}
-              />
-            </div>
-
-            {/* Right controls */}
-            <div className={styles.filterRightControls}>
-              <button
-                type="button"
-                className={styles.btnAdvFilters}
-                onClick={() => setAdvOpen((v) => !v)}
-              >
-                <SlidersHorizontal size={12} style={{ color: '#ff5e3a' }} />
-                <span>Filtros Avanzados</span>
-                <ChevronDown
-                  className={`${styles.filterChevron}${advOpen ? ` ${styles.filterChevronOpen}` : ''}`}
+          {/* Toolbar: search + filters */}
+          <div className={mgmt.surfaceToolbar}>
+            <div className={styles.filterTopRow}>
+              {/* Search */}
+              <div className={styles.searchWrap}>
+                <Search className={styles.searchIcon} />
+                <input
+                  type="text"
+                  className={styles.searchInput}
+                  placeholder="Buscar por nombre, email, iniciales..."
+                  onChange={onSearchChange}
                 />
-              </button>
-              <select
-                className={styles.sortSelect}
-                value={sortVal}
-                onChange={(e) => setSortVal(e.target.value)}
-              >
-                <option value="name_asc">Ordenar: Nombre A-Z</option>
-                <option value="name_desc">Ordenar: Nombre Z-A</option>
-                <option value="email_asc">Ordenar: Email</option>
-              </select>
+              </div>
+
+              {/* Right controls */}
+              <div className={styles.filterRightControls}>
+                <button
+                  type="button"
+                  className={styles.btnAdvFilters}
+                  onClick={() => setAdvOpen((v) => !v)}
+                >
+                  <SlidersHorizontal size={12} style={{ color: '#ff5e3a' }} />
+                  <span>Filtros Avanzados</span>
+                  <ChevronDown
+                    className={`${styles.filterChevron}${advOpen ? ` ${styles.filterChevronOpen}` : ''}`}
+                  />
+                </button>
+                <select
+                  className={styles.sortSelect}
+                  value={sortVal}
+                  onChange={(e) => setSortVal(e.target.value)}
+                >
+                  <option value="name_asc">Nombre A-Z</option>
+                  <option value="name_desc">Nombre Z-A</option>
+                  <option value="email_asc">Email A-Z</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Advanced filters panel */}
+            <div className={advOpen ? `${styles.advPanel} ${styles.advPanelOpen}` : styles.advPanel}>
+              <div>
+                <label className={styles.filterGroupLabel}>Estado de Cuenta</label>
+                <select
+                  className={styles.filterSelect}
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setPage(1); clearSelection(); }}
+                >
+                  <option value="">Todos los Estados</option>
+                  <option value="true">Activo</option>
+                  <option value="false">Inactivo</option>
+                </select>
+              </div>
+              <div>
+                <label className={styles.filterGroupLabel}>Rol Global</label>
+                <select
+                  className={styles.filterSelect}
+                  value={superFilter}
+                  onChange={(e) => { setSuperFilter(e.target.value); setPage(1); clearSelection(); }}
+                >
+                  <option value="">Todos los Roles</option>
+                  <option value="false">usuario</option>
+                  <option value="true">superadmin</option>
+                </select>
+              </div>
+              <div>
+                <label className={styles.filterGroupLabel}>Disponibilidad</label>
+                <select
+                  className={styles.filterSelect}
+                  value={connFilter}
+                  onChange={(e) => setConnFilter(e.target.value)}
+                >
+                  <option value="todos">Todas las conexiones</option>
+                  <option value="online">Online</option>
+                  <option value="away">Ausente (Away)</option>
+                  <option value="offline">Desconectado</option>
+                </select>
+              </div>
+              <div>
+                <label className={styles.filterGroupLabel}>Registros por Página</label>
+                <select
+                  className={styles.filterSelect}
+                  value={String(limit)}
+                  onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); clearSelection(); }}
+                >
+                  <option value="10">10 registros</option>
+                  <option value="20">20 registros</option>
+                  <option value="50">50 registros</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Advanced filters panel */}
-          <div className={advOpen ? `${styles.advPanel} ${styles.advPanelOpen}` : styles.advPanel}>
-            {/* Estado de Cuenta */}
-            <div className={styles.filterGroup}>
-              <label className={styles.filterGroupLabel}>Estado de Cuenta</label>
-              <select
-                className={styles.filterSelect}
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); clearSelection(); }}
-              >
-                <option value="">Todos los Estados</option>
-                <option value="true">Activo</option>
-                <option value="false">Inactivo</option>
-              </select>
-            </div>
+          {/* Loading / Error */}
+          {isLoading && <div className={mgmt.surfaceLoader}><Spinner /></div>}
+          {isError   && <p className={mgmt.surfaceError}>Error cargando usuarios.</p>}
 
-            {/* Rol Global */}
-            <div className={styles.filterGroup}>
-              <label className={styles.filterGroupLabel}>Rol Global</label>
-              <select
-                className={styles.filterSelect}
-                value={superFilter}
-                onChange={(e) => { setSuperFilter(e.target.value); setPage(1); clearSelection(); }}
-              >
-                <option value="">Todos los Roles</option>
-                <option value="false">usuario</option>
-                <option value="true">superadmin</option>
-              </select>
-            </div>
-
-            {/* Disponibilidad / Conexión */}
-            <div className={styles.filterGroup}>
-              <label className={styles.filterGroupLabel}>Disponibilidad / Conexión</label>
-              <select
-                className={styles.filterSelect}
-                value={connFilter}
-                onChange={(e) => setConnFilter(e.target.value)}
-              >
-                <option value="todos">Todas las conexiones</option>
-                <option value="online">Online (Activos)</option>
-                <option value="away">Ausente (Away)</option>
-                <option value="offline">Desconectado (Offline)</option>
-              </select>
-            </div>
-
-            {/* Paginación por página */}
-            <div className={styles.filterGroup}>
-              <label className={styles.filterGroupLabel}>Registros por Página</label>
-              <select
-                className={styles.filterSelect}
-                value={String(limit)}
-                onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); clearSelection(); }}
-              >
-                <option value="10">10 registros</option>
-                <option value="20">20 registros</option>
-                <option value="50">50 registros</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {isLoading && <Spinner />}
-        {isError   && <p className={styles.errorMsg}>Error cargando usuarios.</p>}
-
-        {/* ── Table ── */}
-        {!isLoading && !isError && (
-          <div className={styles.tableWrap}>
-            <div className={styles.tableScroll}>
+          {/* Table */}
+          {!isLoading && !isError && (
+            <div className={mgmt.surfaceBody}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -416,8 +413,8 @@ export function UsersClient() {
                 </thead>
                 <tbody>
                   {!sortedUsers.length && (
-                    <tr className={styles.emptyRow}>
-                      <td colSpan={isSA ? 7 : 5}>
+                    <tr>
+                      <td colSpan={isSA ? 7 : 5} className={mgmt.surfaceEmpty}>
                         No se encontraron usuarios con los filtros aplicados.
                       </td>
                     </tr>
@@ -432,7 +429,7 @@ export function UsersClient() {
                       <tr
                         key={u.id}
                         onClick={() => router.push(`/users/${u.id}/profile`)}
-                        style={isChecked ? { background: '#f5f3ff' } : undefined}
+                        style={isChecked ? { background: '#f1f5f9' } : undefined}
                       >
                         {isSA && (
                           <td className={styles.cbTd} onClick={(e) => e.stopPropagation()}>
@@ -510,7 +507,6 @@ export function UsersClient() {
                         {isSA && (
                           <td onClick={(e) => e.stopPropagation()}>
                             <div className={styles.actionsCell}>
-                              {/* Ver perfil */}
                               <button
                                 type="button"
                                 className={`${styles.actionBtn} ${styles.actionBtnEye}`}
@@ -519,8 +515,6 @@ export function UsersClient() {
                               >
                                 <Eye size={16} />
                               </button>
-
-                              {/* Activar / Desactivar */}
                               {canEdit && (
                                 <button
                                   type="button"
@@ -532,8 +526,6 @@ export function UsersClient() {
                                   {u.is_active ? <ShieldCheck size={16} /> : <Lock size={16} />}
                                 </button>
                               )}
-
-                              {/* Eliminar */}
                               {canDelete && (
                                 <button
                                   type="button"
@@ -553,29 +545,29 @@ export function UsersClient() {
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Pagination */}
-        {meta && meta.pages > 1 && (
-          <div className={styles.pagination}>
-            <span className={styles.paginationInfo}>
-              Página {page} de {meta.pages} ({meta.total} total)
-            </span>
-            <div className={styles.paginationBtns}>
-              <button type="button" className={styles.btnSecondary}
-                onClick={() => { setPage((p) => Math.max(1, p - 1)); clearSelection(); }}
-                disabled={page === 1}>
-                ← Anterior
-              </button>
-              <button type="button" className={styles.btnSecondary}
-                onClick={() => { setPage((p) => Math.min(meta.pages, p + 1)); clearSelection(); }}
-                disabled={page === meta.pages}>
-                Siguiente →
-              </button>
+          {/* Pagination inside surface footer */}
+          {meta && meta.pages > 1 && (
+            <div className={mgmt.surfaceFooter}>
+              <span className={mgmt.pageInfo}>
+                Página {page} de {meta.pages} ({meta.total} total)
+              </span>
+              <div className={mgmt.pageBtns}>
+                <button type="button" className={mgmt.pageBtn}
+                  onClick={() => { setPage((p) => Math.max(1, p - 1)); clearSelection(); }}
+                  disabled={page === 1}>
+                  ← Anterior
+                </button>
+                <button type="button" className={mgmt.pageBtn}
+                  onClick={() => { setPage((p) => Math.min(meta.pages, p + 1)); clearSelection(); }}
+                  disabled={page === meta.pages}>
+                  Siguiente →
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>{/* /surface */}
 
         {/* Bulk actions bar */}
         {isSA && (

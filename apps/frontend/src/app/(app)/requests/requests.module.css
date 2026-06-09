@@ -150,9 +150,9 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
-.pillPending     { background: #eff6ff; color: #1d4ed8; }
-.pillTaken       { background: #f5f3ff; color: #6d28d9; }
-.pillInProgress  { background: #eff6ff; color: #1d4ed8; }
+.pillPending     { background: #f1f5f9; color: #475569; }
+.pillTaken       { background: #fff7ed; color: #9a3412; }
+.pillInProgress  { background: #fef3c7; color: #92400e; }
 .pillCompleted   { background: #f0fdf4; color: #15803d; }
 .pillUnderReview { background: #fffbeb; color: #92400e; }
 .pillApproved    { background: #f0fdf4; color: #15803d; }
