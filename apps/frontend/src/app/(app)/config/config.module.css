@@ -11,6 +11,11 @@
   flex-direction: column;
 }
 
+@media (max-width: 767px) {
+  .mainContent { padding: 0 12px 20px; }
+  .title       { font-size: 20px; }
+}
+
 /* ── Header ── */
 .header {
   display: flex;

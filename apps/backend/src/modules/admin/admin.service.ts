@@ -25,17 +25,20 @@ export class AdminService {
     // When moduleId is provided, only return requests scoped to that module
     const moduleScoped = !!moduleId;
 
+    const safe = <T>(p: Promise<T[]>): Promise<T[]> =>
+      p.catch((e) => { this.logger.warn(`Trash query skipped: ${e.message}`); return []; });
+
     if (!moduleScoped && (!type || type === 'module')) {
-      parts.push(this.db.query<any[]>(
+      parts.push(safe(this.db.query<any[]>(
         `SELECT id, name AS display_name, 'module' AS item_type,
                 deleted_at, scheduled_hard_delete_at,
                 EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
                 type AS extra
          FROM modules.modules WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
-      ));
+      )));
     }
     if (!moduleScoped && (!type || type === 'user')) {
-      parts.push(this.db.query<any[]>(
+      parts.push(safe(this.db.query<any[]>(
         `SELECT p.id, p.first_name || ' ' || p.last_name AS display_name, 'user' AS item_type,
                 p.deleted_at, p.scheduled_hard_delete_at,
                 EXTRACT(EPOCH FROM (p.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
@@ -43,20 +46,20 @@ export class AdminService {
          FROM users.profiles p
          JOIN auth.credentials c ON c.user_id = p.id
          WHERE p.deleted_at IS NOT NULL ORDER BY p.deleted_at DESC`,
-      ));
+      )));
     }
     if (!moduleScoped && (!type || type === 'role')) {
-      parts.push(this.db.query<any[]>(
+      parts.push(safe(this.db.query<any[]>(
         `SELECT id, name AS display_name, 'role' AS item_type,
                 deleted_at, scheduled_hard_delete_at,
                 EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
                 description AS extra
          FROM config.global_roles WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
-      ));
+      )));
     }
     if (!type || type === 'request') {
       if (moduleScoped) {
-        parts.push(this.db.query<any[]>(
+        parts.push(safe(this.db.query<any[]>(
           `SELECT r.id, r.title AS display_name, 'request' AS item_type,
                   r.deleted_at, r.scheduled_hard_delete_at,
                   EXTRACT(EPOCH FROM (r.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
@@ -66,30 +69,30 @@ export class AdminService {
              AND r.metadata->>'module_id' = $1
            ORDER BY r.deleted_at DESC`,
           [moduleId],
-        ));
+        )));
       } else {
-        parts.push(this.db.query<any[]>(
+        parts.push(safe(this.db.query<any[]>(
           `SELECT r.id, r.title AS display_name, 'request' AS item_type,
                   r.deleted_at, r.scheduled_hard_delete_at,
                   EXTRACT(EPOCH FROM (r.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
                   r.type AS extra
            FROM requests.admin_requests r
            WHERE r.deleted_at IS NOT NULL ORDER BY r.deleted_at DESC`,
-        ));
+        )));
       }
     }
     if (!moduleScoped && (!type || type === 'structure_type')) {
-      parts.push(this.db.query<any[]>(
+      parts.push(safe(this.db.query<any[]>(
         `SELECT id, name AS display_name, 'structure_type' AS item_type,
                 deleted_at, scheduled_hard_delete_at,
                 EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
                 slug AS extra
          FROM org.structure_types WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
-      ));
+      )));
     }
     if (!type || type === 'ticket') {
       if (moduleScoped) {
-        parts.push(this.db.query<any[]>(
+        parts.push(safe(this.db.query<any[]>(
           `SELECT t.id, t.title AS display_name, 'ticket' AS item_type,
                   t.deleted_at, t.scheduled_hard_delete_at,
                   EXTRACT(EPOCH FROM (t.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
@@ -98,20 +101,20 @@ export class AdminService {
            WHERE t.deleted_at IS NOT NULL AND t.module_id = $1
            ORDER BY t.deleted_at DESC`,
           [moduleId],
-        ));
+        )));
       } else {
-        parts.push(this.db.query<any[]>(
+        parts.push(safe(this.db.query<any[]>(
           `SELECT id, title AS display_name, 'ticket' AS item_type,
                   deleted_at, scheduled_hard_delete_at,
                   EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
                   type AS extra
            FROM tickets.tickets WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
-        ));
+        )));
       }
     }
     if (!type || type === 'asset') {
       if (moduleScoped) {
-        parts.push(this.db.query<any[]>(
+        parts.push(safe(this.db.query<any[]>(
           `SELECT a.id, a.name AS display_name, 'asset' AS item_type,
                   a.deleted_at, a.scheduled_hard_delete_at,
                   EXTRACT(EPOCH FROM (a.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
@@ -120,15 +123,15 @@ export class AdminService {
            WHERE a.deleted_at IS NOT NULL AND a.module_id = $1
            ORDER BY a.deleted_at DESC`,
           [moduleId],
-        ));
+        )));
       } else {
-        parts.push(this.db.query<any[]>(
+        parts.push(safe(this.db.query<any[]>(
           `SELECT id, name AS display_name, 'asset' AS item_type,
                   deleted_at, scheduled_hard_delete_at,
                   EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
                   serial_number AS extra
            FROM inventory.assets WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
-        ));
+        )));
       }
     }
 

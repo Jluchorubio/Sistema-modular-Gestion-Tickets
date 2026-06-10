@@ -28,16 +28,16 @@
   margin: 2px 0 0;
 }
 
-/* ── 3-col workspace ── */
+/* ── 2-col workspace (merged roles+tree | inspector) ── */
 .workspace {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 20px;
   align-items: start;
 }
 
 @media (min-width: 1024px) {
-  .workspace { grid-template-columns: 4fr 5fr 3fr; }
+  .workspace { grid-template-columns: 7fr 3fr; }
 }
 
 /* ── Panels ── */
@@ -56,6 +56,56 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+}
+
+/* ── Merged panel: roles + tree united ── */
+.panelMerged {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+}
+
+.mergedRoles {
+  padding: 20px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mergedSep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  margin-bottom: 0;
+}
+
+.mergedSepLine {
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.mergedSepLabel {
+  font-size: 10px;
+  font-weight: 900;
+  color: #0e2235;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  background: #ffffff;
+  padding: 0 2px;
+}
+
+.mergedTree {
+  padding: 14px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   flex: 1;
 }
 
@@ -116,9 +166,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 300px;
+  max-height: 240px;
   overflow-y: auto;
-  padding-top: 8px;
+  padding-top: 4px;
 }
 
 .roleCard {
@@ -243,7 +293,7 @@
   background: rgba(248, 250, 252, 0.5);
   border-radius: 8px;
   overflow-y: auto;
-  max-height: 320px;
+  max-height: 400px;
   font-family: 'Courier New', monospace;
   font-size: 11px;
   display: flex;
@@ -402,6 +452,52 @@
   font-style: italic;
   padding: 32px 0;
   line-height: 1.6;
+}
+
+/* Interactive hint — shown when role is selected but no perm clicked yet */
+.inspectorHint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 12px;
+}
+
+.inspectorHintArrow {
+  font-size: 22px;
+  color: #ff5e3a;
+  animation: hintPulse 1.6s ease-in-out infinite;
+  display: block;
+  line-height: 1;
+}
+
+@keyframes hintPulse {
+  0%, 100% { transform: translateX(0); opacity: 0.4; }
+  50%       { transform: translateX(-7px); opacity: 1; }
+}
+
+.inspectorHintText {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.6;
+  font-style: italic;
+  margin: 0;
+}
+
+.inspectorHintBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 94, 58, 0.07);
+  border: 1px solid rgba(255, 94, 58, 0.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ff5e3a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .inspectorDetail { display: flex; flex-direction: column; gap: 0; }

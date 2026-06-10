@@ -13,8 +13,9 @@ interface UIState {
 
   toggleSidebar:      () => void;
   setSidebarExpanded: (expanded: boolean) => void;
-  openMobileSidebar:  () => void;
-  closeMobileSidebar: () => void;
+  openMobileSidebar:   () => void;
+  closeMobileSidebar:  () => void;
+  toggleMobileSidebar: () => void;
   setModuleNav:       (name: string, items: ModuleNavItem[], moduleId?: string) => void;
   clearModuleNav:     () => void;
   setTheme:           (t: AppTheme) => void;
@@ -30,8 +31,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   toggleSidebar:      () => set((s) => ({ sidebarExpanded: !s.sidebarExpanded })),
   setSidebarExpanded: (expanded) => set({ sidebarExpanded: expanded }),
-  openMobileSidebar:  () => set({ mobileSidebarOpen: true }),
-  closeMobileSidebar: () => set({ mobileSidebarOpen: false }),
+  openMobileSidebar:   () => set({ mobileSidebarOpen: true }),
+  closeMobileSidebar:  () => set({ mobileSidebarOpen: false }),
+  toggleMobileSidebar: () => set((s) => ({ mobileSidebarOpen: !s.mobileSidebarOpen })),
   setModuleNav:       (name, items, moduleId) => set({ moduleName: name, moduleNav: items, moduleId: moduleId ?? null }),
   clearModuleNav:     () => set({ moduleName: null, moduleNav: null, moduleId: null }),
   setTheme: (t) => {

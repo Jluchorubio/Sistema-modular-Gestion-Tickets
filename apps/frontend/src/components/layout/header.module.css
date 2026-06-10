@@ -704,15 +704,40 @@
 
 /* ── Responsive ── */
 @media (max-width: 767px) {
-  .hamburger     { display: flex; }
-  .inner         { padding: 0 12px; }
-  .right         { gap: 12px; }
-  .uname         { display: none; }
-  .profileWrap   { padding-left: 8px; border-left: none; }
-  .centerNav     { display: none; }
-  .notifDropdown { width: min(340px, calc(100vw - 20px)); }
-  .calDropdown   { width: min(300px, calc(100vw - 20px)); right: 0; }
-  .dropdown      { right: 0; min-width: min(248px, calc(100vw - 20px)); }
+  .hamburger   { display: flex; }
+  .inner       { padding: 0 12px; }
+  .right       { gap: 12px; }
+  .uname       { display: none; }
+  .profileWrap { padding-left: 8px; border-left: none; }
+  .centerNav   { display: none; }
+
+  /* Dropdowns fixed to viewport — no más overflow lateral */
+  .notifDropdown {
+    position: fixed;
+    top: 52px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    border-radius: 8px;
+  }
+  .calDropdown {
+    position: fixed;
+    top: 52px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    border-radius: 8px;
+  }
+  .dropdown {
+    position: fixed;
+    top: 52px;
+    right: 12px;
+    left: auto;
+    width: min(300px, calc(100vw - 24px));
+    border-radius: 8px;
+  }
 }
 
 /* ── Dark mode ── */

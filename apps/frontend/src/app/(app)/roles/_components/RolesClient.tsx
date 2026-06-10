@@ -191,19 +191,19 @@ export function RolesClient() {
           </div>
         </div>
 
-        {/* ── 3-col workspace ── */}
+        {/* ── 2-col workspace ── */}
         <div className={styles.workspace}>
 
-          {/* ──── LEFT: role list ──── */}
-          <div className={styles.panel}>
-            <div className={styles.panelTop}>
+          {/* ──── LEFT: roles + tree unified ──── */}
+          <div className={styles.panelMerged}>
 
+            {/* ── Section: Roles del Sistema ── */}
+            <div className={styles.mergedRoles}>
               <div className={styles.panelHeader}>
                 <p className={styles.panelTitle}>Roles del Sistema</p>
-                <p className={styles.panelSub}>Selecciona el ámbito del rol para ver y configurar sus permisos.</p>
+                <p className={styles.panelSub}>Selecciona el ámbito y haz clic en "Editar Permisos" para cargar el árbol de accesos del rol.</p>
               </div>
 
-              {/* Context selector */}
               <div>
                 <label className={styles.contextLabel}>Contexto o Módulo</label>
                 <select
@@ -218,7 +218,6 @@ export function RolesClient() {
                 </select>
               </div>
 
-              {/* Role cards */}
               <div className={styles.rolesList}>
                 {rolesLoading && <Spinner />}
                 {!rolesLoading && roles.length === 0 && (
@@ -258,32 +257,27 @@ export function RolesClient() {
                 })}
               </div>
             </div>
-          </div>
 
-          {/* ──── CENTER: permission tree ──── */}
-          <div className={styles.panel}>
-            <div className={styles.panelTop}>
+            {/* ── Divider ── */}
+            <div className={styles.mergedSep}>
+              <div className={styles.mergedSepLine} />
+              <span className={styles.mergedSepLabel}>
+                Árbol de Permisos
+                {activeRole && ` — ${activeRole.name.toUpperCase()}`}
+              </span>
+              <div className={styles.mergedSepLine} />
+            </div>
 
-              <div className={styles.panelHeader}>
-                <div className={styles.panelHeaderRow}>
-                  <div>
-                    <p className={styles.panelTitle}>Árbol de Permisos</p>
-                    <p className={styles.panelSub}>Estructura jerárquica modular de accesos.</p>
-                  </div>
-                  <span className={styles.roleBadge}>
-                    {activeRole ? activeRole.name.toUpperCase() : '—'}
-                  </span>
-                </div>
-              </div>
-
-              <div className={styles.criticalRule}>
-                <strong>Regla Crítica:</strong> Activar un permiso padre (ej. <em>Tickets</em>) no activa sus hijos automáticamente. Solo los habilita/desbloquea para su activación granular. Desactivar un padre desactiva e inhabilita sus hijos.
-              </div>
+            {/* ── Section: Árbol de Permisos ── */}
+            <div className={styles.mergedTree}>
+              <p className={styles.panelSub}>
+                Estructura jerárquica modular. Activar un padre no activa sus hijos automáticamente — solo los desbloquea. Desactivar un padre inhabilita todos sus hijos.
+              </p>
 
               <div className={styles.tree}>
                 {!activeRoleId && (
                   <p className={styles.treeEmpty}>
-                    Selecciona un rol de la columna izquierda para editar sus permisos.
+                    Selecciona un rol arriba y haz clic en "Editar Permisos" para ver el árbol.
                   </p>
                 )}
                 {activeRoleId && grantsFetching && <Spinner />}
@@ -293,7 +287,6 @@ export function RolesClient() {
 
                   return (
                     <div key={parent.key} className={styles.treeGroup}>
-                      {/* Parent node */}
                       <div className={styles.treeParent}>
                         <div className={styles.treeParentLeft}>
                           <input
@@ -312,7 +305,6 @@ export function RolesClient() {
                         <span className={styles.treeSlug}>{parent.key}</span>
                       </div>
 
-                      {/* Child nodes */}
                       {children.length > 0 && (
                         <div className={styles.treeChildren}>
                           {children.map(child => {
@@ -346,21 +338,21 @@ export function RolesClient() {
                   );
                 })}
               </div>
+
+              <div className={styles.saveWrap}>
+                <button
+                  type="button"
+                  className={styles.btnSave}
+                  onClick={handleSave}
+                  disabled={!activeRoleId || !isDirty || saveStatus === 'saving' || grantsFetching}
+                >
+                  {saveStatus === 'saving' ? 'Guardando...' : 'Guardar Permisos del Rol'}
+                </button>
+                {saveStatus === 'ok'  && <p className={styles.saveOk}>✓ Permisos actualizados correctamente</p>}
+                {saveStatus === 'err' && <p className={styles.saveErr}>✗ Error al guardar. Intenta de nuevo.</p>}
+              </div>
             </div>
 
-            {/* Save button */}
-            <div className={styles.saveWrap}>
-              <button
-                type="button"
-                className={styles.btnSave}
-                onClick={handleSave}
-                disabled={!activeRoleId || !isDirty || saveStatus === 'saving' || grantsFetching}
-              >
-                {saveStatus === 'saving' ? 'Guardando...' : 'Guardar Permisos del Rol'}
-              </button>
-              {saveStatus === 'ok'  && <p className={styles.saveOk}>✓ Permisos actualizados correctamente</p>}
-              {saveStatus === 'err' && <p className={styles.saveErr}>✗ Error al guardar. Intenta de nuevo.</p>}
-            </div>
           </div>
 
           {/* ──── RIGHT: permission inspector ──── */}
@@ -369,13 +361,27 @@ export function RolesClient() {
 
               <div className={styles.panelHeader}>
                 <p className={styles.panelTitle}>Inspección de Permiso</p>
-                <p className={styles.panelSub}>Haz clic sobre un permiso para auditarlo.</p>
+                <p className={styles.panelSub}>
+                  {activeRoleId
+                    ? 'Haz clic sobre cualquier permiso del árbol para auditar su impacto.'
+                    : 'Selecciona un rol y luego haz clic en un permiso.'}
+                </p>
               </div>
 
               {!selectedPerm ? (
-                <p className={styles.inspectorEmpty}>
-                  Selecciona un permiso granular del árbol central para analizar su impacto operacional, riesgos e implicaciones de seguridad.
-                </p>
+                activeRoleId ? (
+                  <div className={styles.inspectorHint}>
+                    <span className={styles.inspectorHintArrow}>←</span>
+                    <span className={styles.inspectorHintBadge}>Permiso sin seleccionar</span>
+                    <p className={styles.inspectorHintText}>
+                      Haz clic sobre cualquier nombre de permiso del árbol para ver su descripción operacional, impacto en el sistema y nivel de riesgo de seguridad.
+                    </p>
+                  </div>
+                ) : (
+                  <p className={styles.inspectorEmpty}>
+                    Selecciona un rol y edita sus permisos para activar este panel de inspección.
+                  </p>
+                )
               ) : (
                 <PermissionInspector perm={selectedPerm} />
               )}

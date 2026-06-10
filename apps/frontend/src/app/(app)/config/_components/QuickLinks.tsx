@@ -13,29 +13,40 @@ const LINKS = [
 
 export function QuickLinks() {
   return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+    <div style={{
+      display: 'flex',
+      gap: 8,
+      marginBottom: 20,
+      overflowX: 'auto',
+      scrollSnapType: 'x mandatory',
+      WebkitOverflowScrolling: 'touch',
+      scrollbarWidth: 'none',
+      paddingBottom: 2,
+    }}>
       {LINKS.map(({ href, Icon, label, desc }) => (
         <Link key={href} href={href} style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
           background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
-          textDecoration: 'none', color: 'inherit', flex: '1 1 200px',
+          textDecoration: 'none', color: 'inherit',
+          minWidth: 210, flex: '0 0 auto',
+          scrollSnapAlign: 'start',
           transition: 'border-color .15s',
         }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,94,58,.4)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; }}
         >
           <div style={{
-            width: 36, height: 36, borderRadius: 8, background: '#f8fafc',
+            width: 34, height: 34, borderRadius: 8, background: '#f8fafc',
             border: '1px solid #e2e8f0',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <Icon size={15} style={{ color: '#0e2235' }} />
+            <Icon size={14} style={{ color: '#0e2235' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-            <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{desc}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+            <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{desc}</div>
           </div>
-          <ExternalLink size={11} style={{ color: '#cbd5e1', flexShrink: 0 }} />
+          <ExternalLink size={10} style={{ color: '#cbd5e1', flexShrink: 0 }} />
         </Link>
       ))}
     </div>

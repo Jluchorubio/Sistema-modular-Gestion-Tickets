@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutGrid, UserCog, ShieldCheck, BarChart2,
-  SlidersHorizontal, Trash2, X,
+  SlidersHorizontal, Trash2,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui.store';
@@ -149,15 +149,6 @@ export function AppSidebar() {
         />
       )}
       <aside className={`${styles.sidebar}${expanded ? ` ${styles.expanded}` : ''}${mobileSidebarOpen ? ` ${styles.mobileOpen}` : ''}`}>
-        <button
-          type="button"
-          className={styles.mobileCloseBtn}
-          onClick={closeMobileSidebar}
-          aria-label="Cerrar menú"
-        >
-          <X size={16} />
-        </button>
-
       {/* ── Brand ── */}
       <div className={styles.brand}>
         {logoUrl ? (

@@ -42,7 +42,7 @@ export function AppHeader({ noSidebar = false }: Props) {
 
   const theme              = useUIStore((s) => s.theme);
   const setTheme           = useUIStore((s) => s.setTheme);
-  const openMobileSidebar  = useUIStore((s) => s.openMobileSidebar);
+  const toggleMobileSidebar = useUIStore((s) => s.toggleMobileSidebar);
 
   const THEME_ICON: Record<AppTheme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
   const ThemeIcon = THEME_ICON[theme];
@@ -138,7 +138,7 @@ export function AppHeader({ noSidebar = false }: Props) {
             <button
               type="button"
               className={styles.hamburger}
-              onClick={openMobileSidebar}
+              onClick={toggleMobileSidebar}
               aria-label="Abrir menú"
             >
               <Menu size={20} />
