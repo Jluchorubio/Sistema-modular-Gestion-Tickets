@@ -7,6 +7,7 @@ import { Bell, CheckCheck, Trash2, ExternalLink,
 import { useQuery, useMutation, useQueryClient }           from '@tanstack/react-query';
 import { notificationsService, type AppNotification }     from '@/services/notifications.service';
 import { fmtRelative, fmtDate }                            from '@/lib/formatters';
+import { ContextNav }                                       from '@/components/ui/ContextNav';
 import styles                                              from './notifications.module.css';
 
 /* ── Constants ────────────────────────────────────────────────────────────── */
@@ -164,6 +165,13 @@ export default function NotificationsPage() {
 
   return (
     <div className={styles.pageWrap}>
+      <ContextNav
+        back
+        crumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Notificaciones' },
+        ]}
+      />
       <div className={styles.pageContent}>
 
         {/* ── Header ── */}

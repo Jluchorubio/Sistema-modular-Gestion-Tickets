@@ -30,6 +30,7 @@ import {
   MONTHS_ES, SLA_CALENDAR_HEX, FC_VIEW,
   toDateStr, getReqDateStr, eventColor, getCurrentWeekOfMonth, getWeeksInMonth,
 } from './_types';
+import { ContextNav } from '@/components/ui/ContextNav';
 import { useCalendarContexts }  from './hooks/useCalendarContexts';
 import { MonthGrid }            from './MonthGrid';
 import { MiniMonth }            from './MiniMonth';
@@ -230,6 +231,13 @@ export function CalendarClient() {
 
   return (
     <div className={styles.calPage}>
+      <ContextNav
+        back
+        crumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Calendario de Operaciones' },
+        ]}
+      />
       <div className={styles.shell}>
 
         {/* ── Main panel ── */}
