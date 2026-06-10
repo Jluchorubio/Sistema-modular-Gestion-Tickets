@@ -146,6 +146,21 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
 
   const trendData = trend.map(d => ({ name: fmtDay(d.day).slice(0, 6), tickets: n(d.created) }));
 
+  const techResolutionData = byTech
+    .filter(t => n(t.avg_resolution_hours) > 0)
+    .map(t => ({
+      name:  t.technician_name.split(' ').slice(0, 2).join(' '),
+      horas: Math.round(n(t.avg_resolution_hours)),
+    }))
+    .sort((a, b) => a.horas - b.horas)
+    .slice(0, 10);
+
+  const techVolumeData = byTech.map(t => ({
+    name:      t.technician_name.split(' ').slice(0, 2).join(' '),
+    asignados: n(t.tickets_assigned),
+    resueltos: n(t.tickets_resolved),
+  })).slice(0, 10);
+
   const priorityData = byPriority.map(p => ({
     name:     getPriorityConfig(p.priority).label,
     total:    n(p.total),
@@ -296,52 +311,111 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
 
           {/* ══ TÉCNICOS ══ */}
           {tab === 'tecnicos' && (
-            <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
-              {byTech.length === 0 ? (
-                <div style={{ padding: '60px 0', textAlign: 'center', color: C.muted }}>
-                  <Users size={28} style={{ display: 'block', margin: '0 auto 12px', color: C.border }} />
-                  <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: '0 0 4px' }}>Sin datos de técnicos</p>
-                  <p style={{ fontSize: 11, margin: 0 }}>Aún no hay tickets asignados en este módulo.</p>
-                </div>
-              ) : (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', gap: 12, padding: '10px 18px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
-                    {['Técnico', 'Asignados', 'Resueltos', 'Reprocesos', 'Tiempo prom.', 'Calificación'].map((h, i) => (
-                      <span key={i} style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
-                    ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Table */}
+              <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+                {byTech.length === 0 ? (
+                  <div style={{ padding: '60px 0', textAlign: 'center', color: C.muted }}>
+                    <Users size={28} style={{ display: 'block', margin: '0 auto 12px', color: C.border }} />
+                    <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: '0 0 4px' }}>Sin datos de técnicos</p>
+                    <p style={{ fontSize: 11, margin: 0 }}>Aún no hay tickets asignados en este módulo.</p>
                   </div>
-                  {byTech.map((tech: HelpdeskTechnician) => {
-                    const resolved    = n(tech.tickets_resolved);
-                    const assigned    = n(tech.tickets_assigned);
-                    const resolvePct  = assigned > 0 ? Math.round((resolved / assigned) * 100) : 0;
-                    const rechazados  = n(tech.rechazados);
-                    const avgH        = tech.avg_resolution_hours ? Math.round(n(tech.avg_resolution_hours)) : null;
-                    const rating      = tech.avg_rating ? n(tech.avg_rating) : null;
-                    return (
-                      <div key={tech.technician_id}
-                        style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: `1px solid ${C.border}`, background: '#fff' }}>
-                        <div>
-                          <p style={{ margin: '0 0 1px', fontSize: 12.5, fontWeight: 700, color: C.navy }}>{tech.technician_name}</p>
-                          <div style={{ height: 4, background: C.bg, borderRadius: 2, overflow: 'hidden', marginTop: 3 }}>
-                            <div style={{ height: '100%', width: `${resolvePct}%`, background: '#22c55e', borderRadius: 2 }} />
+                ) : (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', gap: 12, padding: '10px 18px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+                      {['Técnico', 'Asignados', 'Resueltos', 'Reprocesos', 'Tiempo prom.', 'Calificación'].map((h, i) => (
+                        <span key={i} style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
+                      ))}
+                    </div>
+                    {byTech.map((tech: HelpdeskTechnician) => {
+                      const resolved    = n(tech.tickets_resolved);
+                      const assigned    = n(tech.tickets_assigned);
+                      const resolvePct  = assigned > 0 ? Math.round((resolved / assigned) * 100) : 0;
+                      const rechazados  = n(tech.rechazados);
+                      const avgH        = tech.avg_resolution_hours ? Math.round(n(tech.avg_resolution_hours)) : null;
+                      const rating      = tech.avg_rating ? n(tech.avg_rating) : null;
+                      return (
+                        <div key={tech.technician_id}
+                          style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: `1px solid ${C.border}`, background: '#fff' }}>
+                          <div>
+                            <p style={{ margin: '0 0 1px', fontSize: 12.5, fontWeight: 700, color: C.navy }}>{tech.technician_name}</p>
+                            <div style={{ height: 4, background: C.bg, borderRadius: 2, overflow: 'hidden', marginTop: 3 }}>
+                              <div style={{ height: '100%', width: `${resolvePct}%`, background: '#22c55e', borderRadius: 2 }} />
+                            </div>
+                            <p style={{ margin: '2px 0 0', fontSize: 10, color: C.muted }}>{resolvePct}% resolución</p>
                           </div>
-                          <p style={{ margin: '2px 0 0', fontSize: 10, color: C.muted }}>{resolvePct}% resolución</p>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{assigned}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{resolved}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: rechazados > 0 ? '#f59e0b' : C.muted }}>{rechazados}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, fontFamily: 'monospace' }}>{avgH !== null ? `${avgH}h` : '—'}</span>
+                          <div>
+                            <Stars score={rating} />
+                            {n(tech.total_ratings) > 0 && (
+                              <p style={{ margin: '2px 0 0', fontSize: 10, color: C.muted }}>{tech.total_ratings} reseña{n(tech.total_ratings) !== 1 ? 's' : ''}</p>
+                            )}
+                          </div>
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{assigned}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{resolved}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: rechazados > 0 ? '#f59e0b' : C.muted }}>{rechazados}</span>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, fontFamily: 'monospace' }}>{avgH !== null ? `${avgH}h` : '—'}</span>
-                        <div>
-                          <Stars score={rating} />
-                          {n(tech.total_ratings) > 0 && (
-                            <p style={{ margin: '2px 0 0', fontSize: 10, color: C.muted }}>{tech.total_ratings} reseña{n(tech.total_ratings) !== 1 ? 's' : ''}</p>
-                          )}
-                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+
+              {/* Charts (only when data exists) */}
+              {byTech.length > 0 && (
+                <div className={styles.chartsGrid}>
+
+                  {/* avg_resolution_hours per tech */}
+                  <div className={styles.chartPanel}>
+                    <p className={styles.chartTitle}><Clock size={12} style={{ color: C.coral }} /> Tiempo promedio de resolución</p>
+                    <p className={styles.chartSub}>Horas desde apertura hasta cierre — menos es mejor.</p>
+                    {techResolutionData.length === 0 ? (
+                      <p className={styles.noData} style={{ marginTop: 24 }}>Sin tickets cerrados con datos de tiempo.</p>
+                    ) : (
+                      <div style={{ minHeight: Math.max(180, techResolutionData.length * 36) }}>
+                        <ResponsiveContainer width="100%" height={Math.max(180, techResolutionData.length * 36)}>
+                          <BarChart data={techResolutionData} layout="vertical" margin={{ left: 4, right: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 10, fill: C.muted }} unit="h" allowDecimals={false} />
+                            <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#334155' }} width={100} />
+                            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any) => [`${v}h`, 'Prom. resolución']} />
+                            <Bar dataKey="horas" name="Horas" radius={[0,4,4,0]}>
+                              {techResolutionData.map((entry, i) => {
+                                const maxH  = Math.max(...techResolutionData.map(d => d.horas));
+                                const ratio = maxH > 0 ? entry.horas / maxH : 0;
+                                const color = ratio < 0.33 ? '#22c55e' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
+                                return <Cell key={i} fill={color} />;
+                              })}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
                       </div>
-                    );
-                  })}
-                </>
+                    )}
+                  </div>
+
+                  {/* assigned vs resolved grouped */}
+                  <div className={styles.chartPanel}>
+                    <p className={styles.chartTitle}><Users size={12} style={{ color: C.navy }} /> Carga por técnico</p>
+                    <p className={styles.chartSub}>Tickets asignados vs resueltos — gap = backlog activo.</p>
+                    <div style={{ minHeight: Math.max(180, techVolumeData.length * 36) }}>
+                      <ResponsiveContainer width="100%" height={Math.max(180, techVolumeData.length * 36)}>
+                        <BarChart data={techVolumeData} layout="vertical" margin={{ left: 4, right: 12 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 10, fill: C.muted }} allowDecimals={false} />
+                          <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#334155' }} width={100} />
+                          <Tooltip contentStyle={TOOLTIP_STYLE} />
+                          <Legend iconSize={9} wrapperStyle={{ fontSize: 11 }} />
+                          <Bar dataKey="asignados" name="Asignados" fill={C.navy}   radius={[0,3,3,0]} />
+                          <Bar dataKey="resueltos"  name="Resueltos"  fill="#22c55e" radius={[0,3,3,0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                </div>
               )}
+
             </div>
           )}
 

@@ -121,9 +121,9 @@ function computeDeltaFromTrend(trend: DailyTrend[]): number | null {
   return Math.round(((second - first) / first) * 100);
 }
 
-function computePlatformStatus(compliance: number, breached: number): 'healthy' | 'warning' | 'critical' {
-  if (compliance < 70 || breached >= 10) return 'critical';
-  if (compliance < 90 || breached > 0)   return 'warning';
+function computePlatformStatus(compliance: number, breached: number, criticalToday: number): 'healthy' | 'warning' | 'critical' {
+  if (compliance < 70 || breached >= 10 || criticalToday >= 5) return 'critical';
+  if (compliance < 90 || breached > 0  || criticalToday > 0)  return 'warning';
   return 'healthy';
 }
 
@@ -221,10 +221,11 @@ function AuditTimeline({ events }: { events: AuditEntry[] }) {
   );
 }
 
-function PlatformStatusBanner({ status, compliance, breached }: {
+function PlatformStatusBanner({ status, compliance, breached, criticalToday }: {
   status: 'healthy' | 'warning' | 'critical';
   compliance: number;
   breached: number;
+  criticalToday?: number;
 }) {
   const wrapCls  = status === 'healthy' ? styles.statusBannerHealthy  : status === 'warning' ? styles.statusBannerWarning  : styles.statusBannerCritical;
   const dotCls   = status === 'healthy' ? styles.statusDotHealthy     : status === 'warning' ? styles.statusDotWarning     : styles.statusDotCritical;
@@ -241,6 +242,7 @@ function PlatformStatusBanner({ status, compliance, breached }: {
         <div className={styles.statusStats}>
           <span>SLA global: <strong style={{ color: compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444' }}>{compliance}%</strong></span>
           <span>SLA vencidos: <strong style={{ color: breached > 0 ? '#ef4444' : '#22c55e' }}>{breached}</strong></span>
+          {(criticalToday ?? 0) > 0 && <span>Eventos críticos hoy: <strong style={{ color: '#ef4444' }}>{criticalToday}</strong></span>}
         </div>
       </div>
       <span className={`${styles.statusBadge} ${badgeCls}`}>{badgeTxt}</span>
@@ -612,8 +614,8 @@ export function ReportsClient() {
   const insights       = useMemo(() => computeInsights(tickets, sla), [tickets, sla]);
   const trendDelta     = useMemo(() => computeDeltaFromTrend(trend), [trend]);
   const platformStatus = useMemo(
-    () => computePlatformStatus(compliance, n(sla?.summary.breached)),
-    [compliance, sla],
+    () => computePlatformStatus(compliance, n(sla?.summary.breached), n(auditKpis?.critical_today)),
+    [compliance, sla, auditKpis],
   );
   const moduleCompData = useMemo(() => {
     if (adminModules.length <= 1 || moduleCompQueries.length === 0) return [];
@@ -766,6 +768,7 @@ export function ReportsClient() {
                   status={platformStatus}
                   compliance={compliance}
                   breached={n(sla?.summary.breached)}
+                  criticalToday={n(auditKpis?.critical_today)}
                 />
 
                 <InsightsBox insights={insights} />
