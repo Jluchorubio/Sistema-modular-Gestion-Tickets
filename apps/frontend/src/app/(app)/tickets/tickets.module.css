@@ -1470,12 +1470,7 @@
 }
 
 .helpdeskStatsStickyWrap {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: #f8fafc;
-  padding-bottom: 4px;
-  margin-bottom: -4px;
+  /* removed sticky: heavy, occludes content on scroll */
 }
 
 .helpdeskStatsGrid {

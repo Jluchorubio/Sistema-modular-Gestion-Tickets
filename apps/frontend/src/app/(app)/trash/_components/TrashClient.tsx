@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { usePermission } from '@/hooks/usePermission';
 import { usePermissionsStore } from '@/stores/permissions.store';
+import { ContextNav } from '@/components/ui/ContextNav';
 import styles from '../trash.module.css';
 import mgmt   from '@/styles/mgmt.module.css';
 import mstyles from '@/components/ui/modal.module.css';
@@ -148,6 +149,14 @@ export function TrashClient() {
   const bulkPending = bulkRestoreMut.isPending;
 
   return (
+    <>
+    <ContextNav
+      back
+      crumbs={[
+        { label: 'Dashboard', href: '/dashboard' },
+        { label: 'Papelera' },
+      ]}
+    />
     <div className={mgmt.pageWrap}>
       <div className={mgmt.pageContent}>
 
@@ -362,5 +371,6 @@ export function TrashClient() {
       </Modal>
       </div>
     </div>
+    </>
   );
 }

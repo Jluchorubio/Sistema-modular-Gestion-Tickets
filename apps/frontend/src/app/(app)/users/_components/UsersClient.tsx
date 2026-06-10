@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePermission } from '@/hooks/usePermission';
+import { ContextNav } from '@/components/ui/ContextNav';
 import { socketService } from '@/services/socket.service';
 import { tokens } from '@/lib/tokens';
 import { usersService, type UserListItem } from '@/services/users.service';
@@ -257,37 +258,45 @@ export function UsersClient() {
     });
 
   return (
+    <>
+      <ContextNav
+        back
+        crumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Usuarios' },
+        ]}
+      />
     <div className={mgmt.pageWrap}>
       <div className={mgmt.pageContent}>
 
-        {/* ── Unified surface card ── */}
-        <div className={mgmt.surface}>
-
-          {/* Header: title + actions */}
-          <div className={mgmt.surfaceHeader}>
-            <div>
-              <h1 className={mgmt.surfaceTitle}>Usuarios</h1>
-              <p className={mgmt.surfaceCount}>
-                {meta ? `${meta.total} usuario${meta.total !== 1 ? 's' : ''} registrado${meta.total !== 1 ? 's' : ''} en el sistema` : '—'}
-              </p>
-            </div>
-            {canCreate && (
-              <div className={mgmt.surfaceActions}>
-                <button
-                  type="button"
-                  className={styles.btnImport}
-                  onClick={() => setImportOpen(true)}
-                >
-                  <FileSpreadsheet size={13} style={{ color: '#16a34a' }} />
-                  <span>Importar CSV / Excel</span>
-                </button>
-                <button type="button" className={styles.btnCreate} onClick={openCreate}>
-                  <Plus size={11} />
-                  <span>Crear usuario</span>
-                </button>
-              </div>
-            )}
+        {/* ── Free page header ── */}
+        <div className={mgmt.pageHeader}>
+          <div>
+            <h1 className={mgmt.pageHeaderTitle}>Usuarios</h1>
+            <p className={mgmt.pageHeaderSub}>
+              {meta ? `${meta.total} usuario${meta.total !== 1 ? 's' : ''} registrado${meta.total !== 1 ? 's' : ''} en el sistema` : 'Gestión de usuarios del sistema'}
+            </p>
           </div>
+          {canCreate && (
+            <div className={mgmt.pageHeaderActions}>
+              <button
+                type="button"
+                className={styles.btnImport}
+                onClick={() => setImportOpen(true)}
+              >
+                <FileSpreadsheet size={13} style={{ color: '#16a34a' }} />
+                <span>Importar CSV / Excel</span>
+              </button>
+              <button type="button" className={styles.btnCreate} onClick={openCreate}>
+                <Plus size={11} />
+                <span>Crear usuario</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Surface card: filters + table ── */}
+        <div className={mgmt.surface}>
 
           {/* Toolbar: search + filters */}
           <div className={mgmt.surfaceToolbar}>
@@ -860,5 +869,6 @@ export function UsersClient() {
 
       {importOpen && <BulkImportModal onClose={() => setImportOpen(false)} />}
     </div>
+    </>
   );
 }

@@ -20,6 +20,7 @@ import { PrioridadTab }                  from './_components/tabs/PrioridadTab';
 import { CalendarioTab }                 from './_components/tabs/CalendarioTab';
 import { AuditoriaTab }                  from './_components/tabs/AuditoriaTab';
 import { SeguridadTab }                  from './_components/tabs/SeguridadTab';
+import { ContextNav }                    from '@/components/ui/ContextNav';
 import styles from './config.module.css';
 
 export default function GlobalConfigPage() {
@@ -47,6 +48,14 @@ export default function GlobalConfigPage() {
   const isBlocked = (t: Tab) => !hasOrg && GUARDED_TABS.includes(t);
 
   return (
+    <>
+    <ContextNav
+      back
+      crumbs={[
+        { label: 'Dashboard', href: '/dashboard' },
+        { label: 'Configuración del Sistema' },
+      ]}
+    />
     <div className={styles.pageWrap}>
       <div className={styles.mainContent}>
 
@@ -86,5 +95,6 @@ export default function GlobalConfigPage() {
 
       <PendingChangesBar />
     </div>
+    </>
   );
 }
