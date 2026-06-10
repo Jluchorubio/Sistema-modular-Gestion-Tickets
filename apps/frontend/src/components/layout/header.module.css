@@ -684,12 +684,35 @@
 .themeBtn:hover      { background: #e2e8f0; color: #374151; }
 .themeBtnActive      { background: #ffffff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 
+/* ── Hamburger (mobile only) ── */
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #0e2235;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+  flex-shrink: 0;
+  padding: 0;
+}
+.hamburger:hover { background: #f8fafc; }
+
 /* ── Responsive ── */
-@media (max-width: 640px) {
-  .uname       { display: none; }
-  .notifDropdown { width: 290px; }
-  .calDropdown { width: 280px; right: -60px; }
-  .centerNav   { display: none; }
+@media (max-width: 767px) {
+  .hamburger     { display: flex; }
+  .inner         { padding: 0 12px; }
+  .right         { gap: 12px; }
+  .uname         { display: none; }
+  .profileWrap   { padding-left: 8px; border-left: none; }
+  .centerNav     { display: none; }
+  .notifDropdown { width: min(340px, calc(100vw - 20px)); }
+  .calDropdown   { width: min(300px, calc(100vw - 20px)); right: 0; }
+  .dropdown      { right: 0; min-width: min(248px, calc(100vw - 20px)); }
 }
 
 /* ── Dark mode ── */
@@ -781,3 +804,6 @@
 :global([data-theme="dark"]) .themeSwitch { background: rgba(255,255,255,0.08); }
 :global([data-theme="dark"]) .themeBtn:hover { background: rgba(255,255,255,0.12); color: #e2e8f0; }
 :global([data-theme="dark"]) .themeBtnActive { background: rgba(255,255,255,0.18); color: #f1f5f9; box-shadow: none; }
+
+:global([data-theme="dark"]) .hamburger { color: rgba(255,255,255,.75); }
+:global([data-theme="dark"]) .hamburger:hover { background: rgba(255,255,255,0.08); color: #fff; }

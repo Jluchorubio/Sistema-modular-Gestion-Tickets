@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Bell, User, LogOut, ChevronDown,
   CalendarDays, Clock, ChevronRight,
-  Ticket, Sun, Moon, Monitor, Download,
+  Ticket, Sun, Moon, Monitor, Download, Menu,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
@@ -40,8 +40,9 @@ export function AppHeader({ noSidebar = false }: Props) {
   const user        = useAuthStore((s) => s.user);
   const clearAuth   = useAuthStore((s) => s.clearAuth);
 
-  const theme          = useUIStore((s) => s.theme);
-  const setTheme       = useUIStore((s) => s.setTheme);
+  const theme              = useUIStore((s) => s.theme);
+  const setTheme           = useUIStore((s) => s.setTheme);
+  const openMobileSidebar  = useUIStore((s) => s.openMobileSidebar);
 
   const THEME_ICON: Record<AppTheme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
   const ThemeIcon = THEME_ICON[theme];
@@ -131,8 +132,18 @@ export function AppHeader({ noSidebar = false }: Props) {
   return (
     <header className={`${styles.header}${noSidebar ? ` ${styles.headerFull}` : ''}`}>
       <div className={styles.inner}>
-        {/* ── Left: brand + home nav ── */}
+        {/* ── Left: hamburger (mobile) + brand ── */}
         <div className={styles.left}>
+          {!noSidebar && (
+            <button
+              type="button"
+              className={styles.hamburger}
+              onClick={openMobileSidebar}
+              aria-label="Abrir menú"
+            >
+              <Menu size={20} />
+            </button>
+          )}
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
             <div className={styles.brandIcon} />
             <span className={styles.brandName}>Nexo</span>

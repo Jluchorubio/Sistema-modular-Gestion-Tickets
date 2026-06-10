@@ -329,6 +329,99 @@
   display: inline;
 }
 
+/* ── Mobile backdrop ── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  top: 52px;
+  background: rgba(14, 34, 53, 0.45);
+  z-index: 299;
+  animation: backdropIn 0.18s ease forwards;
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Mobile close button (hidden on desktop) ── */
+.mobileCloseBtn {
+  display: none;
+}
+
+/* ── Mobile responsive ── */
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 52px;
+    height: calc(100vh - 52px);
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 300;
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.18);
+    align-items: stretch;
+  }
+
+  .sidebar.mobileOpen {
+    transform: translateX(0);
+  }
+
+  /* Always expanded layout on mobile */
+  .sidebar .nav {
+    align-items: stretch;
+    padding: 12px;
+    gap: 4px;
+  }
+
+  .sidebar .navItem {
+    width: 100%;
+    min-width: unset;
+    height: auto;
+    min-height: 42px;
+    justify-content: flex-start;
+    padding: 10px 14px;
+  }
+
+  .sidebar .navLabel {
+    display: inline;
+    opacity: 1;
+  }
+
+  .sidebar .brand {
+    justify-content: flex-start;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+
+  .sidebar .bottom {
+    padding: 10px 16px 16px;
+    align-items: stretch;
+  }
+
+  /* Desktop expand/collapse toggle not needed on mobile */
+  .sidebar .toggleBtn {
+    display: none;
+  }
+
+  .mobileCloseBtn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px 12px 4px;
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    flex-shrink: 0;
+    transition: color 0.12s;
+  }
+
+  .mobileCloseBtn:hover { color: #0e2235; }
+}
+
 /* ── Dark mode ── */
 :global([data-theme="dark"]) .sidebar {
   background: #0e2235;
@@ -351,3 +444,7 @@
 :global([data-theme="dark"]) .toggleBtn:hover  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,.85); border-color: rgba(255,255,255,0.2); }
 :global([data-theme="dark"]) .configBtn        { background: rgba(255,255,255,0.1); color: rgba(255,255,255,.75); }
 :global([data-theme="dark"]) .configBtn:hover  { background: rgba(255,255,255,0.15); color: #fff; }
+
+:global([data-theme="dark"]) .backdrop         { background: rgba(0, 0, 0, 0.6); }
+:global([data-theme="dark"]) .mobileCloseBtn   { color: rgba(255,255,255,.4); }
+:global([data-theme="dark"]) .mobileCloseBtn:hover { color: rgba(255,255,255,.85); }

@@ -1,10 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutGrid, UserCog, ShieldCheck, BarChart2,
-  SlidersHorizontal, Trash2,
+  SlidersHorizontal, Trash2, X,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui.store';
@@ -30,12 +31,18 @@ function PanelToggleIcon() {
 const MODULE_PREFIXES = ['/requests', '/inventory', '/helpdesk', '/tickets'];
 
 export function AppSidebar() {
-  const expanded      = useUIStore((s) => s.sidebarExpanded);
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const moduleNav     = useUIStore((s) => s.moduleNav);
+  const expanded           = useUIStore((s) => s.sidebarExpanded);
+  const toggleSidebar      = useUIStore((s) => s.toggleSidebar);
+  const mobileSidebarOpen  = useUIStore((s) => s.mobileSidebarOpen);
+  const closeMobileSidebar = useUIStore((s) => s.closeMobileSidebar);
+  const moduleNav          = useUIStore((s) => s.moduleNav);
   const moduleName    = useUIStore((s) => s.moduleName);
   const moduleId      = useUIStore((s) => s.moduleId);
   const pathname      = usePathname();
+
+  // Close mobile sidebar on route change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { closeMobileSidebar(); }, [pathname]);
 
   const user         = useAuthStore((s) => s.user);
   const isSuperadmin = user?.is_superadmin ?? false;
@@ -133,7 +140,23 @@ export function AppSidebar() {
   }
 
   return (
-    <aside className={`${styles.sidebar}${expanded ? ` ${styles.expanded}` : ''}`}>
+    <>
+      {mobileSidebarOpen && (
+        <div
+          className={styles.backdrop}
+          onClick={closeMobileSidebar}
+          aria-hidden="true"
+        />
+      )}
+      <aside className={`${styles.sidebar}${expanded ? ` ${styles.expanded}` : ''}${mobileSidebarOpen ? ` ${styles.mobileOpen}` : ''}`}>
+        <button
+          type="button"
+          className={styles.mobileCloseBtn}
+          onClick={closeMobileSidebar}
+          aria-label="Cerrar menú"
+        >
+          <X size={16} />
+        </button>
 
       {/* ── Brand ── */}
       <div className={styles.brand}>
@@ -158,7 +181,7 @@ export function AppSidebar() {
           </div>
         )}
 
-        {expanded && (
+        {(expanded || mobileSidebarOpen) && (
           <div className={styles.brandInfo}>
             {companyName && (
               <span className={`${styles.brandName}${hasModuleCtx ? ` ${styles.brandNameCoral}` : ''}`}>
@@ -223,6 +246,7 @@ export function AppSidebar() {
         </button>
       </div>
 
-    </aside>
+      </aside>
+    </>
   );
 }

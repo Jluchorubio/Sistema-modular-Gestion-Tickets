@@ -43,6 +43,16 @@
   flex-direction: column;
 }
 
+/* ── Mobile responsive ── */
+@media (max-width: 767px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .main {
+    grid-column: 1;
+  }
+}
+
 /* ── Dark mode ──────────────────────────────────────────────────────────────── */
 :global([data-theme="dark"]) .shell,
 :global([data-theme="dark"]) .shellUser {
