@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Download, Trash2, Eye, Calendar, User, Tag, FileText, File, Image, Film, Globe } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, Eye, Calendar, User, Tag, FileText, File, Image, Film, Globe, Pencil, X, Save } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
@@ -15,6 +15,7 @@ import { fmtDate } from '@/lib/formatters';
 import { ADMIN_ROLES } from '@/constants/roles';
 
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
+const CATEGORIES = ['Hardware', 'Software', 'Red y Conectividad', 'Acceso y Cuentas', 'Impresoras y Periféricos', 'General'];
 
 function getFileIcon(mime?: string | null, size = 24): React.ReactNode {
   const s = { color: C.coral };
@@ -46,6 +47,7 @@ function getExt(name?: string | null): string {
 export default function DocDetailPage() {
   const { id }       = useParams<{ id: string }>();
   const router       = useRouter();
+  const searchParams = useSearchParams();
   const { user }     = useAuthStore();
   const isSuperadmin = user?.is_superadmin ?? false;
   const qc           = useQueryClient();
@@ -58,12 +60,45 @@ export default function DocDetailPage() {
   const moduleRole = user?.module_roles?.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
   const canEdit    = isSuperadmin || ADMIN_ROLES.includes(moduleRole as any);
 
+  /* edit state */
+  const [isEditing,     setIsEditing]     = useState(false);
+  const [editTitle,     setEditTitle]     = useState('');
+  const [editContent,   setEditContent]   = useState('');
+  const [editCategory,  setEditCategory]  = useState('');
+  const [editTags,      setEditTags]      = useState('');
+  const [editPublished, setEditPublished] = useState(false);
+
+  /* delete confirm */
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
   const { data: article, isLoading } = useQuery({
     queryKey: ['knowledge-article', id],
     queryFn:  () => docsService.getArticle(id),
     enabled:  !!id,
     staleTime: 30_000,
   });
+
+  /* open edit mode when ?edit=true */
+  useEffect(() => {
+    if (article && searchParams.get('edit') === 'true' && canEdit) {
+      setEditTitle(article.title);
+      setEditContent(article.content ?? '');
+      setEditCategory(article.category ?? '');
+      setEditTags((article.tags ?? []).join(', '));
+      setEditPublished(article.is_published);
+      setIsEditing(true);
+    }
+  }, [article, searchParams, canEdit]);
+
+  function startEdit() {
+    if (!article) return;
+    setEditTitle(article.title);
+    setEditContent(article.content ?? '');
+    setEditCategory(article.category ?? '');
+    setEditTags((article.tags ?? []).join(', '));
+    setEditPublished(article.is_published);
+    setIsEditing(true);
+  }
 
   const delMut = useMutation({
     mutationFn: () => docsService.deleteArticle(id),
@@ -83,6 +118,23 @@ export default function DocDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['knowledge-article', id] });
       qc.invalidateQueries({ queryKey: ['knowledge-docs'] });
+    },
+  });
+
+  const updateMut = useMutation({
+    mutationFn: () => docsService.updateArticle(id, {
+      title:        editTitle.trim(),
+      content:      editContent.trim(),
+      category:     editCategory.trim() || undefined,
+      tags:         editTags.split(',').map(t => t.trim()).filter(Boolean),
+      is_published: editPublished,
+    }),
+    onSuccess: () => {
+      setIsEditing(false);
+      qc.invalidateQueries({ queryKey: ['knowledge-article', id] });
+      qc.invalidateQueries({ queryKey: ['knowledge-docs'] });
+      /* remove ?edit=true from URL */
+      router.replace(`/helpdesk/knowledge/docs/${id}`);
     },
   });
 
@@ -119,15 +171,11 @@ export default function DocDetailPage() {
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: C.sub, fontFamily: 'inherit', padding: 0, fontWeight: 600 }}>
           <ArrowLeft size={14} /> Volver a la base documental
         </button>
-        {canEdit && (
-          <div style={{ display: 'flex', gap: 8 }}>
+        {canEdit && !isEditing && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {!article.is_published && (
-              <button
-                type="button"
-                onClick={() => publishMut.mutate()}
-                disabled={publishMut.isPending}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700, cursor: publishMut.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: publishMut.isPending ? 0.7 : 1 }}
-              >
+              <button type="button" onClick={() => publishMut.mutate()} disabled={publishMut.isPending}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700, cursor: publishMut.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: publishMut.isPending ? 0.7 : 1 }}>
                 <Globe size={12} /> Publicar
               </button>
             )}
@@ -137,9 +185,39 @@ export default function DocDetailPage() {
                 <Download size={12} /> Descargar
               </a>
             )}
-            <button type="button" onClick={() => { if (confirm('¿Eliminar este documento permanentemente?')) delMut.mutate(); }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', fontSize: 12, fontWeight: 700, color: '#ef4444', cursor: 'pointer', fontFamily: 'inherit' }}>
-              <Trash2 size={12} /> Eliminar
+            <button type="button" onClick={startEdit}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg, fontSize: 12, fontWeight: 700, color: C.sub, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Pencil size={12} /> Editar
+            </button>
+            {deleteConfirm ? (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#334155' }}>¿Eliminar permanentemente?</span>
+                <button type="button" onClick={() => delMut.mutate()} disabled={delMut.isPending}
+                  style={{ padding: '6px 12px', borderRadius: 7, border: 'none', background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {delMut.isPending ? '…' : 'Sí, eliminar'}
+                </button>
+                <button type="button" onClick={() => setDeleteConfirm(false)}
+                  style={{ padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setDeleteConfirm(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', fontSize: 12, fontWeight: 700, color: '#ef4444', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <Trash2 size={12} /> Eliminar
+              </button>
+            )}
+          </div>
+        )}
+        {canEdit && isEditing && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button type="button" onClick={() => updateMut.mutate()} disabled={updateMut.isPending || !editTitle.trim()}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 8, border: 'none', background: C.coral, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: updateMut.isPending ? 0.7 : 1 }}>
+              <Save size={12} /> {updateMut.isPending ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+            <button type="button" onClick={() => { setIsEditing(false); router.replace(`/helpdesk/knowledge/docs/${id}`); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', fontSize: 12, fontWeight: 600, color: C.sub, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <X size={12} /> Cancelar
             </button>
           </div>
         )}
@@ -156,36 +234,72 @@ export default function DocDetailPage() {
               {ext && <span style={{ fontSize: 8, fontWeight: 800, color: C.coral, letterSpacing: '.06em' }}>{ext}</span>}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                {article.category && (
-                  <span style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.1em', padding: '3px 10px', borderRadius: 99, background: `${C.coral}12`, border: `1px solid ${C.coral}30` }}>
-                    {article.category}
-                  </span>
-                )}
-                {!article.is_published && (
-                  <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 5, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>BORRADOR</span>
-                )}
-              </div>
-              <h1 style={{ fontSize: 24, fontWeight: 800, color: C.navy, margin: '0 0 12px', lineHeight: 1.2 }}>
-                {article.title}
-              </h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: C.muted }}>
-                  <User size={12} /> {article.author_name}
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: C.muted }}>
-                  <Calendar size={12} /> {fmtDate(article.updated_at)}
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: C.muted }}>
-                  <Eye size={12} /> {article.view_count} vistas
-                </span>
-                {isFile && article.file_size && (
-                  <span style={{ fontSize: 12, color: C.muted }}>{fmtSize(article.file_size)}</span>
-                )}
-              </div>
+              {isEditing ? (
+                /* EDIT MODE */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: C.sub, display: 'block', marginBottom: 4 }}>Título <span style={{ color: C.coral }}>*</span></label>
+                    <input value={editTitle} onChange={e => setEditTitle(e.target.value)} autoFocus
+                      style={{ width: '100%', padding: '9px 13px', borderRadius: 8, border: `1.5px solid ${C.coral}`, fontSize: 16, fontWeight: 700, color: C.navy, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: C.sub, display: 'block', marginBottom: 4 }}>Categoría</label>
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
+                      {CATEGORIES.map(cat => (
+                        <button key={cat} type="button" onClick={() => setEditCategory(editCategory === cat ? '' : cat)}
+                          style={{ padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 700, border: `1.5px solid ${editCategory === cat ? C.coral : C.border}`, background: editCategory === cat ? `${C.coral}12` : '#fff', color: editCategory === cat ? C.coral : C.sub, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                    <input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder="O escribe una categoría…"
+                      style={{ width: '100%', padding: '7px 12px', borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: C.sub, display: 'block', marginBottom: 4 }}>Etiquetas (separadas por comas)</label>
+                    <input value={editTags} onChange={e => setEditTags(e.target.value)} placeholder="vpn, manual, procedimiento…"
+                      style={{ width: '100%', padding: '7px 12px', borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: C.sub, fontWeight: 600 }}>
+                    <input type="checkbox" checked={editPublished} onChange={e => setEditPublished(e.target.checked)} />
+                    Publicado
+                  </label>
+                </div>
+              ) : (
+                /* VIEW MODE */
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    {article.category && (
+                      <span style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.1em', padding: '3px 10px', borderRadius: 99, background: `${C.coral}12`, border: `1px solid ${C.coral}30` }}>
+                        {article.category}
+                      </span>
+                    )}
+                    {!article.is_published && (
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 5, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>BORRADOR</span>
+                    )}
+                  </div>
+                  <h1 style={{ fontSize: 24, fontWeight: 800, color: C.navy, margin: '0 0 12px', lineHeight: 1.2 }}>
+                    {article.title}
+                  </h1>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: C.muted }}>
+                      <User size={12} /> {article.author_name}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: C.muted }}>
+                      <Calendar size={12} /> {fmtDate(article.updated_at)}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: C.muted }}>
+                      <Eye size={12} /> {article.view_count} vistas
+                    </span>
+                    {isFile && article.file_size && (
+                      <span style={{ fontSize: 12, color: C.muted }}>{fmtSize(article.file_size)}</span>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
             {/* Download button (for all users) */}
-            {isFile && article.file_url && (
+            {isFile && article.file_url && !isEditing && (
               <a href={article.file_url} download={article.file_name ?? true}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 9, border: 'none', background: C.coral, color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none', cursor: 'pointer', flexShrink: 0, boxShadow: `0 4px 14px ${C.coral}40` }}>
                 <Download size={15} /> Descargar
@@ -194,8 +308,8 @@ export default function DocDetailPage() {
           </div>
         </div>
 
-        {/* Tags */}
-        {article.tags.length > 0 && (
+        {/* Tags — view mode only */}
+        {!isEditing && article.tags.length > 0 && (
           <div style={{ padding: '14px 32px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <Tag size={13} style={{ color: C.muted, flexShrink: 0 }} />
             {article.tags.map(t => (
@@ -204,77 +318,64 @@ export default function DocDetailPage() {
           </div>
         )}
 
-        {/* Preview / Content */}
-        {isFile && article.file_url ? (
-          <div style={{ padding: '24px 32px' }}>
-            {isPdf ? (
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em', margin: '0 0 12px' }}>Vista previa</p>
-                <iframe
-                  src={article.file_url}
-                  style={{ width: '100%', height: 600, border: `1px solid ${C.border}`, borderRadius: 10 }}
-                  title={article.title}
-                />
-              </div>
-            ) : isImage ? (
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em', margin: '0 0 12px' }}>Vista previa</p>
-                <img src={article.file_url} alt={article.title}
-                  style={{ maxWidth: '100%', borderRadius: 10, border: `1px solid ${C.border}` }} />
-              </div>
-            ) : (
-              /* Non-previewable file */
-              <div style={{ textAlign: 'center', padding: '48px 24px', background: C.bg, borderRadius: 12, border: `1px dashed ${C.border}` }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>{getFileIcon(article.file_mime, 56)}</div>
-                <p style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: '0 0 6px' }}>{article.file_name}</p>
-                <p style={{ fontSize: 12, color: C.muted, margin: '0 0 20px' }}>
-                  {fmtSize(article.file_size)} · {article.file_mime || ext}
-                </p>
-                <a href={article.file_url} download={article.file_name ?? true}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 9, border: 'none', background: C.navy, color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-                  <Download size={16} /> Descargar archivo
-                </a>
-              </div>
-            )}
-          </div>
-        ) : article.content ? (
-          <div style={{ padding: '32px', minHeight: 120 }}>
-            <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.85, whiteSpace: 'pre-wrap', maxWidth: 760 }}>
-              {article.content}
-            </div>
+        {/* Content — edit mode for article type */}
+        {isEditing && !isFile ? (
+          <div style={{ padding: '24px 32px', borderBottom: `1px solid ${C.border}` }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: C.sub, display: 'block', marginBottom: 6 }}>Contenido</label>
+            <textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={12}
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 9, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical' as const, boxSizing: 'border-box' as const, lineHeight: 1.75 }} />
           </div>
         ) : null}
 
-        {/* Vote section */}
-        <div style={{ padding: '18px 32px', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>¿Te fue útil?</span>
-          <button
-            type="button"
-            onClick={() => voteMut.mutate(1)}
-            disabled={voteMut.isPending}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px',
-              borderRadius: 6, border: `1px solid ${localVote === 1 ? '#16a34a' : C.border}`,
-              background: localVote === 1 ? '#f0fdf4' : '#fff', color: localVote === 1 ? '#16a34a' : C.sub,
-              cursor: voteMut.isPending ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-            }}
-          >
-            👍 Sí ({article.helpful_count})
-          </button>
-          <button
-            type="button"
-            onClick={() => voteMut.mutate(-1)}
-            disabled={voteMut.isPending}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px',
-              borderRadius: 6, border: `1px solid ${localVote === -1 ? '#ef4444' : C.border}`,
-              background: localVote === -1 ? '#fef2f2' : '#fff', color: localVote === -1 ? '#ef4444' : C.sub,
-              cursor: voteMut.isPending ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-            }}
-          >
-            👎 No ({article.not_helpful_count})
-          </button>
-        </div>
+        {/* Preview / Content — view mode */}
+        {!isEditing && (
+          isFile && article.file_url ? (
+            <div style={{ padding: '24px 32px' }}>
+              {isPdf ? (
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em', margin: '0 0 12px' }}>Vista previa</p>
+                  <iframe src={article.file_url} style={{ width: '100%', height: 600, border: `1px solid ${C.border}`, borderRadius: 10 }} title={article.title} />
+                </div>
+              ) : isImage ? (
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em', margin: '0 0 12px' }}>Vista previa</p>
+                  <img src={article.file_url} alt={article.title} style={{ maxWidth: '100%', borderRadius: 10, border: `1px solid ${C.border}` }} />
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '48px 24px', background: C.bg, borderRadius: 12, border: `1px dashed ${C.border}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>{getFileIcon(article.file_mime, 56)}</div>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: '0 0 6px' }}>{article.file_name}</p>
+                  <p style={{ fontSize: 12, color: C.muted, margin: '0 0 20px' }}>{fmtSize(article.file_size)} · {article.file_mime || ext}</p>
+                  <a href={article.file_url} download={article.file_name ?? true}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 9, border: 'none', background: C.navy, color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+                    <Download size={16} /> Descargar archivo
+                  </a>
+                </div>
+              )}
+            </div>
+          ) : article.content ? (
+            <div style={{ padding: '32px', minHeight: 120 }}>
+              <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.85, whiteSpace: 'pre-wrap', maxWidth: 760 }}>
+                {article.content}
+              </div>
+            </div>
+          ) : null
+        )}
+
+        {/* Vote section — view mode only */}
+        {!isEditing && (
+          <div style={{ padding: '18px 32px', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>¿Te fue útil?</span>
+            <button type="button" onClick={() => voteMut.mutate(1)} disabled={voteMut.isPending}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: `1px solid ${localVote === 1 ? '#16a34a' : C.border}`, background: localVote === 1 ? '#f0fdf4' : '#fff', color: localVote === 1 ? '#16a34a' : C.sub, cursor: voteMut.isPending ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>
+              👍 Sí ({article.helpful_count})
+            </button>
+            <button type="button" onClick={() => voteMut.mutate(-1)} disabled={voteMut.isPending}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: `1px solid ${localVote === -1 ? '#ef4444' : C.border}`, background: localVote === -1 ? '#fef2f2' : '#fff', color: localVote === -1 ? '#ef4444' : C.sub, cursor: voteMut.isPending ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>
+              👎 No ({article.not_helpful_count})
+            </button>
+          </div>
+        )}
 
       </div>
     </ModuleLayout>

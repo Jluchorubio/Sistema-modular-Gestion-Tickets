@@ -48,8 +48,9 @@ export default function DocsPage() {
   const moduleRole = user?.module_roles?.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
   const canEdit    = isSuperadmin || ADMIN_ROLES.includes(moduleRole as any);
 
-  const [search,    setSearch]    = useState('');
-  const [catFilter, setCatFilter] = useState('');
+  const [search,        setSearch]        = useState('');
+  const [catFilter,     setCatFilter]     = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const { data: articles = [], isLoading } = useQuery({
     queryKey:  ['knowledge', helpdeskId, search, canEdit],
@@ -60,7 +61,7 @@ export default function DocsPage() {
 
   const delMut = useMutation({
     mutationFn: (id: string) => docsService.deleteArticle(id),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ['knowledge', helpdeskId] }),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['knowledge', helpdeskId] }); setDeleteConfirm(null); },
   });
 
   const categories = useMemo(() => {
@@ -161,15 +162,29 @@ export default function DocsPage() {
               </div>
               {/* Actions */}
               {canEdit && (
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                  <button type="button" onClick={() => router.push(`/helpdesk/knowledge/docs/create?edit=${a.id}`)} title="Editar"
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                  <button type="button" onClick={() => router.push(`/helpdesk/knowledge/docs/${a.id}?edit=true`)} title="Editar"
                     style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.sub }}>
                     <Pencil size={13} />
                   </button>
-                  <button type="button" onClick={() => { if (confirm('¿Eliminar este artículo?')) delMut.mutate(a.id); }}
-                    style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#ef4444' }}>
-                    <Trash2 size={13} />
-                  </button>
+                  {deleteConfirm === a.id ? (
+                    <>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>¿Eliminar?</span>
+                      <button type="button" onClick={() => delMut.mutate(a.id)} disabled={delMut.isPending}
+                        style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {delMut.isPending ? '…' : 'Sí'}
+                      </button>
+                      <button type="button" onClick={() => setDeleteConfirm(null)}
+                        style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        No
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" onClick={() => setDeleteConfirm(a.id)}
+                      style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#ef4444' }}>
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               )}
               <ChevronRight size={14} style={{ color: C.muted, flexShrink: 0 }} />

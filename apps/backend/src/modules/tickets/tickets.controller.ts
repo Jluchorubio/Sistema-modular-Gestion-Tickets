@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Delete, Patch, Body, Param, Query, Req, UseGuards, ParseUUIDPipe,
-  HttpCode, HttpStatus, UploadedFile, UseInterceptors,
+  HttpCode, HttpStatus, UploadedFile, UseInterceptors, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -349,14 +349,14 @@ export class TicketsController {
     @UploadedFile() file: Express.Multer.File,
     @Body() body: { module_id: string; title?: string; category?: string; tags?: string },
   ) {
-    if (!file) throw new Error('No file uploaded');
+    if (!file) throw new BadRequestException('No se subió ningún archivo');
     const path = require('path');
     const fs   = require('fs');
-    const ALLOWED_EXTS  = ['.pdf','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.txt','.csv','.zip','.png','.jpg','.jpeg','.gif','.webp'];
-    const ALLOWED_MIMES = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation','text/plain','text/csv','application/zip','application/x-zip-compressed','image/png','image/jpeg','image/gif','image/webp'];
+    const ALLOWED_EXTS  = ['.pdf','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.txt','.csv','.zip','.png','.jpg','.jpeg','.gif','.webp','.mp4','.mov'];
+    const ALLOWED_MIMES = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation','text/plain','text/csv','application/zip','application/x-zip-compressed','image/png','image/jpeg','image/gif','image/webp','video/mp4','video/quicktime'];
     const ext  = path.extname(file.originalname).toLowerCase();
     if (!ALLOWED_EXTS.includes(ext) || !ALLOWED_MIMES.includes(file.mimetype)) {
-      throw new Error('Tipo de archivo no permitido.');
+      throw new BadRequestException('Tipo de archivo no permitido.');
     }
     const name = `knowledge-${Date.now()}${ext}`;
     const uploadsDir = process.env.STORAGE_PATH ?? './uploads';
@@ -455,7 +455,8 @@ export class TicketsController {
     @Query('q')         q?: string,
     @Query('filter')    filter?: string,
   ) {
-    if (!moduleId) return [];
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!moduleId || !UUID_RE.test(moduleId)) return [];
     return this.knowledge.getPosts(moduleId, q, filter);
   }
 
@@ -514,5 +515,26 @@ export class TicketsController {
     @Param('replyId', ParseUUIDPipe) replyId: string,
   ) {
     return this.knowledge.deleteReply(req.user.sub, replyId);
+  }
+
+  @Patch('knowledge-posts/:id')
+  @RequirePermission('helpdesk:tickets:view')
+  updateKnowledgePost(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { title?: string; content?: string; tags?: string[] },
+  ) {
+    return this.knowledge.updatePost(req.user.sub, id, body);
+  }
+
+  @Patch('knowledge-posts/:postId/replies/:replyId')
+  @RequirePermission('helpdesk:tickets:view')
+  updateKnowledgeReply(
+    @Req() req: RequestWithUser,
+    @Param('postId',  ParseUUIDPipe) _postId: string,
+    @Param('replyId', ParseUUIDPipe) replyId: string,
+    @Body() body: { content: string },
+  ) {
+    return this.knowledge.updateReply(req.user.sub, replyId, body);
   }
 }

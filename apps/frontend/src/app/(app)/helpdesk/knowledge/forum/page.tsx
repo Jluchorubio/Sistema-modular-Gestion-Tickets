@@ -39,10 +39,11 @@ export default function ForumPage() {
   const canModerate = isSuperadmin || ADMIN_ROLES.includes(moduleRole as any);
   const canPost     = !!moduleRole || isSuperadmin;
 
-  const [filter,      setFilter]      = useState<'all' | 'resolved' | 'unresolved'>('all');
-  const [starred,     setStarred]     = useState<Set<string>>(new Set());
-  const [subscribed,  setSubscribed]  = useState<Set<string>>(new Set());
-  const [menuOpen,    setMenuOpen]    = useState<string | null>(null);
+  const [filter,        setFilter]        = useState<'all' | 'resolved' | 'unresolved'>('all');
+  const [starred,       setStarred]       = useState<Set<string>>(new Set());
+  const [subscribed,    setSubscribed]    = useState<Set<string>>(new Set());
+  const [menuOpen,      setMenuOpen]      = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   /* inline create */
   const [showCreate,  setShowCreate]  = useState(false);
@@ -60,7 +61,7 @@ export default function ForumPage() {
 
   const delMut = useMutation({
     mutationFn: (id: string) => forumService.deletePost(id),
-    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['knowledge-posts', helpdeskId] }); setMenuOpen(null); },
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['knowledge-posts', helpdeskId] }); setMenuOpen(null); setDeleteConfirm(null); },
   });
 
   const createMut = useMutation({
@@ -261,17 +262,32 @@ export default function ForumPage() {
                 <div style={{ position: 'relative' }}>
                   {canDel && (
                     <>
-                      <button type="button" onClick={() => setMenuOpen(menuOpen === post.id ? null : post.id)}
+                      <button type="button" onClick={() => { setMenuOpen(menuOpen === post.id ? null : post.id); setDeleteConfirm(null); }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: C.muted, display: 'flex', alignItems: 'center', borderRadius: 6 }}>
                         <MoreVertical size={15} />
                       </button>
                       {menuOpen === post.id && (
-                        <div style={{ position: 'absolute', right: 0, top: '100%', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.1)', zIndex: 20, minWidth: 140, overflow: 'hidden' }}>
-                          <button type="button"
-                            onClick={() => { if (confirm('¿Eliminar este debate?')) delMut.mutate(post.id); }}
-                            style={{ width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#ef4444', fontWeight: 600, textAlign: 'left', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 7 }}>
-                            <Trash2 size={12} /> Eliminar
-                          </button>
+                        <div style={{ position: 'absolute', right: 0, top: '100%', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.1)', zIndex: 20, minWidth: 160, overflow: 'hidden' }}>
+                          {deleteConfirm === post.id ? (
+                            <div style={{ padding: '10px 14px' }}>
+                              <p style={{ fontSize: 11, fontWeight: 700, color: '#334155', margin: '0 0 8px' }}>¿Eliminar debate?</p>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button type="button" onClick={() => delMut.mutate(post.id)} disabled={delMut.isPending}
+                                  style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  {delMut.isPending ? '…' : 'Sí, eliminar'}
+                                </button>
+                                <button type="button" onClick={() => setDeleteConfirm(null)}
+                                  style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => setDeleteConfirm(post.id)}
+                              style={{ width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#ef4444', fontWeight: 600, textAlign: 'left', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 7 }}>
+                              <Trash2 size={12} /> Eliminar
+                            </button>
+                          )}
                         </div>
                       )}
                     </>

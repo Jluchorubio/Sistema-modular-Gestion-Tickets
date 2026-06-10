@@ -69,11 +69,17 @@ export const forumService = {
   createPost: (dto: { module_id: string; title: string; content: string; tags?: string[] }) =>
     api.post('/tickets/knowledge-posts', dto).then((r: any) => r.data),
 
+  updatePost: (id: string, dto: { title?: string; content?: string; tags?: string[] }) =>
+    api.patch(`/tickets/knowledge-posts/${id}`, dto).then((r: any) => r.data),
+
   deletePost: (id: string) =>
     api.delete(`/tickets/knowledge-posts/${id}`).then((r: any) => r.data),
 
   createReply: (postId: string, content: string) =>
     api.post(`/tickets/knowledge-posts/${postId}/replies`, { content }).then((r: any) => r.data),
+
+  updateReply: (postId: string, replyId: string, dto: { content: string }) =>
+    api.patch(`/tickets/knowledge-posts/${postId}/replies/${replyId}`, dto).then((r: any) => r.data),
 
   acceptReply: (postId: string, replyId: string) =>
     api.post(`/tickets/knowledge-posts/${postId}/replies/${replyId}/accept`).then((r: any) => r.data),

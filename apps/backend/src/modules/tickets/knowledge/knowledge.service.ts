@@ -254,4 +254,42 @@ export class KnowledgeService {
     await this.db.query(`DELETE FROM tickets.knowledge_replies WHERE id = $1`, [replyId]);
     return { ok: true };
   }
+
+  async updatePost(userId: string, postId: string, dto: { title?: string; content?: string; tags?: string[] }) {
+    const [[post], [actor]] = await Promise.all([
+      this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_posts WHERE id = $1`, [postId]),
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+    ]);
+    if (!post) throw new NotFoundException('Post not found');
+    if (!actor?.is_superadmin && post.created_by !== userId) throw new ForbiddenException('Sin permisos para editar este post.');
+    const fields: string[] = [];
+    const params: any[] = [];
+    let p = 1;
+    if (dto.title   !== undefined) { fields.push(`title   = $${p++}`); params.push(dto.title.trim()); }
+    if (dto.content !== undefined) { fields.push(`content = $${p++}`); params.push(dto.content.trim()); }
+    if (dto.tags    !== undefined) { fields.push(`tags    = $${p++}`); params.push(dto.tags); }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push('updated_at = now()');
+    params.push(postId);
+    const [row] = await this.db.query<any[]>(
+      `UPDATE tickets.knowledge_posts SET ${fields.join(', ')} WHERE id = $${p} RETURNING id, title, content, tags, updated_at`,
+      params,
+    );
+    return row;
+  }
+
+  async updateReply(userId: string, replyId: string, dto: { content: string }) {
+    const [[reply], [actor]] = await Promise.all([
+      this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_replies WHERE id = $1`, [replyId]),
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+    ]);
+    if (!reply) throw new NotFoundException('Reply not found');
+    if (!actor?.is_superadmin && reply.created_by !== userId) throw new ForbiddenException('Sin permisos para editar esta respuesta.');
+    if (!dto.content?.trim()) throw new BadRequestException('El contenido no puede estar vacío');
+    const [row] = await this.db.query<any[]>(
+      `UPDATE tickets.knowledge_replies SET content = $1, updated_at = now() WHERE id = $2 RETURNING id, content, updated_at`,
+      [dto.content.trim(), replyId],
+    );
+    return row;
+  }
 }

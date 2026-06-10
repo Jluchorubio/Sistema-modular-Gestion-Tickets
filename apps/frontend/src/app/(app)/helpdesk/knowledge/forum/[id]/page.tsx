@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, CheckCircle2, Trash2, Paperclip, X } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle2, Trash2, Paperclip, X, Pencil } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModules } from '@/hooks/useModules';
@@ -39,8 +39,22 @@ export default function ForumThreadPage() {
   const moduleRole = user?.module_roles?.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
   const canModerate = isSuperadmin || ADMIN_ROLES.includes(moduleRole as any);
 
-  const [replyText, setReplyText] = useState('');
+  const [replyText,  setReplyText]  = useState('');
   const [replyFiles, setReplyFiles] = useState<File[]>([]);
+
+  /* edit post */
+  const [editingPost,   setEditingPost]   = useState(false);
+  const [editTitle,     setEditTitle]     = useState('');
+  const [editContent,   setEditContent]   = useState('');
+  const [editTags,      setEditTags]      = useState('');
+
+  /* edit reply */
+  const [editingReply,  setEditingReply]  = useState<string | null>(null);
+  const [editReplyText, setEditReplyText] = useState('');
+
+  /* delete confirmations */
+  const [deletePostConfirm,  setDeletePostConfirm]  = useState(false);
+  const [deleteReplyConfirm, setDeleteReplyConfirm] = useState<string | null>(null);
 
   const { data: post, isLoading, refetch } = useQuery({
     queryKey: ['knowledge-post', id],
@@ -61,13 +75,35 @@ export default function ForumThreadPage() {
 
   const delReplyMut = useMutation({
     mutationFn: (replyId: string) => forumService.deleteReply(id, replyId),
-    onSuccess: () => refetch(),
+    onSuccess: () => { setDeleteReplyConfirm(null); refetch(); },
   });
 
   const delPostMut = useMutation({
     mutationFn: () => forumService.deletePost(id),
     onSuccess: () => router.replace('/helpdesk/knowledge/forum'),
   });
+
+  const updatePostMut = useMutation({
+    mutationFn: () => forumService.updatePost(id, {
+      title:   editTitle.trim(),
+      content: editContent.trim(),
+      tags:    editTags.split(',').map(t => t.trim()).filter(Boolean),
+    }),
+    onSuccess: () => { setEditingPost(false); refetch(); },
+  });
+
+  const updateReplyMut = useMutation({
+    mutationFn: (replyId: string) => forumService.updateReply(id, replyId, { content: editReplyText.trim() }),
+    onSuccess: () => { setEditingReply(null); setEditReplyText(''); refetch(); },
+  });
+
+  function startEditPost() {
+    if (!post) return;
+    setEditTitle(post.title);
+    setEditContent(post.content);
+    setEditTags((post.tags ?? []).join(', '));
+    setEditingPost(true);
+  }
 
   if (isLoading || !post) {
     return (
@@ -79,6 +115,7 @@ export default function ForumThreadPage() {
   }
 
   const canDelPost  = canModerate || post.created_by === user?.id;
+  const canEditPost = canModerate || post.created_by === user?.id;
   const isAuthor    = post.created_by === user?.id;
 
   return (
@@ -97,26 +134,55 @@ export default function ForumThreadPage() {
         {/* Thread header */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              {post.is_resolved
-                ? <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 5, background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={11} /> RESUELTO</span>
-                : <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 5, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>ABIERTO</span>
-              }
-              <span style={{ fontSize: 11, color: C.muted }}>{post.reply_count} {Number(post.reply_count) === 1 ? 'respuesta' : 'respuestas'} · {post.view_count} vistas</span>
-            </div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: C.navy, margin: '0 0 10px', lineHeight: 1.25 }}>{post.title}</h1>
-            {post.tags.length > 0 && (
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
-                {post.tags.map(t => <span key={t} style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>#{t}</span>)}
-              </div>
+            {editingPost ? (
+              <input value={editTitle} onChange={e => setEditTitle(e.target.value)} autoFocus
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${C.coral}`, fontSize: 18, fontWeight: 800, color: C.navy, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const, marginBottom: 8 }} />
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  {post.is_resolved
+                    ? <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 5, background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={11} /> RESUELTO</span>
+                    : <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 5, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>ABIERTO</span>
+                  }
+                  <span style={{ fontSize: 11, color: C.muted }}>{post.reply_count} {Number(post.reply_count) === 1 ? 'respuesta' : 'respuestas'} · {post.view_count} vistas</span>
+                </div>
+                <h1 style={{ fontSize: 22, fontWeight: 800, color: C.navy, margin: '0 0 10px', lineHeight: 1.25 }}>{post.title}</h1>
+                {post.tags.length > 0 && (
+                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
+                    {post.tags.map(t => <span key={t} style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>#{t}</span>)}
+                  </div>
+                )}
+              </>
             )}
           </div>
-          {canDelPost && (
-            <button type="button" onClick={() => { if (confirm('¿Eliminar este debate?')) delPostMut.mutate(); }}
-              style={{ width: 32, height: 32, borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#ef4444', flexShrink: 0 }}>
-              <Trash2 size={13} />
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            {canEditPost && !editingPost && (
+              <button type="button" onClick={startEditPost}
+                style={{ width: 32, height: 32, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.sub }}>
+                <Pencil size={13} />
+              </button>
+            )}
+            {canDelPost && !editingPost && (
+              deletePostConfirm ? (
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#334155', fontWeight: 600 }}>¿Eliminar?</span>
+                  <button type="button" onClick={() => delPostMut.mutate()} disabled={delPostMut.isPending}
+                    style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {delPostMut.isPending ? '…' : 'Sí'}
+                  </button>
+                  <button type="button" onClick={() => setDeletePostConfirm(false)}
+                    style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setDeletePostConfirm(true)}
+                  style={{ width: 32, height: 32, borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#ef4444', flexShrink: 0 }}>
+                  <Trash2 size={13} />
+                </button>
+              )
+            )}
+          </div>
         </div>
 
         {/* Original post content */}
@@ -128,7 +194,29 @@ export default function ForumThreadPage() {
               <span style={{ fontSize: 11, color: C.muted }}>{fmtRelative(post.created_at)}</span>
               {isAuthor && <span style={{ fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 5, background: '#eff6ff', color: '#1d4ed8' }}>AUTOR</span>}
             </div>
-            <p style={{ fontSize: 14, color: '#334155', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap' }}>{post.content}</p>
+            {editingPost ? (
+              <div>
+                <textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={5}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 9, border: `1.5px solid ${C.coral}`, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical' as const, boxSizing: 'border-box' as const, lineHeight: 1.65, marginBottom: 8 }} />
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: C.sub, display: 'block', marginBottom: 4 }}>Etiquetas (separadas por comas)</label>
+                  <input value={editTags} onChange={e => setEditTags(e.target.value)} placeholder="wifi, impresora, red…"
+                    style={{ width: '100%', padding: '7px 12px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }} />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" onClick={() => updatePostMut.mutate()} disabled={updatePostMut.isPending || !editTitle.trim() || !editContent.trim()}
+                    style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: C.coral, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: updatePostMut.isPending ? 0.7 : 1 }}>
+                    {updatePostMut.isPending ? 'Guardando…' : 'Guardar cambios'}
+                  </button>
+                  <button type="button" onClick={() => setEditingPost(false)}
+                    style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p style={{ fontSize: 14, color: '#334155', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap' }}>{post.content}</p>
+            )}
           </div>
         </div>
 
@@ -141,7 +229,10 @@ export default function ForumThreadPage() {
               </span>
             </div>
             {post.replies.map(reply => {
-              const canDelReply = canModerate || reply.created_by === user?.id;
+              const canDelReply  = canModerate || reply.created_by === user?.id;
+              const canEditReply = canModerate || reply.created_by === user?.id;
+              const isEditingThis  = editingReply === reply.id;
+              const isDeletingThis = deleteReplyConfirm === reply.id;
               return (
                 <div key={reply.id}
                   style={{ padding: '18px 24px', borderBottom: `1px solid ${C.border}`, background: reply.is_accepted ? '#f0fdf4' : '#fff', display: 'flex', gap: 16 }}>
@@ -156,21 +247,61 @@ export default function ForumThreadPage() {
                         </span>
                       )}
                     </div>
-                    <p style={{ fontSize: 13, color: '#334155', lineHeight: 1.7, margin: '0 0 10px', whiteSpace: 'pre-wrap' }}>{reply.content}</p>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {isAuthor && !reply.is_accepted && !post.is_resolved && (
-                        <button type="button" onClick={() => acceptMut.mutate(reply.id)}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: '1px solid #bbf7d0', background: '#f0fdf4', fontSize: 11, fontWeight: 700, color: '#15803d', cursor: 'pointer', fontFamily: 'inherit' }}>
-                          <CheckCircle2 size={12} /> Aceptar como solución
-                        </button>
-                      )}
-                      {canDelReply && (
-                        <button type="button" onClick={() => { if (confirm('¿Eliminar esta respuesta?')) delReplyMut.mutate(reply.id); }}
-                          style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}>
-                          <Trash2 size={12} />
-                        </button>
-                      )}
-                    </div>
+
+                    {isEditingThis ? (
+                      <div>
+                        <textarea value={editReplyText} onChange={e => setEditReplyText(e.target.value)} rows={3} autoFocus
+                          style={{ width: '100%', padding: '9px 13px', borderRadius: 8, border: `1.5px solid ${C.coral}`, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical' as const, boxSizing: 'border-box' as const, lineHeight: 1.65, marginBottom: 8 }} />
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button type="button" onClick={() => updateReplyMut.mutate(reply.id)} disabled={updateReplyMut.isPending || !editReplyText.trim()}
+                            style={{ padding: '6px 16px', borderRadius: 7, border: 'none', background: C.coral, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: updateReplyMut.isPending ? 0.7 : 1 }}>
+                            {updateReplyMut.isPending ? 'Guardando…' : 'Guardar'}
+                          </button>
+                          <button type="button" onClick={() => { setEditingReply(null); setEditReplyText(''); }}
+                            style={{ padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p style={{ fontSize: 13, color: '#334155', lineHeight: 1.7, margin: '0 0 10px', whiteSpace: 'pre-wrap' }}>{reply.content}</p>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {isAuthor && !reply.is_accepted && !post.is_resolved && (
+                            <button type="button" onClick={() => acceptMut.mutate(reply.id)}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: '1px solid #bbf7d0', background: '#f0fdf4', fontSize: 11, fontWeight: 700, color: '#15803d', cursor: 'pointer', fontFamily: 'inherit' }}>
+                              <CheckCircle2 size={12} /> Aceptar como solución
+                            </button>
+                          )}
+                          {canEditReply && (
+                            <button type="button" onClick={() => { setEditingReply(reply.id); setEditReplyText(reply.content); }}
+                              style={{ padding: '5px 10px', borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, cursor: 'pointer', color: C.sub, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, fontFamily: 'inherit' }}>
+                              <Pencil size={11} /> Editar
+                            </button>
+                          )}
+                          {canDelReply && (
+                            isDeletingThis ? (
+                              <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                                <span style={{ fontSize: 11, color: '#334155', fontWeight: 600 }}>¿Eliminar?</span>
+                                <button type="button" onClick={() => delReplyMut.mutate(reply.id)} disabled={delReplyMut.isPending}
+                                  style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  {delReplyMut.isPending ? '…' : 'Sí'}
+                                </button>
+                                <button type="button" onClick={() => setDeleteReplyConfirm(null)}
+                                  style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  No
+                                </button>
+                              </div>
+                            ) : (
+                              <button type="button" onClick={() => setDeleteReplyConfirm(reply.id)}
+                                style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}>
+                                <Trash2 size={12} />
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -186,7 +317,7 @@ export default function ForumThreadPage() {
             <div style={{ flex: 1 }}>
               <textarea value={replyText} onChange={e => setReplyText(e.target.value)} rows={4}
                 placeholder="Escribe tu respuesta aquí…"
-                style={{ width: '100%', padding: '10px 14px', borderRadius: 9, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.65 }} />
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 9, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical' as const, boxSizing: 'border-box' as const, lineHeight: 1.65 }} />
 
               {/* File attachment */}
               <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
