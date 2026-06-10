@@ -35,7 +35,7 @@ export class CalendarController {
   @RequirePermission('global:system:access')
   @ApiOperation({ summary: 'Crear evento en el calendario.' })
   createEvent(@Req() req: any, @Body() dto: CreateCalendarEventDto) {
-    return this.service.createEvent(req.user.sub, dto);
+    return this.service.createEvent(req.user.sub, dto, req.user.is_superadmin ?? false);
   }
 
   @Patch('events/:id')

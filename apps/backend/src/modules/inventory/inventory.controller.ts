@@ -203,7 +203,7 @@ export class InventoryController {
   @Post('bulk')
   @RequirePermission('inventario:items:create')
   @ApiOperation({ summary: 'Importación masiva de activos. Máx 100 por petición.' })
-  bulkImport(@Body() dto: { module_id: string; rows: any[] }) {
-    return this.service.bulkImport(dto.module_id, dto.rows);
+  bulkImport(@Req() req: any, @Body() dto: { module_id: string; rows: any[] }) {
+    return this.service.bulkImport(dto.module_id, dto.rows, req.user.sub);
   }
 }

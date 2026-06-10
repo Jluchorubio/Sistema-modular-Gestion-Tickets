@@ -47,6 +47,7 @@ export class SlaBreachService {
        WHERE trk.ticket_id  = t.id
          AND trk.status      = 'active'
          AND trk.deadline_at < now()
+         AND t.deleted_at    IS NULL
        RETURNING
          t.id          AS ticket_id,
          t.title,

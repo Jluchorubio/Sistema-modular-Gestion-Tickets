@@ -501,7 +501,7 @@ export class TicketsService {
 
   async transition(userId: string, ticketId: string, dto: { transition_id: string; reason?: string }) {
     const [ticket] = await this.db.query<any[]>(
-      `SELECT id, title, current_state_id, workflow_version_id, created_by FROM tickets.tickets WHERE id = $1`,
+      `SELECT id, title, current_state_id, workflow_version_id, created_by FROM tickets.tickets WHERE id = $1 AND deleted_at IS NULL`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
@@ -571,7 +571,7 @@ export class TicketsService {
         [ticketId],
       );
 
-      // 2. Final state → mark met or breached
+      // 2. Final state → mark met or breached + deactivate all assignments
       if (toState?.is_final) {
         await qr.query(
           `UPDATE tickets.ticket_sla_tracking
@@ -579,6 +579,12 @@ export class TicketsService {
                breached_at = CASE WHEN deadline_at < now() THEN now() ELSE NULL END,
                updated_at  = now()
            WHERE ticket_id = $1 AND status = 'active'`,
+          [ticketId],
+        );
+        await qr.query(
+          `UPDATE tickets.ticket_assignments
+           SET is_active = false, unassigned_at = now()
+           WHERE ticket_id = $1 AND is_active = true`,
           [ticketId],
         );
       // 3. Entering pause state → pause SLA clock
@@ -647,14 +653,21 @@ export class TicketsService {
 
   async approveTicket(userId: string, ticketId: string, dto: { signature?: string }) {
     const [ticket] = await this.db.query<any[]>(
-      `SELECT t.id, t.created_by, t.workflow_version_id, t.current_state_id, s.is_approval_state
-       FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
-       WHERE  t.id = $1`,
+      `SELECT t.id, t.created_by, t.workflow_version_id, t.current_state_id,
+              s.is_approval_state,
+              ap.expires_at AS approval_expires_at
+       FROM   tickets.tickets t
+       JOIN   tickets.states s ON s.id = t.current_state_id
+       LEFT JOIN tickets.ticket_approvals ap
+              ON ap.ticket_id = t.id AND ap.status = 'pending'
+       WHERE  t.id = $1 AND t.deleted_at IS NULL`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
     if (!ticket.is_approval_state) throw new BadRequestException('El ticket no está pendiente de validación.');
     if (ticket.created_by !== userId) throw new ForbiddenException('Solo el solicitante puede validar este ticket.');
+    if (ticket.approval_expires_at && new Date(ticket.approval_expires_at) < new Date())
+      throw new BadRequestException('La ventana de aprobación ha expirado. El ticket será reabierto automáticamente en el próximo ciclo.');
 
     const [trans] = await this.db.query<any[]>(
       `SELECT tr.id, tr.to_state_id
@@ -701,7 +714,7 @@ export class TicketsService {
       `SELECT t.id, t.title, t.created_by, t.workflow_version_id, t.current_state_id,
               t.reprocess_count, t.module_id, t.priority, s.is_approval_state
        FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
-       WHERE  t.id = $1`,
+       WHERE  t.id = $1 AND t.deleted_at IS NULL`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
@@ -762,32 +775,39 @@ export class TicketsService {
   }
 
   async forceReopenTicket(userId: string, ticketId: string, dto: { reason: string }) {
-    const [ticket] = await this.db.query<any[]>(
-      `SELECT t.id, t.title, t.created_by, t.workflow_version_id, t.current_state_id,
-              t.reprocess_count, t.module_id, t.priority, s.is_final
-       FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
-       WHERE  t.id = $1`,
-      [ticketId],
-    );
-    if (!ticket)          throw new NotFoundException('Ticket not found');
-    if (!ticket.is_final) throw new BadRequestException('Solo se pueden reabrir tickets en estado final.');
-    if ((ticket.reprocess_count ?? 0) >= 5) throw new BadRequestException('Límite de reaperturas alcanzado (5).');
-
-    const [initState] = await this.db.query<any[]>(
-      `SELECT id FROM tickets.states WHERE workflow_version_id = $1 AND is_initial = true LIMIT 1`,
-      [ticket.workflow_version_id],
-    );
-    if (!initState) throw new BadRequestException('No se encontró estado inicial en el flujo de trabajo.');
-
-    const reopenCount    = (ticket.reprocess_count ?? 0) + 1;
-    const shouldEscalate = reopenCount >= 3 && ticket.priority !== 'critica';
-    const newPriority    = shouldEscalate ? this.priorityEngine.escalatePriority(ticket.priority) : ticket.priority;
+    let ticket: any;
+    let reopenCount   = 0;
+    let shouldEscalate = false;
 
     const qr = this.db.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
     try {
       await qr.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
+
+      const ticketRows: any[] = await qr.query(
+        `SELECT t.id, t.title, t.created_by, t.workflow_version_id, t.current_state_id,
+                t.reprocess_count, t.module_id, t.priority, s.is_final
+         FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
+         WHERE  t.id = $1
+         FOR UPDATE OF t`,
+        [ticketId],
+      );
+      ticket = ticketRows[0];
+      if (!ticket)          throw new NotFoundException('Ticket not found');
+      if (!ticket.is_final) throw new BadRequestException('Solo se pueden reabrir tickets en estado final.');
+      if ((ticket.reprocess_count ?? 0) >= 5) throw new BadRequestException('Límite de reaperturas alcanzado (5).');
+
+      const initStateRows: any[] = await qr.query(
+        `SELECT id FROM tickets.states WHERE workflow_version_id = $1 AND is_initial = true LIMIT 1`,
+        [ticket.workflow_version_id],
+      );
+      const initState = initStateRows[0];
+      if (!initState) throw new BadRequestException('No se encontró estado inicial en el flujo de trabajo.');
+
+      reopenCount    = (ticket.reprocess_count ?? 0) + 1;
+      shouldEscalate = reopenCount >= 3 && ticket.priority !== 'critica';
+      const newPriority = shouldEscalate ? this.priorityEngine.escalatePriority(ticket.priority) : ticket.priority;
 
       // UPDATE triggers trg_ticket_state_history automatically — no manual INSERT needed
       await qr.query(
@@ -868,6 +888,16 @@ export class TicketsService {
     file_size:     number;
     file_url:      string;
   }) {
+    const [state] = await this.db.query<{ is_final: boolean }[]>(
+      `SELECT s.is_final
+       FROM   tickets.tickets t
+       JOIN   tickets.states  s ON s.id = t.current_state_id
+       WHERE  t.id = $1 AND t.deleted_at IS NULL`,
+      [ticketId],
+    );
+    if (!state) throw new NotFoundException('Ticket not found');
+    if (state.is_final) throw new BadRequestException('No se pueden adjuntar archivos a un ticket cerrado');
+
     const [row] = await this.db.query<any[]>(
       `INSERT INTO tickets.ticket_attachments
          (ticket_id, uploaded_by, original_name, stored_name, mime_type, file_size, file_url)
@@ -880,11 +910,16 @@ export class TicketsService {
 
   async deleteAttachment(userId: string, ticketId: string, attachmentId: string) {
     const [att] = await this.db.query<any[]>(
-      `SELECT id, uploaded_by, ticket_id FROM tickets.ticket_attachments WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT ta.id, ta.uploaded_by, ta.ticket_id, s.is_final
+       FROM   tickets.ticket_attachments ta
+       JOIN   tickets.tickets t ON t.id = ta.ticket_id
+       JOIN   tickets.states  s ON s.id = t.current_state_id
+       WHERE  ta.id = $1 AND ta.deleted_at IS NULL`,
       [attachmentId],
     );
     if (!att) throw new NotFoundException('Attachment not found');
     if (att.ticket_id !== ticketId) throw new ForbiddenException('El adjunto no pertenece a este ticket');
+    if (att.is_final) throw new BadRequestException('No se pueden eliminar adjuntos de un ticket cerrado');
     if (att.uploaded_by !== userId) throw new ForbiddenException('Solo el autor puede eliminar este adjunto');
     await this.db.query(
       `UPDATE tickets.ticket_attachments SET deleted_at = now() WHERE id = $1`,
@@ -1056,7 +1091,35 @@ export class TicketsService {
     if (!ticket) throw new NotFoundException('Ticket not found');
 
     const isStaff = await this.isStaffInModule(userId, ticket.module_id);
-    const commentType = isStaff ? (dto.comment_type ?? 'public') : 'public';
+    const requestedType = dto.comment_type ?? 'public';
+
+    let commentType: string;
+    if (!isStaff) {
+      commentType = 'public';
+    } else if (requestedType === 'internal') {
+      const ELEVATED_ROLES = ['jefe_tecnico', 'admin_modulo', 'admin_sistema'];
+      const [actorRole] = await this.db.query<{ is_superadmin: boolean; role_name: string | null }[]>(
+        `SELECT u.is_superadmin, mr.name AS role_name
+         FROM   users.profiles u
+         LEFT JOIN modules.user_module_roles umr ON umr.user_id = u.id AND umr.module_id = $2 AND umr.is_active = true
+         LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
+         WHERE  u.id = $1 LIMIT 1`,
+        [userId, ticket.module_id],
+      );
+      const hasElevated = actorRole?.is_superadmin || ELEVATED_ROLES.includes(actorRole?.role_name ?? '');
+      if (!hasElevated) {
+        const [assigned] = await this.db.query<{ id: string }[]>(
+          `SELECT id FROM tickets.ticket_assignments
+           WHERE ticket_id = $1 AND user_id = $2 AND is_active = true LIMIT 1`,
+          [ticketId, userId],
+        );
+        if (!assigned) throw new ForbiddenException('Solo técnicos asignados o superiores pueden publicar notas internas');
+      }
+      commentType = 'internal';
+    } else {
+      commentType = requestedType;
+    }
+
     const [row] = await this.db.query<any[]>(
       `INSERT INTO tickets.ticket_comments (ticket_id, user_id, comment_type, content)
        VALUES ($1, $2, $3, $4)
@@ -1262,10 +1325,24 @@ export class TicketsService {
     }
 
     const [ticket] = await this.db.query<any[]>(
-      `SELECT id FROM tickets.tickets WHERE id = $1`,
+      `SELECT id, module_id FROM tickets.tickets WHERE id = $1`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
+
+    const [assignee] = await this.db.query<{ is_superadmin: boolean; role_name: string | null }[]>(
+      `SELECT u.is_superadmin, mr.name AS role_name
+       FROM   users.profiles u
+       LEFT JOIN modules.user_module_roles umr
+             ON umr.user_id   = u.id
+            AND umr.module_id = $2
+            AND umr.is_active = true
+       LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
+       WHERE  u.id = $1 LIMIT 1`,
+      [dto.user_id, ticket.module_id],
+    );
+    if (!assignee?.is_superadmin && !assignee?.role_name)
+      throw new BadRequestException('El usuario no tiene rol en el módulo de este ticket');
 
     if (dto.role === 'owner') {
       await this.db.query(

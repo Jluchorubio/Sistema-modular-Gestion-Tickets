@@ -77,8 +77,6 @@ export class UsersController {
   }
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Listar usuarios con filtros y paginación.' })
   @ApiQuery({ name: 'search', required: false })

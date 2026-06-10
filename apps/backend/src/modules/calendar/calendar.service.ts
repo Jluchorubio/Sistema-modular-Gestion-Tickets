@@ -246,11 +246,13 @@ export class CalendarService {
     );
   }
 
-  async createEvent(userId: string, dto: CreateCalendarEventDto) {
+  async createEvent(userId: string, dto: CreateCalendarEventDto, isSuperadmin = false) {
     if (!dto.title?.trim())          throw new BadRequestException('El título es requerido');
     if (!dto.start_at || !dto.end_at) throw new BadRequestException('start_at y end_at son requeridos');
     if (new Date(dto.end_at) < new Date(dto.start_at))
       throw new BadRequestException('end_at debe ser >= start_at');
+    if (!isSuperadmin && !dto.all_day && new Date(dto.start_at) < new Date())
+      throw new BadRequestException('No puedes crear eventos en el pasado');
 
     const [event] = await this.db.query<any[]>(
       `INSERT INTO calendar.events
@@ -300,13 +302,23 @@ export class CalendarService {
     isSuperadmin: boolean,
     dto:          UpdateCalendarEventDto,
   ) {
-    const [existing] = await this.db.query<{ id: string; created_by: string; title: string; module_id: string | null }[]>(
-      `SELECT id, created_by, title, module_id FROM calendar.events WHERE id = $1 AND deleted_at IS NULL`,
+    const [existing] = await this.db.query<{
+      id: string; created_by: string; title: string; module_id: string | null;
+      start_at: string; end_at: string | null; all_day: boolean;
+    }[]>(
+      `SELECT id, created_by, title, module_id, start_at, end_at, all_day
+       FROM calendar.events WHERE id = $1 AND deleted_at IS NULL`,
       [eventId],
     );
     if (!existing) throw new NotFoundException(`Evento ${eventId} no encontrado`);
     if (!isSuperadmin && existing.created_by !== userId)
       throw new ForbiddenException('Solo el creador puede editar este evento');
+
+    const effectiveStart = dto.start_at ?? existing.start_at;
+    const effectiveEnd   = dto.end_at   ?? existing.end_at;
+    const isAllDay       = dto.all_day  ?? existing.all_day;
+    if (!isAllDay && effectiveEnd && new Date(effectiveEnd) < new Date(effectiveStart))
+      throw new BadRequestException('La fecha de fin no puede ser anterior a la fecha de inicio');
 
     const fields: string[] = [];
     const values: any[]   = [];

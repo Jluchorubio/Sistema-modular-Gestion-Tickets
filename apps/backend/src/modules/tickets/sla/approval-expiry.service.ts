@@ -4,6 +4,7 @@ import { Cron } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
 import { MessagingService } from '../../../shared/messaging/messaging.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { PriorityEngineService } from '../priority/priority-engine.service';
 
 @Injectable()
 export class ApprovalExpiryService {
@@ -13,6 +14,7 @@ export class ApprovalExpiryService {
     @InjectDataSource() private readonly db: DataSource,
     private readonly messaging: MessagingService,
     private readonly notifications: NotificationsService,
+    private readonly priorityEngine: PriorityEngineService,
   ) {}
 
   /** Every 5 min — send 24h-before-expiry reminders, then expire past-deadline approvals. */
@@ -130,7 +132,7 @@ export class ApprovalExpiryService {
 
         const reopenCount    = (t.reprocess_count ?? 0) + 1;
         const shouldEscalate = reopenCount >= 3 && t.priority !== 'critica';
-        const newPriority    = shouldEscalate ? 'alta' : t.priority;
+        const newPriority    = shouldEscalate ? this.priorityEngine.escalatePriority(t.priority) : t.priority;
 
         // Fetch approval wait duration BEFORE transaction (read-only)
         const [approval] = await this.db.query<{ created_at: string }[]>(

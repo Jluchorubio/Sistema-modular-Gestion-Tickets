@@ -107,6 +107,15 @@ export class InventoryService {
 
   async create(dto: CreateAssetDto, actorId?: string) {
     const { module_id, environment_id, category_id, name, description, serial_number, specifications } = dto;
+
+    if (serial_number?.trim()) {
+      const [dup] = await this.db.query<any[]>(
+        `SELECT id FROM inventory.assets WHERE serial_number = $1 AND deleted_at IS NULL`,
+        [serial_number.trim()],
+      );
+      if (dup) throw new BadRequestException(`Ya existe un activo con número de serie "${serial_number}"`);
+    }
+
     if (actorId) {
       await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
     }
@@ -383,6 +392,18 @@ export class InventoryService {
     category_id?:      string;
     parent_asset_id?:  string | null;
   }) {
+    if (dto.serial_number !== undefined && dto.serial_number !== null && dto.serial_number.trim() !== '') {
+      const [dup] = await this.db.query<any[]>(
+        `SELECT id FROM inventory.assets WHERE serial_number = $1 AND id <> $2 AND deleted_at IS NULL`,
+        [dto.serial_number.trim(), id],
+      );
+      if (dup) throw new BadRequestException(`Ya existe un activo con número de serie "${dto.serial_number}"`);
+    }
+
+    if (actorId) {
+      await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+    }
+
     const fields: string[] = [];
     const values: any[]    = [];
     let idx = 1;
@@ -476,6 +497,7 @@ export class InventoryService {
   async bulkImport(
     moduleId: string,
     rows: Array<Omit<CreateAssetDto, 'module_id'>>,
+    actorId?: string,
   ): Promise<{ created: number; errors: { row: number; message: string }[] }> {
     if (rows.length > 100) throw new BadRequestException('Máximo 100 activos por importación');
 
@@ -488,17 +510,38 @@ export class InventoryService {
     }
     if (errors.length > 0) return { created: 0, errors };
 
+    // Pre-flight: check serial_number duplicates against DB and within the batch
+    const seenSerials = new Set<string>();
+    for (let i = 0; i < rows.length; i++) {
+      const sn = rows[i].serial_number?.trim();
+      if (!sn) continue;
+      if (seenSerials.has(sn)) {
+        errors.push({ row: i + 1, message: `Número de serie duplicado en la importación: "${sn}"` });
+        continue;
+      }
+      seenSerials.add(sn);
+      const [dup] = await this.db.query<any[]>(
+        `SELECT id FROM inventory.assets WHERE serial_number = $1 AND deleted_at IS NULL`,
+        [sn],
+      );
+      if (dup) errors.push({ row: i + 1, message: `Número de serie ya registrado: "${sn}"` });
+    }
+    if (errors.length > 0) return { created: 0, errors };
+
     const qr = this.db.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
     try {
+      if (actorId) {
+        await qr.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+      }
       for (const r of rows) {
         await qr.query(
           `INSERT INTO inventory.assets
              (module_id, environment_id, category_id, name, description, serial_number, specifications)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [moduleId, r.environment_id, r.category_id, r.name.trim(),
-           r.description ?? null, r.serial_number ?? null,
+           r.description ?? null, r.serial_number?.trim() ?? null,
            r.specifications ? JSON.stringify(r.specifications) : null],
         );
       }
