@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Settings, Shield, Wrench, CalendarClock, GitBranch, type LucideIcon } from 'lucide-react';
+import { OverflowTabBar } from '@/components/ui/OverflowTabBar';
 import { useAuthStore } from '@/stores/auth.store';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { modulesService } from '@/services/modules.service';
@@ -78,18 +79,12 @@ export default function ModuleSlugConfigPage() {
           <p className={styles.subtitle}>Comportamiento operativo, SLA y tipos de daño del módulo.</p>
         </div>
 
-        <div className={styles.tabBar}>
-          {HELPDESK_TABS.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              type="button"
-              className={`${styles.tabBtn}${tab === key ? ` ${styles.tabBtnActive}` : ''}`}
-              onClick={() => setTab(key)}
-            >
-              <Icon size={13} />{label}
-            </button>
-          ))}
-        </div>
+        <OverflowTabBar
+          tabs={HELPDESK_TABS}
+          active={tab}
+          onChange={k => setTab(k as Tab)}
+          cls={{ bar: styles.tabBar, btn: styles.tabBtn, active: styles.tabBtnActive }}
+        />
 
         <div className={styles.content}>
           {tab === 'general'     && (

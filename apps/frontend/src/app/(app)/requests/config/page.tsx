@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Settings, Clock, Tags, CalendarClock, type LucideIcon } from 'lucide-react';
+import { OverflowTabBar } from '@/components/ui/OverflowTabBar';
 import { useModules }    from '@/hooks/useModules';
 import { useModuleNav }  from '@/hooks/useModuleNav';
 import { useAuthStore }  from '@/stores/auth.store';
@@ -54,18 +55,12 @@ export default function GestionConfigPage() {
           <p className={styles.subtitle}>Comportamiento operativo, SLA y tipos de solicitud del módulo de Gestión.</p>
         </div>
 
-        <div className={styles.tabBar}>
-          {TABS.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              type="button"
-              className={`${styles.tabBtn}${tab === key ? ` ${styles.tabBtnActive}` : ''}`}
-              onClick={() => setTab(key)}
-            >
-              <Icon size={13} />{label}
-            </button>
-          ))}
-        </div>
+        <OverflowTabBar
+          tabs={TABS}
+          active={tab}
+          onChange={k => setTab(k as Tab)}
+          cls={{ bar: styles.tabBar, btn: styles.tabBtn, active: styles.tabBtnActive }}
+        />
 
         <div className={styles.content}>
           {tab === 'general' && (

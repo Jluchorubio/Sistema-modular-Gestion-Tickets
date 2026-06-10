@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery }             from '@tanstack/react-query';
-import { Lock }                 from 'lucide-react';
 import { systemConfigService }  from '@/services/system-config.service';
 import { usePermission }        from '@/hooks/usePermission';
 import { usePermissionsStore }  from '@/stores/permissions.store';
@@ -12,6 +11,7 @@ import { OrgFlowTab }           from '@/components/config/OrgFlowTab';
 import type { OrgNode }         from '@/services/system-config.service';
 
 import { type Tab, TABS, GUARDED_TABS }  from './_components/_types';
+import { OverflowTabBar }                from '@/components/ui/OverflowTabBar';
 import { QuickLinks }                    from './_components/QuickLinks';
 import { SetupChecklist }                from './_components/SetupChecklist';
 import { OrgRequiredScreen }             from './_components/OrgRequiredScreen';
@@ -60,24 +60,18 @@ export default function GlobalConfigPage() {
         <QuickLinks />
         <SetupChecklist setTab={setTab} />
 
-        <div className={styles.tabBar}>
-          {TABS.map(({ key, label, Icon }) => {
-            const blocked = isBlocked(key);
-            return (
-              <button
-                key={key}
-                type="button"
-                className={`${styles.tabBtn}${tab === key ? ` ${styles.tabBtnActive}` : ''}`}
-                style={blocked ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
-                title={blocked ? 'Requiere estructura organizacional configurada' : undefined}
-                onClick={() => blocked ? setTab('organigrama') : setTab(key)}
-              >
-                {blocked ? <Lock size={12} /> : <Icon size={13} />}
-                <span>{label}</span>
-              </button>
-            );
-          })}
-        </div>
+        <OverflowTabBar
+          tabs={TABS.map(({ key, label, Icon }) => ({
+            key,
+            label,
+            Icon,
+            blocked: isBlocked(key),
+            title:   isBlocked(key) ? 'Requiere estructura organizacional configurada' : undefined,
+          }))}
+          active={tab}
+          onChange={k => isBlocked(k as Tab) ? setTab('organigrama') : setTab(k as Tab)}
+          cls={{ bar: styles.tabBar, btn: styles.tabBtn, active: styles.tabBtnActive }}
+        />
 
         <div className={styles.content}>
           {tab === 'empresa'     && <CompanyTab />}
