@@ -124,8 +124,29 @@
 .statCardLabel { display: block; font-size: 11px; font-weight: 700; color: #64748b; margin-top: 3px; text-transform: uppercase; letter-spacing: .05em; }
 .statCardSub   { font-size: 11px; color: #94a3b8; margin-top: 6px; }
 
-@media (max-width: 900px) { .statsStrip { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 560px) { .statsStrip { grid-template-columns: 1fr; } }
+/* ── Compact responsive — always 4 cols, just smaller ── */
+@media (max-width: 1023px) {
+  .statCard      { padding: 14px 12px; }
+  .statCardValue { font-size: 24px; }
+}
+
+@media (max-width: 767px) {
+  .statsStrip    { gap: 6px; margin-bottom: 16px; }
+  .statCard      { padding: 10px 8px; gap: 2px; }
+  .statCardIcon  { width: 13px; height: 13px; margin-bottom: 3px; }
+  .statCardValue { font-size: 18px; }
+  .statCardLabel { font-size: 9px; letter-spacing: .02em; }
+  .statCardSub   { font-size: 9px; }
+}
+
+@media (max-width: 480px) {
+  .statsStrip    { gap: 4px; }
+  .statCard      { padding: 8px 6px; }
+  .statCardValue { font-size: 15px; }
+  .statCardLabel { font-size: 8px; }
+  .statCardSub   { display: none; }
+  .statCardIcon  { display: none; }
+}
 
 /* ── Section label ── */
 .sectionTitle {

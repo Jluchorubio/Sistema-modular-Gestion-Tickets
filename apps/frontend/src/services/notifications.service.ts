@@ -1,12 +1,13 @@
 import api from './api';
 
 export interface AppNotification {
-  id:         string;
-  event_type: string;
-  status:     'pending' | 'sent' | 'failed';
-  payload:    Record<string, unknown>;
-  created_at: string;
-  sent_at:    string | null;
+  id:           string;
+  event_type:   string;
+  status:       'pending' | 'sent' | 'failed';
+  payload:      Record<string, unknown>;
+  created_at:   string;
+  sent_at:      string | null;
+  dismissed_at: string | null;
 }
 
 export interface NotificationsResponse {
@@ -17,6 +18,11 @@ export interface NotificationsResponse {
 export const notificationsService = {
   async getMyNotifications(): Promise<NotificationsResponse> {
     const { data } = await api.get('/notifications/me');
+    return data;
+  },
+
+  async getAllNotifications(): Promise<NotificationsResponse> {
+    const { data } = await api.get('/notifications/me/all');
     return data;
   },
 

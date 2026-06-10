@@ -23,7 +23,7 @@ export class NotificationsController {
 
   @Get('me')
   @RequirePermission('global:system:access')
-  @ApiOperation({ summary: 'Listar notificaciones internas del usuario autenticado (últimas 30).' })
+  @ApiOperation({ summary: 'Listar notificaciones internas del usuario autenticado (últimas 50, sin descartadas).' })
   async getMyNotifications(@Req() req: any) {
     const rows = await this.db.query<NotificationLog[]>(
       `SELECT id, event_type, status, payload, created_at, sent_at
@@ -36,6 +36,23 @@ export class NotificationsController {
       [req.user.sub],
     );
     const unread = rows.filter((r) => r.status === 'pending').length;
+    return { notifications: rows, unread_count: unread };
+  }
+
+  @Get('me/all')
+  @RequirePermission('global:system:access')
+  @ApiOperation({ summary: 'Historial completo de notificaciones (incluye descartadas, últimas 200).' })
+  async getAllMyNotifications(@Req() req: any) {
+    const rows = await this.db.query<(NotificationLog & { dismissed_at: string | null })[]>(
+      `SELECT id, event_type, status, payload, created_at, sent_at, dismissed_at
+       FROM notifications.notification_logs
+       WHERE user_id = $1
+         AND channel = 'in_app'
+       ORDER BY created_at DESC
+       LIMIT 200`,
+      [req.user.sub],
+    );
+    const unread = rows.filter((r) => r.status === 'pending' && r.dismissed_at === null).length;
     return { notifications: rows, unread_count: unread };
   }
 
