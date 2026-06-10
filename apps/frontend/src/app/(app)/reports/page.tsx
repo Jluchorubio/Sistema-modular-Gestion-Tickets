@@ -1,5 +1,6 @@
 import dynamic from 'next/dynamic';
 import { SkeletonReports } from '@/components/ui/Skeleton';
+import { ContextNav } from '@/components/ui/ContextNav';
 
 const ReportsClient = dynamic(
   () => import('./_components/ReportsClient').then((m) => ({ default: m.ReportsClient })),
@@ -7,5 +8,10 @@ const ReportsClient = dynamic(
 );
 
 export default function ReportsPage() {
-  return <ReportsClient />;
+  return (
+    <>
+      <ContextNav back crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Reportes' }]} />
+      <ReportsClient />
+    </>
+  );
 }

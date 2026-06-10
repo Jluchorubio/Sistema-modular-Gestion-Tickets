@@ -11,6 +11,7 @@ import { ModuleConfigClient }  from '@/components/modules/ModuleConfigClient';
 import { CategoriesTab }       from '@/components/config/CategoriesTab';
 
 import { Spinner }             from '@/components/ui/Spinner';
+import { ContextNav }           from '@/components/ui/ContextNav';
 import { INVENTORY_NAV, INVENTORY_MODULE_NAME, isInventoryModule } from '../_nav';
 import styles from '@/app/(app)/requests/config/config.module.css';
 
@@ -44,6 +45,8 @@ export default function InventoryConfigPage() {
   ) ?? false;
 
   return (
+    <>
+    <ContextNav back crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Inventario', href: '/inventory' }, { label: 'Configuración' }]} />
     <div className={styles.pageWrap}>
       <div className={styles.mainContent}>
 
@@ -75,5 +78,6 @@ export default function InventoryConfigPage() {
 
       </div>
     </div>
+    </>
   );
 }

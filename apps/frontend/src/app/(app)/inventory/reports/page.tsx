@@ -4,6 +4,7 @@ import { useModuleNav } from '@/hooks/useModuleNav';
 import { useAuthStore } from '@/stores/auth.store';
 import { Spinner } from '@/components/ui/Spinner';
 import { ReportsClient } from '@/app/(app)/reports/_components/ReportsClient';
+import { ContextNav } from '@/components/ui/ContextNav';
 import { INVENTORY_NAV, INVENTORY_MODULE_NAME, isInventoryModule } from '../_nav';
 
 export default function InventoryReportsPage() {
@@ -18,13 +19,23 @@ export default function InventoryReportsPage() {
 
   if (isLoading) return <Spinner />;
 
+  const nav = <ContextNav back crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Inventario', href: '/inventory' }, { label: 'Reportes' }]} />;
+
   if (!isSuperadmin && !isAdminModulo) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
-        No tienes permiso para ver esta sección.
-      </div>
+      <>
+        {nav}
+        <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
+          No tienes permiso para ver esta sección.
+        </div>
+      </>
     );
   }
 
-  return <ReportsClient />;
+  return (
+    <>
+      {nav}
+      <ReportsClient />
+    </>
+  );
 }

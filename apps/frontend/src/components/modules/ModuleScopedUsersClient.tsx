@@ -237,18 +237,19 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
     <div className={mgmt.pageWrap}>
       <div className={mgmt.pageContent}>
 
-        {/* ── Header ── */}
-        <div className={styles.header}>
+        {/* ── Page header (free-standing, above card) ── */}
+        <div className={mgmt.pageHeader}>
           <div>
-            <h1 className={styles.title}>Usuarios</h1>
-            <p className={styles.count}>
+            <h1 className={mgmt.pageHeaderTitle}>Usuarios</h1>
+            <p className={mgmt.pageHeaderSub}>
               {rawUsers.length} usuario{rawUsers.length !== 1 ? 's' : ''} en este módulo
             </p>
           </div>
         </div>
 
-        {/* ── Filter card ── */}
-        <div className={styles.filterCard}>
+        {/* ── Surface card: toolbar + table ── */}
+        <div className={mgmt.surface}>
+        <div className={mgmt.surfaceToolbar}>
           <div className={styles.filterTopRow}>
             <div className={styles.searchWrap}>
               <Search className={styles.searchIcon} />
@@ -294,13 +295,12 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
         </div>
 
         {isLoading && <Spinner />}
-        {isError   && <p className={styles.errorMsg}>Error cargando usuarios.</p>}
+        {isError   && <p style={{ padding: '16px 20px', color: '#ef4444', fontSize: 12 }}>Error cargando usuarios.</p>}
 
         {/* ── Table ── */}
         {!isLoading && !isError && (
-          <div className={styles.tableWrap}>
-            <div className={styles.tableScroll}>
-              <table className={styles.table}>
+          <div className={mgmt.surfaceBody}>
+            <table className={styles.table}>
                 <thead>
                   <tr>
                     <th>Usuario</th>
@@ -415,9 +415,9 @@ export function ModuleScopedUsersClient({ moduleId, scope, profileBasePath = '/u
                 </tbody>
               </table>
             </div>
-          </div>
         )}
-      </div>
+      </div>{/* end surface */}
+    </div>{/* end pageContent */}
 
       {/* ── EDIT MODAL ── */}
       <Modal open={!!editUser} title="Editar usuario" onClose={() => { setEditUser(null); setModalMsg(null); }}>

@@ -12,6 +12,7 @@ import { SlaRequestsTab }      from '@/components/config/SlaRequestsTab';
 import { RequestTypesTab }     from '@/components/config/RequestTypesTab';
 import { ModuleCalendarioTab } from '@/components/config/ModuleCalendarioTab';
 import { Spinner }             from '@/components/ui/Spinner';
+import { ContextNav }           from '@/components/ui/ContextNav';
 import { GESTION_NAV, GESTION_MODULE_NAME, isGestionModule } from '../_nav';
 import styles from './config.module.css';
 
@@ -47,6 +48,8 @@ export default function GestionConfigPage() {
   ) ?? false;
 
   return (
+    <>
+    <ContextNav back crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Gestión Administrativa', href: '/requests' }, { label: 'Configuración' }]} />
     <div className={styles.pageWrap}>
       <div className={styles.mainContent}>
 
@@ -79,5 +82,6 @@ export default function GestionConfigPage() {
 
       </div>
     </div>
+    </>
   );
 }

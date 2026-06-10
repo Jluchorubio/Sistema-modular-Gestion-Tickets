@@ -4,6 +4,7 @@ import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useAuthStore } from '@/stores/auth.store';
 import { ModuleScopedUsersClient } from '@/components/modules/ModuleScopedUsersClient';
+import { ContextNav } from '@/components/ui/ContextNav';
 import { GESTION_NAV, GESTION_MODULE_NAME, isGestionModule } from '../_nav';
 import { MODULE_ROLES } from '@/constants/roles';
 
@@ -21,5 +22,10 @@ export default function GestionUsersPage() {
   ) ?? false;
   const scope = (isSuperadmin || isAdminModulo) ? 'all' : 'module-only';
 
-  return <ModuleScopedUsersClient moduleId={gestionRef.id} scope={scope} profileBasePath="/requests/users" />;
+  return (
+    <>
+      <ContextNav back crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Gestión Administrativa', href: '/requests' }, { label: 'Usuarios' }]} />
+      <ModuleScopedUsersClient moduleId={gestionRef.id} scope={scope} profileBasePath="/requests/users" />
+    </>
+  );
 }

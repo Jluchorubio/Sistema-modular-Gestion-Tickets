@@ -5,6 +5,7 @@ import { useModuleNav } from '@/hooks/useModuleNav';
 import { useAuthStore } from '@/stores/auth.store';
 import { Spinner } from '@/components/ui/Spinner';
 import { ModuleTrashClient } from '@/app/(app)/requests/_components/ModuleTrashClient';
+import { ContextNav } from '@/components/ui/ContextNav';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 
 export default function HelpdeskTrashPage() {
@@ -19,13 +20,23 @@ export default function HelpdeskTrashPage() {
 
   if (isLoading || !helpdeskId) return <Spinner />;
 
+  const nav = <ContextNav back crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Mesa de Ayuda', href: '/helpdesk' }, { label: 'Papelera' }]} />;
+
   if (!isSuperadmin && !isAdminModulo) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
-        No tienes permiso para ver esta sección.
-      </div>
+      <>
+        {nav}
+        <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
+          No tienes permiso para ver esta sección.
+        </div>
+      </>
     );
   }
 
-  return <ModuleTrashClient itemType="ticket" />;
+  return (
+    <>
+      {nav}
+      <ModuleTrashClient itemType="ticket" />
+    </>
+  );
 }

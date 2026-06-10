@@ -4,6 +4,7 @@ import { useModuleNav } from '@/hooks/useModuleNav';
 import { useAuthStore } from '@/stores/auth.store';
 import { Spinner } from '@/components/ui/Spinner';
 import { ModuleTrashClient } from '@/app/(app)/requests/_components/ModuleTrashClient';
+import { ContextNav } from '@/components/ui/ContextNav';
 import { INVENTORY_NAV, INVENTORY_MODULE_NAME, isInventoryModule } from '../_nav';
 
 export default function InventoryTrashPage() {
@@ -18,13 +19,23 @@ export default function InventoryTrashPage() {
 
   if (isLoading || !inventoryId) return <Spinner />;
 
+  const nav = <ContextNav back crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Inventario', href: '/inventory' }, { label: 'Papelera' }]} />;
+
   if (!isSuperadmin && !isAdminModulo) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
-        No tienes permiso para ver esta sección.
-      </div>
+      <>
+        {nav}
+        <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
+          No tienes permiso para ver esta sección.
+        </div>
+      </>
     );
   }
 
-  return <ModuleTrashClient itemType="asset" />;
+  return (
+    <>
+      {nav}
+      <ModuleTrashClient itemType="asset" />
+    </>
+  );
 }

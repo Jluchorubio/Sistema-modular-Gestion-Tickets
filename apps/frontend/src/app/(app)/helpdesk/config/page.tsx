@@ -15,6 +15,7 @@ import { ModuleCalendarioTab }  from '@/components/config/ModuleCalendarioTab';
 import { WorkflowTab }          from '@/components/config/WorkflowTab';
 
 import { Spinner }              from '@/components/ui/Spinner';
+import { ContextNav }            from '@/components/ui/ContextNav';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
 import styles from '@/app/(app)/requests/config/config.module.css';
 
@@ -54,6 +55,8 @@ export default function HelpdeskConfigPage() {
   ) ?? false;
 
   return (
+    <>
+    <ContextNav back crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Mesa de Ayuda', href: '/helpdesk' }, { label: 'Configuración' }]} />
     <div className={styles.pageWrap}>
       <div className={styles.mainContent}>
 
@@ -86,5 +89,6 @@ export default function HelpdeskConfigPage() {
 
       </div>
     </div>
+    </>
   );
 }
