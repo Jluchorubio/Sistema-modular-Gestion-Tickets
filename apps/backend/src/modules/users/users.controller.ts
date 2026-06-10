@@ -233,6 +233,18 @@ export class UsersController {
     return this.roleService.createGlobalRole(body.name, body.description);
   }
 
+  @Patch('global-roles/:id')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @RequirePermission('global:roles:edit')
+  @ApiOperation({ summary: 'Actualizar nombre/descripción de rol global. Solo superadmin.' })
+  updateGlobalRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { name?: string; description?: string },
+  ) {
+    return this.roleService.updateGlobalRole(id, body.name, body.description);
+  }
+
   @Delete('global-roles/:id')
   @UseGuards(RolesGuard)
   @Roles('superadmin')

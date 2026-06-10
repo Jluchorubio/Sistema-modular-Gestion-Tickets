@@ -186,6 +186,11 @@ export const usersService = {
     return data;
   },
 
+  async updateGlobalRole(id: string, name?: string, description?: string): Promise<GlobalRole> {
+    const { data } = await api.patch(`/users/global-roles/${id}`, { name, description });
+    return data;
+  },
+
   async deleteGlobalRole(id: string): Promise<void> {
     await api.delete(`/users/global-roles/${id}`);
   },

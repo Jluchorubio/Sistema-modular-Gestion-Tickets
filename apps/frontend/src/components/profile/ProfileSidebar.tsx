@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Edit2, Check, Star, Eye, Upload, Trash2,
-  Building2, MapPin, Mail, Phone, Home, CalendarDays,
+  MapPin, Mail, Phone, CalendarDays,
   X, RefreshCw, Globe, ChevronDown, ShieldCheck,
   UserCircle, Briefcase, AlertCircle,
 } from 'lucide-react';
@@ -135,6 +135,19 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
   const [prefixOpen,   setPrefixOpen]   = useState(false);
   const [prefixSearch, setPrefixSearch] = useState('');
 
+  /* ── Crop modal state ── */
+  const [cropOpen,      setCropOpen]      = useState(false);
+  const [cropSrc,       setCropSrc]       = useState<string | null>(null);
+  const [cropZoom,      setCropZoom]      = useState(1);
+  const [cropOffset,    setCropOffset]    = useState({ x: 0, y: 0 });
+  const [cropDragging,  setCropDragging]  = useState(false);
+  const [cropDragStart, setCropDragStart] = useState({ mx: 0, my: 0, ox: 0, oy: 0 });
+  const [cropNatW,      setCropNatW]      = useState(0);
+  const [cropNatH,      setCropNatH]      = useState(0);
+  const [cropBaseScale, setCropBaseScale] = useState(1);
+  const cropImgRef = useRef<HTMLImageElement>(null);
+  const CROP_SIZE  = 260;
+
   const canEdit = isOwnProfile || viewerIsSuperadmin;
 
   const { data: sessionsData } = useQuery({
@@ -187,18 +200,72 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
 
   const isAvatarBusy = isUploading || applyAvatarMut.isPending;
 
-  async function handleAvatarFile(file: File) {
+  function handleAvatarFile(file: File) {
     setUploadError(null);
+    const src = URL.createObjectURL(file);
+    setCropSrc(src);
+    setCropZoom(1);
+    setCropOffset({ x: 0, y: 0 });
+    setCropOpen(true);
+  }
+
+  function closeCrop() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+    setCropOpen(false);
+    setCropDragging(false);
+  }
+
+  async function confirmCrop() {
+    const img = cropImgRef.current;
+    if (!img || !cropSrc || cropNatW === 0) return;
     setIsUploading(true);
-    try {
-      const base64 = await resizeImageToBase64(file);
-      setAvatarPreview(base64);
-      applyAvatarMut.mutate(base64);
-    } catch {
-      setUploadError('Error al procesar la imagen');
-    } finally {
-      setIsUploading(false);
-    }
+    closeCrop();
+
+    const OUT  = 320;
+    const ratio = OUT / CROP_SIZE;
+
+    const rendW = cropNatW * cropBaseScale * cropZoom;
+    const rendH = cropNatH * cropBaseScale * cropZoom;
+    const imgLeft = CROP_SIZE / 2 + cropOffset.x - rendW / 2;
+    const imgTop  = CROP_SIZE / 2 + cropOffset.y - rendH / 2;
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = OUT;
+    canvas.height = OUT;
+    const ctx = canvas.getContext('2d')!;
+    ctx.beginPath();
+    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, imgLeft * ratio, imgTop * ratio, rendW * ratio, rendH * ratio);
+
+    const base64 = canvas.toDataURL('image/webp', 0.85);
+    setIsUploading(false);
+    setAvatarPreview(base64);
+    applyAvatarMut.mutate(base64);
+  }
+
+  function onCropPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setCropDragging(true);
+    setCropDragStart({ mx: e.clientX, my: e.clientY, ox: cropOffset.x, oy: cropOffset.y });
+  }
+
+  function onCropPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!cropDragging) return;
+    setCropOffset({
+      x: cropDragStart.ox + (e.clientX - cropDragStart.mx),
+      y: cropDragStart.oy + (e.clientY - cropDragStart.my),
+    });
+  }
+
+  function onCropPointerUp() {
+    setCropDragging(false);
+  }
+
+  function onCropWheel(e: React.WheelEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setCropZoom(z => Math.min(3, Math.max(0.5, z - e.deltaY * 0.001)));
   }
 
   // ── Camera ───────────────────────────────────────────────────────────────
@@ -417,6 +484,71 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
         </div>
       )}
 
+      {/* ── Crop Modal ── */}
+      {cropOpen && cropSrc && (
+        <div className={styles.cropBackdrop} onClick={closeCrop}>
+          <div className={styles.cropModal} onClick={e => e.stopPropagation()}>
+            <button className={styles.cameraClose} onClick={closeCrop}><X size={18} /></button>
+            <h3 className={styles.cropTitle}>Ajustar foto de perfil</h3>
+            <p className={styles.cropHint}>Arrastra para mover · Rueda del ratón para zoom</p>
+
+            <div
+              className={styles.cropStage}
+              onPointerDown={onCropPointerDown}
+              onPointerMove={onCropPointerMove}
+              onPointerUp={onCropPointerUp}
+              onPointerLeave={onCropPointerUp}
+              onWheel={onCropWheel}
+              style={{ cursor: cropDragging ? 'grabbing' : 'grab' }}
+            >
+              <img
+                ref={cropImgRef}
+                src={cropSrc}
+                alt="crop"
+                className={styles.cropImg}
+                onLoad={e => {
+                  const img = e.target as HTMLImageElement;
+                  const s = Math.max(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
+                  setCropNatW(img.naturalWidth);
+                  setCropNatH(img.naturalHeight);
+                  setCropBaseScale(s);
+                  setCropZoom(1);
+                  setCropOffset({ x: 0, y: 0 });
+                }}
+                draggable={false}
+                style={{
+                  width:  cropNatW > 0 ? `${cropNatW * cropBaseScale * cropZoom}px` : '260px',
+                  height: cropNatH > 0 ? `${cropNatH * cropBaseScale * cropZoom}px` : '260px',
+                  transform: `translate(calc(-50% + ${cropOffset.x}px), calc(-50% + ${cropOffset.y}px))`,
+                }}
+              />
+            </div>
+
+            <div className={styles.cropZoomRow}>
+              <span className={styles.cropZoomLabel}>Zoom</span>
+              <input
+                type="range"
+                className={styles.cropZoomSlider}
+                min="50"
+                max="300"
+                value={Math.round(cropZoom * 100)}
+                onChange={e => setCropZoom(Number(e.target.value) / 100)}
+              />
+              <span className={styles.cropZoomLabel}>{Math.round(cropZoom * 100)}%</span>
+            </div>
+
+            <div className={styles.cameraBtns}>
+              <button className={styles.btnSecondary} onClick={closeCrop}>
+                <X size={13} /> Cancelar
+              </button>
+              <button className={styles.btnPrimary} onClick={confirmCrop}>
+                <Check size={13} /> Aplicar foto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Camera Modal ── */}
       {cameraOpen && (
         <div className={styles.cameraBackdrop} onClick={closeCamera}>
@@ -570,14 +702,14 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
         </div>
       )}
 
-      {/* ── Edit accordion ── */}
+      {/* ── Edit profile ── */}
       {canEdit && (
         <>
           <button className={styles.btnSecondary} onClick={() => { setEditOpen(v => !v); setEditMsg(null); }}>
             <Edit2 size={13} />
             {editOpen ? 'Cancelar edición' : 'Editar perfil'}
           </button>
-          <div className={`${styles.editAccordion}${editOpen ? ` ${styles.editAccordionOpen}` : ''}`}>
+          {editOpen && (
             <div className={styles.editAccordionInner}>
               <form onSubmit={submitEdit(data => {
                 setEditMsg(null);
@@ -843,34 +975,23 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
                 </div>
               </form>
             </div>
-          </div>
+          )}
         </>
       )}
 
-      {/* ── Info rows ── */}
+      {/* ── Quick info: email + member since ── */}
       <div className={styles.divider}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {([
-            { label: user.department   || '—',  Icon: Building2   },
-            { label: user.primary_sede || '—',  Icon: MapPin       },
-            { label: user.email        || '—',  Icon: Mail         },
-            {
-              label: user.phone
-                ? `${user.phone_prefix ? user.phone_prefix + ' ' : ''}${user.phone}`
-                : '—',
-              Icon: Phone,
-            },
-            {
-              label: [user.city, user.state_province, user.country].filter(Boolean).join(', ') || user.address || '—',
-              Icon: Home,
-            },
-            { label: `Desde ${fmtDate(user.created_at)}`, Icon: CalendarDays },
-          ] as { label: string; Icon: React.ElementType }[]).map((row, i) => (
-            <div key={i} className={styles.sideRow}>
-              <row.Icon size={14} style={{ flexShrink: 0, marginTop: 1, color: '#64748B' }} />
-              <span className={styles.sideRowText}>{row.label}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {user.email && (
+            <div className={styles.sideRow}>
+              <Mail size={14} style={{ flexShrink: 0, marginTop: 1, color: '#64748B' }} />
+              <span className={styles.sideRowText}>{user.email}</span>
             </div>
-          ))}
+          )}
+          <div className={styles.sideRow}>
+            <CalendarDays size={14} style={{ flexShrink: 0, marginTop: 1, color: '#64748B' }} />
+            <span className={styles.sideRowText}>Miembro desde {fmtDate(user.created_at)}</span>
+          </div>
         </div>
       </div>
 
@@ -931,24 +1052,6 @@ export function ProfileSidebar({ user, isOwnProfile, viewerIsSuperadmin = false,
           </>
         )}
       </div>
-
-      {/* ── Active modules ── */}
-      {activeModules.length > 0 && (
-        <div className={styles.divider}>
-          <p className={styles.leftSectionTitle}>Módulos activos</p>
-          {activeModules.map(r => (
-            <div key={r.umr_id} className={styles.moduleItem}>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: '#0D1B2A' }}>{r.module_name}</p>
-                <p style={{ fontSize: 11, color: '#64748B' }}>{r.role_name}</p>
-              </div>
-              <span className={`${styles.badge} ${styles.badgeBlue}`} style={{ fontSize: 10 }}>
-                {r.role_name.toUpperCase()}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* ── Stats ── */}
       <div className={styles.divider}>

@@ -229,6 +229,38 @@ export class RoleService {
     return row;
   }
 
+  async updateGlobalRole(id: string, name?: string, description?: string) {
+    const [role] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM config.global_roles WHERE id = $1`,
+      [id],
+    );
+    if (!role) throw new NotFoundException(`Rol global ${id} no encontrado`);
+
+    if (name !== undefined) {
+      const normalized = name.trim().toLowerCase().replace(/\s+/g, '_');
+      if (!normalized) throw new BadRequestException('name no puede estar vacío');
+      const [dup] = await this.db.query<{ id: string }[]>(
+        `SELECT id FROM config.global_roles WHERE name = $1 AND id != $2`,
+        [normalized, id],
+      );
+      if (dup) throw new ConflictException(`Rol '${normalized}' ya existe`);
+      await this.db.query(
+        `UPDATE config.global_roles SET name = $1, description = $2 WHERE id = $3`,
+        [normalized, description ?? null, id],
+      );
+    } else if (description !== undefined) {
+      await this.db.query(
+        `UPDATE config.global_roles SET description = $1 WHERE id = $2`,
+        [description ?? null, id],
+      );
+    }
+    const [updated] = await this.db.query<any[]>(
+      `SELECT id, name, description, is_active FROM config.global_roles WHERE id = $1`,
+      [id],
+    );
+    return updated;
+  }
+
   async deleteGlobalRole(id: string) {
     const [role] = await this.db.query<{ id: string }[]>(
       `SELECT id FROM config.global_roles WHERE id = $1`,

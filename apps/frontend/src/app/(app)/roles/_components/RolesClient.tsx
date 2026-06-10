@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePermission } from '@/hooks/usePermission';
 import { usePermissionsStore } from '@/stores/permissions.store';
 import { useSuperadminGuard } from '@/hooks/useSuperadminGuard';
@@ -10,7 +10,10 @@ import {
   type PermissionDef,
   type RoleInfo,
 } from '@/services/permissions.service';
+import { usersService } from '@/services/users.service';
 import { Spinner } from '@/components/ui/Spinner';
+import { ContextNav } from '@/components/ui/ContextNav';
+import { Plus, X, Edit2, Trash2, RotateCcw, Check, ShieldCheck, Lock } from 'lucide-react';
 import styles from '../roles.module.css';
 import mgmt   from '@/styles/mgmt.module.css';
 
@@ -53,6 +56,71 @@ export function RolesClient() {
   const [savedGrants,     setSavedGrants]     = useState<Set<string>>(new Set());
   const [selectedPermKey, setSelectedPermKey] = useState<string | null>(null);
   const [saveStatus,      setSaveStatus]      = useState<'idle' | 'saving' | 'ok' | 'err'>('idle');
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createDesc, setCreateDesc] = useState('');
+  const [createErr,  setCreateErr]  = useState<string | null>(null);
+
+  const createRoleMut = useMutation({
+    mutationFn: () => usersService.createGlobalRole(createName.trim(), createDesc.trim() || undefined),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['roles', 'global'] });
+      setCreateOpen(false);
+      setCreateName('');
+      setCreateDesc('');
+      setCreateErr(null);
+    },
+    onError: (e: Error) => setCreateErr(e.message ?? 'Error al crear rol'),
+  });
+
+  /* ── Edit / Delete / Reactivate state ── */
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editName,      setEditName]      = useState('');
+  const [editDesc,      setEditDesc]      = useState('');
+  const [editErr,       setEditErr]       = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  function startEdit(role: RoleInfo) {
+    setEditingRoleId(role.id);
+    setEditName(role.name);
+    setEditDesc(role.description ?? '');
+    setEditErr(null);
+    setConfirmDeleteId(null);
+  }
+
+  function cancelEdit() {
+    setEditingRoleId(null);
+    setEditErr(null);
+  }
+
+  const updateRoleMut = useMutation({
+    mutationFn: () => usersService.updateGlobalRole(editingRoleId!, editName.trim() || undefined, editDesc.trim() || undefined),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['roles', 'global'] });
+      setEditingRoleId(null);
+      setEditErr(null);
+    },
+    onError: (e: Error) => setEditErr(e.message ?? 'Error al actualizar'),
+  });
+
+  const deleteRoleMut = useMutation({
+    mutationFn: (id: string) => usersService.deleteGlobalRole(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['roles', 'global'] });
+      setConfirmDeleteId(null);
+      if (activeRoleId === confirmDeleteId) {
+        setActiveRoleId(null);
+        setLocalGrants(new Set());
+        setSavedGrants(new Set());
+      }
+    },
+  });
+
+  const reactivateRoleMut = useMutation({
+    mutationFn: (id: string) => usersService.reactivateGlobalRole(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['roles', 'global'] }),
+  });
 
   const isGlobal = contextVal === 'global';
   const roleType: 'global' | 'module' = isGlobal ? 'global' : 'module';
@@ -181,216 +249,386 @@ export function RolesClient() {
 
   return (
     <div className={mgmt.pageWrap}>
+      <ContextNav
+        back
+        crumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Roles y Privilegios' },
+        ]}
+      />
       <div className={mgmt.pageContent}>
+
+        {/* ── Create role modal ── */}
+        {createOpen && (
+          <div className={styles.modalBackdrop} onClick={() => setCreateOpen(false)}>
+            <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <div>
+                  <h2 className={styles.modalTitle}>Nuevo Rol Global</h2>
+                  <p className={styles.modalSub}>El rol se creará sin permisos. Asígnalos desde el árbol.</p>
+                </div>
+                <button type="button" className={styles.modalCloseBtn} onClick={() => setCreateOpen(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div className={styles.modalField}>
+                <label className={styles.modalLabel}>Nombre del rol *</label>
+                <input
+                  className={styles.modalInput}
+                  placeholder="Ej: auditor, soporte_l1…"
+                  value={createName}
+                  onChange={e => setCreateName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className={styles.modalField}>
+                <label className={styles.modalLabel}>Descripción (opcional)</label>
+                <input
+                  className={styles.modalInput}
+                  placeholder="Breve descripción del rol…"
+                  value={createDesc}
+                  onChange={e => setCreateDesc(e.target.value)}
+                />
+              </div>
+              {createErr && <p className={styles.modalError}>{createErr}</p>}
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.btnModalCancel} onClick={() => { setCreateOpen(false); setCreateErr(null); }}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className={styles.btnModalCreate}
+                  onClick={() => { setCreateErr(null); createRoleMut.mutate(); }}
+                  disabled={!createName.trim() || createRoleMut.isPending}
+                >
+                  {createRoleMut.isPending ? 'Creando…' : 'Crear rol'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Header ── */}
         <div className={styles.header}>
           <div>
             <h1 className={styles.title}>Roles y Privilegios</h1>
-            <p className={styles.sub}>Control de perfiles de seguridad, niveles de acceso y matrices de permisos por módulo.</p>
+            <p className={styles.sub}>Gestión de perfiles de acceso, matrices de permisos y control de privilegios del sistema.</p>
           </div>
+          {isGlobal && (
+            <button
+              type="button"
+              className={styles.btnNewRole}
+              onClick={() => { setCreateOpen(true); setCreateName(''); setCreateDesc(''); setCreateErr(null); }}
+            >
+              <Plus size={13} />
+              Nuevo Rol
+            </button>
+          )}
         </div>
 
-        {/* ── 2-col workspace ── */}
+        {/* ══ 3-panel workspace ══ */}
         <div className={styles.workspace}>
 
-          {/* ──── LEFT: roles + tree unified ──── */}
-          <div className={styles.panelMerged}>
-
-            {/* ── Section: Roles del Sistema ── */}
-            <div className={styles.mergedRoles}>
-              <div className={styles.panelHeader}>
-                <p className={styles.panelTitle}>Roles del Sistema</p>
-                <p className={styles.panelSub}>Selecciona el ámbito y haz clic en "Editar Permisos" para cargar el árbol de accesos del rol.</p>
-              </div>
-
+          {/* ─── LEFT: Roles panel ─── */}
+          <div className={styles.rolesPanel}>
+            <div className={styles.rolesPanelHead}>
               <div>
-                <label className={styles.contextLabel}>Contexto o Módulo</label>
-                <select
-                  className={styles.contextSelect}
-                  value={contextVal}
-                  onChange={e => handleContextChange(e.target.value)}
-                >
-                  <option value="global">Sistema Global (General)</option>
-                  {modules.map(m => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
+                <p className={styles.panelLabel}>Roles del sistema</p>
               </div>
+            </div>
 
-              <div className={styles.rolesList}>
-                {rolesLoading && <Spinner />}
-                {!rolesLoading && roles.length === 0 && (
-                  <p className={styles.emptyMsg}>No hay roles configurados para este contexto.</p>
-                )}
-                {roles.map(role => {
-                  const isActive   = activeRoleId === role.id;
-                  const permCount  = isActive ? localGrants.size : null;
-                  return (
+            <div className={styles.contextWrap}>
+              <select
+                className={styles.contextSelect}
+                value={contextVal}
+                onChange={e => handleContextChange(e.target.value)}
+              >
+                <option value="global">Sistema Global</option>
+                {modules.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.rolesList}>
+              {rolesLoading && (
+                <p className={styles.emptyMsg}>Cargando…</p>
+              )}
+              {!rolesLoading && roles.length === 0 && (
+                <p className={styles.emptyMsg}>Sin roles para este contexto.</p>
+              )}
+              {roles.map(role => {
+                const isSelected = activeRoleId === role.id;
+                const isEditing  = editingRoleId === role.id;
+                const isDeleting = confirmDeleteId === role.id;
+                const permCount  = isSelected ? localGrants.size : null;
+
+                return (
+                  <div key={role.id}>
+                    {/* Row */}
                     <div
-                      key={role.id}
-                      className={`${styles.roleCard}${isActive ? ` ${styles.roleCardActive}` : ''}`}
+                      className={[
+                        styles.roleRow,
+                        isSelected    ? styles.roleRowActive   : '',
+                        !role.is_active ? styles.roleRowInactive : '',
+                      ].join(' ')}
+                      onClick={() => !isEditing && selectRole(role)}
                     >
-                      <div className={styles.roleCardTop}>
-                        <span className={styles.roleCardName}>{role.name}</span>
-                        <span className={`${styles.roleCardStatus} ${role.is_active ? styles.roleCardStatusActive : styles.roleCardStatusInactive}`}>
-                          {role.is_active ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </div>
-                      {role.description && (
-                        <p className={styles.roleCardDesc}>{role.description}</p>
-                      )}
-                      <div className={styles.roleCardFooter}>
-                        <span className={styles.roleCardPermCount}>
-                          {permCount !== null ? `${permCount} permisos` : '— permisos'}
-                        </span>
-                        <button
-                          type="button"
-                          className={styles.btnEditRole}
-                          onClick={() => selectRole(role)}
-                        >
-                          ⚙ Editar Permisos
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                      <div className={`${styles.roleRowDot} ${role.is_active ? styles.roleRowDotActive : styles.roleRowDotInactive}`} />
 
-            {/* ── Divider ── */}
-            <div className={styles.mergedSep}>
-              <div className={styles.mergedSepLine} />
-              <span className={styles.mergedSepLabel}>
-                Árbol de Permisos
-                {activeRole && ` — ${activeRole.name.toUpperCase()}`}
-              </span>
-              <div className={styles.mergedSepLine} />
-            </div>
-
-            {/* ── Section: Árbol de Permisos ── */}
-            <div className={styles.mergedTree}>
-              <p className={styles.panelSub}>
-                Estructura jerárquica modular. Activar un padre no activa sus hijos automáticamente — solo los desbloquea. Desactivar un padre inhabilita todos sus hijos.
-              </p>
-
-              <div className={styles.tree}>
-                {!activeRoleId && (
-                  <p className={styles.treeEmpty}>
-                    Selecciona un rol arriba y haz clic en "Editar Permisos" para ver el árbol.
-                  </p>
-                )}
-                {activeRoleId && grantsFetching && <Spinner />}
-                {activeRoleId && !grantsFetching && parents.map(parent => {
-                  const isParentChecked = localGrants.has(parent.key);
-                  const children = childrenOf(parent.key);
-
-                  return (
-                    <div key={parent.key} className={styles.treeGroup}>
-                      <div className={styles.treeParent}>
-                        <div className={styles.treeParentLeft}>
+                      {isEditing ? (
+                        <div className={styles.roleRowEditForm} onClick={e => e.stopPropagation()}>
                           <input
-                            type="checkbox"
-                            className={styles.treeCb}
-                            checked={isParentChecked}
-                            onChange={e => toggleParent(parent.key, e.target.checked)}
+                            className={styles.roleRowEditInput}
+                            placeholder="Nombre *"
+                            value={editName}
+                            onChange={e => setEditName(e.target.value)}
+                            autoFocus
                           />
-                          <span
-                            className={styles.treeParentName}
-                            onClick={() => setSelectedPermKey(parent.key)}
-                          >
-                            {parent.label}
-                          </span>
+                          <input
+                            className={styles.roleRowEditInput}
+                            placeholder="Descripción (opcional)"
+                            value={editDesc}
+                            onChange={e => setEditDesc(e.target.value)}
+                          />
+                          {editErr && <p style={{ fontSize: 10, color: '#ef4444', margin: 0 }}>{editErr}</p>}
+                          <div className={styles.roleRowEditActions}>
+                            <button type="button" className={styles.btnRowEditCancel} onClick={cancelEdit}>✕</button>
+                            <button
+                              type="button"
+                              className={styles.btnRowEditSave}
+                              onClick={() => { setEditErr(null); updateRoleMut.mutate(); }}
+                              disabled={!editName.trim() || updateRoleMut.isPending}
+                            >
+                              <Check size={10} style={{ display: 'inline', marginRight: 3 }} />
+                              {updateRoleMut.isPending ? '…' : 'Guardar'}
+                            </button>
+                          </div>
                         </div>
-                        <span className={styles.treeSlug}>{parent.key}</span>
-                      </div>
+                      ) : (
+                        <div className={styles.roleRowBody}>
+                          <span className={styles.roleRowName}>{role.name}</span>
+                          {role.description && (
+                            <span className={styles.roleRowDesc}>{role.description}</span>
+                          )}
+                          <div className={styles.roleRowMeta}>
+                            <span className={styles.roleRowCount}>
+                              {permCount !== null ? `${permCount} permisos` : '—'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
-                      {children.length > 0 && (
-                        <div className={styles.treeChildren}>
-                          {children.map(child => {
-                            const isDisabled = !isParentChecked;
-                            const isChecked  = !isDisabled && localGrants.has(child.key);
-                            return (
-                              <div key={child.key} className={styles.treeChild}>
-                                <div className={styles.treeChildLeft}>
-                                  <span className={styles.treeLine}>├──</span>
-                                  <input
-                                    type="checkbox"
-                                    className={styles.treeCb}
-                                    checked={isChecked}
-                                    disabled={isDisabled}
-                                    onChange={e => toggleChild(child.key, e.target.checked)}
-                                  />
-                                  <span
-                                    className={`${styles.treeChildName}${isDisabled ? ` ${styles.treeChildNameDisabled}` : ''}`}
-                                    onClick={() => { if (!isDisabled) setSelectedPermKey(child.key); }}
-                                  >
-                                    {child.label}
-                                  </span>
-                                </div>
-                                <span className={styles.treeChildSlug}>{child.key}</span>
-                              </div>
-                            );
-                          })}
+                      {!isEditing && (
+                        <div className={styles.roleRowActions} onClick={e => e.stopPropagation()}>
+                          {role.is_active ? (
+                            <>
+                              <button
+                                type="button"
+                                title="Editar"
+                                className={styles.btnRowAction}
+                                onClick={() => startEdit(role)}
+                              >
+                                <Edit2 size={10} />
+                              </button>
+                              <button
+                                type="button"
+                                title="Desactivar"
+                                className={`${styles.btnRowAction} ${styles.btnRowActionDanger}`}
+                                onClick={() => { setConfirmDeleteId(role.id); setEditingRoleId(null); }}
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              title="Reactivar"
+                              className={`${styles.btnRowAction} ${styles.btnRowActionSuccess}`}
+                              onClick={() => reactivateRoleMut.mutate(role.id)}
+                              disabled={reactivateRoleMut.isPending}
+                            >
+                              <RotateCcw size={10} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
 
-              <div className={styles.saveWrap}>
-                <button
-                  type="button"
-                  className={styles.btnSave}
-                  onClick={handleSave}
-                  disabled={!activeRoleId || !isDirty || saveStatus === 'saving' || grantsFetching}
-                >
-                  {saveStatus === 'saving' ? 'Guardando...' : 'Guardar Permisos del Rol'}
-                </button>
-                {saveStatus === 'ok'  && <p className={styles.saveOk}>✓ Permisos actualizados correctamente</p>}
-                {saveStatus === 'err' && <p className={styles.saveErr}>✗ Error al guardar. Intenta de nuevo.</p>}
-              </div>
+                    {/* Delete confirm */}
+                    {isDeleting && (
+                      <div className={styles.roleRowDeleteConfirm}>
+                        <p className={styles.roleRowDeleteText}>
+                          Desactivar <strong>{role.name}</strong>. Los usuarios asignados conservarán acceso hasta reasignación.
+                        </p>
+                        <div className={styles.roleRowDeleteBtns}>
+                          <button type="button" className={styles.btnRowEditCancel} onClick={() => setConfirmDeleteId(null)}>Cancelar</button>
+                          <button
+                            type="button"
+                            className={styles.btnConfirmDelete}
+                            onClick={() => deleteRoleMut.mutate(role.id)}
+                            disabled={deleteRoleMut.isPending}
+                          >
+                            {deleteRoleMut.isPending ? '…' : 'Desactivar'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-
           </div>
 
-          {/* ──── RIGHT: permission inspector ──── */}
-          <div className={styles.panel}>
-            <div className={styles.panelTop}>
-
-              <div className={styles.panelHeader}>
-                <p className={styles.panelTitle}>Inspección de Permiso</p>
-                <p className={styles.panelSub}>
-                  {activeRoleId
-                    ? 'Haz clic sobre cualquier permiso del árbol para auditar su impacto.'
-                    : 'Selecciona un rol y luego haz clic en un permiso.'}
+          {/* ─── CENTER: Permission tree ─── */}
+          <div className={styles.treePanel}>
+            <div className={styles.treePanelHead}>
+              <div>
+                <p className={styles.treePanelTitle}>
+                  <ShieldCheck size={13} />
+                  {activeRole
+                    ? <><span>Árbol de Permisos</span><span className={styles.treePanelTitleBadge}>{activeRole.name}</span></>
+                    : 'Árbol de Permisos'
+                  }
+                </p>
+                <p className={styles.treePanelSub}>
+                  {activeRole
+                    ? 'Activar padre desbloquea hijos. Desactivar padre revoca todos sus hijos.'
+                    : 'Selecciona un rol para gestionar sus permisos.'}
                 </p>
               </div>
-
-              {!selectedPerm ? (
-                activeRoleId ? (
-                  <div className={styles.inspectorHint}>
-                    <span className={styles.inspectorHintArrow}>←</span>
-                    <span className={styles.inspectorHintBadge}>Permiso sin seleccionar</span>
-                    <p className={styles.inspectorHintText}>
-                      Haz clic sobre cualquier nombre de permiso del árbol para ver su descripción operacional, impacto en el sistema y nivel de riesgo de seguridad.
-                    </p>
-                  </div>
-                ) : (
-                  <p className={styles.inspectorEmpty}>
-                    Selecciona un rol y edita sus permisos para activar este panel de inspección.
-                  </p>
-                )
-              ) : (
-                <PermissionInspector perm={selectedPerm} />
-              )}
             </div>
 
-            <div className={styles.auditNote}>
-              <p className={styles.auditTitle}>☉ Registro de Auditoría</p>
-              <p className={styles.auditText}>
-                Todos los cambios de permisos son auditados dinámicamente por el sistema global para prevenir fallos de seguridad.
+            <div className={styles.treeScroll}>
+              {!activeRoleId && (
+                <div className={styles.treeEmpty}>
+                  <div className={styles.treeEmptyIcon}>
+                    <Lock size={20} />
+                  </div>
+                  <p className={styles.treeEmptyTitle}>Selecciona un rol</p>
+                  <p className={styles.treeEmptyDesc}>Haz clic en cualquier rol del panel izquierdo para ver y editar sus permisos.</p>
+                </div>
+              )}
+
+              {activeRoleId && grantsFetching && (
+                <div className={styles.treeEmpty}>
+                  <Spinner />
+                  <p className={styles.treeEmptyDesc}>Cargando permisos…</p>
+                </div>
+              )}
+
+              {activeRoleId && !grantsFetching && parents.map(parent => {
+                const isParentChecked = localGrants.has(parent.key);
+                const children        = childrenOf(parent.key);
+
+                return (
+                  <div key={parent.key} className={styles.treeGroup}>
+                    {/* Parent row */}
+                    <div className={styles.treeParentRow}>
+                      <div className={styles.treeParentLeft}>
+                        <input
+                          type="checkbox"
+                          className={styles.treeCb}
+                          checked={isParentChecked}
+                          onChange={e => toggleParent(parent.key, e.target.checked)}
+                        />
+                        <span
+                          className={styles.treeParentLabel}
+                          onClick={() => setSelectedPermKey(parent.key)}
+                        >
+                          {parent.label}
+                        </span>
+                        <span className={styles.treeKeyBadge}>{parent.section}</span>
+                      </div>
+                    </div>
+
+                    {/* Children */}
+                    {children.length > 0 && (
+                      <div className={styles.treeChildren}>
+                        {children.map(child => {
+                          const isDisabled = !isParentChecked;
+                          const isChecked  = !isDisabled && localGrants.has(child.key);
+                          return (
+                            <div
+                              key={child.key}
+                              className={[
+                                styles.treeChildRow,
+                                isDisabled ? styles.treeChildRowDisabled : '',
+                              ].join(' ')}
+                            >
+                              <input
+                                type="checkbox"
+                                className={styles.treeCb}
+                                checked={isChecked}
+                                disabled={isDisabled}
+                                onChange={e => toggleChild(child.key, e.target.checked)}
+                              />
+                              <span
+                                className={[
+                                  styles.treeChildLabel,
+                                  isDisabled ? styles.treeChildLabelDisabled : '',
+                                ].join(' ')}
+                                onClick={() => { if (!isDisabled) setSelectedPermKey(child.key); }}
+                              >
+                                {child.label}
+                              </span>
+                              <span className={styles.treeChildKeyBadge}>{child.action}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className={styles.treeFooter}>
+              <button
+                type="button"
+                className={styles.btnSave}
+                onClick={handleSave}
+                disabled={!activeRoleId || !isDirty || saveStatus === 'saving' || grantsFetching}
+              >
+                {saveStatus === 'saving' ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+              {saveStatus === 'ok'  && <p className={styles.saveOk}>✓ Permisos guardados</p>}
+              {saveStatus === 'err' && <p className={styles.saveErr}>✗ Error al guardar</p>}
+            </div>
+          </div>
+
+          {/* ─── RIGHT: Inspector panel ─── */}
+          <div className={styles.inspectorPanel}>
+            <div className={styles.inspectorPanelHead}>
+              <p className={styles.panelLabel}>Inspección</p>
+            </div>
+
+            {!selectedPerm ? (
+              <div className={styles.inspectorEmpty}>
+                <div className={styles.treeEmptyIcon}>
+                  <ShieldCheck size={18} />
+                </div>
+                {activeRoleId ? (
+                  <>
+                    <span className={styles.inspectorHintArrow}>←</span>
+                    <p className={styles.inspectorEmptyTitle}>Selecciona un permiso</p>
+                    <p className={styles.inspectorEmptyDesc}>Haz clic sobre cualquier nombre del árbol para auditar su impacto.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className={styles.inspectorEmptyTitle}>Sin contexto</p>
+                    <p className={styles.inspectorEmptyDesc}>Selecciona un rol y luego un permiso del árbol.</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <PermissionInspector perm={selectedPerm} />
+            )}
+
+            <div className={styles.inspectorAudit}>
+              <p className={styles.inspectorAuditTitle}>Auditoría activa</p>
+              <p className={styles.inspectorAuditText}>
+                Todos los cambios de permisos se registran en el log de auditoría del sistema en tiempo real.
               </p>
             </div>
           </div>
@@ -406,35 +644,30 @@ function PermissionInspector({ perm }: { perm: PermissionDef }) {
   const risk = computeRisk(perm);
   return (
     <div className={styles.inspectorDetail}>
-      <div className={styles.inspectorHead}>
-        <span className={styles.inspectorTag}>Inspección de Permiso</span>
-        <h2 className={styles.inspectorName}>{perm.label}</h2>
-        <span className={styles.inspectorSlug}>{perm.key}</span>
+      <div>
+        <p className={styles.inspectorPermName}>{perm.label}</p>
+        <span className={styles.inspectorPermKey}>{perm.key}</span>
       </div>
 
-      <div className={styles.inspectorSections}>
-        <div>
-          <span className={styles.inspectorSectionLabel}>Descripción Operacional</span>
-          <p className={styles.inspectorSectionText}>{perm.description ?? '—'}</p>
-        </div>
+      <div className={styles.inspectorSection}>
+        <span className={styles.inspectorSectionLabel}>Descripción Operacional</span>
+        <p className={styles.inspectorSectionText}>{perm.description ?? '—'}</p>
+      </div>
 
-        <div>
-          <span className={styles.inspectorSectionLabel}>Impacto en el Sistema</span>
-          <p className={styles.inspectorSectionText}>
-            Concede accesibilidad técnica directa al subsistema ITSM en el alcance operacional de{' '}
-            <code style={{ fontFamily: 'monospace', fontSize: 10 }}>{perm.key}</code>.
-          </p>
-        </div>
+      <div className={styles.inspectorSection}>
+        <span className={styles.inspectorSectionLabel}>Impacto en el Sistema</span>
+        <p className={styles.inspectorSectionText}>
+          Concede acceso directo al subsistema ITSM en el alcance operacional de{' '}
+          <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 10 }}>{perm.key}</code>.
+        </p>
+      </div>
 
-        <div>
-          <span className={styles.inspectorSectionLabel}>Nivel de Riesgo</span>
-          <div>
-            <span className={`${styles.riskBadge} ${RISK_CLS[risk]}`}>
-              ⚠ {RISK_LABEL[risk]}
-            </span>
-            <p className={styles.riskDesc}>{RISK_DESC[risk]}</p>
-          </div>
-        </div>
+      <div className={styles.inspectorSection}>
+        <span className={styles.inspectorSectionLabel}>Nivel de Riesgo</span>
+        <span className={`${styles.riskBadge} ${RISK_CLS[risk]}`}>
+          ⚠ {RISK_LABEL[risk]}
+        </span>
+        <p className={styles.riskDesc}>{RISK_DESC[risk]}</p>
       </div>
     </div>
   );

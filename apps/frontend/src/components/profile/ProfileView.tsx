@@ -7,6 +7,7 @@ import { ProfileOverviewTab } from './ProfileOverviewTab';
 import { ProfileSecurityTab } from './ProfileSecurityTab';
 import { ProfileSettingsTab } from './ProfileSettingsTab';
 import { ProfileSkillsTab } from './ProfileSkillsTab';
+import { ContextNav } from '@/components/ui/ContextNav';
 import { type ProfileUser, type ActiveTab } from './profile.types';
 import styles from './profile.module.css';
 
@@ -37,6 +38,16 @@ export function ProfileView({ user: initialUser, isOwnProfile, viewerIsSuperadmi
   }, []);
 
   return (
+    <>
+      {!onBack && (
+        <ContextNav
+          back
+          crumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: isOwnProfile ? 'Mi Perfil' : fullName },
+          ]}
+        />
+      )}
     <div style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 0 60px' }}>
       {onBack && (
         <button className={styles.btnBack} onClick={onBack}>
@@ -111,5 +122,6 @@ export function ProfileView({ user: initialUser, isOwnProfile, viewerIsSuperadmi
         </div>
       </div>
     </div>
+    </>
   );
 }
