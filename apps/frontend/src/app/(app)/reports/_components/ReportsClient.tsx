@@ -1,138 +1,209 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Ticket, Download, Package } from 'lucide-react';
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
+import {
+  TrendingUp, Shield, BarChart2, Activity, ChevronDown, Download,
+  RefreshCw, AlertTriangle, Info, CheckCircle2, Zap, User,
+} from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUIStore } from '@/stores/ui.store';
 import { ADMIN_ROLES } from '@/constants/roles';
-import { reportingService, type DailyTrend, type SlaByPriority, type AuditEntry } from '@/services/reporting.service';
+import {
+  reportingService,
+  type DailyTrend, type SlaByPriority, type AuditEntry,
+  type AuditKpis, type AuditUserActivity, type TicketsSummary, type SlaMetrics,
+} from '@/services/reporting.service';
 import api from '@/services/api';
 import { getPriorityConfig } from '@/constants/status';
 import { fmtDay } from '@/lib/formatters';
 import styles from '../reports.module.css';
 import mgmt   from '@/styles/mgmt.module.css';
 
-const PRIORITY_COLORS = Object.fromEntries(['baja','media','alta','critica'].map(p => [p, getPriorityConfig(p).color]));
-const PRIORITY_LABELS = Object.fromEntries(['baja','media','alta','critica'].map(p => [p, getPriorityConfig(p).label]));
+/* ─────────────────── helpers ─────────────────────── */
 
-function num(v: string | null | undefined): number {
+function n(v: string | null | undefined): number {
   return v ? parseFloat(v) : 0;
 }
 
-/* ── Horizontal bar ── */
-function HBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+const PRIORITY_COLORS = Object.fromEntries(
+  ['baja','media','alta','critica'].map(p => [p, getPriorityConfig(p).color])
+);
+const PRIORITY_LABELS = Object.fromEntries(
+  ['baja','media','alta','critica'].map(p => [p, getPriorityConfig(p).label])
+);
+
+type Severity = 'critical' | 'warning' | 'info' | 'success';
+
+function getSeverity(action: string): Severity {
+  const a = action.toLowerCase();
+  if (a.includes('delete') || a.includes('login_failed') || a.includes('login_locked') || a.includes('permission')) return 'critical';
+  if (a.includes('update') || a.includes('config') || a.includes('setting') || a.includes('role')) return 'warning';
+  if (a.includes('created') || a.includes('completed') || a.includes('resolved') || a === 'auth.login') return 'success';
+  return 'info';
+}
+
+function getCategory(action: string): string {
+  const a = action.toLowerCase();
+  if (a.startsWith('auth.')) return 'Autenticación';
+  if (a.startsWith('calendar.')) return 'Calendario';
+  if (a.startsWith('ticket.')) return 'Helpdesk';
+  if (a.startsWith('asset.')) return 'Inventario';
+  if (a.startsWith('request.')) return 'Solicitudes';
+  if (a.includes('config') || a.includes('setting')) return 'Configuración';
+  if (a.includes('permission') || a.includes('role')) return 'Permisos';
+  return 'Sistema';
+}
+
+function humanizeAction(action: string): string {
+  return action
+    .replace('auth.', '')
+    .replace('calendar.', 'Calendario: ')
+    .replace('ticket.', 'Ticket: ')
+    .replace('asset.', 'Activo: ')
+    .replace('request.', 'Solicitud: ')
+    .replace(/_/g, ' ')
+    .replace(/\./g, ' · ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 60_000)   return 'Hace un momento';
+  if (diff < 3600_000) return `Hace ${Math.floor(diff / 60_000)} min`;
+  if (diff < 86400_000) return `Hace ${Math.floor(diff / 3600_000)}h`;
+  return new Date(iso).toLocaleDateString('es-CO');
+}
+
+const SEV = {
+  critical: { color: '#ef4444', label: 'CRÍTICO' },
+  warning:  { color: '#f59e0b', label: 'AVISO'   },
+  info:     { color: '#3b82f6', label: 'INFO'     },
+  success:  { color: '#22c55e', label: 'OK'       },
+} as const;
+
+function computeInsights(tickets?: TicketsSummary, sla?: SlaMetrics): string[] {
+  const out: string[] = [];
+  if (!tickets || !sla) return out;
+  const compliance = n(sla.summary.compliance_pct);
+  const breached   = n(sla.summary.breached);
+  const total      = n(tickets.totals.total);
+  const open       = n(tickets.totals.open);
+  const last7      = n(tickets.totals.last_7_days);
+
+  if      (compliance < 70) out.push(`SLA crítico: solo ${compliance.toFixed(1)}% de cumplimiento — acción inmediata requerida.`);
+  else if (compliance < 90) out.push(`SLA en alerta: ${compliance.toFixed(1)}% de cumplimiento, por debajo del objetivo del 90%.`);
+  else                      out.push(`SLA saludable: ${compliance.toFixed(1)}% de cumplimiento, por encima del objetivo.`);
+
+  if (breached > 0) out.push(`${breached} ticket${breached !== 1 ? 's' : ''} con SLA vencido requieren escalación inmediata.`);
+
+  const openRate = total > 0 ? (open / total) * 100 : 0;
+  if (openRate > 60) out.push(`${openRate.toFixed(0)}% de tickets están abiertos — carga operacional elevada.`);
+  else if (openRate < 20 && total > 0) out.push(`Solo ${openRate.toFixed(0)}% de tickets están abiertos — excelente tasa de cierre.`);
+
+  if (last7 > 0) {
+    const avg = (last7 / 7).toFixed(1);
+    out.push(`Promedio de ${avg} tickets/día en los últimos 7 días.`);
+  }
+  return out.slice(0, 4);
+}
+
+/* ─────────────────── sub-components ─────────────────── */
+
+function KpiCard({ label, value, sub, color = '#0e2235' }: {
+  label: string; value: string | number; sub?: string; color?: string;
+}) {
   return (
-    <div className={styles.hbar}>
-      <div className={styles.hbarLabels}>
-        <span className={styles.hbarName}>{label}</span>
-        <span className={styles.hbarCount}>
-          {value} <span className={styles.hbarPct}>({pct}%)</span>
-        </span>
-      </div>
-      <div className={styles.hbarTrack}>
-        <div className={styles.hbarFill} style={{ width: `${pct}%`, background: color }} />
-      </div>
+    <div className={styles.kpiCard}>
+      <span className={styles.kpiLabel}>{label}</span>
+      <span className={styles.kpiValue} style={{ color }}>{value}</span>
+      {sub && <span className={styles.kpiSub}>{sub}</span>}
     </div>
   );
 }
 
-/* ── Trend bar chart ── */
-function TrendChart({ trend }: { trend: DailyTrend[] }) {
-  const maxVal = useMemo(() => Math.max(...trend.map((d) => num(d.created)), 1), [trend]);
+function InsightsBox({ insights }: { insights: string[] }) {
+  if (insights.length === 0) return null;
+  return (
+    <div className={styles.insightsBox}>
+      <p className={styles.insightsTitle}><Zap size={12} /> Análisis operacional automático</p>
+      <ul className={styles.insightsList}>
+        {insights.map((ins, i) => (
+          <li key={i} className={styles.insightsItem}>
+            <span className={styles.insightsDot} />
+            {ins}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
-  if (trend.length === 0) {
-    return <div className={styles.trendEmpty}>Sin datos en los últimos 30 días</div>;
+function AuditTimeline({ events }: { events: AuditEntry[] }) {
+  if (events.length === 0) {
+    return <div className={styles.timelineEmpty}>Sin eventos de auditoría registrados.</div>;
   }
-
   return (
-    <>
-      <div className={styles.trendBars}>
-        {trend.map((d) => {
-          const h   = Math.max(4, Math.round((num(d.created) / maxVal) * 80));
-          const val = num(d.created);
-          return (
-            <div
-              key={d.day}
-              className={styles.trendBarWrap}
-              title={`${fmtDay(d.day)}: ${val} ticket${val !== 1 ? 's' : ''}`}
-            >
-              <div className={styles.trendBarFill} style={{ height: h, opacity: val === 0 ? 0.2 : 1 }} />
-            </div>
-          );
-        })}
-      </div>
-      <div className={styles.trendFooter}>
-        <span>{fmtDay(trend[0].day)}</span>
-        <span>Total: {trend.reduce((s, d) => s + num(d.created), 0)} tickets</span>
-        <span>{fmtDay(trend[trend.length - 1].day)}</span>
-      </div>
-    </>
-  );
-}
-
-/* ── SLA ring ── */
-function SlaRing({ pct }: { pct: number }) {
-  const r             = 44;
-  const circumference = 2 * Math.PI * r;
-  const dash          = (pct / 100) * circumference;
-  const color         = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
-
-  return (
-    <svg width={110} height={110} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={55} cy={55} r={r} fill="none" stroke="#f1f5f9" strokeWidth={12} />
-      <circle
-        cx={55} cy={55} r={r} fill="none"
-        stroke={color} strokeWidth={12}
-        strokeDasharray={`${dash} ${circumference}`}
-        strokeLinecap="round"
-        style={{ transition: 'stroke-dasharray .6s ease' }}
-      />
-    </svg>
-  );
-}
-
-/* ── SLA priority table ── */
-function SlaPriorityTable({ rows }: { rows: SlaByPriority[] }) {
-  if (rows.length === 0) return <p className={styles.noData}>Sin datos</p>;
-  return (
-    <table className={styles.table}>
-      <thead className={styles.tableHead}>
-        <tr>
-          {['Prioridad', 'Total', 'Vencidos', 'SLA prom. (h)'].map((h) => (
-            <th key={h}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody className={styles.tableBody}>
-        {rows.map((r) => {
-          const color  = PRIORITY_COLORS[r.priority] ?? '#94a3b8';
-          const breach = num(r.breached);
-          return (
-            <tr key={r.priority}>
-              <td>
-                <span className={styles.tablePriority}>
-                  <span className={styles.tableDot} style={{ background: color }} />
-                  <span className={styles.tablePrioName}>{PRIORITY_LABELS[r.priority] ?? r.priority}</span>
+    <div className={styles.timeline}>
+      {events.map((e) => {
+        const sev = getSeverity(e.action);
+        const cfg = SEV[sev];
+        return (
+          <div key={e.id} className={styles.timelineItem}>
+            <div className={styles.timelineDot} style={{ background: cfg.color, marginTop: 4 }} />
+            <div className={styles.timelineContent}>
+              <div className={styles.timelineTop}>
+                <span
+                  className={styles.timelineSev}
+                  style={{ color: cfg.color, borderColor: `${cfg.color}40`, background: `${cfg.color}12` }}
+                >
+                  {cfg.label}
                 </span>
-              </td>
-              <td className={styles.tableTotal}>{num(r.total)}</td>
-              <td style={{ color: breach > 0 ? '#ef4444' : '#22c55e', fontWeight: 600 }}>{breach}</td>
-              <td className={styles.tableAvg}>{r.avg_sla_hours ? `${Math.round(num(r.avg_sla_hours))}h` : '—'}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+                <span className={styles.timelineActor}>{e.actor_name ?? e.actor_email ?? 'Sistema'}</span>
+                <span className={styles.timelineAction}>{humanizeAction(e.action)}</span>
+              </div>
+              <div className={styles.timelineMeta}>
+                <span>{relativeTime(e.created_at)}</span>
+                <span>· {getCategory(e.action)}</span>
+                {e.entity_id && <span>· #{e.entity_id.slice(0, 8)}</span>}
+                {e.ip_address && <span>· {e.ip_address}</span>}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
-/* ── Main ── */
+const TOOLTIP_STYLE = {
+  fontSize: 11,
+  borderRadius: 8,
+  border: '1px solid #e2e8f0',
+  boxShadow: '0 4px 12px rgba(0,0,0,.08)',
+};
+
+/* ─────────────────── tabs ─────────────────────── */
+
+type Tab = 'overview' | 'operacion' | 'sla' | 'auditoria';
+
+const TABS: { key: Tab; label: string; Icon: typeof BarChart2 }[] = [
+  { key: 'overview',   label: 'Overview',   Icon: BarChart2   },
+  { key: 'operacion',  label: 'Operación',  Icon: TrendingUp  },
+  { key: 'sla',        label: 'SLA',        Icon: Activity    },
+  { key: 'auditoria',  label: 'Auditoría',  Icon: Shield      },
+];
+
+/* ─────────────────── main ─────────────────────── */
+
 export function ReportsClient() {
-  const user           = useAuthStore((s) => s.user);
-  const isSuperadmin   = user?.is_superadmin ?? false;
-  const storeModuleId  = useUIStore((s) => s.moduleId);
+  const user          = useAuthStore((s) => s.user);
+  const isSuperadmin  = user?.is_superadmin ?? false;
+  const storeModuleId = useUIStore((s) => s.moduleId);
 
   const adminModules = useMemo(() => {
     const roles = user?.module_roles?.filter(
@@ -142,16 +213,93 @@ export function ReportsClient() {
     return roles.filter((r) => { if (seen.has(r.module_id)) return false; seen.add(r.module_id); return true; });
   }, [user]);
 
-  const [selectedModule, setSelectedModule] = useState<string>('');
-  const [dateFrom,       setDateFrom]       = useState<string>('');
-  const [dateTo,         setDateTo]         = useState<string>('');
-  const [csvExporting,   setCsvExporting]   = useState(false);
+  const [tab,          setTab]          = useState<Tab>('overview');
+  const [selectedMod,  setSelectedMod]  = useState('');
+  const [dateFrom,     setDateFrom]     = useState('');
+  const [dateTo,       setDateTo]       = useState('');
+  const [exportOpen,   setExportOpen]   = useState(false);
+  const [csvLoading,   setCsvLoading]   = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
-  const handleExportCsv = useCallback(async () => {
-    setCsvExporting(true);
+  // audit filters
+  const [auditActor,   setAuditActor]   = useState('');
+  const [auditAction,  setAuditAction]  = useState('');
+  const [auditFrom,    setAuditFrom]    = useState('');
+  const [auditTo,      setAuditTo]      = useState('');
+
+  useEffect(() => { setSelectedMod(storeModuleId ?? ''); }, [storeModuleId]);
+
+  // close export dropdown on outside click
+  useEffect(() => {
+    if (!exportOpen) return;
+    function handler(e: MouseEvent) {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [exportOpen]);
+
+  const moduleId = selectedMod || undefined;
+  const from     = dateFrom || undefined;
+  const to       = dateTo   || undefined;
+  const canView  = isSuperadmin || adminModules.length > 0;
+
+  const { data: tickets, isLoading: tLoading, refetch: refetchTickets } = useQuery({
+    queryKey:  ['reports-tickets', moduleId, from, to],
+    queryFn:   () => reportingService.getTicketsSummary(moduleId, from, to),
+    staleTime: 2 * 60_000,
+    enabled:   canView,
+  });
+
+  const { data: sla, isLoading: sLoading, refetch: refetchSla } = useQuery({
+    queryKey:  ['reports-sla', moduleId, from, to],
+    queryFn:   () => reportingService.getSlaMetrics(moduleId, from, to),
+    staleTime: 2 * 60_000,
+    enabled:   canView,
+  });
+
+  const { data: auditLog, isLoading: auditLoading, refetch: refetchAudit } = useQuery({
+    queryKey:  ['reports-audit', auditActor, auditAction, auditFrom, auditTo],
+    queryFn:   () => reportingService.getAuditLogFiltered({
+      limit: 100,
+      actorId: auditActor || undefined,
+      action:  auditAction || undefined,
+      dateFrom: auditFrom || undefined,
+      dateTo:   auditTo   || undefined,
+    }),
+    staleTime: 60_000,
+    enabled:   canView && tab === 'auditoria',
+  });
+
+  const { data: auditKpis } = useQuery({
+    queryKey:  ['reports-audit-kpis'],
+    queryFn:   () => reportingService.getAuditKpis(),
+    staleTime: 60_000,
+    enabled:   canView && tab === 'auditoria',
+  });
+
+  const { data: auditActivity } = useQuery({
+    queryKey:  ['reports-audit-activity'],
+    queryFn:   () => reportingService.getAuditUserActivity(12),
+    staleTime: 5 * 60_000,
+    enabled:   canView && tab === 'auditoria',
+  });
+
+  const isLoading = tLoading || sLoading;
+
+  function refetchAll() {
+    refetchTickets();
+    refetchSla();
+    if (tab === 'auditoria') refetchAudit();
+  }
+
+  /* ── CSV export ── */
+  const handleCsvExport = useCallback(async () => {
+    setCsvLoading(true);
+    setExportOpen(false);
     try {
       const res = await api.get('/reporting/export/tickets', {
-        params:       selectedModule ? { moduleId: selectedModule } : {},
+        params:       moduleId ? { moduleId } : {},
         responseType: 'blob',
       });
       const url  = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
@@ -163,59 +311,225 @@ export function ReportsClient() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } finally {
-      setCsvExporting(false);
+      setCsvLoading(false);
     }
-  }, [selectedModule]);
+  }, [moduleId]);
 
-  // Sync to module context: auto-filter when entering a module, reset when leaving
-  useEffect(() => {
-    setSelectedModule(storeModuleId ?? '');
-  }, [storeModuleId]);
+  /* ── PDF export ── */
+  const handlePdfExport = useCallback(async () => {
+    setExportOpen(false);
+    const { default: jsPDF }     = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
 
-  const moduleId = selectedModule || undefined;
-  const from     = dateFrom || undefined;
-  const to       = dateTo   || undefined;
+    const doc = new jsPDF() as any;
+    const now = new Date().toLocaleDateString('es-CO');
 
-  const canViewReports = isSuperadmin || adminModules.length > 0;
+    // Cover
+    doc.setFillColor(14, 34, 53);
+    doc.rect(0, 0, 210, 55, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(26);
+    doc.setFont('helvetica', 'bold');
+    doc.text('NEXO ITSM', 18, 28);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Reporte Ejecutivo Operacional', 18, 40);
+    doc.setFontSize(10);
+    doc.text(`Emitido: ${now}`, 18, 50);
 
-  const { data: sla, isLoading: slaLoading } = useQuery({
-    queryKey:  ['reports-sla', moduleId, from, to],
-    queryFn:   () => reportingService.getSlaMetrics(moduleId, from, to),
-    staleTime: 2 * 60_000,
-    enabled:   canViewReports,
-  });
+    // Watermark
+    doc.setTextColor(200, 200, 200);
+    doc.setFontSize(60);
+    doc.setFont('helvetica', 'bold');
+    doc.saveGraphicsState();
+    doc.setGState(new (doc.GState as any)({ opacity: 0.06 }));
+    doc.text('NEXO', 30, 160, { angle: 40 });
+    doc.restoreGraphicsState();
 
-  const { data: tickets, isLoading: ticketsLoading } = useQuery({
-    queryKey:  ['reports-tickets', moduleId, from, to],
-    queryFn:   () => reportingService.getTicketsSummary(moduleId, from, to),
-    staleTime: 2 * 60_000,
-    enabled:   canViewReports,
-  });
+    // KPIs section
+    doc.setTextColor(14, 34, 53);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('KPIs Operacionales', 18, 70);
 
-  const { data: inventory } = useQuery({
-    queryKey:  ['reports-inventory', moduleId],
-    queryFn:   () => reportingService.getInventorySummary(moduleId),
-    staleTime: 2 * 60_000,
-    enabled:   canViewReports,
-  });
+    const compliance = n(sla?.summary.compliance_pct);
+    const kpiRows = [
+      ['Total Tickets',     n(tickets?.totals.total).toString()],
+      ['Tickets Abiertos',  n(tickets?.totals.open).toString()],
+      ['Tickets Cerrados',  n(tickets?.totals.closed).toString()],
+      ['Últimos 7 días',    n(tickets?.totals.last_7_days).toString()],
+      ['SLA Cumplimiento',  `${compliance}%`],
+      ['SLA Vencidos',      n(sla?.summary.breached).toString()],
+    ];
 
-  const { data: auditLog } = useQuery({
-    queryKey:  ['reports-audit'],
-    queryFn:   () => reportingService.getAuditLog(50),
-    staleTime: 60_000,
-    enabled:   isSuperadmin,
-  });
+    autoTable(doc, {
+      startY: 75,
+      head: [['Métrica', 'Valor']],
+      body: kpiRows,
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [14, 34, 53] },
+      columnStyles: { 1: { fontStyle: 'bold', halign: 'center' } },
+    });
 
-  const isLoading = slaLoading || ticketsLoading;
+    // SLA by priority
+    let y = (doc as any).lastAutoTable.finalY + 14;
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SLA por Prioridad', 18, y);
 
+    const slaRows = (sla?.by_priority ?? []).map(r => [
+      PRIORITY_LABELS[r.priority] ?? r.priority,
+      n(r.total).toString(),
+      n(r.breached).toString(),
+      r.avg_sla_hours ? `${Math.round(n(r.avg_sla_hours))}h` : '—',
+    ]);
+
+    autoTable(doc, {
+      startY: y + 5,
+      head: [['Prioridad', 'Total', 'Vencidos', 'SLA Prom.']],
+      body: slaRows,
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [14, 34, 53] },
+    });
+
+    // Insights
+    const insights = computeInsights(tickets, sla);
+    if (insights.length > 0) {
+      y = (doc as any).lastAutoTable.finalY + 14;
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Análisis Automático', 18, y);
+      y += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      insights.forEach((ins, i) => {
+        doc.text(`• ${ins}`, 20, y + i * 7);
+      });
+    }
+
+    doc.save(`nexo-reporte-${Date.now()}.pdf`);
+  }, [tickets, sla]);
+
+  /* ── Excel export ── */
+  const handleExcelExport = useCallback(async () => {
+    setExportOpen(false);
+    const ExcelJS = await import('exceljs');
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'NEXO ITSM';
+    wb.created = new Date();
+
+    // Sheet 1: Resumen
+    const ws1 = wb.addWorksheet('Resumen Ejecutivo');
+    ws1.columns = [
+      { header: 'Métrica', key: 'metric', width: 30 },
+      { header: 'Valor',   key: 'value',  width: 18 },
+    ];
+    ws1.getRow(1).font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    ws1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E2235' } };
+    const compliance = n(sla?.summary.compliance_pct);
+    [
+      { metric: 'Total Tickets',    value: n(tickets?.totals.total) },
+      { metric: 'Tickets Abiertos', value: n(tickets?.totals.open) },
+      { metric: 'Tickets Cerrados', value: n(tickets?.totals.closed) },
+      { metric: 'Últimos 7 Días',   value: n(tickets?.totals.last_7_days) },
+      { metric: 'SLA Cumplimiento', value: `${compliance}%` },
+      { metric: 'SLA Vencidos',     value: n(sla?.summary.breached) },
+    ].forEach(r => ws1.addRow(r));
+
+    // Sheet 2: SLA por prioridad
+    const ws2 = wb.addWorksheet('SLA por Prioridad');
+    ws2.columns = [
+      { header: 'Prioridad',   key: 'priority', width: 16 },
+      { header: 'Total',       key: 'total',    width: 10 },
+      { header: 'Vencidos',    key: 'breached', width: 12 },
+      { header: 'SLA Prom. h', key: 'avg',      width: 14 },
+    ];
+    ws2.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws2.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E2235' } };
+    (sla?.by_priority ?? []).forEach(r => ws2.addRow({
+      priority: PRIORITY_LABELS[r.priority] ?? r.priority,
+      total:    n(r.total),
+      breached: n(r.breached),
+      avg:      r.avg_sla_hours ? Math.round(n(r.avg_sla_hours)) : '—',
+    }));
+
+    // Sheet 3: Tendencia
+    const ws3 = wb.addWorksheet('Tendencia 30 días');
+    ws3.columns = [
+      { header: 'Fecha',   key: 'day',     width: 16 },
+      { header: 'Tickets', key: 'created', width: 12 },
+    ];
+    ws3.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws3.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF5E3A' } };
+    (tickets?.daily_trend ?? []).forEach(d => ws3.addRow({ day: d.day, created: n(d.created) }));
+
+    // Sheet 4: Auditoría
+    const ws4 = wb.addWorksheet('Auditoría');
+    ws4.columns = [
+      { header: 'Timestamp', key: 'created_at',  width: 22 },
+      { header: 'Actor',     key: 'actor_name',  width: 24 },
+      { header: 'Acción',    key: 'action',      width: 32 },
+      { header: 'Entidad',   key: 'entity_type', width: 18 },
+      { header: 'IP',        key: 'ip_address',  width: 16 },
+    ];
+    ws4.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws4.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
+    (auditLog ?? []).forEach(e => ws4.addRow({
+      created_at:  new Date(e.created_at).toLocaleString('es-CO'),
+      actor_name:  e.actor_name ?? e.actor_email ?? '—',
+      action:      e.action,
+      entity_type: e.entity_type,
+      ip_address:  e.ip_address ?? '—',
+    }));
+
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nexo-reporte-${Date.now()}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [tickets, sla, auditLog]);
+
+  /* ── derived data ── */
   const totals     = tickets?.totals;
   const byState    = tickets?.by_state    ?? [];
   const byPriority = tickets?.by_priority ?? [];
   const trend      = tickets?.daily_trend ?? [];
+  const compliance = n(sla?.summary.compliance_pct);
+  const hasData    = n(totals?.total) > 0;
+  const insights   = useMemo(() => computeInsights(tickets, sla), [tickets, sla]);
 
-  const totalTickets = num(totals?.total);
-  const compliance   = num(sla?.summary.compliance_pct);
-  const hasData      = totalTickets > 0;
+  const trendData = trend.map((d) => ({
+    name:    fmtDay(d.day).slice(0, 6),
+    tickets: n(d.created),
+    day:     d.day,
+  }));
+
+  const stateData = byState.map((s) => ({
+    name:  s.state_label,
+    value: n(s.total),
+    color: s.is_final ? '#22c55e' : '#3b82f6',
+  }));
+
+  const priorityData = byPriority.map((p) => ({
+    name:  PRIORITY_LABELS[p.priority] ?? p.priority,
+    value: n(p.total),
+    color: PRIORITY_COLORS[p.priority] ?? '#94a3b8',
+  }));
+
+  const slaDonutData = [
+    { name: 'Cumplidos', value: n(sla?.summary.compliant), color: '#22c55e' },
+    { name: 'Vencidos',  value: n(sla?.summary.breached),  color: '#ef4444' },
+    { name: 'Sin SLA',   value: n(sla?.summary.without_sla), color: '#e2e8f0' },
+  ].filter(d => d.value > 0);
+
+  const activityData = (auditActivity ?? []).map((u) => ({
+    name:  (u.actor_name ?? u.actor_email ?? '—').split(' ').slice(0, 2).join(' '),
+    count: n(u.action_count),
+  })).slice(0, 10);
 
   return (
     <div className={mgmt.pageWrap}>
@@ -224,28 +538,50 @@ export function ReportsClient() {
         {/* ── Header ── */}
         <div className={styles.header}>
           <div>
-            <h1 className={styles.title}>Centro de Reportes y Auditoría</h1>
-            <p className={styles.sub}>Estadísticas avanzadas, nivel de servicio de acuerdos de SLA y registro de auditoría de seguridad global.</p>
+            <p className={styles.headerLabel}>Centro de Analítica</p>
+            <h1 className={styles.title}>Reportes y Auditoría</h1>
+            <p className={styles.sub}>Observabilidad operacional · SLA · Trazabilidad empresarial</p>
           </div>
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            disabled={csvExporting}
-            className={styles.filterBtn}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: csvExporting ? 'not-allowed' : 'pointer', opacity: csvExporting ? 0.7 : 1, fontFamily: 'inherit' }}
-          >
-            <Download size={13} />
-            {csvExporting ? 'Exportando…' : 'Exportar tickets CSV'}
-          </button>
+          <div className={styles.headerActions}>
+            <button type="button" onClick={refetchAll} className={styles.refreshBtn}>
+              <RefreshCw size={12} />
+              Actualizar
+            </button>
+            <div className={styles.exportWrap} ref={exportRef}>
+              <button
+                type="button"
+                className={styles.exportBtn}
+                disabled={csvLoading}
+                onClick={() => setExportOpen(v => !v)}
+              >
+                <Download size={12} />
+                {csvLoading ? 'Exportando…' : 'Exportar'}
+                <ChevronDown size={11} />
+              </button>
+              {exportOpen && (
+                <div className={styles.exportDropdown}>
+                  <button type="button" className={styles.exportDropdownItem} onClick={handleCsvExport}>
+                    <Download size={13} /> Exportar CSV
+                  </button>
+                  <button type="button" className={styles.exportDropdownItem} onClick={handlePdfExport}>
+                    <Download size={13} /> Exportar PDF
+                  </button>
+                  <button type="button" className={styles.exportDropdownItem} onClick={handleExcelExport}>
+                    <Download size={13} /> Exportar Excel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* ── Module filter — hidden when locked to a module context ── */}
+        {/* ── Module filter ── */}
         {!storeModuleId && (isSuperadmin || adminModules.length > 1) && (
           <div className={styles.filterBar}>
             <button
               type="button"
-              className={`${styles.filterBtn}${!selectedModule ? ` ${styles.filterBtnActive}` : ''}`}
-              onClick={() => setSelectedModule('')}
+              className={`${styles.filterBtn}${!selectedMod ? ` ${styles.filterBtnActive}` : ''}`}
+              onClick={() => setSelectedMod('')}
             >
               Todos los módulos
             </button>
@@ -253,8 +589,8 @@ export function ReportsClient() {
               <button
                 key={m.module_id}
                 type="button"
-                className={`${styles.filterBtn}${selectedModule === m.module_id ? ` ${styles.filterBtnActive}` : ''}`}
-                onClick={() => setSelectedModule(m.module_id)}
+                className={`${styles.filterBtn}${selectedMod === m.module_id ? ` ${styles.filterBtnActive}` : ''}`}
+                onClick={() => setSelectedMod(m.module_id)}
               >
                 {m.module_name}
               </button>
@@ -262,274 +598,396 @@ export function ReportsClient() {
           </div>
         )}
 
-        {/* ── Date range filter ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Rango de fechas:</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={e => setDateFrom(e.target.value)}
-            style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontFamily: 'inherit', color: '#334155' }}
-          />
-          <span style={{ fontSize: 11, color: '#94a3b8' }}>—</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={e => setDateTo(e.target.value)}
-            style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontFamily: 'inherit', color: '#334155' }}
-          />
+        {/* ── Date range ── */}
+        <div className={styles.dateRow}>
+          <span className={styles.dateLabel}>Rango:</span>
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={styles.dateInput} />
+          <span className={styles.dateSep}>—</span>
+          <input type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   className={styles.dateInput} />
           {(dateFrom || dateTo) && (
-            <button
-              type="button"
-              onClick={() => { setDateFrom(''); setDateTo(''); }}
-              style={{ fontSize: 11, fontWeight: 700, color: '#ff5e3a', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
-            >
-              Limpiar
-            </button>
+            <button type="button" className={styles.dateClear} onClick={() => { setDateFrom(''); setDateTo(''); }}>Limpiar</button>
           )}
         </div>
 
-        {isLoading && <div className={styles.loading}>Cargando métricas…</div>}
+        {/* ── Tab bar ── */}
+        <div className={styles.tabs}>
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={`${styles.tab}${tab === t.key ? ` ${styles.tabActive}` : ''}`}
+              onClick={() => setTab(t.key)}
+            >
+              <t.Icon size={13} /> {t.label}
+            </button>
+          ))}
+        </div>
 
-        {!isLoading && (
+        {isLoading ? (
+          <div className={styles.loading}>Cargando métricas…</div>
+        ) : (
           <>
-            {/* ── 4 metric cards ── */}
-            <div className={styles.metricsGrid}>
-              <div className={styles.metricCard}>
-                <span className={styles.metricLabel}>Cumplimiento SLA General</span>
-                <span className={`${styles.metricValue} ${styles.metricValueGreen}`}>
-                  {sla?.summary.compliance_pct ? `${compliance}%` : '—'}
-                </span>
-                <span className={styles.metricTrend}>
-                  ↑ Basado en tickets con SLA activo
-                </span>
-              </div>
 
-              <div className={styles.metricCard}>
-                <span className={styles.metricLabel}>Total Tickets</span>
-                <span className={`${styles.metricValue} ${styles.metricValueDark}`}>
-                  {num(totals?.total)}
-                </span>
-                <span className={styles.metricTrend}>
-                  Abiertos: {num(totals?.open)} · Cerrados: {num(totals?.closed)}
-                </span>
-              </div>
+            {/* ══════════ OVERVIEW ══════════ */}
+            {tab === 'overview' && (
+              <>
+                <InsightsBox insights={insights} />
 
-              <div className={styles.metricCard}>
-                <span className={styles.metricLabel}>Tickets Vencidos SLA</span>
-                <span className={`${styles.metricValue} ${styles.metricValueCoral}`}>
-                  {num(sla?.summary.breached)}
-                </span>
-                <span className={styles.metricTrend}>
-                  Sin SLA asignado: {num(sla?.summary.without_sla)}
-                </span>
-              </div>
+                <div className={styles.kpiGrid}>
+                  <KpiCard label="Total Tickets"    value={n(totals?.total)}          sub={`Abiertos: ${n(totals?.open)} · Cerrados: ${n(totals?.closed)}`} color="#0e2235" />
+                  <KpiCard label="SLA Cumplimiento" value={`${compliance}%`}          sub="De tickets con SLA activo"   color={compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444'} />
+                  <KpiCard label="SLA Vencidos"     value={n(sla?.summary.breached)}  sub={`Sin SLA: ${n(sla?.summary.without_sla)}`} color="#ef4444" />
+                  <KpiCard label="Últimos 7 Días"   value={n(totals?.last_7_days)}    sub="Tickets nuevos" color="#3b82f6" />
+                </div>
 
-              <div className={styles.metricCard}>
-                <span className={styles.metricLabel}>Últimos 7 Días</span>
-                <span className={`${styles.metricValue} ${styles.metricValueDark}`}>
-                  {num(totals?.last_7_days)} tickets
-                </span>
-                <span className={styles.metricTrend}>
-                  <span className={styles.metricTrendDot} />
-                  Nuevos tickets creados
-                </span>
-              </div>
-            </div>
+                {hasData && (
+                  <>
+                    <div className={styles.chartsGrid}>
+                      <div className={styles.chartPanel}>
+                        <p className={styles.chartTitle}><TrendingUp size={13} style={{ color: '#ff5e3a' }} /> Tendencia de creación — 30 días</p>
+                        <p className={styles.chartSub}>Volumen diario de tickets abiertos en el período.</p>
+                        <div className={`${styles.chartArea} ${styles.chartArea260}`}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                              <defs>
+                                <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%"  stopColor="#ff5e3a" stopOpacity={0.22} />
+                                  <stop offset="95%" stopColor="#ff5e3a" stopOpacity={0}    />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                              <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} />
+                              <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} allowDecimals={false} />
+                              <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any) => [v, 'Tickets']} />
+                              <Area type="monotone" dataKey="tickets" stroke="#ff5e3a" fill="url(#trendGrad)" strokeWidth={2} dot={false} />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
 
-            {!hasData && (
-              <div className={styles.emptyState}>
-                <Ticket size={32} className={styles.emptyIcon} />
-                <p className={styles.emptyMsg}>Sin datos para mostrar. Crea tickets para ver métricas.</p>
-              </div>
+                      <div className={styles.chartPanel}>
+                        <p className={styles.chartTitle}>Por Estado</p>
+                        <p className={styles.chartSub}>Distribución actual de tickets.</p>
+                        <div className={`${styles.chartArea} ${styles.chartArea260}`}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={stateData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={76} paddingAngle={3}>
+                                {stateData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                              </Pie>
+                              <Tooltip contentStyle={TOOLTIP_STYLE} />
+                              <Legend iconSize={9} wrapperStyle={{ fontSize: 11 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={styles.chartsGrid}>
+                      <div className={styles.chartPanel}>
+                        <p className={styles.chartTitle}>Por Prioridad</p>
+                        <p className={styles.chartSub}>Distribución de tickets por nivel de prioridad.</p>
+                        <div className={`${styles.chartArea} ${styles.chartArea220}`}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={priorityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} paddingAngle={3}>
+                                {priorityData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                              </Pie>
+                              <Tooltip contentStyle={TOOLTIP_STYLE} />
+                              <Legend iconSize={9} wrapperStyle={{ fontSize: 11 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      <div className={styles.chartPanel}>
+                        <p className={styles.chartTitle}>SLA por Prioridad</p>
+                        <p className={styles.chartSub}>Cumplimiento y breaches por nivel.</p>
+                        <div className={`${styles.chartArea} ${styles.chartArea220}`}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={(sla?.by_priority ?? []).map(r => ({
+                              name:     PRIORITY_LABELS[r.priority] ?? r.priority,
+                              total:    n(r.total),
+                              vencidos: n(r.breached),
+                            }))} margin={{ left: -10 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} allowDecimals={false} />
+                              <Tooltip contentStyle={TOOLTIP_STYLE} />
+                              <Legend iconSize={9} wrapperStyle={{ fontSize: 11 }} />
+                              <Bar dataKey="total"    name="Total"    fill="#0e2235" radius={[4,4,0,0]} />
+                              <Bar dataKey="vencidos" name="Vencidos" fill="#ef4444" radius={[4,4,0,0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {!hasData && (
+                  <div className={styles.emptyState}>
+                    <BarChart2 size={32} className={styles.emptyIcon} />
+                    <p className={styles.emptyMsg}>Sin datos para mostrar. Crea tickets para ver métricas.</p>
+                  </div>
+                )}
+              </>
             )}
 
-            {hasData && (
+            {/* ══════════ OPERACIÓN ══════════ */}
+            {tab === 'operacion' && (
               <>
-                {/* ── Charts split 7/5 ── */}
-                <div className={styles.chartsGrid}>
-                  {/* Left: 30-day trend */}
-                  <div className={styles.chartPanel}>
-                    <div>
-                      <h3 className={styles.chartPanelTitle}>
-                        <span className={styles.chartPanelTitleAccent}>▲</span>
-                        Tendencia de Creación de Tickets (30 días)
-                      </h3>
-                      <p className={styles.chartPanelSub}>
-                        Volumen diario de tickets abiertos en el período reciente.
-                      </p>
-                    </div>
-                    <div className={styles.chartArea}>
-                      <TrendChart trend={trend} />
-                    </div>
-                  </div>
+                <div className={styles.kpiGrid}>
+                  <KpiCard label="Total Tickets"  value={n(totals?.total)}         color="#0e2235" />
+                  <KpiCard label="Abiertos"        value={n(totals?.open)}          color="#ff5e3a" sub="En este momento" />
+                  <KpiCard label="Cerrados"        value={n(totals?.closed)}        color="#22c55e" />
+                  <KpiCard label="Últimos 7 días"  value={n(totals?.last_7_days)}   color="#3b82f6" />
+                </div>
 
-                  {/* Right: SLA ring */}
-                  <div className={styles.chartPanel}>
-                    <div>
-                      <h3 className={styles.chartPanelTitle}>
-                        Cumplimiento de SLA
-                      </h3>
-                      <p className={styles.chartPanelSub}>
-                        Porcentaje de tickets resueltos antes del vencimiento límite.
-                      </p>
+                {hasData && (
+                  <>
+                    <div className={styles.chartPanel} style={{ marginBottom: 16 }}>
+                      <p className={styles.chartTitle}><TrendingUp size={13} style={{ color: '#ff5e3a' }} /> Tendencia 30 días</p>
+                      <p className={styles.chartSub}>Volumen diario de tickets creados.</p>
+                      <div className={`${styles.chartArea} ${styles.chartArea260}`}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="trendGrad2" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%"  stopColor="#0e2235" stopOpacity={0.18} />
+                                <stop offset="95%" stopColor="#0e2235" stopOpacity={0}    />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                            <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} />
+                            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} allowDecimals={false} />
+                            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any) => [v, 'Tickets']} />
+                            <Area type="monotone" dataKey="tickets" stroke="#0e2235" fill="url(#trendGrad2)" strokeWidth={2} dot={false} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                    <div className={styles.chartArea} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div className={styles.slaWrap}>
-                        <div className={styles.slaRingWrap}>
-                          <SlaRing pct={compliance} />
-                          <div className={styles.slaRingInner}>
-                            <span
-                              className={styles.slaRingPct}
-                              style={{ color: compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444' }}
-                            >
-                              {sla?.summary.compliance_pct ? `${compliance}%` : '—'}
-                            </span>
-                          </div>
+
+                    <div className={styles.chartsGrid}>
+                      <div className={styles.chartPanel}>
+                        <p className={styles.chartTitle}>Por Estado</p>
+                        <div className={`${styles.chartArea} ${styles.chartArea220}`}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={stateData} layout="vertical" margin={{ left: 10 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                              <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} allowDecimals={false} />
+                              <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#334155' }} width={90} />
+                              <Tooltip contentStyle={TOOLTIP_STYLE} />
+                              <Bar dataKey="value" name="Tickets" radius={[0,4,4,0]}>
+                                {stateData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
                         </div>
-                        <div className={styles.slaStats}>
-                          {([
-                            ['Total',     num(sla?.summary.total),       '#0e2235'],
-                            ['Conformes', num(sla?.summary.compliant),   '#22c55e'],
-                            ['Vencidos',  num(sla?.summary.breached),    '#ef4444'],
-                            ['Sin SLA',   num(sla?.summary.without_sla), '#94a3b8'],
-                          ] as [string, number, string][]).map(([label, val, color]) => (
-                            <div key={label} className={styles.slaStatItem}>
-                              <p className={styles.slaStatValue} style={{ color }}>{val}</p>
-                              <p className={styles.slaStatLabel}>{label}</p>
-                            </div>
-                          ))}
+                      </div>
+
+                      <div className={styles.chartPanel}>
+                        <p className={styles.chartTitle}>Por Prioridad</p>
+                        <div className={`${styles.chartArea} ${styles.chartArea220}`}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={priorityData} layout="vertical" margin={{ left: 10 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                              <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} allowDecimals={false} />
+                              <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#334155' }} width={70} />
+                              <Tooltip contentStyle={TOOLTIP_STYLE} />
+                              <Bar dataKey="value" name="Tickets" radius={[0,4,4,0]}>
+                                {priorityData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* ══════════ SLA ══════════ */}
+            {tab === 'sla' && (
+              <>
+                <div className={styles.kpiGrid}>
+                  <KpiCard label="Total con SLA"  value={n(sla?.summary.total)}         color="#0e2235" />
+                  <KpiCard label="Cumplimiento"   value={`${compliance}%`}              color={compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444'} />
+                  <KpiCard label="Vencidos"       value={n(sla?.summary.breached)}      color="#ef4444" sub="Breach activo" />
+                  <KpiCard label="Sin SLA"        value={n(sla?.summary.without_sla)}   color="#94a3b8" sub="Sin definir" />
+                </div>
+
+                <div className={styles.chartsGrid}>
+                  <div className={styles.chartPanel}>
+                    <p className={styles.chartTitle}>Cumplimiento SLA global</p>
+                    <p className={styles.chartSub}>Tickets resueltos antes del vencimiento límite.</p>
+                    <div className={`${styles.chartArea} ${styles.chartArea260}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ position: 'relative', width: 200, height: 200 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={slaDonutData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={62} outerRadius={86} paddingAngle={3}>
+                              {slaDonutData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                            </Pie>
+                            <Tooltip contentStyle={TOOLTIP_STYLE} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                          <span style={{ fontSize: 28, fontWeight: 900, color: compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444', lineHeight: 1 }}>{compliance}%</span>
+                          <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 4 }}>cumplimiento</span>
                         </div>
                       </div>
                     </div>
                   </div>
+
+                  <div className={styles.chartPanel}>
+                    <p className={styles.chartTitle}>SLA por prioridad</p>
+                    <p className={styles.chartSub}>Total vs vencidos por nivel.</p>
+                    <div className={`${styles.chartArea} ${styles.chartArea260}`}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={(sla?.by_priority ?? []).map(r => ({
+                          name:     PRIORITY_LABELS[r.priority] ?? r.priority,
+                          total:    n(r.total),
+                          vencidos: n(r.breached),
+                        }))} margin={{ left: -10 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                          <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} allowDecimals={false} />
+                          <Tooltip contentStyle={TOOLTIP_STYLE} />
+                          <Legend iconSize={9} wrapperStyle={{ fontSize: 11 }} />
+                          <Bar dataKey="total"    name="Total"    fill="#0e2235" radius={[4,4,0,0]} />
+                          <Bar dataKey="vencidos" name="Vencidos" fill="#ef4444" radius={[4,4,0,0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
 
-                {/* ── Detail sections ── */}
-                <div className={styles.sectionsGrid}>
-                  <div className={styles.section}>
-                    <p className={styles.sectionTitle}>Tickets por Estado</p>
-                    {byState.length === 0
-                      ? <p className={styles.noData}>Sin datos</p>
-                      : byState.map((s) => (
-                        <HBar
-                          key={s.state_name}
-                          label={s.state_label}
-                          value={num(s.total)}
-                          total={totalTickets}
-                          color={s.is_final ? '#22c55e' : 'var(--status-info-text, #1d4ed8)'}
-                        />
-                      ))
+                {/* SLA table */}
+                <div className={styles.section}>
+                  <p className={styles.sectionTitle}>Detalle por prioridad</p>
+                  <table className={styles.prioTable}>
+                    <thead>
+                      <tr>
+                        <th>Prioridad</th>
+                        <th>Total</th>
+                        <th>Vencidos</th>
+                        <th>SLA Prom.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(sla?.by_priority ?? []).map((r) => {
+                        const color  = PRIORITY_COLORS[r.priority] ?? '#94a3b8';
+                        const breach = n(r.breached);
+                        return (
+                          <tr key={r.priority}>
+                            <td>
+                              <span className={styles.prioRow}>
+                                <span className={styles.prioDot} style={{ background: color }} />
+                                <span className={styles.prioName}>{PRIORITY_LABELS[r.priority] ?? r.priority}</span>
+                              </span>
+                            </td>
+                            <td className={styles.prioTotal}>{n(r.total)}</td>
+                            <td className={styles.prioBreached} style={{ color: breach > 0 ? '#ef4444' : '#22c55e' }}>{breach}</td>
+                            <td className={styles.prioAvg}>{r.avg_sla_hours ? `${Math.round(n(r.avg_sla_hours))}h` : '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* ══════════ AUDITORÍA ══════════ */}
+            {tab === 'auditoria' && (
+              <>
+                {/* KPI cards */}
+                <div className={styles.auditKpiGrid}>
+                  <div className={styles.auditKpiCard}>
+                    <p className={styles.auditKpiVal}>{n(auditKpis?.total_today)}</p>
+                    <p className={styles.auditKpiLabel}>Eventos hoy</p>
+                  </div>
+                  <div className={`${styles.auditKpiCard} ${n(auditKpis?.critical_today) > 0 ? styles.auditKpiCritical : ''}`}>
+                    <p className={styles.auditKpiVal} style={n(auditKpis?.critical_today) > 0 ? { color: '#ef4444' } : undefined}>{n(auditKpis?.critical_today)}</p>
+                    <p className={styles.auditKpiLabel}>Críticos hoy</p>
+                  </div>
+                  <div className={styles.auditKpiCard}>
+                    <p className={styles.auditKpiVal}>{n(auditKpis?.config_changes)}</p>
+                    <p className={styles.auditKpiLabel}>Cambios config.</p>
+                  </div>
+                  <div className={styles.auditKpiCard}>
+                    <p className={styles.auditKpiVal}>{n(auditKpis?.auth_events)}</p>
+                    <p className={styles.auditKpiLabel}>Eventos auth</p>
+                  </div>
+                </div>
+
+                {/* Filters */}
+                <div className={styles.auditFilters}>
+                  <span className={styles.auditFilterLabel}>Filtrar:</span>
+                  <input
+                    className={styles.auditFilterInput}
+                    placeholder="Actor (nombre o email)"
+                    value={auditActor}
+                    onChange={e => setAuditActor(e.target.value)}
+                  />
+                  <input
+                    className={styles.auditFilterInput}
+                    placeholder="Acción (ej: auth, delete)"
+                    value={auditAction}
+                    onChange={e => setAuditAction(e.target.value)}
+                  />
+                  <input type="date" className={styles.auditFilterInput} value={auditFrom} onChange={e => setAuditFrom(e.target.value)} />
+                  <span className={styles.dateSep}>—</span>
+                  <input type="date" className={styles.auditFilterInput} value={auditTo} onChange={e => setAuditTo(e.target.value)} />
+                  {(auditActor || auditAction || auditFrom || auditTo) && (
+                    <button type="button" className={styles.dateClear} onClick={() => { setAuditActor(''); setAuditAction(''); setAuditFrom(''); setAuditTo(''); }}>Limpiar</button>
+                  )}
+                </div>
+
+                <div className={styles.chartsGrid} style={{ marginBottom: 16 }}>
+                  {/* Timeline */}
+                  <div>
+                    <p className={styles.sectionTitle} style={{ marginBottom: 10 }}>
+                      <Shield size={12} style={{ verticalAlign: 'middle', marginRight: 5, color: '#ff5e3a' }} />
+                      Timeline de eventos
+                    </p>
+                    {auditLoading
+                      ? <div className={styles.loading} style={{ padding: '40px 0' }}>Cargando eventos…</div>
+                      : <AuditTimeline events={auditLog ?? []} />
                     }
                   </div>
 
-                  <div className={styles.section}>
-                    <p className={styles.sectionTitle}>Tickets por Prioridad</p>
-                    {byPriority.length === 0
-                      ? <p className={styles.noData}>Sin datos</p>
-                      : byPriority.map((p) => (
-                        <HBar
-                          key={p.priority}
-                          label={PRIORITY_LABELS[p.priority] ?? p.priority}
-                          value={num(p.total)}
-                          total={totalTickets}
-                          color={PRIORITY_COLORS[p.priority] ?? '#94a3b8'}
-                        />
-                      ))
-                    }
-                  </div>
-
-                  <div className={styles.section}>
-                    <p className={styles.sectionTitle}>SLA por Prioridad</p>
-                    <SlaPriorityTable rows={sla?.by_priority ?? []} />
+                  {/* User activity */}
+                  <div>
+                    <p className={styles.sectionTitle} style={{ marginBottom: 10 }}>
+                      <User size={12} style={{ verticalAlign: 'middle', marginRight: 5, color: '#0e2235' }} />
+                      Actividad por usuario (30 días)
+                    </p>
+                    <div className={styles.chartPanel} style={{ padding: '16px 12px' }}>
+                      <div style={{ height: 280 }}>
+                        {activityData.length === 0
+                          ? <p className={styles.noData}>Sin actividad registrada.</p>
+                          : (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={activityData} layout="vertical" margin={{ left: 0, right: 12 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                                <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} allowDecimals={false} />
+                                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#334155' }} width={90} />
+                                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any) => [v, 'Acciones']} />
+                                <Bar dataKey="count" name="Acciones" fill="#0e2235" radius={[0,4,4,0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          )
+                        }
+                      </div>
+                    </div>
                   </div>
                 </div>
               </>
             )}
+
           </>
         )}
-
-        {/* ── Inventory summary ── */}
-        {inventory && (
-          <div className={styles.auditWrap}>
-            <div className={styles.auditHead}>
-              <span className={styles.auditHeadTitle} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Package size={15} /> Inventario
-              </span>
-            </div>
-            <div style={{ padding: '12px 16px', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-              {([
-                ['Total',         inventory.totals.total,         '#0e2235'],
-                ['Disponible',    inventory.totals.disponible,    '#22c55e'],
-                ['Asignado',      inventory.totals.asignado,      '#3b82f6'],
-                ['En reparación', inventory.totals.en_reparacion, '#f59e0b'],
-                ['Dado de baja',  inventory.totals.dado_de_baja,  '#94a3b8'],
-                ['Nuevos 30d',    inventory.totals.added_last_30, '#8b5cf6'],
-              ] as [string, string, string][]).map(([label, val, color]) => (
-                <div key={label} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color }}>{val ?? 0}</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{label}</div>
-                </div>
-              ))}
-            </div>
-            {inventory.by_category.length > 0 && (
-              <div className={styles.auditScroll}>
-                <table className={styles.auditTable}>
-                  <thead><tr><th>Categoría</th><th>Total</th><th>Disponible</th><th>Asignado</th></tr></thead>
-                  <tbody>
-                    {inventory.by_category.map((r) => (
-                      <tr key={r.category_name}>
-                        <td>{r.category_name}</td>
-                        <td>{r.total}</td>
-                        <td style={{ color: '#22c55e' }}>{r.disponible}</td>
-                        <td style={{ color: '#3b82f6' }}>{r.asignado}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Audit log table ── */}
-        <div className={styles.auditWrap}>
-          <div className={styles.auditHead}>
-            <span className={styles.auditHeadTitle}>Logs e Historial de Auditoría de Seguridad</span>
-            <span className={styles.auditBadge}>AUDIT REALTIME</span>
-          </div>
-          <div className={styles.auditScroll}>
-            <table className={styles.auditTable}>
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Actor</th>
-                  <th>Acción</th>
-                  <th>Entidad</th>
-                  <th>IP Origen</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(!auditLog || auditLog.length === 0) && (
-                  <tr>
-                    <td colSpan={5} className={styles.auditEmpty}>
-                      Sin registros de auditoría disponibles.
-                    </td>
-                  </tr>
-                )}
-                {(auditLog ?? []).map((e: AuditEntry) => (
-                  <tr key={e.id}>
-                    <td style={{ whiteSpace: 'nowrap' }}>{new Date(e.created_at).toLocaleString('es-CO')}</td>
-                    <td>{e.actor_name ?? e.actor_email ?? '—'}</td>
-                    <td><code style={{ fontSize: 11 }}>{e.action}</code></td>
-                    <td style={{ fontSize: 11, color: '#64748b' }}>{e.entity_type}{e.entity_id ? ` · ${e.entity_id.slice(0, 8)}…` : ''}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{e.ip_address ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
 
       </div>
     </div>

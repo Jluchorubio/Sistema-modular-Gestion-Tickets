@@ -330,4 +330,79 @@ export class ReportingService {
 
     return { kpis: enrichedKpis, by_category: byCategory, by_priority: byPriority, by_technician: byTechnician, sla, daily_trend: trend };
   }
+
+  async auditKpis() {
+    const [row] = await this.db.query<any[]>(
+      `SELECT
+         COUNT(*)                                                                   AS total_today,
+         COUNT(*) FILTER (WHERE action ILIKE '%delete%'
+                             OR  action = 'auth.login_failed'
+                             OR  action = 'auth.login_locked'
+                             OR  action ILIKE '%permission%')                      AS critical_today,
+         COUNT(*) FILTER (WHERE action ILIKE '%config%'
+                             OR  action ILIKE '%setting%'
+                             OR  action ILIKE '%update%')                          AS config_changes,
+         COUNT(*) FILTER (WHERE action LIKE 'auth.%')                              AS auth_events,
+         COUNT(*) FILTER (WHERE action ILIKE '%role%')                             AS role_changes
+       FROM audit.event_log
+       WHERE created_at >= CURRENT_DATE`,
+      [],
+    );
+    return row;
+  }
+
+  async auditUserActivity(limit = 15) {
+    return this.db.query<any[]>(
+      `SELECT
+         el.actor_id,
+         COALESCE(p.first_name || ' ' || p.last_name, c.email, 'Sistema') AS actor_name,
+         c.email                                                            AS actor_email,
+         COUNT(*)                                                           AS action_count,
+         COUNT(*) FILTER (WHERE el.created_at >= CURRENT_DATE)             AS today_count,
+         MAX(el.created_at)                                                 AS last_action_at
+       FROM audit.event_log el
+       LEFT JOIN users.profiles   p ON p.id = el.actor_id
+       LEFT JOIN auth.credentials c ON c.user_id = el.actor_id
+       WHERE el.created_at >= now() - INTERVAL '30 days'
+       GROUP BY el.actor_id, actor_name, c.email
+       ORDER BY action_count DESC
+       LIMIT $1`,
+      [limit],
+    );
+  }
+
+  async auditLogFiltered(params: {
+    limit?:      number;
+    actorId?:    string;
+    action?:     string;
+    entityType?: string;
+    dateFrom?:   string;
+    dateTo?:     string;
+  }) {
+    const { limit = 100, actorId, action, entityType, dateFrom, dateTo } = params;
+    const conditions: string[] = [];
+    const values: any[]        = [Math.min(limit, 200)];
+    let idx = 2;
+
+    if (actorId)    { conditions.push(`el.actor_id = $${idx++}`);    values.push(actorId);          }
+    if (action)     { conditions.push(`el.action ILIKE $${idx++}`);  values.push(`%${action}%`);    }
+    if (entityType) { conditions.push(`el.entity_type = $${idx++}`); values.push(entityType);        }
+    if (dateFrom)   { conditions.push(`el.created_at >= $${idx++}`); values.push(dateFrom);          }
+    if (dateTo)     { conditions.push(`el.created_at <= $${idx++}`); values.push(dateTo);            }
+
+    const cond = conditions.length ? `AND ${conditions.join(' AND ')}` : '';
+    return this.db.query<any[]>(
+      `SELECT el.id, el.action, el.entity_type, el.entity_id,
+              el.ip_address, el.created_at,
+              COALESCE(p.first_name || ' ' || p.last_name, c.email) AS actor_name,
+              c.email AS actor_email
+       FROM   audit.event_log el
+       LEFT JOIN users.profiles   p ON p.id = el.actor_id
+       LEFT JOIN auth.credentials c ON c.user_id = el.actor_id
+       WHERE  1=1 ${cond}
+       ORDER  BY el.created_at DESC
+       LIMIT  $1`,
+      values,
+    );
+  }
 }

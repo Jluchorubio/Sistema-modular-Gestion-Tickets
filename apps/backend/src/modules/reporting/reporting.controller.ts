@@ -47,15 +47,43 @@ export class ReportingController {
     return this.service.inventorySummary(moduleId);
   }
 
+  @Get('audit/kpis')
+  @ApiOperation({ summary: 'KPIs de auditoría: conteos por severidad para el día de hoy.' })
+  auditKpis() {
+    return this.service.auditKpis();
+  }
+
+  @Get('audit/activity')
+  @ApiOperation({ summary: 'Actividad de usuarios en los últimos 30 días (top N actores).' })
+  @ApiQuery({ name: 'limit', required: false })
+  auditUserActivity(@Query('limit') limit?: string) {
+    return this.service.auditUserActivity(limit ? parseInt(limit, 10) : 15);
+  }
+
   @Get('audit')
-  @ApiOperation({ summary: 'Log de auditoría: últimas N entradas del event_log.' })
+  @ApiOperation({ summary: 'Log de auditoría con filtros opcionales.' })
   @ApiQuery({ name: 'limit',       required: false })
   @ApiQuery({ name: 'entity_type', required: false })
+  @ApiQuery({ name: 'actor_id',    required: false })
+  @ApiQuery({ name: 'action',      required: false })
+  @ApiQuery({ name: 'dateFrom',    required: false })
+  @ApiQuery({ name: 'dateTo',      required: false })
   auditLog(
-    @Query('limit')       limit?: string,
+    @Query('limit')       limit?:      string,
     @Query('entity_type') entityType?: string,
+    @Query('actor_id')    actorId?:    string,
+    @Query('action')      action?:     string,
+    @Query('dateFrom')    dateFrom?:   string,
+    @Query('dateTo')      dateTo?:     string,
   ) {
-    return this.service.auditLog(limit ? Math.min(parseInt(limit, 10), 200) : 50, entityType);
+    return this.service.auditLogFiltered({
+      limit:      limit ? Math.min(parseInt(limit, 10), 200) : 100,
+      entityType,
+      actorId,
+      action,
+      dateFrom,
+      dateTo,
+    });
   }
 
   @Get('helpdesk')
@@ -75,6 +103,6 @@ export class ReportingController {
     const csv = await this.service.exportTicketsCsv(moduleId);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="tickets-${Date.now()}.csv"`);
-    res.send('﻿' + csv); // BOM for Excel UTF-8
+    res.send('﻿' + csv);
   }
 }

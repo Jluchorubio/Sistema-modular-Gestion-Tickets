@@ -3,7 +3,7 @@ import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useAuthStore } from '@/stores/auth.store';
 import { Spinner } from '@/components/ui/Spinner';
-import { ReportsClient } from '@/app/(app)/reports/_components/ReportsClient';
+import { InventoryReportsClient } from '../_components/InventoryReportsClient';
 import { ContextNav } from '@/components/ui/ContextNav';
 import { INVENTORY_NAV, INVENTORY_MODULE_NAME, isInventoryModule } from '../_nav';
 
@@ -35,7 +35,7 @@ export default function InventoryReportsPage() {
   return (
     <>
       {nav}
-      <ReportsClient />
+      <InventoryReportsClient moduleId={inventoryId} />
     </>
   );
 }
