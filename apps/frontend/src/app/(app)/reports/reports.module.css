@@ -693,3 +693,143 @@
 .emptyState { padding: 48px 0; text-align: center; }
 .emptyIcon  { color: #cbd5e1; margin-bottom: 12px; }
 .emptyMsg   { font-size: 13px; color: #94a3b8; margin: 0; }
+
+/* ── Platform Status Banner ── */
+.statusBanner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.statusBannerHealthy  { background: #f0fdf4; border-color: #86efac; }
+.statusBannerWarning  { background: #fffbeb; border-color: #fcd34d; }
+.statusBannerCritical { background: #fef2f2; border-color: #fca5a5; }
+
+.statusDot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .65; transform: scale(1.18); }
+}
+
+.statusDotHealthy  { background: #22c55e; animation: statusPulse 2.5s infinite; }
+.statusDotWarning  { background: #f59e0b; animation: statusPulse 1.8s infinite; }
+.statusDotCritical { background: #ef4444; animation: statusPulse 1s infinite; }
+
+.statusMain  { flex: 1; min-width: 0; }
+
+.statusTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0e2235;
+  margin: 0 0 4px;
+}
+
+.statusStats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.statusBadge {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 5px 12px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.statusBadgeHealthy  { background: #dcfce7; color: #16a34a; }
+.statusBadgeWarning  { background: #fef3c7; color: #d97706; }
+.statusBadgeCritical { background: #fee2e2; color: #dc2626; }
+
+/* ── Module Comparison Table ── */
+.moduleCompWrap {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.moduleCompHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 10px;
+  font-weight: 900;
+  color: #0e2235;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin: 0;
+}
+
+.moduleCompTable { width: 100%; border-collapse: collapse; }
+
+.moduleCompTable th {
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.moduleCompTable td {
+  padding: 11px 16px;
+  font-size: 12px;
+  color: #334155;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.moduleCompTable tr:last-child td  { border-bottom: none; }
+.moduleCompTable tbody tr:hover td { background: #fafbfc; }
+
+.moduleCompBar     { height: 4px; border-radius: 2px; background: #f1f5f9; overflow: hidden; margin-top: 5px; }
+.moduleCompBarFill { height: 100%; border-radius: 2px; transition: width .4s; }
+
+.moduleCompRiskHigh { color: #ef4444; font-weight: 800; font-size: 11px; }
+.moduleCompRiskMed  { color: #f59e0b; font-weight: 800; font-size: 11px; }
+.moduleCompRiskLow  { color: #22c55e; font-weight: 800; font-size: 11px; }
+
+/* ── Risk Detection ── */
+.riskBox {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-left: 3px solid #ef4444;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.riskTitle {
+  font-size: 10px;
+  font-weight: 900;
+  color: #dc2626;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.riskList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.riskItem { font-size: 12px; color: #991b1b; display: flex; align-items: flex-start; gap: 7px; line-height: 1.4; }
+.riskDot  { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; flex-shrink: 0; margin-top: 4px; }
+.riskOk   { font-size: 12px; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 6px; }

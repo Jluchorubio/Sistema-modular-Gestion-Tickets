@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -112,15 +112,56 @@ function computeInsights(tickets?: TicketsSummary, sla?: SlaMetrics): string[] {
   return out.slice(0, 4);
 }
 
+function computeDeltaFromTrend(trend: DailyTrend[]): number | null {
+  if (!trend || trend.length < 4) return null;
+  const mid    = Math.floor(trend.length / 2);
+  const first  = trend.slice(0, mid).reduce((s, d) => s + n(d.created), 0);
+  const second = trend.slice(mid).reduce((s, d) => s + n(d.created), 0);
+  if (first === 0) return null;
+  return Math.round(((second - first) / first) * 100);
+}
+
+function computePlatformStatus(compliance: number, breached: number): 'healthy' | 'warning' | 'critical' {
+  if (compliance < 70 || breached >= 10) return 'critical';
+  if (compliance < 90 || breached > 0)   return 'warning';
+  return 'healthy';
+}
+
+function computeRiskSignals(events: AuditEntry[]): string[] {
+  if (!events.length) return [];
+  const out: string[] = [];
+  const criticals  = events.filter(e => getSeverity(e.action) === 'critical');
+  if (criticals.length > 0)
+    out.push(`${criticals.length} evento${criticals.length !== 1 ? 's' : ''} crítico${criticals.length !== 1 ? 's' : ''} en el período filtrado`);
+  const authFails  = events.filter(e => e.action.toLowerCase().includes('login_failed') || e.action.toLowerCase().includes('login_locked'));
+  if (authFails.length >= 2)
+    out.push(`${authFails.length} intentos de autenticación fallidos detectados`);
+  const roleChg    = events.filter(e => e.action.toLowerCase().includes('role') || e.action.toLowerCase().includes('permission'));
+  if (roleChg.length > 0)
+    out.push(`${roleChg.length} cambio${roleChg.length !== 1 ? 's' : ''} de permisos o roles`);
+  const deletes    = events.filter(e => e.action.toLowerCase().includes('delete'));
+  if (deletes.length >= 3)
+    out.push(`${deletes.length} eliminaciones en el período — revisar`);
+  return out.slice(0, 5);
+}
+
 /* ─────────────────── sub-components ─────────────────── */
 
-function KpiCard({ label, value, sub, color = '#0e2235' }: {
-  label: string; value: string | number; sub?: string; color?: string;
+function KpiCard({ label, value, sub, color = '#0e2235', delta }: {
+  label: string; value: string | number; sub?: string; color?: string; delta?: number | null;
 }) {
   return (
     <div className={styles.kpiCard}>
       <span className={styles.kpiLabel}>{label}</span>
       <span className={styles.kpiValue} style={{ color }}>{value}</span>
+      {delta != null && (
+        <span
+          className={delta > 0 ? styles.kpiDeltaUp : delta < 0 ? styles.kpiDeltaDown : styles.kpiDeltaNeutral}
+          style={{ fontSize: 11, display: 'block', marginBottom: 2 }}
+        >
+          {delta > 0 ? '↑' : delta < 0 ? '↓' : '→'} {Math.abs(delta)}% vs período anterior
+        </span>
+      )}
       {sub && <span className={styles.kpiSub}>{sub}</span>}
     </div>
   );
@@ -176,6 +217,55 @@ function AuditTimeline({ events }: { events: AuditEntry[] }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function PlatformStatusBanner({ status, compliance, breached }: {
+  status: 'healthy' | 'warning' | 'critical';
+  compliance: number;
+  breached: number;
+}) {
+  const wrapCls  = status === 'healthy' ? styles.statusBannerHealthy  : status === 'warning' ? styles.statusBannerWarning  : styles.statusBannerCritical;
+  const dotCls   = status === 'healthy' ? styles.statusDotHealthy     : status === 'warning' ? styles.statusDotWarning     : styles.statusDotCritical;
+  const badgeCls = status === 'healthy' ? styles.statusBadgeHealthy   : status === 'warning' ? styles.statusBadgeWarning   : styles.statusBadgeCritical;
+  const title    = status === 'healthy' ? 'Sistema operativo y saludable'
+                 : status === 'warning' ? 'Sistema con advertencias activas'
+                 : 'Sistema con incidentes críticos — acción requerida';
+  const badgeTxt = status === 'healthy' ? '● OPERATIVO' : status === 'warning' ? '● ADVERTENCIA' : '● CRÍTICO';
+  return (
+    <div className={`${styles.statusBanner} ${wrapCls}`}>
+      <div className={`${styles.statusDot} ${dotCls}`} />
+      <div className={styles.statusMain}>
+        <p className={styles.statusTitle}>{title}</p>
+        <div className={styles.statusStats}>
+          <span>SLA global: <strong style={{ color: compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444' }}>{compliance}%</strong></span>
+          <span>SLA vencidos: <strong style={{ color: breached > 0 ? '#ef4444' : '#22c55e' }}>{breached}</strong></span>
+        </div>
+      </div>
+      <span className={`${styles.statusBadge} ${badgeCls}`}>{badgeTxt}</span>
+    </div>
+  );
+}
+
+function RiskDetectionBox({ signals, loading }: { signals: string[]; loading?: boolean }) {
+  if (loading) return null;
+  return (
+    <div className={styles.riskBox}>
+      <p className={styles.riskTitle}><AlertTriangle size={11} /> Detección de riesgos</p>
+      {signals.length === 0
+        ? <p className={styles.riskOk}><CheckCircle2 size={13} /> Sin riesgos detectados en el período seleccionado</p>
+        : (
+          <ul className={styles.riskList}>
+            {signals.map((s, i) => (
+              <li key={i} className={styles.riskItem}>
+                <span className={styles.riskDot} />
+                {s}
+              </li>
+            ))}
+          </ul>
+        )
+      }
     </div>
   );
 }
@@ -275,7 +365,7 @@ export function ReportsClient() {
     queryKey:  ['reports-audit-kpis'],
     queryFn:   () => reportingService.getAuditKpis(),
     staleTime: 60_000,
-    enabled:   canView && tab === 'auditoria',
+    enabled:   canView,
   });
 
   const { data: auditActivity } = useQuery({
@@ -292,6 +382,25 @@ export function ReportsClient() {
     refetchSla();
     if (tab === 'auditoria') refetchAudit();
   }
+
+  /* ── Module comparison (parallel per-module SLA + tickets) ── */
+  const showModuleComp = canView && adminModules.length > 1 && tab === 'overview';
+  const moduleCompQueries = useQueries({
+    queries: adminModules.slice(0, 5).flatMap((m) => [
+      {
+        queryKey:  ['mc-tickets', m.module_id],
+        queryFn:   () => reportingService.getTicketsSummary(m.module_id),
+        staleTime: 5 * 60_000,
+        enabled:   showModuleComp,
+      },
+      {
+        queryKey:  ['mc-sla', m.module_id],
+        queryFn:   () => reportingService.getSlaMetrics(m.module_id),
+        staleTime: 5 * 60_000,
+        enabled:   showModuleComp,
+      },
+    ]),
+  });
 
   /* ── CSV export ── */
   const handleCsvExport = useCallback(async () => {
@@ -500,7 +609,29 @@ export function ReportsClient() {
   const trend      = tickets?.daily_trend ?? [];
   const compliance = n(sla?.summary.compliance_pct);
   const hasData    = n(totals?.total) > 0;
-  const insights   = useMemo(() => computeInsights(tickets, sla), [tickets, sla]);
+  const insights       = useMemo(() => computeInsights(tickets, sla), [tickets, sla]);
+  const trendDelta     = useMemo(() => computeDeltaFromTrend(trend), [trend]);
+  const platformStatus = useMemo(
+    () => computePlatformStatus(compliance, n(sla?.summary.breached)),
+    [compliance, sla],
+  );
+  const moduleCompData = useMemo(() => {
+    if (adminModules.length <= 1 || moduleCompQueries.length === 0) return [];
+    return adminModules.slice(0, 5).map((m, i) => {
+      const tQ = moduleCompQueries[i * 2];
+      const sQ = moduleCompQueries[i * 2 + 1];
+      const t  = tQ?.data as TicketsSummary | undefined;
+      const s  = sQ?.data as SlaMetrics     | undefined;
+      return {
+        name:       m.module_name,
+        total:      n(t?.totals.total),
+        open:       n(t?.totals.open),
+        compliance: n(s?.summary.compliance_pct),
+        breached:   n(s?.summary.breached),
+        loading:    tQ?.isLoading || sQ?.isLoading,
+      };
+    });
+  }, [adminModules, moduleCompQueries]);
 
   const trendData = trend.map((d) => ({
     name:    fmtDay(d.day).slice(0, 6),
@@ -631,11 +762,17 @@ export function ReportsClient() {
             {/* ══════════ OVERVIEW ══════════ */}
             {tab === 'overview' && (
               <>
+                <PlatformStatusBanner
+                  status={platformStatus}
+                  compliance={compliance}
+                  breached={n(sla?.summary.breached)}
+                />
+
                 <InsightsBox insights={insights} />
 
                 <div className={styles.kpiGrid}>
-                  <KpiCard label="Total Tickets"    value={n(totals?.total)}          sub={`Abiertos: ${n(totals?.open)} · Cerrados: ${n(totals?.closed)}`} color="#0e2235" />
-                  <KpiCard label="SLA Cumplimiento" value={`${compliance}%`}          sub="De tickets con SLA activo"   color={compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444'} />
+                  <KpiCard label="Total Tickets"    value={n(totals?.total)}         delta={trendDelta} sub={`Abiertos: ${n(totals?.open)} · Cerrados: ${n(totals?.closed)}`} color="#0e2235" />
+                  <KpiCard label="SLA Cumplimiento" value={`${compliance}%`}          sub="De tickets con SLA activo" color={compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444'} />
                   <KpiCard label="SLA Vencidos"     value={n(sla?.summary.breached)}  sub={`Sin SLA: ${n(sla?.summary.without_sla)}`} color="#ef4444" />
                   <KpiCard label="Últimos 7 Días"   value={n(totals?.last_7_days)}    sub="Tickets nuevos" color="#3b82f6" />
                 </div>
@@ -722,6 +859,53 @@ export function ReportsClient() {
                       </div>
                     </div>
                   </>
+                )}
+
+                {moduleCompData.length > 0 && (
+                  <div className={styles.moduleCompWrap}>
+                    <p className={styles.moduleCompHeader}>
+                      <BarChart2 size={12} /> Comparación de módulos
+                    </p>
+                    <table className={styles.moduleCompTable}>
+                      <thead>
+                        <tr>
+                          <th>Módulo</th>
+                          <th>Tickets</th>
+                          <th>Abiertos</th>
+                          <th>SLA %</th>
+                          <th>Vencidos</th>
+                          <th>Riesgo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {moduleCompData.map((m) => {
+                          const risk    = m.compliance < 70 || m.breached >= 5 ? 'high' : m.compliance < 90 || m.breached > 0 ? 'med' : 'low';
+                          const riskCls = risk === 'high' ? styles.moduleCompRiskHigh : risk === 'med' ? styles.moduleCompRiskMed : styles.moduleCompRiskLow;
+                          return (
+                            <tr key={m.name}>
+                              <td style={{ fontWeight: 700, color: '#0e2235' }}>{m.name}</td>
+                              <td>{m.loading ? '…' : m.total}</td>
+                              <td>{m.loading ? '…' : m.open}</td>
+                              <td>
+                                {m.loading ? '…' : (
+                                  <>
+                                    <span style={{ fontWeight: 700, color: m.compliance >= 90 ? '#22c55e' : m.compliance >= 70 ? '#f59e0b' : '#ef4444' }}>
+                                      {m.compliance}%
+                                    </span>
+                                    <div className={styles.moduleCompBar}>
+                                      <div className={styles.moduleCompBarFill} style={{ width: `${m.compliance}%`, background: m.compliance >= 90 ? '#22c55e' : m.compliance >= 70 ? '#f59e0b' : '#ef4444' }} />
+                                    </div>
+                                  </>
+                                )}
+                              </td>
+                              <td style={{ color: m.breached > 0 ? '#ef4444' : '#334155' }}>{m.loading ? '…' : m.breached}</td>
+                              <td><span className={riskCls}>{risk === 'high' ? '● ALTO' : risk === 'med' ? '● MEDIO' : '● OK'}</span></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
 
                 {!hasData && (
@@ -943,6 +1127,10 @@ export function ReportsClient() {
                     <button type="button" className={styles.dateClear} onClick={() => { setAuditActor(''); setAuditAction(''); setAuditFrom(''); setAuditTo(''); }}>Limpiar</button>
                   )}
                 </div>
+
+                {!auditLoading && (
+                  <RiskDetectionBox signals={computeRiskSignals(auditLog ?? [])} />
+                )}
 
                 <div className={styles.chartsGrid} style={{ marginBottom: 16 }}>
                   {/* Timeline */}
