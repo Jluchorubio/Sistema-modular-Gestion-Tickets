@@ -109,6 +109,30 @@ export class TicketsController {
     });
   }
 
+  @Get('knowledge')
+  @RequirePermission('helpdesk:tickets:view')
+  getKnowledgeArticles(
+    @Query('module_id')      moduleId?: string,
+    @Query('q')              q?: string,
+    @Query('include_drafts') includeDrafts?: string,
+  ) {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!moduleId || !UUID_RE.test(moduleId)) return [];
+    return this.knowledge.getArticles(moduleId, q, includeDrafts === 'true');
+  }
+
+  @Get('knowledge-posts')
+  @RequirePermission('helpdesk:tickets:view')
+  getKnowledgePosts(
+    @Query('module_id') moduleId: string,
+    @Query('q')         q?: string,
+    @Query('filter')    filter?: string,
+  ) {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!moduleId || !UUID_RE.test(moduleId)) return [];
+    return this.knowledge.getPosts(moduleId, q, filter);
+  }
+
   @Get(':id')
   @RequirePermission('helpdesk:tickets:view')
   findOne(@Req() req: RequestWithUser, @Param('id', ParseUUIDPipe) id: string) {
@@ -380,18 +404,6 @@ export class TicketsController {
     });
   }
 
-  @Get('knowledge')
-  @RequirePermission('helpdesk:tickets:view')
-  getKnowledgeArticles(
-    @Query('module_id')      moduleId?: string,
-    @Query('q')              q?: string,
-    @Query('include_drafts') includeDrafts?: string,
-  ) {
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!moduleId || !UUID_RE.test(moduleId)) return [];
-    return this.knowledge.getArticles(moduleId, q, includeDrafts === 'true');
-  }
-
   @Get('knowledge/:id')
   @RequirePermission('helpdesk:tickets:view')
   getKnowledgeArticle(@Param('id', ParseUUIDPipe) id: string) {
@@ -447,18 +459,6 @@ export class TicketsController {
   }
 
   /* ── Forum posts ─────────────────────────────────────────────────────── */
-
-  @Get('knowledge-posts')
-  @RequirePermission('helpdesk:tickets:view')
-  getKnowledgePosts(
-    @Query('module_id') moduleId: string,
-    @Query('q')         q?: string,
-    @Query('filter')    filter?: string,
-  ) {
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!moduleId || !UUID_RE.test(moduleId)) return [];
-    return this.knowledge.getPosts(moduleId, q, filter);
-  }
 
   @Get('knowledge-posts/:id')
   @RequirePermission('helpdesk:tickets:view')
