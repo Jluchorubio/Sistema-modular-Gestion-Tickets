@@ -70,7 +70,7 @@
 .searchInput {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 7px 12px;
   font-size: 12px;
   color: #334155;
@@ -89,7 +89,7 @@
   font-size: 12px;
   font-weight: 700;
   padding: 7px 16px;
-  border-radius: 8px;
+  border-radius: 4px;
   border: none;
   cursor: pointer;
   font-family: inherit;
@@ -108,7 +108,7 @@
 .statCard {
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
@@ -155,7 +155,7 @@
   min-width: 118px;
   padding: 0 14px;
   border: 1px solid #ff5e3a;
-  border-radius: 8px;
+  border-radius: 4px;
   background: #ff5e3a;
   color: #ffffff;
   cursor: pointer;
@@ -175,7 +175,7 @@
   width: 164px;
   padding: 6px 0;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #ffffff;
   box-shadow: 0 14px 32px rgba(15,34,53,.12);
   opacity: 0;
@@ -242,7 +242,7 @@
 .moduleSummaryItem,
 .createInline {
   border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #ffffff;
 }
 
@@ -270,7 +270,7 @@
 .moduleListThumb {
   width: 74px;
   height: 56px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: #0e2235;
   color: #ffffff;
   flex-shrink: 0;
@@ -322,7 +322,7 @@
 
 .moduleListEnter {
   border: 0;
-  border-radius: 8px;
+  border-radius: 4px;
   background: #0e2235;
   color: #ffffff;
   padding: 8px 14px;
@@ -386,7 +386,7 @@
 .createCard {
   background: #ffffff;
   border: 1.5px dashed #e2e8f0;
-  border-radius: 12px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   flex-direction: column;

@@ -150,7 +150,7 @@ export function DashboardClient() {
         <div className={styles.dashHeader}>
           <div>
             <h1 className={styles.welcome}>
-              Bienvenido{displayName ? `, ${displayName}` : ''}
+              Bienvenido{displayName ? `, ${displayName}` : ''} 👋
             </h1>
             <p className={styles.sub}>
               Selecciona el entorno operativo al cual deseas ingresar para gestionar incidentes, activos o aprobaciones.
