@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ShieldCheck, Lock } from 'lucide-react';
 import {
   permissionsService,
   type PermissionDef,
@@ -11,7 +12,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import styles from '@/app/(app)/roles/roles.module.css';
 import mgmt  from '@/styles/mgmt.module.css';
 
-/* ── Risk helpers (identical to global RolesClient) ── */
+/* ── Risk helpers ── */
 type RiskLevel = 'root' | 'high' | 'medium' | 'low';
 
 function computeRisk(perm: PermissionDef): RiskLevel {
@@ -29,33 +30,28 @@ const RISK_LABEL: Record<RiskLevel, string> = {
   root: 'Agrupador Raíz', high: 'Alto', medium: 'Medio', low: 'Bajo',
 };
 const RISK_DESC: Record<RiskLevel, string> = {
-  root:   'Este es un permiso de nodo padre. Habilitarlo permite el acceso general a la sección.',
-  high:   'Alerta de Seguridad: Este permiso faculta la eliminación o edición de datos críticos.',
-  medium: 'Este permiso faculta la inserción de nuevos registros y operaciones ejecutivas.',
-  low:    'Este permiso concede acceso a funcionalidades de consulta y lectura ordinaria.',
+  root:   'Permiso de nodo padre. Habilitarlo permite el acceso general a la sección.',
+  high:   'Alerta de Seguridad: faculta la eliminación o edición de datos críticos.',
+  medium: 'Faculta la inserción de registros y operaciones ejecutivas.',
+  low:    'Concede acceso de consulta y lectura ordinaria.',
 };
 
 function PermissionInspector({ perm }: { perm: PermissionDef }) {
   const risk = computeRisk(perm);
   return (
     <div className={styles.inspectorDetail}>
-      <div className={styles.inspectorHead}>
-        <span className={styles.inspectorTag}>Inspección de Permiso</span>
-        <h2 className={styles.inspectorName}>{perm.label}</h2>
-        <span className={styles.inspectorSlug}>{perm.key}</span>
+      <div>
+        <p className={styles.inspectorPermName}>{perm.label}</p>
+        <span className={styles.inspectorPermKey}>{perm.key}</span>
       </div>
-      <div className={styles.inspectorSections}>
-        <div>
-          <span className={styles.inspectorSectionLabel}>Descripción Operacional</span>
-          <p className={styles.inspectorSectionText}>{perm.description ?? '—'}</p>
-        </div>
-        <div>
-          <span className={styles.inspectorSectionLabel}>Nivel de Riesgo</span>
-          <div>
-            <span className={`${styles.riskBadge} ${RISK_CLS[risk]}`}>⚠ {RISK_LABEL[risk]}</span>
-            <p className={styles.riskDesc}>{RISK_DESC[risk]}</p>
-          </div>
-        </div>
+      <div className={styles.inspectorSection}>
+        <span className={styles.inspectorSectionLabel}>Descripción Operacional</span>
+        <p className={styles.inspectorSectionText}>{perm.description ?? '—'}</p>
+      </div>
+      <div className={styles.inspectorSection}>
+        <span className={styles.inspectorSectionLabel}>Nivel de Riesgo</span>
+        <span className={`${styles.riskBadge} ${RISK_CLS[risk]}`}>⚠ {RISK_LABEL[risk]}</span>
+        <p className={styles.riskDesc}>{RISK_DESC[risk]}</p>
       </div>
     </div>
   );
@@ -156,178 +152,204 @@ export function ModuleScopedRolesClient({ moduleId, moduleName }: Props) {
 
   return (
     <div className={mgmt.pageWrap}>
-      <div className={styles.mainContent}>
+      <div className={mgmt.pageContent}>
 
+        {/* ── Header ── */}
         <div className={styles.header}>
           <div>
             <h1 className={styles.title}>Roles y Privilegios</h1>
-            <p className={styles.sub}>
-              Módulo: <strong>{moduleName}</strong> — Perfiles de seguridad y matriz de permisos.
-            </p>
+            <p className={styles.sub}>Módulo: <strong>{moduleName}</strong> — Perfiles de seguridad y matriz de permisos.</p>
           </div>
         </div>
 
+        {/* ══ 3-panel workspace ══ */}
         <div className={styles.workspace}>
 
-          {/* ──── LEFT: role list ──── */}
-          <div className={styles.panel}>
-            <div className={styles.panelTop}>
-              <div className={styles.panelHeader}>
-                <p className={styles.panelTitle}>Roles del Módulo</p>
-                <p className={styles.panelSub}>Selecciona un rol para ver y configurar sus permisos.</p>
-              </div>
+          {/* ─── LEFT: Roles panel ─── */}
+          <div className={styles.rolesPanel}>
+            <div className={styles.rolesPanelHead}>
+              <p className={styles.panelLabel}>Roles del módulo</p>
+            </div>
 
-              <div className={styles.rolesList}>
-                {rolesLoading && <Spinner />}
-                {!rolesLoading && roles.length === 0 && (
-                  <p className={styles.emptyMsg}>No hay roles configurados para este módulo.</p>
-                )}
-                {roles.map(role => {
-                  const isActive  = activeRoleId === role.id;
-                  const permCount = isActive ? localGrants.size : null;
-                  return (
-                    <div
-                      key={role.id}
-                      className={`${styles.roleCard}${isActive ? ` ${styles.roleCardActive}` : ''}`}
-                    >
-                      <div className={styles.roleCardTop}>
-                        <span className={styles.roleCardName}>{role.name}</span>
-                        <span className={`${styles.roleCardStatus} ${role.is_active ? styles.roleCardStatusActive : styles.roleCardStatusInactive}`}>
-                          {role.is_active ? 'Activo' : 'Inactivo'}
+            <div className={styles.rolesList}>
+              {rolesLoading && <p className={styles.emptyMsg}>Cargando…</p>}
+              {!rolesLoading && roles.length === 0 && (
+                <p className={styles.emptyMsg}>Sin roles configurados para este módulo.</p>
+              )}
+              {roles.map(role => {
+                const isSelected = activeRoleId === role.id;
+                const permCount  = isSelected ? localGrants.size : null;
+
+                return (
+                  <div
+                    key={role.id}
+                    className={[
+                      styles.roleRow,
+                      isSelected        ? styles.roleRowActive   : '',
+                      !role.is_active   ? styles.roleRowInactive : '',
+                    ].join(' ')}
+                    onClick={() => selectRole(role)}
+                  >
+                    <div className={`${styles.roleRowDot} ${role.is_active ? styles.roleRowDotActive : styles.roleRowDotInactive}`} />
+                    <div className={styles.roleRowBody}>
+                      <span className={styles.roleRowName}>{role.name}</span>
+                      {role.description && (
+                        <span className={styles.roleRowDesc}>{role.description}</span>
+                      )}
+                      <div className={styles.roleRowMeta}>
+                        <span className={styles.roleRowCount}>
+                          {permCount !== null ? `${permCount} permisos` : '—'}
                         </span>
-                      </div>
-                      {role.description && <p className={styles.roleCardDesc}>{role.description}</p>}
-                      <div className={styles.roleCardFooter}>
-                        <span className={styles.roleCardPermCount}>
-                          {permCount !== null ? `${permCount} permisos` : '— permisos'}
-                        </span>
-                        <button type="button" className={styles.btnEditRole} onClick={() => selectRole(role)}>
-                          ⚙ Editar Permisos
-                        </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* ──── CENTER: permission tree ──── */}
-          <div className={styles.panel}>
-            <div className={styles.panelTop}>
-              <div className={styles.panelHeader}>
-                <div className={styles.panelHeaderRow}>
-                  <div>
-                    <p className={styles.panelTitle}>Árbol de Permisos</p>
-                    <p className={styles.panelSub}>Estructura jerárquica modular de accesos.</p>
-                  </div>
-                  <span className={styles.roleBadge}>
-                    {activeRole ? activeRole.name.toUpperCase() : '—'}
-                  </span>
-                </div>
-              </div>
-
-              <div className={styles.criticalRule}>
-                <strong>Regla Crítica:</strong> Activar un permiso padre no activa sus hijos automáticamente. Solo los habilita/desbloquea. Desactivar un padre desactiva e inhabilita sus hijos.
-              </div>
-
-              <div className={styles.tree}>
-                {!activeRoleId && (
-                  <p className={styles.treeEmpty}>
-                    Selecciona un rol de la columna izquierda para editar sus permisos.
-                  </p>
-                )}
-                {activeRoleId && grantsFetching && <Spinner />}
-                {activeRoleId && !grantsFetching && parents.map(parent => {
-                  const isParentChecked = localGrants.has(parent.key);
-                  const children = childrenOf(parent.key);
-                  return (
-                    <div key={parent.key} className={styles.treeGroup}>
-                      <div className={styles.treeParent}>
-                        <div className={styles.treeParentLeft}>
-                          <input
-                            type="checkbox"
-                            className={styles.treeCb}
-                            checked={isParentChecked}
-                            onChange={e => toggleParent(parent.key, e.target.checked)}
-                          />
-                          <span
-                            className={styles.treeParentName}
-                            onClick={() => setSelectedPermKey(parent.key)}
-                          >
-                            {parent.label}
-                          </span>
-                        </div>
-                        <span className={styles.treeSlug}>{parent.key}</span>
-                      </div>
-                      {children.length > 0 && (
-                        <div className={styles.treeChildren}>
-                          {children.map(child => {
-                            const isDisabled = !isParentChecked;
-                            const isChecked  = !isDisabled && localGrants.has(child.key);
-                            return (
-                              <div key={child.key} className={styles.treeChild}>
-                                <div className={styles.treeChildLeft}>
-                                  <span className={styles.treeLine}>├──</span>
-                                  <input
-                                    type="checkbox"
-                                    className={styles.treeCb}
-                                    checked={isChecked}
-                                    disabled={isDisabled}
-                                    onChange={e => toggleChild(child.key, e.target.checked)}
-                                  />
-                                  <span
-                                    className={`${styles.treeChildName}${isDisabled ? ` ${styles.treeChildNameDisabled}` : ''}`}
-                                    onClick={() => { if (!isDisabled) setSelectedPermKey(child.key); }}
-                                  >
-                                    {child.label}
-                                  </span>
-                                </div>
-                                <span className={styles.treeChildSlug}>{child.key}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+          {/* ─── CENTER: Permission tree ─── */}
+          <div className={styles.treePanel}>
+            <div className={styles.treePanelHead}>
+              <div>
+                <p className={styles.treePanelTitle}>
+                  <ShieldCheck size={13} />
+                  {activeRole
+                    ? <><span>Árbol de Permisos</span><span className={styles.treePanelTitleBadge}>{activeRole.name}</span></>
+                    : 'Árbol de Permisos'
+                  }
+                </p>
+                <p className={styles.treePanelSub}>
+                  {activeRole
+                    ? 'Activar padre desbloquea hijos. Desactivar padre revoca todos sus hijos.'
+                    : 'Selecciona un rol para gestionar sus permisos.'}
+                </p>
               </div>
             </div>
 
-            <div className={styles.saveWrap}>
+            <div className={styles.treeScroll}>
+              {!activeRoleId && (
+                <div className={styles.treeEmpty}>
+                  <div className={styles.treeEmptyIcon}><Lock size={20} /></div>
+                  <p className={styles.treeEmptyTitle}>Selecciona un rol</p>
+                  <p className={styles.treeEmptyDesc}>Haz clic en cualquier rol del panel izquierdo para ver y editar sus permisos.</p>
+                </div>
+              )}
+
+              {activeRoleId && grantsFetching && (
+                <div className={styles.treeEmpty}>
+                  <Spinner />
+                  <p className={styles.treeEmptyDesc}>Cargando permisos…</p>
+                </div>
+              )}
+
+              {activeRoleId && !grantsFetching && parents.map(parent => {
+                const isParentChecked = localGrants.has(parent.key);
+                const children        = childrenOf(parent.key);
+                return (
+                  <div key={parent.key} className={styles.treeGroup}>
+                    <div className={styles.treeParentRow}>
+                      <div className={styles.treeParentLeft}>
+                        <input
+                          type="checkbox"
+                          className={styles.treeCb}
+                          checked={isParentChecked}
+                          onChange={e => toggleParent(parent.key, e.target.checked)}
+                        />
+                        <span
+                          className={styles.treeParentLabel}
+                          onClick={() => setSelectedPermKey(parent.key)}
+                        >
+                          {parent.label}
+                        </span>
+                        <span className={styles.treeKeyBadge}>{parent.section}</span>
+                      </div>
+                    </div>
+
+                    {children.length > 0 && (
+                      <div className={styles.treeChildren}>
+                        {children.map(child => {
+                          const isDisabled = !isParentChecked;
+                          const isChecked  = !isDisabled && localGrants.has(child.key);
+                          return (
+                            <div
+                              key={child.key}
+                              className={[
+                                styles.treeChildRow,
+                                isDisabled ? styles.treeChildRowDisabled : '',
+                              ].join(' ')}
+                            >
+                              <input
+                                type="checkbox"
+                                className={styles.treeCb}
+                                checked={isChecked}
+                                disabled={isDisabled}
+                                onChange={e => toggleChild(child.key, e.target.checked)}
+                              />
+                              <span
+                                className={[
+                                  styles.treeChildLabel,
+                                  isDisabled ? styles.treeChildLabelDisabled : '',
+                                ].join(' ')}
+                                onClick={() => { if (!isDisabled) setSelectedPermKey(child.key); }}
+                              >
+                                {child.label}
+                              </span>
+                              <span className={styles.treeChildKeyBadge}>{child.action}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className={styles.treeFooter}>
               <button
                 type="button"
                 className={styles.btnSave}
                 onClick={handleSave}
                 disabled={!activeRoleId || !isDirty || saveStatus === 'saving' || grantsFetching}
               >
-                {saveStatus === 'saving' ? 'Guardando...' : 'Guardar Permisos del Rol'}
+                {saveStatus === 'saving' ? 'Guardando…' : 'Guardar cambios'}
               </button>
-              {saveStatus === 'ok'  && <p className={styles.saveOk}>✓ Permisos actualizados correctamente</p>}
-              {saveStatus === 'err' && <p className={styles.saveErr}>✗ Error al guardar. Intenta de nuevo.</p>}
+              {saveStatus === 'ok'  && <p className={styles.saveOk}>✓ Permisos guardados</p>}
+              {saveStatus === 'err' && <p className={styles.saveErr}>✗ Error al guardar</p>}
             </div>
           </div>
 
-          {/* ──── RIGHT: permission inspector ──── */}
-          <div className={styles.panel}>
-            <div className={styles.panelTop}>
-              <div className={styles.panelHeader}>
-                <p className={styles.panelTitle}>Inspección de Permiso</p>
-                <p className={styles.panelSub}>Haz clic sobre un permiso para auditarlo.</p>
-              </div>
-              {!selectedPerm ? (
-                <p className={styles.inspectorEmpty}>
-                  Selecciona un permiso granular del árbol central para analizar su impacto operacional, riesgos e implicaciones de seguridad.
-                </p>
-              ) : (
-                <PermissionInspector perm={selectedPerm} />
-              )}
+          {/* ─── RIGHT: Inspector panel ─── */}
+          <div className={styles.inspectorPanel}>
+            <div className={styles.inspectorPanelHead}>
+              <p className={styles.panelLabel}>Inspección</p>
             </div>
-            <div className={styles.auditNote}>
-              <p className={styles.auditTitle}>☉ Registro de Auditoría</p>
-              <p className={styles.auditText}>
-                Todos los cambios de permisos son auditados dinámicamente por el sistema.
+
+            {!selectedPerm ? (
+              <div className={styles.inspectorEmpty}>
+                <div className={styles.treeEmptyIcon}><ShieldCheck size={18} /></div>
+                {activeRoleId ? (
+                  <>
+                    <span className={styles.inspectorHintArrow}>←</span>
+                    <p className={styles.inspectorEmptyTitle}>Selecciona un permiso</p>
+                    <p className={styles.inspectorEmptyDesc}>Haz clic sobre cualquier nombre del árbol para auditar su impacto.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className={styles.inspectorEmptyTitle}>Sin contexto</p>
+                    <p className={styles.inspectorEmptyDesc}>Selecciona un rol y luego un permiso del árbol.</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <PermissionInspector perm={selectedPerm} />
+            )}
+
+            <div className={styles.inspectorAudit}>
+              <p className={styles.inspectorAuditTitle}>Auditoría activa</p>
+              <p className={styles.inspectorAuditText}>
+                Todos los cambios se registran en el log de auditoría en tiempo real.
               </p>
             </div>
           </div>

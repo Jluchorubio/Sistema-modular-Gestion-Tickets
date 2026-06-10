@@ -42,10 +42,11 @@
 }
 
 .navItem.active {
-  background: #f1f5f9;
-  border-color: #e2e8f0;
+  background: transparent;
+  border-color: transparent;
   color: #0e2235;
   font-weight: 700;
+  box-shadow: inset 0 -2px 0 #ff5e3a;
 }
 
 .icon {

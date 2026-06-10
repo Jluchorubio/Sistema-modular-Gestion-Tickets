@@ -645,3 +645,19 @@
 }
 .superToggleOn::after { left: 19px; }
 .superToggleLabel { font-size: 12px; color: #475569; }
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  /* Header: stack buttons */
+  .headerActions     { flex-wrap: wrap; gap: 6px; width: 100%; }
+  .btnImport,
+  .btnCreate         { flex: 1; justify-content: center; font-size: 11px; padding: 7px 10px; }
+
+  /* Filter: right controls wrap */
+  .filterRightControls { flex-wrap: wrap; justify-content: flex-start; }
+  .sortSelect        { flex: 1; min-width: 120px; }
+
+  /* Modal: full screen on small screens */
+  .modalBox          { padding: 18px; max-height: 95vh; }
+  .formRow2          { grid-template-columns: 1fr; }
+}

@@ -318,3 +318,23 @@
   background: #f8fafc;
   border-color: #cbd5e1;
 }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .ticketListGrid {
+    grid-template-columns: 1fr 90px 56px;
+  }
+}
+
+@media (max-width: 767px) {
+  .header        { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .headerLeft    { width: 100%; }
+  .statPills     { width: 100%; }
+  .statPill      { flex: 1; min-width: 60px; }
+  .availOptions  { flex-wrap: wrap; }
+  .ticketListGrid {
+    grid-template-columns: 1fr 56px;
+  }
+  .footer        { flex-wrap: wrap; }
+  .footerBtn     { flex: 1; justify-content: center; }
+}

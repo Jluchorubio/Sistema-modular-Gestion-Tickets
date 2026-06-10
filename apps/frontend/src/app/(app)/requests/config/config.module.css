@@ -550,3 +550,27 @@
   font-family: monospace;
   padding: 2px 0;
 }
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .mainContent    { padding: 16px; }
+  .header         { padding-bottom: 14px; margin-bottom: 14px; }
+  .title          { font-size: 15px; }
+
+  /* Tab bar already scrollable; shrink font */
+  .tabBtn         { padding: 6px 11px; font-size: 10px; }
+
+  /* Content panel padding */
+  .content        { padding: 16px; }
+
+  /* SLA values: stack */
+  .slaValues      { flex-direction: column; gap: 6px; align-items: flex-start; }
+  .slaEditRow     { gap: 6px; }
+
+  /* List rows: tighten */
+  .listRow        { padding: 9px 12px; }
+  .dl             { grid-template-columns: 130px 1fr; font-size: 12px; }
+
+  /* Import actions wrap */
+  .importActions  { flex-wrap: wrap; }
+}

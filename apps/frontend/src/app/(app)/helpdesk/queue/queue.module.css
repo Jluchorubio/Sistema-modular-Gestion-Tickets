@@ -17,7 +17,7 @@
 }
 
 /* Small screens: drop priority column too, keep title + SLA + action */
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .tableGrid {
     grid-template-columns: minmax(0, 1fr) 60px auto;
   }

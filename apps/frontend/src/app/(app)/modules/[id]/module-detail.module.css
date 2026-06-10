@@ -208,6 +208,10 @@
 
 .btnPrimary:hover { opacity: .88; }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
+  .header   { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .statsRow { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+@media (max-width: 480px) {
   .statsRow { grid-template-columns: 1fr; }
 }

@@ -10,19 +10,10 @@ import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { useHelpdeskRoleGuard } from '@/hooks/useHelpdeskRole';
 import { ticketsService, type TicketListItem, type SlaStatus } from '@/services/tickets.service';
-import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
+import { getPriorityConfig } from '@/constants/status';
 import { MetricCard, MetricRow } from '@/components/ui/MetricCard';
 import { HELPDESK_NAV, HELPDESK_MODULE_NAME, isHelpdeskModule } from '@/app/(app)/tickets/_nav';
-
-/* ── Design tokens ── */
-const C = {
-  navy:   '#0e2235',
-  coral:  '#ff5e3a',
-  border: '#e2e8f0',
-  muted:  '#94a3b8',
-  sub:    '#64748b',
-  bg:     '#f8fafc',
-};
+import styles from './sla.module.css';
 
 /* ── Helpers ── */
 function hoursLeft(deadline: string | null): number | null {
@@ -70,64 +61,59 @@ const RISK_LABELS: Record<string, string> = {
   paused:   'Pausado',
 };
 
+function rowClass(risk: string): string {
+  if (risk === 'breached') return `${styles.ticketRow} ${styles.ticketRowBreached}`;
+  if (risk === 'critical') return `${styles.ticketRow} ${styles.ticketRowCritical}`;
+  return `${styles.ticketRow} ${styles.ticketRowNormal}`;
+}
 
 /* ── Ticket row ── */
-function TicketRow({ ticket }: { ticket: TicketListItem }) {
+function TicketRow({ ticket }: { ticket: TicketListItem & { risk: string; hoursLeft: number | null } }) {
   const router    = useRouter();
-  const h         = hoursLeft(ticket.sla_deadline_tracked ?? ticket.sla_deadline);
-  const risk      = riskLevel(h, ticket.sla_status);
-  const riskColor = RISK_COLORS[risk] ?? C.muted;
-  const pColor    = getPriorityConfig(ticket.priority).color;
+  const h         = ticket.hoursLeft;
+  const risk      = ticket.risk;
+  const riskColor = RISK_COLORS[risk] ?? '#94a3b8';
+  const pCfg      = getPriorityConfig(ticket.priority);
 
   return (
-    <div
-      onClick={() => router.push(`/helpdesk/ticket/${ticket.id}`)}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 120px 100px 90px 110px 36px',
-        alignItems: 'center',
-        gap: 12,
-        padding: '12px 16px',
-        background: risk === 'breached' ? '#fef2f2' : risk === 'critical' ? '#fff7ed' : '#fff',
-        borderBottom: `1px solid ${C.border}`,
-        cursor: 'pointer',
-        borderLeft: `3px solid ${riskColor}`,
-        transition: 'background .12s',
-      }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = risk === 'breached' ? '#fee2e2' : risk === 'critical' ? '#ffedd5' : C.bg; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = risk === 'breached' ? '#fef2f2' : risk === 'critical' ? '#fff7ed' : '#fff'; }}
-    >
+    <div className={rowClass(risk)} onClick={() => router.push(`/helpdesk/ticket/${ticket.id}`)}>
       {/* Title */}
-      <div style={{ minWidth: 0 }}>
-        <p style={{ margin: '0 0 3px', fontSize: 12.5, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {ticket.title}
-        </p>
-        <p style={{ margin: 0, fontSize: 10, color: C.muted }}>
-          #{ticket.id.slice(-6).toUpperCase()} · {ticket.creator_name}
-        </p>
+      <div className={styles.ticketTitleWrap}>
+        <p className={styles.ticketTitle}>{ticket.title}</p>
+        <p className={styles.ticketMeta}>#{ticket.id.slice(-6).toUpperCase()} · {ticket.creator_name}</p>
       </div>
 
       {/* Assignee */}
-      <p style={{ margin: 0, fontSize: 11, color: C.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <p className={`${styles.ticketAssignee} ${styles.colAssignee}`}>
         {ticket.assignee_name ?? '—'}
       </p>
 
       {/* Priority */}
-      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `color-mix(in srgb, ${pColor} 15%, transparent)`, color: pColor, border: `1px solid color-mix(in srgb, ${pColor} 25%, transparent)`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-        {getPriorityConfig(ticket.priority).label}
+      <span
+        className={`${styles.priorityBadge} ${styles.colPriority}`}
+        style={{
+          background: `color-mix(in srgb, ${pCfg.color} 15%, transparent)`,
+          color: pCfg.color,
+          border: `1px solid color-mix(in srgb, ${pCfg.color} 25%, transparent)`,
+        }}
+      >
+        {pCfg.label}
       </span>
 
       {/* Time left */}
-      <span style={{ fontSize: 12, fontWeight: 800, color: riskColor, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+      <span className={`${styles.slaTime} ${styles.colSlaTime}`} style={{ color: riskColor }}>
         {h !== null ? fmtHours(h) : '—'}
       </span>
 
       {/* Risk badge */}
-      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `${riskColor}18`, color: riskColor, border: `1px solid ${riskColor}30`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+      <span
+        className={styles.riskBadge}
+        style={{ background: `${riskColor}18`, color: riskColor, border: `1px solid ${riskColor}30` }}
+      >
         {RISK_LABELS[risk]}
       </span>
 
-      <ChevronRight size={13} style={{ color: C.muted }} />
+      <ChevronRight size={13} style={{ color: '#94a3b8' }} />
     </div>
   );
 }
@@ -148,7 +134,6 @@ export default function SlaPage() {
   const [view,   setView]   = useState<ViewFilter>('all');
   const [search, setSearch] = useState('');
 
-  /* Fetch all non-final tickets */
   const { data: res, isLoading } = useQuery({
     queryKey:  ['sla-all-tickets', helpdeskId],
     queryFn:   () => ticketsService.getAll({ module_id: helpdeskId!, limit: 500 }),
@@ -159,7 +144,6 @@ export default function SlaPage() {
 
   const allTickets = res?.data ?? [];
 
-  /* Compute risk levels */
   const withRisk = useMemo(() =>
     allTickets
       .filter(t => !t.is_final)
@@ -169,20 +153,19 @@ export default function SlaPage() {
       })
       .sort((a, b) => {
         const order = { breached: 0, critical: 1, warning: 2, ok: 3, met: 4, paused: 5 };
-        const oa = order[a.risk] ?? 9;
-        const ob = order[b.risk] ?? 9;
+        const oa = (order as Record<string, number>)[a.risk] ?? 9;
+        const ob = (order as Record<string, number>)[b.risk] ?? 9;
         if (oa !== ob) return oa - ob;
         return (a.hoursLeft ?? 999) - (b.hoursLeft ?? 999);
       }),
     [allTickets],
   );
 
-  /* Compliance stats */
   const stats = useMemo(() => {
-    const closed = allTickets.filter(t => t.is_final);
+    const closed  = allTickets.filter(t => t.is_final);
     const met     = closed.filter(t => t.sla_status === 'met').length;
     const breached = closed.filter(t => t.sla_status === 'breached').length;
-    const rate = closed.length > 0 ? Math.round((met / closed.length) * 100) : null;
+    const rate    = closed.length > 0 ? Math.round((met / closed.length) * 100) : null;
     return {
       breached_active:  withRisk.filter(t => t.risk === 'breached').length,
       critical_active:  withRisk.filter(t => t.risk === 'critical').length,
@@ -195,11 +178,12 @@ export default function SlaPage() {
   }, [withRisk, allTickets]);
 
   const filtered = useMemo(() => {
-    let list = withRisk;
+    let list: typeof withRisk = withRisk;
     if (view === 'breached') list = list.filter(t => t.risk === 'breached');
     else if (view === 'critical') list = list.filter(t => t.risk === 'critical' || t.risk === 'breached');
     else if (view === 'warning')  list = list.filter(t => t.risk === 'warning');
-    else if (view === 'met')      list = allTickets.filter(t => t.is_final && t.sla_status === 'met')
+    else if (view === 'met')      list = allTickets
+      .filter(t => t.is_final && t.sla_status === 'met')
       .map(t => ({ ...t, risk: 'met' as const, hoursLeft: null }));
 
     if (search.trim()) {
@@ -214,7 +198,7 @@ export default function SlaPage() {
     return list;
   }, [withRisk, allTickets, view, search]);
 
-  const complianceColor = stats.compliance_rate === null ? C.muted
+  const complianceColor = stats.compliance_rate === null ? '#94a3b8'
     : stats.compliance_rate >= 90 ? '#22c55e'
     : stats.compliance_rate >= 70 ? '#f59e0b'
     : '#ef4444';
@@ -230,27 +214,20 @@ export default function SlaPage() {
       hideInfo
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 16, flexWrap: 'wrap' }}>
+      <div className={styles.header}>
         <div>
-          <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.12em', margin: '0 0 3px' }}>
-            Mesa de Ayuda
-          </p>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: C.navy, margin: 0 }}>
-            Seguimiento SLA
-          </h1>
+          <p className={styles.eyebrow}>Mesa de Ayuda</p>
+          <h1 className={styles.title}>Seguimiento SLA</h1>
         </div>
 
-        {/* Compliance rate */}
         {stats.compliance_rate !== null && (
-          <div style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className={styles.complianceBadge}>
             <BarChart2 size={18} style={{ color: complianceColor }} />
             <div>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: complianceColor, lineHeight: 1 }}>
+              <p className={styles.complianceValue} style={{ color: complianceColor }}>
                 {stats.compliance_rate}%
               </p>
-              <p style={{ margin: '2px 0 0', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>
-                Cumplimiento SLA
-              </p>
+              <p className={styles.complianceLabel}>Cumplimiento SLA</p>
             </div>
           </div>
         )}
@@ -266,44 +243,40 @@ export default function SlaPage() {
       </MetricRow>
 
       {/* Search */}
-      <div style={{ position: 'relative', marginBottom: 14 }}>
-        <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
+      <div className={styles.searchWrap}>
+        <span className={styles.searchIcon}><Search size={13} /></span>
         <input
+          className={styles.searchInput}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar ticket, técnico o solicitante…"
-          style={{ width: '100%', padding: '9px 12px 9px 30px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#fff', boxSizing: 'border-box' as const }}
         />
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
-        {/* Table header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px 90px 110px 36px', gap: 12, padding: '10px 16px', background: C.bg, borderBottom: `1px solid ${C.border}`, borderLeft: '3px solid transparent' }}>
+      <div className={styles.tableWrap}>
+        <div className={styles.tableHeader}>
           {['Ticket', 'Técnico', 'Prioridad', 'Tiempo', 'Estado SLA', ''].map((h, i) => (
-            <span key={i} style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
+            <span key={i} className={styles.headerCell}>{h}</span>
           ))}
         </div>
 
         {isLoading ? (
-          <div style={{ padding: '48px 0', textAlign: 'center', color: C.muted, fontSize: 13 }}>
-            Cargando datos SLA…
-          </div>
+          <div className={styles.loading}>Cargando datos SLA…</div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: '48px 0', textAlign: 'center' }}>
-            <CheckCircle2 size={28} style={{ color: '#22c55e', display: 'block', margin: '0 auto 12px' }} />
-            <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>
+          <div className={styles.empty}>
+            <CheckCircle2 size={28} style={{ color: '#22c55e', display: 'block', margin: '0 auto 0' }} />
+            <p className={styles.emptyText}>
               {view === 'all' ? 'Sin tickets activos.' : 'Sin tickets en esta categoría.'}
             </p>
           </div>
         ) : (
-          filtered.map((t) => <TicketRow key={t.id} ticket={t as TicketListItem} />)
+          filtered.map((t) => <TicketRow key={t.id} ticket={t as TicketListItem & { risk: string; hoursLeft: number | null }} />)
         )}
       </div>
 
-      {/* Footer count */}
       {filtered.length > 0 && (
-        <p style={{ fontSize: 11, color: C.muted, margin: '10px 0 0', textAlign: 'right' }}>
+        <p className={styles.footerCount}>
           {filtered.length} ticket{filtered.length !== 1 ? 's' : ''} mostrado{filtered.length !== 1 ? 's' : ''}
         </p>
       )}

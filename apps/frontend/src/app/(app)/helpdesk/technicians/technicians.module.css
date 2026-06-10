@@ -1,0 +1,297 @@
+/* ── Page header ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  color: #ff5e3a;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  margin: 0 0 3px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0e2235;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.metricRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Filters ── */
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.searchWrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 12px 8px 30px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  background: #fff;
+  box-sizing: border-box;
+  color: #0e2235;
+  transition: border-color .15s;
+}
+.searchInput:focus { border-color: #ff5e3a; }
+.searchInput::placeholder { color: #94a3b8; }
+
+.filterPills {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.filterPill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .12s, background .12s, color .12s;
+  white-space: nowrap;
+}
+.filterPill:hover { border-color: #cbd5e1; background: #f8fafc; }
+
+.filterPillDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.filterPillCount { font-size: 10px; opacity: .7; }
+
+/* ── Tech grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+/* ── Tech card ── */
+.card {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 18px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: box-shadow .15s, border-color .15s;
+}
+.card:hover {
+  box-shadow: 0 8px 28px rgba(14,34,53,.1);
+  border-color: rgba(255,94,58,.4);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatarWrap { position: relative; flex-shrink: 0; }
+
+.avatarImg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatarInitials {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0e2235;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.statusDot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 12px;
+  height: 12px;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+}
+
+.cardInfo { flex: 1; min-width: 0; }
+
+.cardName {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0e2235;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardStatusBadge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+.cardLastSeen {
+  margin: 3px 0 0;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.cardChevron { color: #94a3b8; flex-shrink: 0; }
+
+.cardRole {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roleBadge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  text-transform: uppercase;
+}
+
+/* Workload bar */
+.workload {}
+
+.workloadTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.workloadLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.workloadBarRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workloadTrack {
+  flex: 1;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.workloadFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width .3s;
+}
+
+.workloadCount {
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 22px;
+  text-align: right;
+}
+
+/* Rating */
+.cardRating {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+
+/* ── Empty / loading ── */
+.empty {
+  padding: 60px 0;
+  text-align: center;
+}
+
+.emptyText { font-size: 14px; color: #94a3b8; margin: 0; }
+
+.loading {
+  padding: 60px 0;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .header       { flex-direction: column; align-items: flex-start; }
+  .filters      { flex-direction: column; align-items: stretch; }
+  .searchWrap   { min-width: 0; }
+  .filterPills  { gap: 4px; }
+  .grid         { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr; }
+}
