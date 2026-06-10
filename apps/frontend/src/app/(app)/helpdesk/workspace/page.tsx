@@ -143,14 +143,15 @@ export default function WorkspacePage() {
           <div>
             <p className={styles.eyebrow}>
               Mi espacio de trabajo
-              {stats.today > 0 && <span style={{ marginLeft: 8, fontWeight: 700, color: '#0e2235', background: 'rgba(14,34,53,.08)', borderRadius: 4, padding: '1px 6px', letterSpacing: 0 }}>+{stats.today} hoy</span>}
+              {stats.today > 0 && <span className={styles.todayBadge}>+{stats.today} hoy</span>}
             </p>
             <h1 className={styles.name}>{user?.first_name} {user?.last_name}</h1>
             <div className={styles.badges}>
               <span className={styles.roleBadge}>{roleLabel}</span>
               <button type="button" onClick={() => setShowAvailPicker(v => !v)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: `${acColor}18`, color: acColor, border: `1px solid ${acColor}35`, cursor: 'pointer', fontFamily: 'inherit' }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: acColor }} />
+                className={styles.availBtn}
+                style={{ background: `${acColor}18`, color: acColor, border: `1px solid ${acColor}35` }}>
+                <span className={styles.availBtnDot} style={{ background: acColor }} />
                 {TECH_AVAIL_LABELS[myAvailStatus]}
                 {availMut.isPending ? ' …' : ' ▾'}
               </button>
@@ -204,15 +205,23 @@ export default function WorkspacePage() {
 
       {/* Priority distribution */}
       {sorted.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', flexShrink: 0 }}>Cola activa · {sorted.length}</span>
+        <div className={styles.priorityBar}>
+          <span className={styles.priorityBarLabel}>Cola activa · {sorted.length}</span>
           {(['critica', 'alta', 'media', 'baja'] as TicketPriority[]).map(p => {
             const count = sorted.filter(t => t.priority === p).length;
             if (!count) return null;
             const cfg = getPriorityConfig(p);
             return (
-              <span key={p} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 8, background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`, color: cfg.color, border: `1px solid color-mix(in srgb, ${cfg.color} 22%, transparent)` }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
+              <span
+                key={p}
+                className={styles.priorityTag}
+                style={{
+                  background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`,
+                  color: cfg.color,
+                  border: `1px solid color-mix(in srgb, ${cfg.color} 22%, transparent)`,
+                }}
+              >
+                <span className={styles.priorityTagDot} style={{ background: cfg.color }} />
                 {count} {cfg.label}
               </span>
             );
@@ -279,7 +288,14 @@ export default function WorkspacePage() {
                   </p>
                 </div>
                 <span className={styles.ticketCategory}>{t.category_name}</span>
-                <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: `color-mix(in srgb, ${pColor} 15%, transparent)`, color: pColor, border: `1px solid color-mix(in srgb, ${pColor} 25%, transparent)`, textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const }}>
+                <span
+                  className={styles.priorityBadge}
+                  style={{
+                    background: `color-mix(in srgb, ${pColor} 15%, transparent)`,
+                    color: pColor,
+                    border: `1px solid color-mix(in srgb, ${pColor} 25%, transparent)`,
+                  }}
+                >
                   {getPriorityConfig(t.priority).label}
                 </span>
                 <span className={styles.slaTime} style={{ color: slaColor ?? '#94a3b8' }}>

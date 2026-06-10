@@ -319,6 +319,86 @@
   border-color: #cbd5e1;
 }
 
+/* ── Today badge ── */
+.todayBadge {
+  margin-left: 8px;
+  font-weight: 700;
+  color: #0e2235;
+  background: rgba(14,34,53,.08);
+  border-radius: 4px;
+  padding: 1px 6px;
+  letter-spacing: 0;
+}
+
+/* ── Availability toggle button ── */
+.availBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid transparent;
+  transition: opacity .12s;
+}
+.availBtn:hover { opacity: .85; }
+
+.availBtnDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Priority distribution bar ── */
+.priorityBar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.priorityBarLabel {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  flex-shrink: 0;
+}
+
+.priorityTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.priorityTagDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Priority badge in rows ── */
+.priorityBadge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .ticketListGrid {
