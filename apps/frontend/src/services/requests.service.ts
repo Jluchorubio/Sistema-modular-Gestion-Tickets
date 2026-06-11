@@ -68,6 +68,7 @@ export interface RequestsFilter {
   type?:      RequestType   | '';
   source?:    TaskSource    | '';
   escalated?: boolean;
+  moduleId?:  string;
   limit?:     number;
   page?:      number;
 }
@@ -75,11 +76,12 @@ export interface RequestsFilter {
 export const requestsService = {
   async getAll(filter: RequestsFilter = {}): Promise<PaginatedResponse<AdmRequest>> {
     const params: Record<string, string | number | boolean> = { limit: filter.limit ?? 50 };
-    if (filter.status)            params.status    = filter.status;
-    if (filter.type)              params.type      = filter.type;
-    if (filter.source)            params.source    = filter.source;
+    if (filter.status)             params.status    = filter.status;
+    if (filter.type)               params.type      = filter.type;
+    if (filter.source)             params.source    = filter.source;
     if (filter.escalated === true) params.escalated = true;
-    if (filter.page)              params.page      = filter.page;
+    if (filter.moduleId)           params.moduleId  = filter.moduleId;
+    if (filter.page)               params.page      = filter.page;
     const { data } = await api.get('/requests', { params });
     return data;
   },
@@ -143,11 +145,13 @@ export const requestsService = {
     return data;
   },
 
-  async getStats(): Promise<{
+  async getStats(moduleId?: string): Promise<{
     total: number; pending: number; taken: number;
     in_progress: number; escalated: number; sla_breached: number;
   }> {
-    const { data } = await api.get('/requests/stats');
+    const params: Record<string, string> = {};
+    if (moduleId) params.moduleId = moduleId;
+    const { data } = await api.get('/requests/stats', { params });
     return data;
   },
 

@@ -284,6 +284,81 @@
 }
 .rejectNotes:focus { border-color: var(--app-navy); }
 
+/* ── Oversight tabs (Operacional / Supervisión) ── */
+.oversightTabBar {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.oversightTab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 20px;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
+  font-family: inherit;
+  transition: background .15s, border-color .15s;
+}
+
+.oversightTabActive {
+  background: #fff;
+  border-color: #e2e8f0;
+  border-bottom-color: #fff;
+}
+
+.oversightTabLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.oversightTabLabelActive { color: #0e2235; }
+
+.oversightTabBadge {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 94, 58, 0.08);
+  color: #ff5e3a;
+}
+
+.oversightTabDesc {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* ── Supervision mode banner ── */
+.supervisionBanner {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-left: 3px solid #ff5e3a;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.supervisionBannerTitle {
+  font-weight: 700;
+  color: #c2410c;
+}
+
 /* ── Responsive ── */
 @media (max-width: 767px) {
   .header      { flex-direction: column; align-items: flex-start; gap: 12px; }

@@ -34,9 +34,7 @@ export class PermissionGuard implements CanActivate {
     if (!userId) return true;
 
     const has = await this.permissionsService.hasPermission(userId, required);
-    // null = perfil no encontrado → JwtAuthGuard lanzará 401
-    if (has === null) return true;
-    if (!has) throw new ForbiddenException(`Permiso requerido: ${required}`);
+    if (has === null || !has) throw new ForbiddenException(`Permiso requerido: ${required}`);
 
     return true;
   }

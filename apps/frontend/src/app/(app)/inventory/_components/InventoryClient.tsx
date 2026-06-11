@@ -25,6 +25,7 @@ import { ticketsService } from '@/services/tickets.service';
 import { modulesService, type FieldDef } from '@/services/modules.service';
 import { usePermission } from '@/hooks/usePermission';
 import { fmtDate } from '@/lib/formatters';
+import s from './inventory.module.css';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type ViewMode  = 'card' | 'list' | 'summary';
@@ -1121,7 +1122,7 @@ export function InventoryClient() {
     <ModuleLayout moduleId={inventoryId || selectedModule || undefined} title="Inventario" description="Registro y trazabilidad de activos organizacionales." isSuperadmin={isSuperadmin} hideInfo alwaysOpen>
 
       {/* ── Page header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div className={s.pageHeader}>
         <div>
           <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: C.coral, margin: '0 0 3px' }}>
             Módulo · Inventario
@@ -1166,10 +1167,10 @@ export function InventoryClient() {
       <MetricsRow assets={allAssets} />
 
       {/* Two-panel layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '252px minmax(0,1fr)', gap: 14, alignItems: 'start' }}>
+      <div className={s.twoPanel}>
 
         {/* ── SIDEBAR ── */}
-        <aside style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '16px', position: 'sticky', top: 16, boxShadow: '0 2px 8px rgba(14,34,53,.04)' }}>
+        <aside className={s.invSidebar} style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '16px', boxShadow: '0 2px 8px rgba(14,34,53,.04)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
               <p style={SECTION_HEAD}>Navegación</p>
@@ -1240,7 +1241,7 @@ export function InventoryClient() {
           </div>
 
           {/* Toolbar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div className={s.toolbar}>
             <div style={{ flex: '1 1 160px', position: 'relative' }}>
               <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
               <input type="text" value={search} onChange={e => handleSearch(e.target.value)} placeholder="Nombre, serial, QR…"
@@ -1290,7 +1291,7 @@ export function InventoryClient() {
           {!isLoading && filtered.length > 0 && (
             <>
               {viewMode === 'card' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
+                <div className={s.cardGrid}>
                   {filtered.map(a => (
                     <AssetCard key={a.id} asset={a}
                       onOpen={() => !selectMode && setDrawerAssetId(a.id)}

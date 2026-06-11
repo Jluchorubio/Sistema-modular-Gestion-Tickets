@@ -2244,3 +2244,52 @@
   .helpdeskV2Profile    { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
   .helpdeskV2Metrics    { width: 100%; border-left: none; border-top: 1px solid #e2e8f0; }
 }
+
+/* ── Mobile (767px) ──────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Ticket workspace two-panel: stack vertically */
+  .workspace        { flex-direction: column; min-height: auto; border-radius: 8px; }
+  .wDark            { width: 100%; max-height: 360px; overflow-y: auto; }
+  .wMain            { padding: 18px 16px; }
+
+  /* Ticket workspace page */
+  .hwBodyGrid       { grid-template-columns: 1fr; }
+  .hwPage           { padding: 12px 14px 28px; }
+  .hwTopBar         { flex-wrap: wrap; gap: 8px; }
+  .hwInfoGrid       { grid-template-columns: 1fr 1fr; }
+  .hwDeviceGrid     { grid-template-columns: 1fr; }
+  .hwFsmBtns        { flex-direction: column; }
+  .hwTakeBtn, .hwDoneBtn, .hwGenericTransBtn { flex: none; width: 100%; }
+
+  /* List toolbar */
+  .listToolbar      { flex-direction: column; align-items: stretch; }
+  .newTicketBtn     { width: 100%; justify-content: center; }
+
+  /* Filter bar */
+  .filterBar        { flex-wrap: wrap; gap: 8px; }
+
+  /* Stats row */
+  .statsRow         { padding: 12px 14px 0; gap: 8px; }
+  .statCard         { min-width: 80px; padding: 10px 10px 8px; }
+  .statCount        { font-size: 20px; }
+
+  /* Panels */
+  .panels           { padding: 12px 14px 20px; gap: 14px; }
+
+  /* Helpdesk admin shell */
+  .helpdeskAdminMain { padding: 12px 14px 28px; }
+  .helpdeskStatsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .helpdeskTechPanel { padding: 14px; }
+
+  /* V2 metrics bar: 2 cols */
+  .helpdeskV2MetricsBar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .helpdeskV2Header     { padding: 10px 14px; }
+
+  /* Participants band: wrap */
+  .hwParticipantsBand { padding: 10px 12px; }
+
+  /* Ticket card grid: already 1 col at 900px, keep */
+
+  /* Drawer-safe: sub-bar */
+  .helpdeskSubBar   { padding: 6px 14px; flex-direction: column; align-items: flex-start; gap: 4px; }
+}

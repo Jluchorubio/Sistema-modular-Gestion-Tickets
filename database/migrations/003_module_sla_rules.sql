@@ -20,4 +20,4 @@ CREATE INDEX IF NOT EXISTS idx_module_sla_rules_module ON modules.module_sla_rul
 
 CREATE TRIGGER trg_module_sla_rules_updated_at
     BEFORE UPDATE ON modules.module_sla_rules
-    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();

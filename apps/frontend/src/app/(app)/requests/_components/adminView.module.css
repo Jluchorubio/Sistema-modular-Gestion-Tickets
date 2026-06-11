@@ -175,7 +175,16 @@
 /* ── List ── */
 .list { display: flex; flex-direction: column; }
 
-@media (max-width: 640px) {
-  .toolbar { flex-direction: column; align-items: stretch; }
-  .searchWrap { max-width: none; }
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .toolbar          { flex-direction: column; align-items: stretch; }
+  .searchWrap       { max-width: none; }
+  .btnPrimary       { width: 100%; justify-content: center; }
+  .statsBar         { gap: 6px; }
+  .escalatedCheck   { font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  .filterSelect     { font-size: 11px; padding: 6px 8px; }
+  .clearFilters     { font-size: 10px; }
 }

@@ -58,16 +58,16 @@ function KpiCard({ label, value, sub, color = C.coral, Icon }: {
   label: string; value: string | number; sub?: string; color?: string; Icon?: typeof BarChart2;
 }) {
   return (
-    <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 20px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+    <div className={styles.kpiCardFlex}>
       {Icon && (
-        <div style={{ width: 36, height: 36, borderRadius: 9, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div className={styles.kpiIconWrap} style={{ background: `${color}15` }}>
           <Icon size={17} style={{ color }} />
         </div>
       )}
       <div>
-        <p style={{ margin: '0 0 2px', fontSize: 24, fontWeight: 800, color, lineHeight: 1 }}>{value}</p>
-        <p style={{ margin: '0 0 1px', fontSize: 11, fontWeight: 700, color: C.navy }}>{label}</p>
-        {sub && <p style={{ margin: 0, fontSize: 10, color: C.muted }}>{sub}</p>}
+        <p className={styles.kpiCardVal} style={{ color }}>{value}</p>
+        <p className={styles.kpiCardName}>{label}</p>
+        {sub && <p className={styles.kpiCardSub}>{sub}</p>}
       </div>
     </div>
   );

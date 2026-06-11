@@ -1984,7 +1984,6 @@ CREATE INDEX IF NOT EXISTS idx_users_profiles_active      ON users.profiles (is_
 CREATE INDEX IF NOT EXISTS idx_users_profiles_deleted     ON users.profiles (deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_profiles_superadmin  ON users.profiles (is_superadmin) WHERE is_superadmin = true AND deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_profiles_last_seen_at      ON users.profiles (last_seen_at) WHERE last_seen_at IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_profiles_position          ON users.profiles (position_id) WHERE position_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_profiles_username    ON users.profiles (username) WHERE username IS NOT NULL AND deleted_at IS NULL;
 
 -- reports (materialized view index — se crea junto con la vista en Parte 11)

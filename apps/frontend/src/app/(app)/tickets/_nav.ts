@@ -1,4 +1,4 @@
-import { Home, BarChart2, UserCog, ShieldCheck, Settings2, Clock, Headset, Inbox, LayoutDashboard, BookOpen } from 'lucide-react';
+import { Home, BarChart2, UserCog, ShieldCheck, Settings2, Clock, Headset, Inbox, LayoutDashboard, BookOpen, FileText } from 'lucide-react';
 import type { ModuleNavItem } from '@/types/nav.types';
 
 export const HELPDESK_MODULE_NAME = 'Mesa de Ayuda';
@@ -16,7 +16,8 @@ export const HELPDESK_NAV: ModuleNavItem[] = [
   { key: 'users',   label: 'Usuarios',       Icon: UserCog,     href: '/helpdesk/users',   allowedRoles: ['admin_modulo']                                 },
   { key: 'roles',   label: 'Roles',          Icon: ShieldCheck, href: '/helpdesk/roles',   allowedRoles: ['admin_modulo']                                 },
   { key: 'reports', label: 'Reportes',       Icon: BarChart2,   href: '/helpdesk/reports', allowedRoles: ['admin_modulo', 'jefe_tecnico']                 },
-  { key: 'config',  label: 'Configuración',  Icon: Settings2,   href: '/helpdesk/config',  allowedRoles: ['admin_modulo']                                 },
+  { key: 'requests', label: 'Solicitudes',    Icon: FileText,    href: '/helpdesk/requests', allowedRoles: ['admin_modulo']                                },
+  { key: 'config',   label: 'Configuración', Icon: Settings2,   href: '/helpdesk/config',   allowedRoles: ['admin_modulo']                                },
 ];
 
 /** Operational header: shown in the horizontal sub-header above content, Helpdesk only.

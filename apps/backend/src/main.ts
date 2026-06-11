@@ -84,7 +84,7 @@ async function bootstrap() {
     .map(o => o.trim());
 
   app.enableCors({
-    origin: (origin, cb) => {
+    origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
       // Permitir sin origin (mobile apps, curl, Swagger)
       if (!origin || allowed.includes(origin)) return cb(null, true);
       cb(new Error(`CORS: origin ${origin} no permitido`));

@@ -60,8 +60,9 @@ export class RequestsController {
   @Get('stats')
   @RequirePermission('gestion:requests:view_all')
   @ApiOperation({ summary: 'Stats de solicitudes para admin/superadmin.' })
-  getStats(@Req() req: any) {
-    return this.service.getStats(req.user.sub);
+  @ApiQuery({ name: 'moduleId', required: false })
+  getStats(@Req() req: any, @Query('moduleId') moduleId?: string) {
+    return this.service.getStats(req.user.sub, moduleId);
   }
 
   @Get('stats/mine')
@@ -86,17 +87,19 @@ export class RequestsController {
   @ApiQuery({ name: 'type',      required: false })
   @ApiQuery({ name: 'source',    required: false })
   @ApiQuery({ name: 'escalated', required: false, type: Boolean })
+  @ApiQuery({ name: 'moduleId',  required: false })
   @ApiQuery({ name: 'page',      required: false, type: Number })
   @ApiQuery({ name: 'limit',     required: false, type: Number })
   findAll(
     @Req() req: any,
-    @Query() q: { status?: string; type?: string; source?: string; escalated?: string; page?: string; limit?: string },
+    @Query() q: { status?: string; type?: string; source?: string; escalated?: string; moduleId?: string; page?: string; limit?: string },
   ) {
     return this.service.findAll(req.user.sub, {
       status:    q.status,
       type:      q.type,
       source:    q.source,
       escalated: q.escalated === 'true' ? true : undefined,
+      moduleId:  q.moduleId,
       page:      q.page  ? parseInt(q.page,  10) : 1,
       limit:     q.limit ? parseInt(q.limit, 10) : 20,
     });

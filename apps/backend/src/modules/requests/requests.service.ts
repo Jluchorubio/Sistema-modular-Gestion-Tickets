@@ -137,7 +137,7 @@ export class RequestsService {
     return { ok: true };
   }
 
-  async findAll(userId: string, opts: { status?: string; type?: string; source?: string; escalated?: boolean; page?: number; limit?: number }) {
+  async findAll(userId: string, opts: { status?: string; type?: string; source?: string; escalated?: boolean; moduleId?: string; page?: number; limit?: number }) {
     const page   = Math.max(1, opts.page  ?? 1);
     const limit  = Math.min(100, Math.max(1, opts.limit ?? 20));
     const offset = (page - 1) * limit;
@@ -166,9 +166,10 @@ export class RequestsService {
       )`);
     }
 
-    if (opts.status)              { params.push(opts.status);  conditions.push(`r.status      = $${params.length}`); }
-    if (opts.type)                { params.push(opts.type);    conditions.push(`r.type        = $${params.length}`); }
-    if (opts.source)              { params.push(opts.source);  conditions.push(`r.task_source = $${params.length}`); }
+    if (opts.status)              { params.push(opts.status);     conditions.push(`r.status                  = $${params.length}`); }
+    if (opts.type)                { params.push(opts.type);       conditions.push(`r.type                    = $${params.length}`); }
+    if (opts.source)              { params.push(opts.source);     conditions.push(`r.task_source             = $${params.length}`); }
+    if (opts.moduleId)            { params.push(opts.moduleId);   conditions.push(`r.metadata->>'module_id'  = $${params.length}`); }
     if (opts.escalated === true)  { conditions.push(`r.escalated = TRUE`); }
 
     const where = `WHERE ${conditions.join(' AND ')}`;
@@ -471,23 +472,26 @@ export class RequestsService {
     return PRIORITY_HOURS[priority] ?? 24;
   }
 
-  async getStats(userId: string) {
+  async getStats(userId: string, moduleId?: string) {
     const [profile] = await this.db.query<{ is_superadmin: boolean }[]>(
       `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
       [userId],
     );
     const isSuperadmin = profile?.is_superadmin ?? false;
 
-    const scopeClause = isSuperadmin ? '' : `
-      AND (
-        r.assigned_to = $1
-        OR r.metadata->>'module_id' IN (
-          SELECT umr.module_id::text
-          FROM   modules.user_module_roles umr
-          WHERE  umr.user_id = $1 AND umr.is_active = TRUE
-        )
-      )`;
-    const params = isSuperadmin ? [] : [userId];
+    const conditions: string[] = ['r.deleted_at IS NULL'];
+    const params: unknown[]   = [];
+
+    if (!isSuperadmin) {
+      params.push(userId);
+      conditions.push(`(r.assigned_to = $${params.length} OR r.metadata->>'module_id' IN (SELECT umr.module_id::text FROM modules.user_module_roles umr WHERE umr.user_id = $${params.length} AND umr.is_active = TRUE))`);
+    }
+    if (moduleId) {
+      params.push(moduleId);
+      conditions.push(`r.metadata->>'module_id' = $${params.length}`);
+    }
+
+    const scopeClause = `WHERE ${conditions.join(' AND ')}`;
 
     const [stats] = await this.db.query<any[]>(
       `SELECT
@@ -499,7 +503,7 @@ export class RequestsService {
          COUNT(*) FILTER (WHERE r.sla_due_at < now()
                           AND r.status NOT IN ('completed','approved','rejected','cancelled')) AS sla_breached
        FROM requests.admin_requests r
-       WHERE r.deleted_at IS NULL ${scopeClause}`,
+       ${scopeClause}`,
       params,
     );
 

@@ -68,72 +68,41 @@ UPDATE org.structure_types SET parent_type_id = '10000000-0000-0000-0000-0000000
 UPDATE org.structure_types SET parent_type_id = '10000000-0000-0000-0000-000000000002' WHERE slug = 'area';
 
 -- ── 4. Migrate existing data → org.nodes ────────────────────────────────────
+-- Skip silently if legacy tables don't exist (clean deployments where
+-- migration 013 ran before this, or SCHEMA_MASTER already omitted them).
 
--- 4a. Sedes (headquarters → nodes of type 'sede')
-INSERT INTO org.nodes (id, type_id, name, address, city, country, phone, email, is_active, weight, created_at, updated_at)
-SELECT
-  id,
-  '10000000-0000-0000-0000-000000000001',
-  name,
-  address,
-  city,
-  country,
-  phone,
-  email,
-  is_active,
-  5,
-  created_at,
-  updated_at
-FROM org.headquarters
-ON CONFLICT (id) DO NOTHING;
+DO $$
+BEGIN
+  -- 4a. Sedes
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='org' AND table_name='headquarters') THEN
+    INSERT INTO org.nodes (id, type_id, name, address, city, country, phone, email, is_active, weight, created_at, updated_at)
+    SELECT id, '10000000-0000-0000-0000-000000000001', name, address, city, country, phone, email, is_active, 5, created_at, updated_at
+    FROM org.headquarters ON CONFLICT (id) DO NOTHING;
+  END IF;
 
--- 4b. Departamentos (departments → nodes of type 'departamento', parent = NULL for now)
-INSERT INTO org.nodes (id, type_id, name, description, is_active, weight, created_at, updated_at)
-SELECT
-  id,
-  '10000000-0000-0000-0000-000000000002',
-  name,
-  description,
-  is_active,
-  5,
-  created_at,
-  updated_at
-FROM org.departments
-ON CONFLICT (id) DO NOTHING;
+  -- 4b. Departamentos
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='org' AND table_name='departments') THEN
+    INSERT INTO org.nodes (id, type_id, name, description, is_active, weight, created_at, updated_at)
+    SELECT id, '10000000-0000-0000-0000-000000000002', name, description, is_active, 5, created_at, updated_at
+    FROM org.departments ON CONFLICT (id) DO NOTHING;
+  END IF;
 
--- 4c. Áreas (areas → nodes of type 'area', parent = their department node)
-INSERT INTO org.nodes (id, type_id, parent_id, name, description, is_active, weight, created_at, updated_at)
-SELECT
-  id,
-  '10000000-0000-0000-0000-000000000003',
-  department_id,
-  name,
-  description,
-  is_active,
-  5,
-  created_at,
-  updated_at
-FROM org.areas
-ON CONFLICT (id) DO NOTHING;
+  -- 4c. Áreas
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='org' AND table_name='areas') THEN
+    INSERT INTO org.nodes (id, type_id, parent_id, name, description, is_active, weight, created_at, updated_at)
+    SELECT id, '10000000-0000-0000-0000-000000000003', department_id, name, description, is_active, 5, created_at, updated_at
+    FROM org.areas ON CONFLICT (id) DO NOTHING;
+  END IF;
 
--- 4d. Cargos/Positions (positions → nodes of type 'cargo')
---     weight derived from level: level maps 1-10 directly
-INSERT INTO org.nodes (id, type_id, name, description, weight, is_active, created_at, updated_at)
-SELECT
-  id,
-  '10000000-0000-0000-0000-000000000004',
-  name,
-  description,
-  level,
-  is_active,
-  created_at,
-  updated_at
-FROM org.positions
-ON CONFLICT (id) DO NOTHING;
+  -- 4d. Cargos/Positions
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='org' AND table_name='positions') THEN
+    INSERT INTO org.nodes (id, type_id, name, description, weight, is_active, created_at, updated_at)
+    SELECT id, '10000000-0000-0000-0000-000000000004', name, description, level, is_active, created_at, updated_at
+    FROM org.positions ON CONFLICT (id) DO NOTHING;
+  END IF;
+END $$;
 
 -- ── 5. Add org_node_id + position_node_id to users.profiles ─────────────────
--- org_node_id      = deepest org node where user belongs (sede/depto/area)
--- position_node_id = the user's cargo/position node
 
 ALTER TABLE users.profiles
   ADD COLUMN IF NOT EXISTS org_node_id      uuid REFERENCES org.nodes(id) ON DELETE SET NULL,
@@ -142,17 +111,23 @@ ALTER TABLE users.profiles
 CREATE INDEX IF NOT EXISTS idx_profiles_org_node      ON users.profiles(org_node_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_position_node ON users.profiles(position_node_id);
 
--- Back-fill position_node_id from existing position_id (same uuid, migrated above)
-UPDATE users.profiles
-SET position_node_id = position_id
-WHERE position_id IS NOT NULL
-  AND position_node_id IS NULL;
+-- Back-fill only if legacy columns exist (dropped by migration 013 on upgrade paths)
+DO $$
+BEGIN
+  -- Back-fill position_node_id from position_id if column still exists
+  IF EXISTS (SELECT FROM information_schema.columns WHERE table_schema='users' AND table_name='profiles' AND column_name='position_id') THEN
+    UPDATE users.profiles SET position_node_id = position_id
+    WHERE position_id IS NOT NULL AND position_node_id IS NULL;
+  END IF;
 
--- Back-fill org_node_id: prefer area_id, then department_id, then headquarters_id
-UPDATE users.profiles
-SET org_node_id = COALESCE(area_id, department_id, headquarters_id)
-WHERE org_node_id IS NULL
-  AND (area_id IS NOT NULL OR department_id IS NOT NULL OR headquarters_id IS NOT NULL);
+  -- Back-fill org_node_id from legacy columns if they still exist
+  IF EXISTS (SELECT FROM information_schema.columns WHERE table_schema='users' AND table_name='profiles' AND column_name='area_id') THEN
+    UPDATE users.profiles
+    SET org_node_id = COALESCE(area_id, department_id, headquarters_id)
+    WHERE org_node_id IS NULL
+      AND (area_id IS NOT NULL OR department_id IS NOT NULL OR headquarters_id IS NOT NULL);
+  END IF;
+END $$;
 
 -- ── 6. updated_at triggers for new tables ───────────────────────────────────
 

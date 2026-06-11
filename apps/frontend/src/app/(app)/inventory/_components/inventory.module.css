@@ -1,0 +1,92 @@
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+/* ── Two-panel grid (sidebar + content) ──────────────────────────────────── */
+.twoPanel {
+  display: grid;
+  grid-template-columns: 252px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+/* ── Left sidebar ────────────────────────────────────────────────────────── */
+.invSidebar {
+  position: sticky;
+  top: 16px;
+}
+
+/* ── Metrics row ─────────────────────────────────────────────────────────── */
+.metricsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* ── Asset card grid ─────────────────────────────────────────────────────── */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+/* ── Responsive: tablet (900px) ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .twoPanel { grid-template-columns: 200px minmax(0, 1fr); gap: 10px; }
+  .metricsRow { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Responsive: mobile (767px) ──────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .twoPanel {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .invSidebar {
+    position: static;
+    /* Sidebar becomes full-width above content on mobile */
+  }
+
+  .metricsRow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .cardGrid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+  }
+
+  .pageHeader {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .toolbar {
+    gap: 6px;
+  }
+}
+
+/* ── Responsive: small mobile (480px) ───────────────────────────────────── */
+@media (max-width: 480px) {
+  .cardGrid { grid-template-columns: 1fr 1fr; }
+  .metricsRow { grid-template-columns: repeat(2, 1fr); }
+}

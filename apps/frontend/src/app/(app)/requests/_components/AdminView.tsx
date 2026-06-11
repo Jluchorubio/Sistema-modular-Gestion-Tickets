@@ -23,11 +23,12 @@ import { RequestDetailModal } from './RequestDetailModal';
 import styles from './adminView.module.css';
 
 interface AdminViewProps {
-  isSuperadmin: boolean;
+  isSuperadmin:  boolean;
+  moduleId?:     string;
+  escalatedOnly?: boolean;
 }
 
-
-export function AdminView({ isSuperadmin }: AdminViewProps) {
+export function AdminView({ isSuperadmin, moduleId, escalatedOnly = false }: AdminViewProps) {
   const qc = useQueryClient();
 
   const canCreate       = usePermission('gestion:requests:create');
@@ -40,7 +41,7 @@ export function AdminView({ isSuperadmin }: AdminViewProps) {
   const [statusFilter,  setStatusFilter]  = useState<RequestStatus | ''>('');
   const [typeFilter,    setTypeFilter]    = useState<RequestType | ''>('');
   const [searchQ,       setSearchQ]       = useState('');
-  const [onlyEscalated, setOnlyEscalated] = useState(false);
+  const [onlyEscalated, setOnlyEscalated] = useState(escalatedOnly);
 
   const [createOpen,     setCreateOpen]     = useState(false);
   const [rejectOpen,     setRejectOpen]     = useState(false);
@@ -55,15 +56,15 @@ export function AdminView({ isSuperadmin }: AdminViewProps) {
   const [expandedId,     setExpandedId]     = useState<string | null>(null);
 
   const { data: stats } = useQuery({
-    queryKey: ['requests-stats'],
-    queryFn:  () => requestsService.getStats(),
+    queryKey: ['requests-stats', moduleId],
+    queryFn:  () => requestsService.getStats(moduleId),
     staleTime: 30_000,
     enabled:  canViewAll,
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['requests', 'inbox', statusFilter, typeFilter, onlyEscalated],
-    queryFn:  () => requestsService.getAll({ status: statusFilter, type: typeFilter, escalated: onlyEscalated || undefined, limit: 100 }),
+    queryKey: ['requests', 'inbox', statusFilter, typeFilter, onlyEscalated, moduleId],
+    queryFn:  () => requestsService.getAll({ status: statusFilter, type: typeFilter, escalated: onlyEscalated || undefined, moduleId, limit: 100 }),
     enabled:  canViewAll,
   });
 
@@ -195,21 +196,23 @@ export function AdminView({ isSuperadmin }: AdminViewProps) {
           ))}
         </select>
 
-        <label className={styles.escalatedCheck}>
-          <input
-            type="checkbox"
-            checked={onlyEscalated}
-            onChange={e => setOnlyEscalated(e.target.checked)}
-          />
-          <TrendingUp size={11} />
-          Solo escaladas
-        </label>
+        {!escalatedOnly && (
+          <label className={styles.escalatedCheck}>
+            <input
+              type="checkbox"
+              checked={onlyEscalated}
+              onChange={e => setOnlyEscalated(e.target.checked)}
+            />
+            <TrendingUp size={11} />
+            Solo escaladas
+          </label>
+        )}
 
-        {(statusFilter || typeFilter || onlyEscalated) && (
+        {(statusFilter || typeFilter || (!escalatedOnly && onlyEscalated)) && (
           <button
             type="button"
             className={styles.clearFilters}
-            onClick={() => { setStatusFilter(''); setTypeFilter(''); setOnlyEscalated(false); }}
+            onClick={() => { setStatusFilter(''); setTypeFilter(''); if (!escalatedOnly) setOnlyEscalated(false); }}
           >
             Limpiar filtros
           </button>

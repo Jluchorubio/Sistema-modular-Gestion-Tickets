@@ -218,6 +218,8 @@ export class AdminService {
       { table: 'config.global_roles',       label: 'roles' },
       { table: 'requests.admin_requests',   label: 'requests' },
       { table: 'org.structure_types',       label: 'structure_types' },
+      { table: 'tickets.tickets',           label: 'tickets' },
+      { table: 'inventory.assets',          label: 'assets' },
     ];
 
     const detail: Record<string, number> = {};
