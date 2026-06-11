@@ -69,12 +69,15 @@ interface ExecFormProps {
   setRoleChange:   (v: { moduleId: string; roleId: string }) => void;
   moduleAccess:    { moduleId: string; roleId: string };
   setModuleAccess: (v: { moduleId: string; roleId: string }) => void;
+  targetDept:      string;
+  setTargetDept:   (v: string) => void;
 }
 
 function ExecForm({
   request, requesterId,
   roleChange, setRoleChange,
   moduleAccess, setModuleAccess,
+  targetDept, setTargetDept,
 }: ExecFormProps) {
   const type = request.type;
 
@@ -192,6 +195,40 @@ function ExecForm({
     );
   }
 
+  /* ── access_revocation ── */
+  if (type === 'access_revocation') {
+    const metaModule = meta.module_id as string | undefined;
+    return (
+      <div className={styles.execNote}>
+        {metaModule ? (
+          <>Se revocará el acceso de <strong>{request.requester_name ?? 'este usuario'}</strong> al módulo solicitado. Esta acción no puede deshacerse desde aquí.</>
+        ) : (
+          <span style={{ color: '#dc2626' }}>La solicitud no especifica el módulo a revocar. Completa manualmente y finaliza.</span>
+        )}
+      </div>
+    );
+  }
+
+  /* ── user_transfer ── */
+  if (type === 'user_transfer') {
+    return (
+      <div>
+        <div className={styles.execNote} style={{ marginBottom: 10 }}>
+          Se actualizará el departamento del usuario en su perfil. Especifica el destino del traslado.
+        </div>
+        <Field label="Departamento / área de destino *">
+          <input
+            className={styles.input}
+            type="text"
+            placeholder="Ej: Recursos Humanos, TI, Logística…"
+            value={targetDept}
+            onChange={e => setTargetDept(e.target.value)}
+          />
+        </Field>
+      </div>
+    );
+  }
+
   return null;
 }
 
@@ -225,8 +262,9 @@ export function RequestDetailModal({
   const [execError,       setExecError]       = useState('');
   const [resolveNotes,    setResolveNotes]    = useState('');
 
-  const [roleChange,   setRoleChange]   = useState({ moduleId: metaModuleId, roleId: metaRoleId });
-  const [moduleAccess, setModuleAccess] = useState({ moduleId: metaModuleId, roleId: metaRoleId });
+  const [roleChange,    setRoleChange]    = useState({ moduleId: metaModuleId, roleId: metaRoleId });
+  const [moduleAccess,  setModuleAccess]  = useState({ moduleId: metaModuleId, roleId: metaRoleId });
+  const [targetDept,    setTargetDept]    = useState((meta.target_department ?? '') as string);
 
   /* ── Mutations ── */
   const invalidate = () => {
@@ -282,6 +320,24 @@ export function RequestDetailModal({
         case 'reactivation':
           await usersService.updateUser(requesterId, { is_active: true });
           break;
+
+        case 'access_revocation': {
+          const meta       = request.metadata ?? {};
+          const moduleId   = meta.module_id as string | undefined;
+          if (!moduleId) throw new Error('La solicitud no especifica el módulo a revocar.');
+          const userRoles  = await usersService.getUserRoles(requesterId);
+          const targetRole = userRoles.find((r: any) => r.module_id === moduleId && r.status === 'active');
+          if (!targetRole) throw new Error('El usuario no tiene acceso activo al módulo indicado.');
+          await usersService.removeRole(requesterId, targetRole.umr_id);
+          break;
+        }
+
+        case 'user_transfer': {
+          const dept = targetDept.trim();
+          if (!dept) throw new Error('Ingresa el departamento/área de destino del traslado.');
+          await usersService.updateUser(requesterId, { department: dept });
+          break;
+        }
       }
 
       await requestsService.updateProgress(request.id, 'completed');
@@ -306,7 +362,7 @@ export function RequestDetailModal({
       case 'reactivation':          return true;
       case 'permission_adjustment': return true;
       case 'access_revocation':     return true;
-      case 'user_transfer':         return true;
+      case 'user_transfer':         return !!targetDept.trim();
       default:                      return false;
     }
   }
@@ -386,7 +442,7 @@ export function RequestDetailModal({
           </div>
 
           {hasSla && (
-            <div><SlaCountdown sla_due_at={request.sla_due_at!} /></div>
+            <div><SlaCountdown sla_due_at={request.sla_due_at!} created_at={request.created_at} /></div>
           )}
 
           {/* Description */}
@@ -416,6 +472,7 @@ export function RequestDetailModal({
                     requesterId={requesterId}
                     roleChange={roleChange}      setRoleChange={setRoleChange}
                     moduleAccess={moduleAccess}  setModuleAccess={setModuleAccess}
+                    targetDept={targetDept}      setTargetDept={setTargetDept}
                   />
 
                   <Field label="Notas de resolución (opcional)">

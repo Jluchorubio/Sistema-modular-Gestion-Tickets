@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   Bell, User, LogOut, ChevronDown,
   CalendarDays, Clock, ChevronRight,
-  Ticket, Sun, Moon, Monitor, Download,
+  Ticket, Sun, Moon, Monitor, Download, Menu,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
@@ -36,12 +36,13 @@ interface Props {
 
 export function AppHeader({ noSidebar = false }: Props) {
   const router      = useRouter();
-  const pathname    = usePathname();
   const qc          = useQueryClient();
   const user        = useAuthStore((s) => s.user);
   const clearAuth   = useAuthStore((s) => s.clearAuth);
-  const theme       = useUIStore((s) => s.theme);
-  const setTheme    = useUIStore((s) => s.setTheme);
+
+  const theme              = useUIStore((s) => s.theme);
+  const setTheme           = useUIStore((s) => s.setTheme);
+  const toggleMobileSidebar = useUIStore((s) => s.toggleMobileSidebar);
 
   const THEME_ICON: Record<AppTheme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
   const ThemeIcon = THEME_ICON[theme];
@@ -70,6 +71,7 @@ export function AppHeader({ noSidebar = false }: Props) {
     queryFn:  () => notificationsService.getMyNotifications(),
     refetchInterval: 60_000,
     staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const markReadMut = useMutation({
@@ -79,6 +81,16 @@ export function AppHeader({ noSidebar = false }: Props) {
 
   const markAllMut = useMutation({
     mutationFn: () => notificationsService.markAllAsRead(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications-me'] }),
+  });
+
+  const dismissMut = useMutation({
+    mutationFn: (id: string) => notificationsService.dismiss(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications-me'] }),
+  });
+
+  const dismissAllReadMut = useMutation({
+    mutationFn: () => notificationsService.dismissAllRead(),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications-me'] }),
   });
 
@@ -117,36 +129,26 @@ export function AppHeader({ noSidebar = false }: Props) {
 
   const { canInstall, install } = usePWAInstall();
 
-  const navLinks = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/requests',  label: 'Solicitudes' },
-  ];
-
   return (
     <header className={`${styles.header}${noSidebar ? ` ${styles.headerFull}` : ''}`}>
       <div className={styles.inner}>
-        {/* ── Brand ── */}
-        <div className={styles.brand}>
+        {/* ── Left: hamburger (mobile) + brand ── */}
+        <div className={styles.left}>
+          {!noSidebar && (
+            <button
+              type="button"
+              className={styles.hamburger}
+              onClick={toggleMobileSidebar}
+              aria-label="Abrir menú"
+            >
+              <Menu size={20} />
+            </button>
+          )}
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
-            <div className={styles.brandIcon}>T</div>
-            <span className={styles.brandName}>Tickets System</span>
+            <div className={styles.brandIcon} />
+            <span className={styles.brandName}>Nexo</span>
           </Link>
         </div>
-
-        {/* ── Centro nav (solo no-sidebar) ── */}
-        {noSidebar && (
-          <nav className={styles.centerNav}>
-            {navLinks.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`${styles.centerNavLink}${pathname.startsWith(href) ? ` ${styles.centerNavLinkActive}` : ''}`}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-        )}
 
         <div className={styles.right}>
           {/* ── PWA install button ── */}
@@ -247,16 +249,28 @@ export function AppHeader({ noSidebar = false }: Props) {
                 <span className={styles.notifTitle}>
                   Notificaciones{unread > 0 ? ` (${unread})` : ''}
                 </span>
-                {unread > 0 && (
-                  <button
-                    className={styles.notifMarkAll}
-                    type="button"
-                    onClick={() => markAllMut.mutate()}
-                    disabled={markAllMut.isPending}
-                  >
-                    Marcar todo leído
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {unread > 0 && (
+                    <button
+                      className={styles.notifMarkAll}
+                      type="button"
+                      onClick={() => markAllMut.mutate()}
+                      disabled={markAllMut.isPending}
+                    >
+                      Marcar leído
+                    </button>
+                  )}
+                  {notifications.some((n) => n.status === 'sent') && (
+                    <button
+                      className={styles.notifMarkAll}
+                      type="button"
+                      onClick={() => dismissAllReadMut.mutate()}
+                      disabled={dismissAllReadMut.isPending}
+                    >
+                      Limpiar leídas
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className={styles.notifList}>
@@ -264,22 +278,55 @@ export function AppHeader({ noSidebar = false }: Props) {
                   <p className={styles.notifEmpty}>Sin notificaciones</p>
                 )}
                 {notifications.map((n) => {
-                  const isUnread = n.status === 'pending';
+                  const isUnread  = n.status === 'pending';
+                  const subject   = typeof n.payload.subject === 'string'
+                    ? n.payload.subject
+                    : n.event_type.replace(/_/g, ' ');
+                  const ticketId  = typeof n.payload.ticketId  === 'string' ? n.payload.ticketId  : null;
+                  const requestId = typeof n.payload.requestId === 'string' ? n.payload.requestId : null;
+                  const href      = ticketId  ? `/helpdesk/ticket/${ticketId}`
+                                  : requestId ? `/requests/${requestId}`
+                                  : null;
                   return (
                     <div
                       key={n.id}
-                      className={`${styles.notifItem}${isUnread ? ` ${styles.notifItemUnread}` : ''}`}
-                      onClick={() => isUnread && markReadMut.mutate(n.id)}
+                      className={`${styles.notifItem}${isUnread ? ` ${styles.notifItemUnread}` : ''}${href ? ` ${styles.notifItemClickable}` : ''}`}
+                      onClick={() => {
+                        if (isUnread) markReadMut.mutate(n.id);
+                        if (href) { router.push(href); setNotifOpen(false); }
+                      }}
                     >
                       <span className={`${styles.notifDot}${!isUnread ? ` ${styles.notifDotRead}` : ''}`} />
                       <div className={styles.notifBody}>
-                        <p className={styles.notifEvt}>{n.event_type.replace(/_/g, ' ')}</p>
+                        <p className={styles.notifEvt}>{subject}</p>
                         <p className={styles.notifMsg}>{getNotifMessage(n)}</p>
                       </div>
-                      <span className={styles.notifTime}>{fmtRelative(n.created_at)}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                        <span className={styles.notifTime}>{fmtRelative(n.created_at)}</span>
+                        <button
+                          type="button"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.4, fontSize: 14, lineHeight: 1 }}
+                          title="Descartar"
+                          onClick={(e) => { e.stopPropagation(); dismissMut.mutate(n.id); }}
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Footer link */}
+              <div style={{ borderTop: '1px solid #e2e8f0', padding: '8px 12px' }}>
+                <Link
+                  href="/notifications"
+                  className={styles.notifMarkAll}
+                  style={{ display: 'block', textAlign: 'center', width: '100%' }}
+                  onClick={() => setNotifOpen(false)}
+                >
+                  Ver todas las notificaciones
+                </Link>
               </div>
             </div>
           </div>

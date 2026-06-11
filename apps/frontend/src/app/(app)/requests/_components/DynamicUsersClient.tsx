@@ -375,7 +375,7 @@ export function DynamicUsersClient() {
 
         {authUser && (
           <OwnProfileCard
-            user={{ ...authUser, global_role: null, global_role_id: null, last_login_at: null, roles: (authUser as any).module_roles?.map((r: any) => ({ module: r.module_name, role: r.role_name })) ?? [] }}
+            user={{ ...authUser, global_role: null, global_role_id: null, last_login_at: null, last_seen_at: null, roles: (authUser as any).module_roles?.map((r: any) => ({ module: r.module_name, role: r.role_name })) ?? [] }}
             requests={mineReqs}
           />
         )}

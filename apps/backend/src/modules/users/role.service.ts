@@ -99,8 +99,16 @@ export class RoleService {
     return { ok: true, message: 'Rol removido' };
   }
 
-  async getUsersByModule(moduleId: string) {
+  async getUsersByModule(moduleId: string, limit?: number, offset?: number) {
     await this.assertModuleExists(moduleId);
+
+    const params: unknown[] = [moduleId];
+    let limitClause = '';
+    if (limit != null) {
+      params.push(limit);
+      params.push(offset ?? 0);
+      limitClause = `LIMIT $${params.length - 1} OFFSET $${params.length}`;
+    }
 
     return this.db.query<any[]>(
       `SELECT p.id,
@@ -117,8 +125,9 @@ export class RoleService {
        WHERE  umr.module_id = $1
          AND  umr.is_active = true
          AND  p.deleted_at  IS NULL
-       ORDER  BY p.first_name, p.last_name, mr.name`,
-      [moduleId],
+       ORDER  BY p.first_name, p.last_name, mr.name
+       ${limitClause}`,
+      params,
     );
   }
 
@@ -134,6 +143,7 @@ export class RoleService {
         COUNT(*) FILTER (WHERE is_active = false)       AS inactive_users
       FROM users.profiles
       WHERE deleted_at IS NULL
+        AND id != '00000000-0000-0000-0000-000000000001'
     `);
 
     const [moduleStats] = await this.db.query<{
@@ -155,7 +165,6 @@ export class RoleService {
         COUNT(*) FILTER (WHERE s.is_final = false)           AS open_tickets
       FROM tickets.tickets t
       JOIN tickets.states s ON s.id = t.current_state_id
-      WHERE t.deleted_at IS NULL
     `);
 
     const [requestStats] = await this.db.query<{
@@ -163,13 +172,11 @@ export class RoleService {
     }[]>(`
       SELECT
         COUNT(*)                                                                        AS total_requests,
-        COUNT(*) FILTER (WHERE status IN ('pending', 'taken', 'in_progress'))           AS pending_requests,
+        COUNT(*) FILTER (WHERE status = 'pending')                                      AS pending_requests,
         COUNT(*) FILTER (WHERE status IN ('taken', 'in_progress'))                      AS in_progress_requests
       FROM requests.admin_requests
       WHERE deleted_at IS NULL
     `);
-
-    const totalModules = parseInt(moduleStats?.total_modules ?? '0', 10);
 
     return {
       users: {
@@ -178,9 +185,9 @@ export class RoleService {
         inactive: parseInt(userStats?.inactive_users ?? '0', 10),
       },
       modules: {
-        total:    totalModules,
-        active:   totalModules,
-        inactive: 0,
+        total:    parseInt(moduleStats?.total_modules    ?? '0', 10),
+        active:   parseInt(moduleStats?.active_modules   ?? '0', 10),
+        inactive: parseInt(moduleStats?.inactive_modules ?? '0', 10),
       },
       tickets: {
         total: parseInt(ticketStats?.total_tickets ?? '0', 10),
@@ -220,6 +227,38 @@ export class RoleService {
       [normalized, description ?? null],
     );
     return row;
+  }
+
+  async updateGlobalRole(id: string, name?: string, description?: string) {
+    const [role] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM config.global_roles WHERE id = $1`,
+      [id],
+    );
+    if (!role) throw new NotFoundException(`Rol global ${id} no encontrado`);
+
+    if (name !== undefined) {
+      const normalized = name.trim().toLowerCase().replace(/\s+/g, '_');
+      if (!normalized) throw new BadRequestException('name no puede estar vacío');
+      const [dup] = await this.db.query<{ id: string }[]>(
+        `SELECT id FROM config.global_roles WHERE name = $1 AND id != $2`,
+        [normalized, id],
+      );
+      if (dup) throw new ConflictException(`Rol '${normalized}' ya existe`);
+      await this.db.query(
+        `UPDATE config.global_roles SET name = $1, description = $2 WHERE id = $3`,
+        [normalized, description ?? null, id],
+      );
+    } else if (description !== undefined) {
+      await this.db.query(
+        `UPDATE config.global_roles SET description = $1 WHERE id = $2`,
+        [description ?? null, id],
+      );
+    }
+    const [updated] = await this.db.query<any[]>(
+      `SELECT id, name, description, is_active FROM config.global_roles WHERE id = $1`,
+      [id],
+    );
+    return updated;
   }
 
   async deleteGlobalRole(id: string) {

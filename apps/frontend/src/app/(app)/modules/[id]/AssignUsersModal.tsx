@@ -70,7 +70,7 @@ export function AssignUsersModal({ moduleId, existingUserIds, onClose }: Props) 
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 9000,
+      position: 'fixed', inset: 0, zIndex: 210,
       background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(3px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
     }}>
@@ -136,16 +136,16 @@ export function AssignUsersModal({ moduleId, existingUserIds, onClose }: Props) 
               >
                 <div style={{
                   width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                  border: checked ? '2px solid #6366F1' : '2px solid #E2E8F0',
-                  background: checked ? '#6366F1' : '#fff',
+                  border: checked ? '2px solid #0e2235' : '2px solid #E2E8F0',
+                  background: checked ? '#0e2235' : '#fff',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {checked && <Check size={12} color="#fff" strokeWidth={3} />}
                 </div>
                 <div style={{
-                  width: 32, height: 32, borderRadius: '50%', background: '#312E81',
+                  width: 32, height: 32, borderRadius: '50%', background: '#0e2235',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 700, color: '#C7D2FE', flexShrink: 0, overflow: 'hidden',
+                  fontSize: 11, fontWeight: 700, color: '#bfdbfe', flexShrink: 0, overflow: 'hidden',
                 }}>
                   {u.avatar_url
                     ? <img src={u.avatar_url} alt="" style={{ width: 32, height: 32, objectFit: 'cover' }} />
@@ -181,7 +181,7 @@ export function AssignUsersModal({ moduleId, existingUserIds, onClose }: Props) 
               onClick={() => { setErrMsg(''); assignMut.mutate(); }}
               disabled={!canSubmit}
               style={{
-                padding: '8px 16px', background: canSubmit ? '#6366F1' : '#A5B4FC',
+                padding: '8px 16px', background: canSubmit ? '#0e2235' : '#94a3b8',
                 color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
                 cursor: canSubmit ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
               }}

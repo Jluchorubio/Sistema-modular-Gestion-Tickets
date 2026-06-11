@@ -24,7 +24,7 @@
 .card {
   background: #fff;
   border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 16px 18px;
   transition: border-color .12s;
 }
@@ -40,12 +40,12 @@
 .roleIcon {
   width: 36px;
   height: 36px;
-  background: #eef2ff;
+  background: var(--app-border-soft, #f1f5f9);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6366F1;
+  color: var(--app-navy, #0e2235);
   flex-shrink: 0;
 }
 

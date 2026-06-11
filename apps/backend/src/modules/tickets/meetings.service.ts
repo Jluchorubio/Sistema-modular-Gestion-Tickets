@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessagingService } from '../../shared/messaging/messaging.service';
 
 export type MeetingProvider = 'google_meet' | 'teams' | 'zoom' | 'internal';
 export type MeetingStatus   = 'scheduled' | 'active' | 'completed' | 'cancelled';
@@ -19,7 +19,7 @@ export interface CreateMeetingDto {
 export class MeetingsService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
-    private readonly events: EventEmitter2,
+    private readonly messaging: MessagingService,
   ) {}
 
   async getMeetings(ticketId: string) {
@@ -45,8 +45,17 @@ export class MeetingsService {
       throw new BadRequestException(`Proveedor inválido: ${dto.provider}`);
     }
 
+    if (dto.meeting_url) {
+      try { new URL(dto.meeting_url); } catch {
+        throw new BadRequestException('El enlace de reunión no es una URL válida.');
+      }
+      if (!dto.meeting_url.startsWith('https://') && !dto.meeting_url.startsWith('http://')) {
+        throw new BadRequestException('El enlace de reunión debe comenzar con https:// o http://');
+      }
+    }
+
     const [ticket] = await this.db.query<{ id: string; module_id: string }[]>(
-      `SELECT id, module_id FROM tickets.tickets WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT id, module_id FROM tickets.tickets WHERE id = $1`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException(`Ticket ${ticketId} no encontrado`);
@@ -90,7 +99,7 @@ export class MeetingsService {
       [ticketId],
     );
     const allParticipants = [...(dto.participant_ids ?? []), actorId];
-    this.events.emit('meeting.scheduled', {
+    this.messaging.emit('meeting.scheduled', {
       meetingId:      meeting.id,
       ticketId,
       ticketTitle:    ticketRow?.title ?? ticketId,
@@ -120,7 +129,9 @@ export class MeetingsService {
     return row;
   }
 
-  async getCalendarMeetings(userId: string, isSuperadmin: boolean, moduleId?: string) {
+  async getCalendarMeetings(userId: string, moduleId?: string) {
+    const [actor] = await this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]);
+    const isSuperadmin: boolean = actor?.is_superadmin ?? false;
     const conditions: string[] = [`tm.status IN ('scheduled','active')`];
     const values: any[] = [];
     let idx = 1;

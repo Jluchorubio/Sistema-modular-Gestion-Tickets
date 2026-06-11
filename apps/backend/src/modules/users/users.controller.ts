@@ -30,6 +30,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { PreferencesDto } from './dto/preferences.dto';
 import { AssignRoleDto } from './dto/assign-role.dto';
 import { AvailabilityDto } from './dto/availability.dto';
+import { SelfAvailabilityDto } from './dto/self-availability.dto';
 import { AddSkillDto } from './dto/add-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { CompleteProfileDto } from './dto/complete-profile.dto';
@@ -76,8 +77,6 @@ export class UsersController {
   }
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Listar usuarios con filtros y paginación.' })
   @ApiQuery({ name: 'search', required: false })
@@ -154,8 +153,20 @@ export class UsersController {
   @Get('me/assigned-tickets')
   @ApiOperation({ summary: 'Tickets activos asignados al usuario.' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  getMyAssignedTickets(@Req() req: any, @Query('limit') limit?: string) {
-    return this.profileService.getMyAssignedTickets(req.user.sub, limit ? parseInt(limit, 10) : 50);
+  @ApiQuery({ name: 'module_id', required: false, type: String })
+  getMyAssignedTickets(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+    @Query('module_id') moduleId?: string,
+  ) {
+    return this.profileService.getMyAssignedTickets(req.user.sub, limit ? parseInt(limit, 10) : 50, moduleId);
+  }
+
+  @Get('me/tech-stats')
+  @ApiOperation({ summary: 'Estadísticas de rendimiento del técnico (rating, tickets calificados).' })
+  @ApiQuery({ name: 'module_id', required: false, type: String })
+  getMyTechStats(@Req() req: any, @Query('module_id') moduleId?: string) {
+    return this.profileService.getMyTechStats(req.user.sub, moduleId);
   }
 
   @Get('me/activity-feed')
@@ -180,12 +191,18 @@ export class UsersController {
   }
 
   @Get('module/:moduleId')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:users:view')
   @ApiOperation({ summary: 'Usuarios activos de un módulo con sus roles.' })
-  getUsersByModule(@Param('moduleId', ParseUUIDPipe) moduleId: string) {
-    return this.roleService.getUsersByModule(moduleId);
+  getUsersByModule(
+    @Param('moduleId', ParseUUIDPipe) moduleId: string,
+    @Query('limit')  limit?:  string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.roleService.getUsersByModule(
+      moduleId,
+      limit  ? parseInt(limit,  10) : undefined,
+      offset ? parseInt(offset, 10) : undefined,
+    );
   }
 
   // ─── System stats (superadmin) ───────────────────────────────────────────────
@@ -214,6 +231,18 @@ export class UsersController {
   @ApiOperation({ summary: 'Crear nuevo rol global. Solo superadmin.' })
   createGlobalRole(@Body() body: { name: string; description?: string }) {
     return this.roleService.createGlobalRole(body.name, body.description);
+  }
+
+  @Patch('global-roles/:id')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  @RequirePermission('global:roles:edit')
+  @ApiOperation({ summary: 'Actualizar nombre/descripción de rol global. Solo superadmin.' })
+  updateGlobalRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { name?: string; description?: string },
+  ) {
+    return this.roleService.updateGlobalRole(id, body.name, body.description);
   }
 
   @Delete('global-roles/:id')
@@ -275,8 +304,6 @@ export class UsersController {
   }
 
   @Get(':id/activity')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Gráfica de actividad de un usuario — últimas 26 semanas.' })
   getUserActivity(@Param('id', ParseUUIDPipe) id: string) {
@@ -284,8 +311,6 @@ export class UsersController {
   }
 
   @Get(':id/recent-tickets')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Últimos tickets de un usuario. ?limit=N (default 6).' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -294,8 +319,6 @@ export class UsersController {
   }
 
   @Get(':id/activity-feed')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Feed de actividad de un usuario — últimos 20 eventos.' })
   getUserActivityFeed(@Param('id', ParseUUIDPipe) id: string) {
@@ -303,17 +326,26 @@ export class UsersController {
   }
 
   @Get(':id/request-stats')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Estadísticas de solicitudes y tickets de un usuario.' })
   getUserRequestStats(@Param('id', ParseUUIDPipe) id: string) {
     return this.profileService.getUserRequestStats(id);
   }
 
+  @Get(':id/assigned-tickets')
+  @RequirePermission('global:users:view')
+  @ApiOperation({ summary: 'Tickets asignados a un técnico (vista de admin/jefe técnico).' })
+  @ApiQuery({ name: 'module_id', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getUserAssignedTickets(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('module_id') moduleId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.profileService.getUserAssignedTickets(id, moduleId, limit ? parseInt(limit, 10) : 100);
+  }
+
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Ver usuario por ID.' })
   getOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -341,8 +373,6 @@ export class UsersController {
   // ─── Roles por módulo ────────────────────────────────────────────────────────
 
   @Get(':id/roles')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('global:users:view')
   @ApiOperation({ summary: 'Roles de un usuario en todos sus módulos.' })
   getRoles(@Param('id', ParseUUIDPipe) id: string) {
@@ -368,6 +398,18 @@ export class UsersController {
   }
 
   // ─── Disponibilidad ──────────────────────────────────────────────────────────
+
+  @Get('me/availability')
+  @ApiOperation({ summary: 'Mi disponibilidad por módulo.' })
+  getMyAvailability(@Req() req: any) {
+    return this.skillService.getAvailability(req.user.sub);
+  }
+
+  @Put('me/availability')
+  @ApiOperation({ summary: 'Actualizar mi propio estado de disponibilidad (técnico).' })
+  setMyAvailability(@Req() req: any, @Body() dto: SelfAvailabilityDto) {
+    return this.skillService.setMyAvailability(req.user.sub, dto);
+  }
 
   @Get(':id/availability')
   @ApiOperation({ summary: 'Disponibilidad del técnico por módulo.' })

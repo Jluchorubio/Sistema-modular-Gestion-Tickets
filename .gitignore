@@ -28,6 +28,9 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Claude Code local settings (may contain credentials in allow-lists)
+.claude/settings.local.json
 *.swp
 *.swo
 
@@ -42,3 +45,8 @@ coverage/
 
 # TypeScript incremental compilation
 *.tsbuildinfo
+
+node_modules/
+apps/backend/dist/
+.env
+audit_screenshots/

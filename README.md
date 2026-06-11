@@ -1,6 +1,6 @@
-# Sistema Modular de Gestión de Tickets
+# NEXO ITSM — Sistema Modular de Gestión de Tickets
 
-API REST para gestión de tickets de soporte con arquitectura modular, autenticación completa y control de roles por módulo.
+Plataforma ITSM enterprise para gestión de tickets, inventario, solicitudes administrativas y reportes. Arquitectura monorepo NestJS 11 + Next.js 14 con autenticación completa, RBAC por módulo, SLA automático y soporte multi-módulo.
 
 ---
 
@@ -10,18 +10,20 @@ API REST para gestión de tickets de soporte con arquitectura modular, autentica
 | Tecnología | Rol |
 |---|---|
 | **Node.js 20 + TypeScript** | Runtime y lenguaje principal |
-| **NestJS 10** | Framework HTTP (módulos, guards, pipes, filtros) |
-| **PostgreSQL 16** | Base de datos principal — schema v6.1 (13 schemas) |
-| **TypeORM** | Solo como conector/DataSource — todas las queries son SQL raw |
+| **NestJS 11** | Framework HTTP (módulos, guards, pipes, filtros) |
+| **PostgreSQL 16** | Base de datos principal — schema v7.0 (15 schemas) |
+| **TypeORM** | Solo como conector/DataSource — queries 100% SQL raw |
 | **JWT (passport-jwt)** | Autenticación stateless — access 15min / refresh 7 días |
 | **bcrypt** | Hash de contraseñas (12 rounds) |
 | **speakeasy + qrcode** | TOTP 2FA (Google Authenticator) |
 | **Resend** | Envío de emails (OTP, recuperación de contraseña) |
-| **passport-google-oauth20** | Login con Google |
+| **passport-google-oauth20** | Login con Google OAuth2 |
 | **Helmet + CORS** | Seguridad HTTP |
 | **@nestjs/throttler** | Rate limiting: 100 req/60s por IP |
-| **Redis** | Preparado para caché y pub/sub (ioredis incluido) |
-| **Swagger/OpenAPI** | Documentación automática de endpoints |
+| **@nestjs/schedule** | Schedulers (SLA auto-escalation cada 30 min) |
+| **EventEmitter2** | Bus de eventos interno (notificaciones, escalation) |
+| **Redis (ioredis)** | Caché y pub/sub |
+| **Swagger/OpenAPI** | Documentación automática en `/docs` |
 | **Docker + Docker Compose** | Contenedores para dev y producción |
 
 ### Frontend
@@ -29,82 +31,249 @@ API REST para gestión de tickets de soporte con arquitectura modular, autentica
 |---|---|
 | **Next.js 14** | Framework React con App Router |
 | **TypeScript** | Lenguaje principal |
-| **Tailwind CSS** | Estilos utilitarios |
+| **CSS Modules** | Estilos por componente |
 | **Zustand** | Estado global |
 | **SWR** | Fetching y caché de datos |
+| **Recharts** | Gráficos y reportes |
 | **Anime.js** | Animaciones |
+| **Lucide React** | Iconografía |
 
 ---
 
-## Arquitectura
+## Arquitectura del monorepo
 
 ```
 Sistema modular Gestion Tickets/
 ├── apps/
-│   ├── backend/                  NestJS API
-│   │   └── src/
-│   │       ├── gateway/          Guards, filtros, decoradores globales
-│   │       ├── health/           Health check endpoint
-│   │       ├── infrastructure/   TypeORM CLI config
-│   │       ├── shared/           SharedModule (DB connection global)
-│   │       └── modules/
-│   │           ├── auth/         ✅ Completo
-│   │           ├── users/        ✅ Completo
-│   │           ├── system-modules/ Parcial
-│   │           ├── tickets/      Stub
-│   │           ├── inventory/    Stub
-│   │           ├── files/        Stub
-│   │           ├── notifications/ Stub
-│   │           └── reporting/    Stub
-│   └── frontend/                 Next.js (en desarrollo)
-├── DB_FINAL_v6_1.sql             Schema completo PostgreSQL
-├── tests_v6_1.sql                14 tests de regresión del schema
-└── docker-compose.yml
+│   ├── backend/                   NestJS API
+│   │   ├── src/
+│   │   │   ├── gateway/           Guards, filtros, decoradores globales
+│   │   │   ├── health/            Health check endpoint
+│   │   │   ├── infrastructure/    TypeORM CLI config
+│   │   │   ├── shared/            SharedModule (DataSource global)
+│   │   │   └── modules/
+│   │   │       ├── auth/          ✅ JWT, 2FA TOTP, Google OAuth, OTP
+│   │   │       ├── users/         ✅ CRUD, roles, skills, disponibilidad
+│   │   │       ├── system-modules/ ✅ Módulos organizacionales
+│   │   │       ├── tickets/       ✅ CRUD, SLA, asignación, timeline
+│   │   │       ├── inventory/     ✅ CMDB-style, assets, specs
+│   │   │       ├── requests/      ✅ Flujo 5-etapas, SLA, scheduler
+│   │   │       ├── notifications/ ✅ Bell, email, EventEmitter2
+│   │   │       ├── reporting/     ✅ Reportes enterprise, PDF/Excel
+│   │   │       ├── audit/         ✅ Audit log, timeline por entidad
+│   │   │       ├── calendar/      ✅ Grid mensual/anual, reuniones
+│   │   │       ├── config/        ✅ SLA, categorías, horarios, RBAC
+│   │   │       ├── trash/         ✅ Soft-delete, 90 días, bulk re-auth
+│   │   │       └── files/         ✅ Upload local/S3
+│   │   └── Dockerfile
+│   └── frontend/                  Next.js 14 App Router
+│       └── src/
+│           ├── app/(app)/         Rutas autenticadas
+│           │   ├── dashboard/     Métricas globales
+│           │   ├── tickets/       Módulo Helpdesk
+│           │   ├── inventory/     Módulo Inventario
+│           │   ├── requests/      Solicitudes (superadmin: oversight)
+│           │   ├── helpdesk/requests/  Solicitudes desde Helpdesk
+│           │   ├── inventory/requests/ Solicitudes desde Inventario
+│           │   ├── calendar/      Calendario + reuniones
+│           │   ├── config/        Configuración global
+│           │   ├── users/         Gestión de usuarios
+│           │   ├── roles/         RBAC + permisos
+│           │   ├── reports/       Reportes enterprise
+│           │   ├── audit/         Auditoría
+│           │   └── trash/         Papelera
+│           ├── services/          Clientes HTTP (SWR + fetch)
+│           ├── stores/            Zustand stores
+│           └── types/             Tipos compartidos
+├── database/
+│   ├── SCHEMA_MASTER.sql          Schema completo v7.0 (15 schemas)
+│   └── migrations/                Migraciones incrementales (001–037+)
+├── nginx/
+│   └── nginx.conf                 Proxy reverso (HTTP/HTTPS)
+├── docker-compose.yml             Producción: Railway DB por defecto (sin postgres local)
+├── docker-compose.local.yml       Override: activa postgres local + sobreescribe DATABASE_URL
+├── docker-compose.railway.yml     Alias legacy (equivalente al docker-compose.yml actual)
+└── start-dev.bat                  Atajo Windows — arranca backend + frontend
 ```
-
-### Principio de queries
-No se usan entidades TypeORM. Todo es SQL raw a través de `DataSource.query()`. Esto permite aprovechar al 100% el schema v6.1 con sus triggers, funciones y constraints sin que TypeORM interfiera.
 
 ---
 
-## Levantar el proyecto
+## Levantar con Docker
 
-### Con Docker (recomendado)
+### Prioridad de variables de entorno
+
+```
+apps/backend/.env  (env_file)   ← DATABASE_URL Railway — SIEMPRE GANA
+environment block               ← NO define DATABASE_URL — no sobreescribe
+```
+
+El bloque `environment` de Docker Compose tiene mayor precedencia que `env_file`.
+Por eso `DATABASE_URL` fue **eliminado** del bloque `environment` en `docker-compose.yml`.
+El backend lee el valor directamente de `apps/backend/.env`, donde está la URL de Railway.
+
+---
+
+### Modo por defecto — Railway (producción)
+
+`apps/backend/.env` debe tener `DATABASE_URL` apuntando a Railway antes de levantar.
+
 ```bash
-cp .env.example .env
-# editar .env con tus valores
+# Verificar que DATABASE_URL en apps/backend/.env es Railway:
+# DATABASE_URL=postgresql://postgres:<pass>@tramway.proxy.rlwy.net:16466/railway
 
 docker compose up -d
 ```
 
-### Desarrollo local
-```bash
-# backend
-cd apps/backend
-cp .env.example .env   # completar variables
-npm install
-npm run start:dev      # http://localhost:3001
+Contenedores que arrancan:
 
-# frontend
-cd apps/frontend
-cp .env.example .env
-npm install
-npm run dev            # http://localhost:3000
+| Contenedor | Imagen | Puerto | Descripción |
+|---|---|---|---|
+| `tickets_redis` | redis:7-alpine | `6379` | Caché y pub/sub |
+| `tickets_backend` | build local | `3001` | API NestJS → Railway DB |
+| `tickets_frontend` | build local | `3000` | App Next.js |
+| `tickets_nginx` | nginx:alpine | `80` / `443` | Proxy reverso |
+
+`tickets_postgres` **no arranca** — la DB es Railway.
+
+#### URLs disponibles
+
+| Servicio | URL |
+|---|---|
+| **App web** | http://localhost (vía nginx) |
+| **Frontend directo** | http://localhost:3000 |
+| **API backend** | http://localhost:3001/api/v1 |
+| **Swagger UI** | http://localhost:3001/docs |
+| **Health check** | http://localhost:3001/health |
+
+#### Verificar que el backend usa Railway
+
+```bash
+docker exec tickets_backend printenv DATABASE_URL
+# Debe mostrar: postgresql://postgres:...@tramway.proxy.rlwy.net:16466/railway
 ```
 
-### Variables de entorno — backend
+---
+
+### Modo desarrollo aislado — PostgreSQL local
+
+Usa `docker-compose.local.yml` como override. Este archivo:
+- Quita la restricción de perfil del servicio `postgres` → arranca el contenedor
+- Sobreescribe `DATABASE_URL` → apunta al postgres local
+- Activa `MIGRATIONS_DIR` → corre migraciones al iniciar
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+```
+
+Contenedores adicionales que arrancan:
+
+| Contenedor | Imagen | Puerto | Descripción |
+|---|---|---|---|
+| `tickets_postgres` | postgres:16-alpine | `5432` | PostgreSQL local con schema aplicado |
+
+---
+
+### Comandos útiles de Docker
+
+```bash
+# Detener todo
+docker compose down
+
+# Detener y borrar volúmenes (reset completo de DB local)
+docker compose down -v
+
+# Reconstruir backend (después de cambios de código)
+docker compose build backend && docker compose up -d backend
+
+# Reconstruir frontend
+docker compose build frontend && docker compose up -d frontend
+
+# Ver variable DATABASE_URL en runtime (confirmar Railway)
+docker exec tickets_backend printenv DATABASE_URL
+
+# Acceder al shell del backend
+docker exec -it tickets_backend sh
+
+# Acceder a PostgreSQL local (solo en modo local)
+docker exec -it tickets_postgres psql -U tickets_user -d tickets_db
+
+# Ver logs del scheduler SLA
+docker compose logs backend | grep -i scheduler
+
+# Activar RabbitMQ (perfil opcional)
+docker compose --profile rabbitmq up -d
+# RabbitMQ Management UI: http://localhost:15672
+```
+
+---
+
+## Desarrollo local (sin Docker)
+
+### Windows — script automático
+
+```bat
+start-dev.bat
+```
+
+Libera puertos 3000 y 3001, abre dos ventanas CMD: backend en 3001 y frontend en 3000.
+
+### Manual
+
+```bash
+# Backend
+cd apps/backend
+npm install
+npm run start:dev          # http://localhost:3001
+
+# Frontend (otra terminal)
+cd apps/frontend
+npm install
+npm run dev                # http://localhost:3000
+```
+
+---
+
+## Variables de entorno
+
+### `apps/backend/.env`
+
 ```env
-DATABASE_URL=postgresql://user:pass@localhost:5432/tickets_db
-JWT_SECRET=tu_secreto_muy_largo
-JWT_REFRESH_SECRET=otro_secreto
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
+# Base de datos
+DATABASE_URL=postgresql://tickets_user:tickets_pass@localhost:5432/tickets_db
+
+# JWT
+JWT_SECRET=secreto_muy_largo_minimo_32_chars
+JWT_REFRESH_SECRET=otro_secreto_diferente
+
+# Google OAuth
+GOOGLE_CLIENT_ID=tu_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=tu_google_secret
 GOOGLE_CALLBACK_URL=http://localhost:3001/api/v1/auth/google/callback
-RESEND_API_KEY=re_...
+
+# Email (Resend)
+RESEND_API_KEY=re_xxxxxxxxxxxx
+
+# URLs
 APP_URL=http://localhost:3000
 ALLOWED_ORIGINS=http://localhost:3000
+
+# Entorno
 NODE_ENV=development
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Storage
+STORAGE_DRIVER=local    # o 's3' para producción
 ```
+
+### `apps/frontend/.env` (opcional en dev)
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+> **IMPORTANTE:** Nunca commitear `apps/backend/.env` — contiene credenciales reales y está en `.gitignore`.
 
 ---
 
@@ -112,90 +281,98 @@ NODE_ENV=development
 
 Disponible **solo en desarrollo** en `http://localhost:3001/docs`
 
-### Cómo autenticarse en Swagger
+### Autenticarse en Swagger
 
-1. Ir a `POST /api/v1/auth/login` → ejecutar con email y password
-2. Copiar el `access_token` de la respuesta
-3. Clic en el botón **Authorize** (candado arriba a la derecha)
-4. Pegar el token en el campo `BearerAuth` → **Authorize**
-5. Todos los endpoints protegidos ahora envían el header `Authorization: Bearer <token>`
+1. `POST /api/v1/auth/login` → ejecutar con email y password
+2. Copiar `access_token` de la respuesta
+3. Clic en **Authorize** (candado arriba a la derecha)
+4. Pegar en campo `BearerAuth` → **Authorize**
 
-> El `access_token` expira en 15 minutos. Usar `POST /api/v1/auth/refresh` con el `refresh_token` para obtener uno nuevo sin volver a loguearse.
+> El `access_token` expira en 15 min. Usar `POST /api/v1/auth/refresh` con el `refresh_token` para renovar.
 
 ### Flujo con 2FA en Swagger
 
-Si el usuario tiene 2FA activo, el login retorna `{ requires_mfa: true, mfa_token }` en vez de los tokens finales.
+Si el usuario tiene TOTP activo, el login retorna `{ requires_mfa: true, mfa_token }`.
 
-1. Copiar el `mfa_token`
-2. Pegar en Authorize (reemplaza el token anterior)
-3. Ejecutar `POST /api/v1/auth/mfa/verify` con el código del authenticator
-4. Retorna los tokens reales → autorizar con el `access_token`
+1. Copiar `mfa_token` → autorizar con ese token
+2. `POST /api/v1/auth/mfa/verify` con el código del authenticator
+3. Retorna tokens reales → autorizar con `access_token`
 
 ---
 
-## Gestión de usuarios — flujo del administrador
+## Módulos del sistema
 
-**No hay registro público.** El superadmin crea todos los usuarios desde la API.
+| Módulo | Descripción | Estado |
+|---|---|---|
+| **auth** | JWT, refresh, 2FA TOTP, Google OAuth, OTP email, recuperación password | ✅ |
+| **users** | CRUD usuarios, roles por módulo, skills, disponibilidad de técnicos | ✅ |
+| **system-modules** | Gestión de módulos organizacionales, asignación de admins | ✅ |
+| **tickets** | CRUD tickets, SLA, asignación, timeline, categorías, prioridades | ✅ |
+| **inventory** | CMDB-style: assets, specs dinámicas por tipo, asociación con tickets | ✅ |
+| **requests** | Solicitudes administrativas 5 etapas, SLA auto-escalation, oversight | ✅ |
+| **notifications** | Bell, email, EventEmitter2, badges en tiempo real | ✅ |
+| **calendar** | Grid mensual/anual custom, reuniones Teams/Zoom, multi-módulo | ✅ |
+| **config** | SLA por categoría, horarios laborales, holidays, RBAC master | ✅ |
+| **reporting** | Reportes enterprise por módulo, Recharts, PDF/Excel export | ✅ |
+| **audit** | Timeline por entidad, filtros, export CSV/PDF, KPIs | ✅ |
+| **trash** | Papelera unificada, soft-delete 90 días, bulk restore/delete con re-auth | ✅ |
+| **files** | Upload local y S3, asociación con tickets/assets | ✅ |
 
-### Crear un usuario
+---
 
-```
-POST /api/v1/users
-Authorization: Bearer <access_token_superadmin>
-
-{
-  "first_name": "Juan",
-  "last_name": "García",
-  "email": "juan@empresa.com",
-  "password": "Password123!",
-  "phone": "+573001234567",
-  "is_superadmin": false
-}
-```
-
-Retorna el perfil completo con `id`. Guardar ese `id` para el siguiente paso.
-
-### Asignar rol en un módulo
+## RBAC — Jerarquía de roles
 
 ```
-POST /api/v1/users/:id/roles
-Authorization: Bearer <access_token_superadmin_o_admin_modulo>
-
-{
-  "module_id": "uuid-del-modulo",
-  "role_id": "uuid-del-rol"
-}
+superadmin           → acceso total al sistema, sin restricción de módulo
+  │
+admin_modulo         → gestión completa de su(s) módulo(s) asignados
+  │
+jefe_tecnico         → supervisión de técnicos en su módulo
+  │
+tecnico              → resolución de tickets asignados
+  │
+usuario              → creación de tickets/solicitudes
 ```
 
-Roles disponibles por módulo (seeds en `DB_FINAL_v6_1.sql`):
-- `usuario` — puede crear tickets
-- `tecnico` — puede resolver tickets
-- `jefe_tecnico` — supervisa técnicos
-- `admin_modulo` — administra el módulo completo
+El motor RBAC maneja **60 permisos granulares** agrupados por recurso (`tickets:create`, `inventory:edit`, `requests:view_all`, etc.). Los permisos se asignan por usuario/módulo desde `/config/roles`.
 
-### Editar usuario existente
+---
 
-```
-PATCH /api/v1/users/:id
-{
-  "is_active": false   // desactivar acceso
-}
-```
+## Flujo de solicitudes (Requests)
 
-### Quitar rol
+Las solicitudes pasan por 5 etapas con control de permisos en cada transición:
 
 ```
-DELETE /api/v1/users/:id/roles/:umrId
+pending → taken → in_progress → under_review → approved / rejected
+                                              ↘ cancelled
 ```
+
+El **scheduler SLA** corre cada 30 minutos y escala automáticamente las solicitudes cuyo `sla_due_at` haya vencido sin completarse.
+
+---
+
+## Base de datos
+
+Schema v7.0 con 15 schemas PostgreSQL:
+
+`app`, `auth`, `users`, `config`, `modules`, `tickets`, `inventory`, `files`, `notifications`, `audit`, `events`, `reports`, `maintenance`, `calendar`, `requests`
+
+El schema maestro está en `database/SCHEMA_MASTER.sql`. Al usar `docker-compose.yml` se aplica automáticamente al crear el contenedor de PostgreSQL.
+
+Para aplicar manualmente:
+
+```bash
+psql -U tickets_user -d tickets_db -f database/SCHEMA_MASTER.sql
+```
+
+Las migraciones incrementales (para bases existentes) están en `database/migrations/`. Se aplican automáticamente al iniciar el backend cuando `MIGRATIONS_DIR` apunta a esa ruta.
 
 ---
 
 ## Referencia de endpoints
 
 > Base URL: `http://localhost:3001/api/v1`
-> Todos los endpoints marcados con 🔒 requieren `Authorization: Bearer <token>`
-
----
+> 🔒 = requiere `Authorization: Bearer <token>`
 
 ### Auth — `/auth`
 
@@ -216,61 +393,46 @@ DELETE /api/v1/users/:id/roles/:umrId
 | POST | `/auth/password/forgot` | ❌ | Enviar email con link de recuperación |
 | POST | `/auth/password/reset` | ❌ | Resetear contraseña con token del email |
 
----
-
 ### Users — `/users`
 
-> Crear/listar/editar usuarios requiere rol `superadmin` o `admin_modulo`.
-> Perfil propio accesible para cualquier usuario autenticado.
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/users` | Crear usuario (superadmin / admin_modulo) |
+| GET | `/users` | Listar con filtros: `search`, `is_active`, `page`, `limit` |
+| GET | `/users/:id` | Perfil completo + roles en todos sus módulos |
+| PATCH | `/users/:id` | Actualizar datos del usuario |
+| DELETE | `/users/:id` | Soft-delete + revocar sesiones (superadmin) |
+| GET | `/users/me` | Perfil propio |
+| PATCH | `/users/me` | Actualizar nombre, teléfono, avatar |
+| PATCH | `/users/me/password` | Cambiar contraseña |
+| GET | `/users/module/:moduleId` | Usuarios activos del módulo con roles |
+| POST | `/users/:id/roles` | Asignar rol en módulo |
+| DELETE | `/users/:id/roles/:umrId` | Quitar rol |
+| GET | `/users/:id/availability` | Estado de disponibilidad |
+| PUT | `/users/:id/availability` | Setear disponible/no disponible |
+| GET | `/users/:id/skills` | Skills del técnico |
+| POST | `/users/:id/skills` | Agregar skill |
+| PATCH | `/users/:id/skills/:skillId` | Editar skill |
+| DELETE | `/users/:id/skills/:skillId` | Desactivar skill |
 
-#### Administración de usuarios
+### Requests — `/requests`
 
-| Método | Ruta | Rol requerido | Descripción |
-|---|---|---|---|
-| POST | `/users` | superadmin \| admin_modulo | Crear usuario. Genera perfil + credencial + preferencias |
-| GET | `/users` | superadmin \| admin_modulo | Listar usuarios. Filtros: `search`, `is_active`, `is_superadmin`, `page`, `limit` |
-| GET | `/users/:id` | superadmin \| admin_modulo | Perfil completo + roles en todos sus módulos |
-| PATCH | `/users/:id` | superadmin \| admin_modulo | Actualizar campos. Solo superadmin toca `is_superadmin` |
-| DELETE | `/users/:id` | superadmin | Soft-delete + revocar todas sus sesiones |
-
-#### Perfil propio
-
-| Método | Ruta | Rol requerido | Descripción |
-|---|---|---|---|
-| GET | `/users/me` | 🔒 cualquier usuario | Perfil propio + preferencias + roles |
-| PATCH | `/users/me` | 🔒 cualquier usuario | Actualizar nombre, teléfono, avatar |
-| PATCH | `/users/me/password` | 🔒 cualquier usuario | Cambiar contraseña — revoca todas las sesiones activas |
-| GET | `/users/me/preferences` | 🔒 cualquier usuario | Ver preferencias (idioma, timezone, notificaciones) |
-| PUT | `/users/me/preferences` | 🔒 cualquier usuario | Actualizar preferencias completas |
-
-#### Roles por módulo
-
-| Método | Ruta | Rol requerido | Descripción |
-|---|---|---|---|
-| GET | `/users/module/:moduleId` | superadmin \| admin_modulo | Usuarios activos del módulo con roles y disponibilidad |
-| GET | `/users/:id/roles` | superadmin \| admin_modulo | Todos los roles del usuario en todos los módulos |
-| POST | `/users/:id/roles` | superadmin \| admin_modulo del módulo | Asignar rol. Reactiva si existía inactivo |
-| DELETE | `/users/:id/roles/:umrId` | superadmin \| admin_modulo del módulo | Quitar rol (soft — mantiene historial) |
-
-#### Disponibilidad de técnicos
-
-| Método | Ruta | Rol requerido | Descripción |
-|---|---|---|---|
-| GET | `/users/:id/availability` | 🔒 cualquier usuario | Estado de disponibilidad por módulo |
-| PUT | `/users/:id/availability` | superadmin \| admin_modulo del módulo | Setear disponible/no disponible con razón y fechas |
-
-Razones de no disponibilidad: `vacation`, `maternity_leave`, `sick_leave`, `training`, `other`
-
-#### Skills de técnicos
-
-| Método | Ruta | Rol requerido | Descripción |
-|---|---|---|---|
-| GET | `/users/:id/skills` | 🔒 cualquier usuario | Skills activas del técnico ordenadas por prioridad |
-| POST | `/users/:id/skills` | superadmin \| admin_modulo del módulo | Agregar skill. Reactiva si existía eliminada |
-| PATCH | `/users/:id/skills/:skillId` | superadmin \| admin_modulo del módulo | Editar `max_concurrent` y/o `priority` |
-| DELETE | `/users/:id/skills/:skillId` | superadmin \| admin_modulo del módulo | Desactivar skill (soft-delete) |
-
----
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/requests` | Crear solicitud |
+| GET | `/requests/me` | Mis solicitudes |
+| DELETE | `/requests/me/:id` | Cancelar mi solicitud |
+| PATCH | `/requests/me/:id/complete` | Marcar completada (usuario) |
+| GET | `/requests/stats` | Estadísticas globales (admin) |
+| GET | `/requests/stats/mine` | Mis estadísticas |
+| GET | `/requests/user/:id` | Solicitudes de un usuario |
+| GET | `/requests` | Todas (con filtros: módulo, estado, escalado) |
+| PATCH | `/requests/:id/review` | Aprobar/rechazar solicitud |
+| POST | `/requests/:id/take` | Tomar solicitud asignada |
+| PATCH | `/requests/:id/progress` | Actualizar progreso |
+| POST | `/requests/:id/escalate` | Escalar manualmente |
+| DELETE | `/requests/:id/escalate` | Des-escalar |
+| GET | `/requests/:id/timeline` | Timeline de la solicitud |
 
 ### System Modules — `/system-modules`
 
@@ -280,9 +442,7 @@ Razones de no disponibilidad: `vacation`, `maternity_leave`, `sick_leave`, `trai
 | GET | `/system-modules/:id` | Módulo con conteo de miembros |
 | POST | `/system-modules` | Crear módulo |
 
----
-
-### Health — `/health`
+### Health
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -290,66 +450,59 @@ Razones de no disponibilidad: `vacation`, `maternity_leave`, `sick_leave`, `trai
 
 ---
 
-## Seguridad — cómo funciona la autorización
+## Gestión de usuarios — flujo del administrador
+
+No hay registro público. El superadmin crea todos los usuarios desde la app o la API.
+
+### Crear usuario vía API
 
 ```
-Request
-  │
-  ▼
-JwtAuthGuard          → verifica token JWT válido y no es challenge MFA/OTP
-  │
-  ▼
-RolesGuard (si aplica) → verifica is_superadmin en DB
-                         o al menos un rol admin_modulo activo en algún módulo
-  │
-  ▼
-Service               → para operaciones de módulo específico, verifica
-                         que el actor sea superadmin O tenga admin_modulo
-                         en ESE módulo en particular
+POST /api/v1/users
+Authorization: Bearer <access_token_superadmin>
+
+{
+  "first_name": "Juan",
+  "last_name": "García",
+  "email": "juan@empresa.com",
+  "password": "Password123!",
+  "phone": "+573001234567"
+}
 ```
 
-### Jerarquía de roles
+### Asignar rol en un módulo
 
 ```
-superadmin           → acceso total, sin restricción de módulo
-  │
-admin_modulo         → gestión completa de su(s) módulo(s)
-  │
-jefe_tecnico         → supervisión de técnicos en su módulo
-  │
-tecnico              → resolución de tickets asignados
-  │
-usuario              → creación de tickets
+POST /api/v1/users/:id/roles
+Authorization: Bearer <access_token_superadmin_o_admin_modulo>
+
+{
+  "module_id": "uuid-del-modulo",
+  "role_id": "uuid-del-rol"
+}
 ```
 
 ---
 
-## Estado de módulos
+## Credenciales de demo
 
-| Módulo | Estado | Endpoints |
+| Campo | Valor |
+|---|---|
+| Email | `joselu.rubio2008@gmail.com` |
+| Password | `AdminPass2026!` |
+| Rol | Superadmin |
+
+---
+
+## Roadmap
+
+| Fase | Descripción | Estado |
 |---|---|---|
-| auth | ✅ Completo | 14 endpoints |
-| users | ✅ Completo | 18 endpoints |
-| system-modules | 🔄 Parcial | 3 endpoints básicos |
-| tickets | ⏳ Pendiente | — |
-| inventory | ⏳ Pendiente | — |
-| files | ⏳ Pendiente | — |
-| notifications | ⏳ Pendiente | — |
-| reporting | ⏳ Pendiente | — |
-
----
-
-## Schema de base de datos
-
-El archivo `DB_FINAL_v6_1.sql` contiene el schema completo. Ejecutar en PostgreSQL antes de levantar el backend:
-
-```bash
-psql -U tickets_user -d tickets_db -f DB_FINAL_v6_1.sql
-```
-
-13 schemas: `app`, `auth`, `users`, `config`, `modules`, `tickets`, `inventory`, `files`, `notifications`, `audit`, `events`, `reports`, `maintenance`.
-
-Tests de regresión:
-```bash
-psql -U tickets_user -d tickets_db -f tests_v6_1.sql
-```
+| Fase 0 | Fundación: auth, users, RBAC, módulos | ✅ Completo |
+| Fase 1 | Tickets + Inventario core | ✅ Completo |
+| Fase 2 | Solicitudes + SLA + Scheduler | ✅ Completo |
+| Fase 3 | Gestión administrativa: config, SLA engine, routing | ✅ Completo |
+| Fase 4 | Calendar, Trash, Notifications enterprise | ✅ Completo |
+| Fase 5 | Responsive 100% (todos los módulos) | ✅ Completo |
+| Fase 6 | Reports enterprise + Auditoría enterprise | 🔄 En progreso |
+| Fase 7 | Merge a main + Deploy WDS | ⏳ Pendiente |
+| Fase 8 | Security: httpOnly cookies, refresh rotation, rate limit por usuario | ⏳ Pendiente |

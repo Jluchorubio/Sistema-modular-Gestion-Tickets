@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma IT - Módulos e ITSM</title>
+    <!-- Tailwind CSS para maquetación y tipografía -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter para un acabado de tipografía premium -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome para iconos de los módulos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js para las gráficas interactivas serias -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#0e2235',      // Azul oscuro de operaciones
+                            darker: '#061320',    // Azul marino profundo
+                            coral: '#ff5e3a',     // Coral de acento técnico
+                            green: '#20c933',     // Verde de éxito/activo
+                            bg: '#f8fafc',        // Fondo gris ultra limpio
+                            border: '#e2e8f0',    // Gris de borde técnico fino
+                            textMuted: '#64748b'  // Texto secundario
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+        }
+
+        /* Transición suave para colapso de sidebar */
+        .sidebar-transition {
+            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Bordes rectos serios de estilo industrial ITSM */
+        .sharp-card {
+            border-radius: 4px;
+        }
+
+        .sharp-input {
+            border-radius: 4px;
+        }
+
+        .sharp-btn {
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-2 md:p-6 no-scrollbar">
+
+    <!-- Contenedor Principal Unificado con diseño recto y profesional de alta gama -->
+    <div
+        class="w-full max-w-[1380px] bg-white rounded-sm shadow-[0_4px_35px_rgba(15,34,53,0.08)] border border-slate-200 overflow-hidden flex flex-col min-h-[760px]">
+
+        <!-- HEADER GLOBAL (image_837fe3.png) - Rediseñado con esquinas rectas y sobriedad técnica -->
+        <header class="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between z-10 shrink-0">
+            <!-- Izquierda: Toggle Sidebar + Logotipo -->
+            <div class="flex items-center space-x-4">
+                <!-- Botón hamburguesa con esquinas rectas como la referencia -->
+                <button onclick="toggleSidebar()"
+                    class="w-10 h-10 border border-slate-200 rounded-sm hover:bg-slate-50 flex items-center justify-center text-brand-dark transition-all">
+                    <i class="fa-solid fa-bars text-sm"></i>
+                </button>
+                <div class="flex items-center space-x-2">
+                    <!-- Icono Logotipo con barras inclinadas y punto coral -->
+                    <div class="flex space-x-[3px] items-center">
+                        <span class="w-[6px] h-5 bg-brand-dark rounded-xs transform -rotate-12"></span>
+                        <span
+                            class="w-[6px] h-5 bg-brand-dark rounded-xs transform -rotate-12 translate-y-[2px]"></span>
+                    </div>
+                    <span class="text-xs font-black text-brand-dark uppercase tracking-widest"
+                        id="header-logo-text">LOGOTIPO</span>
+                </div>
+            </div>
+
+            <!-- Derecha: Calendario, Campana con notificación, nameUser y Avatar con borde coral -->
+            <div class="flex items-center space-x-6 text-slate-700">
+                <!-- Atajo Calendario -->
+                <button class="hover:text-brand-coral transition-all text-slate-400 p-1"
+                    onclick="alertModal('Calendario', 'Abriendo el planificador de agenda técnica del sistema.')">
+                    <i class="fa-solid fa-calendar-days text-[16px]"></i>
+                </button>
+                <!-- Campana de Alertas con badge -->
+                <div class="relative cursor-pointer p-1"
+                    onclick="alertModal('Alertas', 'Bandeja de notificaciones operativas de la plataforma.')">
+                    <span class="text-slate-400 hover:text-brand-dark transition-all"><i
+                            class="fa-regular fa-bell text-[16px]"></i></span>
+                    <span
+                        class="absolute top-0 right-0 bg-brand-coral text-white font-extrabold w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] border border-white">4</span>
+                </div>
+                <!-- nameUser & Avatar -->
+                <div class="flex items-center space-x-3 pl-4 border-l border-slate-200">
+                    <span class="text-xs font-bold text-brand-dark hidden sm:inline" id="topbar-user-fullname">Diego
+                        Herrera</span>
+                    <div class="w-8 h-8 rounded-full bg-brand-dark text-white flex items-center justify-center text-[10px] font-black border-2 border-brand-coral"
+                        id="topbar-user-avatar">
+                        DH
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENIDO INFERIOR: SIDEBAR + PANEL CENTRAL -->
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+
+            <!-- SIDEBAR MODULAR - Configuración contextualizada por entorno -->
+            <aside id="sidebar-panel"
+                class="w-full md:w-[240px] bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col justify-between py-6 px-4 sidebar-transition shrink-0 overflow-y-auto no-scrollbar">
+
+                <div class="space-y-6">
+                    <!-- Cabecera del Sidebar (Visible solo en modo Módulo) -->
+                    <div id="sidebar-module-header" class="text-center pb-4 border-b border-slate-100 hidden">
+                        <span class="text-[11px] font-extrabold text-brand-coral uppercase tracking-widest block">LOGO •
+                            NOMBRE</span>
+                        <span class="text-[10px] text-brand-textMuted font-bold uppercase tracking-wider block mt-0.5"
+                            id="sidebar-module-subtitle">HELPDESK</span>
+                    </div>
+
+                    <!-- Items de Navegación Verticales -->
+                    <nav class="flex flex-col space-y-2.5" id="sidebar-navigation">
+
+                        <!-- Botón 1: Módulos Disponibles -->
+                        <button onclick="handleButton1Click()" id="sidebar-nav-btn1"
+                            class="w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 bg-slate-50 border border-slate-200 text-brand-dark transition-all">
+                            <span class="w-4 text-center"><i class="fa-solid fa-shapes"></i></span>
+                            <span class="sidebar-label">Módulos Disponibles</span>
+                        </button>
+
+                        <!-- Botón 2: Usuarios del Sistema -->
+                        <button onclick="switchViewToUsers()" id="sidebar-nav-users"
+                            class="w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 text-slate-500 hover:text-brand-dark hover:bg-slate-50 transition-all border border-transparent">
+                            <span class="w-4 text-center"><i class="fa-solid fa-user-gear"></i></span>
+                            <span class="sidebar-label">Usuarios</span>
+                        </button>
+
+                        <!-- Botón 3: Roles y Privilegios -->
+                        <button onclick="switchViewToRoles()" id="sidebar-nav-roles"
+                            class="w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 text-slate-500 hover:text-brand-dark hover:bg-slate-50 transition-all border border-transparent">
+                            <span class="w-4 text-center"><i class="fa-solid fa-user-shield"></i></span>
+                            <span class="sidebar-label">Roles</span>
+                        </button>
+
+                        <!-- Botón 4: Reportes y Auditoría (Habilitado con funcionalidad total) -->
+                        <button onclick="switchViewToReports()" id="sidebar-nav-reports"
+                            class="w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 text-slate-500 hover:text-brand-dark hover:bg-slate-50 transition-all border border-transparent">
+                            <span class="w-4 text-center"><i class="fa-solid fa-chart-line"></i></span>
+                            <span class="sidebar-label">Reportes</span>
+                        </button>
+
+                        <!-- Botón para la configuración del módulo específico (Helpdesk) -->
+                        <div id="sidebar-nav-btn5-container" class="hidden">
+                            <button
+                                onclick="alertModal('Configuración del Módulo', 'Accediendo a los parámetros de configuración de Helpdesk.')"
+                                class="w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 text-slate-500 hover:text-brand-dark hover:bg-slate-50 transition-all">
+                                <span class="w-4 text-center"><i class="fa-solid fa-gears"></i></span>
+                                <span class="sidebar-label">Configuración(Por modulo)</span>
+                            </button>
+                        </div>
+
+                    </nav>
+                </div>
+
+                <!-- Botón de Configuración Global del Sistema (En la base del menú) -->
+                <div class="pt-4 border-t border-slate-150" id="sidebar-global-config-container">
+                    <button
+                        onclick="alertModal('Configuración Global', 'Accediendo a los parámetros de configuración global del sistema.')"
+                        class="w-full bg-[#1e293b] hover:bg-slate-800 text-white text-[10px] font-black py-2.5 rounded-sm uppercase tracking-wider transition-all flex items-center justify-center space-x-2 shadow-sm">
+                        <i class="fa-solid fa-sliders text-xs"></i>
+                        <span class="sidebar-label">Configuración del Sistema</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- CONTENIDO DE TRABAJO DINÁMICO -->
+            <main class="flex-1 p-6 md:p-9 bg-brand-bg overflow-y-auto no-scrollbar flex flex-col justify-between">
+
+                <!-- PANTALLA A: SELECCIÓN DE MÓDULOS -->
+                <div id="view-modules-portal" class="space-y-6">
+                    <!-- Encabezado de Saludo -->
+                    <div
+                        class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-4 mb-4">
+                        <div>
+                            <h1 class="text-2xl font-extrabold text-brand-dark tracking-tight font-sans">Bienvenido
+                                Diego Herrera 👋</h1>
+                            <p class="text-xs text-brand-textMuted mt-1">Selecciona el entorno operativo o audita el
+                                estado general del ecosistema de la organización.</p>
+                        </div>
+
+                        <!-- Buscador del Portal General -->
+                        <div class="flex items-center space-x-2 mt-4 md:mt-0 font-sans">
+                            <span class="text-xs font-semibold text-brand-dark">Buscar módulos</span>
+                            <input type="text" id="module-search-input" oninput="searchModules()"
+                                placeholder="Escribe para buscar..."
+                                class="bg-white border border-slate-300 rounded-sm px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-brand-dark w-48 shadow-xs">
+                            <button onclick="searchModules()"
+                                class="bg-[#cbd5e1] hover:bg-slate-300 text-slate-800 text-xs font-bold px-4 py-1.5 rounded-sm transition-all">Ir</button>
+                        </div>
+                    </div>
+
+                    <!-- Grilla de Tarjetas de Módulos (Esquinas rectas premium, avatares de encargados superpuestos) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="modules-cards-grid">
+                        <!-- Módulo 1: Helpdesk -->
+                        <div id="card-helpdesk"
+                            class="bg-white rounded-sm border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col overflow-hidden group relative">
+                            <div class="h-36 overflow-hidden relative bg-brand-dark flex items-center justify-center">
+                                <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&q=80&w=400"
+                                    alt="Mesa de Ayuda"
+                                    class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-all duration-500">
+                                <div class="absolute top-3 left-3">
+                                    <span
+                                        class="bg-white/95 text-brand-dark text-[9px] font-black px-2 py-0.5 rounded-xs tracking-wider border border-slate-200 shadow-sm">MÓDULO
+                                        ITSM</span>
+                                </div>
+                            </div>
+                            <div class="relative h-0">
+                                <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=120"
+                                    alt="Carlos"
+                                    class="w-10 h-10 rounded-full border-2 border-white absolute -top-5 right-4 z-10 object-cover shadow-md"
+                                    title="Encargado: Carlos Mendoza (Soporte)">
+                            </div>
+                            <div class="p-4 flex-1 flex flex-col justify-between min-h-[150px]">
+                                <div>
+                                    <span
+                                        class="text-[9px] bg-brand-coral/10 text-brand-coral font-bold px-2 py-0.5 rounded-xs tracking-wider">SEMESTRE
+                                        III</span>
+                                    <h3
+                                        class="text-xs font-black text-brand-dark mt-2 uppercase tracking-wide leading-relaxed group-hover:text-brand-coral transition-colors">
+                                        MESA DE AYUDA (HELPDESK)</h3>
+                                    <p class="text-[11px] text-brand-textMuted mt-1 leading-relaxed">Gestión y
+                                        resolución oportuna de incidentes de hardware, software y red con control de
+                                        SLA.</p>
+                                </div>
+                                <div class="border-t border-slate-100 pt-3 mt-3 flex items-center justify-between">
+                                    <span class="text-[9px] text-[#20c933] font-bold flex items-center"><span
+                                            class="w-1.5 h-1.5 bg-[#20c933] rounded-full mr-1"></span> Activo</span>
+                                    <button onclick="enterToHelpdeskModule()"
+                                        class="text-[10px] font-black text-brand-dark hover:underline flex items-center font-bold">
+                                        <span>Ingresar</span>
+                                        <i class="fa-solid fa-chevron-right text-[8px] ml-1"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Módulo 2: Gestión Administrativa -->
+                        <div id="card-admin"
+                            class="bg-white rounded-sm border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col overflow-hidden group relative">
+                            <div class="h-36 overflow-hidden relative bg-brand-dark flex items-center justify-center">
+                                <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=400"
+                                    alt="Gestión Administrativa"
+                                    class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-all duration-500">
+                                <div class="absolute top-3 left-3">
+                                    <span
+                                        class="bg-white/95 text-brand-dark text-[9px] font-black px-2 py-0.5 rounded-xs tracking-wider border border-slate-200 shadow-sm">ADMINISTRATIVO</span>
+                                </div>
+                            </div>
+                            <div class="relative h-0">
+                                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120"
+                                    alt="Mónica"
+                                    class="w-10 h-10 rounded-full border-2 border-white absolute -top-5 right-4 z-10 object-cover shadow-md"
+                                    title="Encargado: Mónica Martínez (Finanzas)">
+                            </div>
+                            <div class="p-4 flex-1 flex flex-col justify-between min-h-[150px]">
+                                <div>
+                                    <span
+                                        class="text-[9px] bg-brand-coral/10 text-brand-coral font-bold px-2 py-0.5 rounded-xs tracking-wider">SEMESTRE
+                                        III</span>
+                                    <h3
+                                        class="text-xs font-black text-brand-dark mt-2 uppercase tracking-wide leading-relaxed group-hover:text-brand-coral transition-colors">
+                                        GESTIÓN ADMINISTRATIVA</h3>
+                                    <p class="text-[11px] text-brand-textMuted mt-1 leading-relaxed">Flujos de
+                                        aprobación, autorizaciones de compras y presupuestos del departamento de TI.</p>
+                                </div>
+                                <div class="border-t border-slate-100 pt-3 mt-3 flex items-center justify-between">
+                                    <span class="text-[9px] text-amber-500 font-bold flex items-center"><span
+                                            class="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1"></span> En Espera</span>
+                                    <button onclick="alertModal('Acceso', 'Abriendo el módulo administrativo...')"
+                                        class="text-[10px] font-black text-brand-dark hover:underline flex items-center font-bold">
+                                        <span>Ingresar</span>
+                                        <i class="fa-solid fa-chevron-right text-[8px] ml-1"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Módulo 3: Inventario de Activos -->
+                        <div id="card-inventory"
+                            class="bg-white rounded-sm border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col overflow-hidden group relative">
+                            <div class="h-36 overflow-hidden relative bg-brand-dark flex items-center justify-center">
+                                <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=400"
+                                    alt="Inventario"
+                                    class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-all duration-500">
+                                <div class="absolute top-3 left-3">
+                                    <span
+                                        class="bg-white/95 text-brand-dark text-[9px] font-black px-2 py-0.5 rounded-xs tracking-wider border border-slate-200 shadow-sm">CONTROL
+                                        DE HARDWARE</span>
+                                </div>
+                            </div>
+                            <div class="relative h-0">
+                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120"
+                                    alt="Sebastián"
+                                    class="w-10 h-10 rounded-full border-2 border-white absolute -top-5 right-4 z-10 object-cover shadow-md"
+                                    title="Encargado: Sebastián Castro (Inventario)">
+                            </div>
+                            <div class="p-4 flex-1 flex flex-col justify-between min-h-[150px]">
+                                <div>
+                                    <span
+                                        class="text-[9px] bg-brand-coral/10 text-brand-coral font-bold px-2 py-0.5 rounded-xs tracking-wider">SEMESTRE
+                                        III</span>
+                                    <h3
+                                        class="text-xs font-black text-brand-dark mt-2 uppercase tracking-wide leading-relaxed group-hover:text-brand-coral transition-colors">
+                                        INVENTARIO DE ACTIVOS</h3>
+                                    <p class="text-[11px] text-brand-textMuted mt-1 leading-relaxed">Registro de
+                                        activos, relación jerárquica padre-hijo, trazabilidad total de hardware y
+                                        generación de QR.</p>
+                                </div>
+                                <div class="border-t border-slate-100 pt-3 mt-3 flex items-center justify-between">
+                                    <span class="text-[9px] text-[#20c933] font-bold flex items-center"><span
+                                            class="w-1.5 h-1.5 bg-[#20c933] rounded-full mr-1"></span> Activo</span>
+                                    <button onclick="alertModal('Acceso', 'Abriendo el inventario de activos...')"
+                                        class="text-[10px] font-black text-brand-dark hover:underline flex items-center font-bold">
+                                        <span>Ingresar</span>
+                                        <i class="fa-solid fa-chevron-right text-[8px] ml-1"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Módulo 4: Reportería y Auditoría -->
+                        <div id="card-reports"
+                            class="bg-white rounded-sm border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col overflow-hidden group relative">
+                            <div class="h-36 overflow-hidden relative bg-brand-dark flex items-center justify-center">
+                                <img src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=400"
+                                    alt="Reportería"
+                                    class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-all duration-500">
+                                <div class="absolute top-3 left-3">
+                                    <span
+                                        class="bg-white/95 text-brand-dark text-[9px] font-black px-2 py-0.5 rounded-xs tracking-wider border border-slate-200 shadow-sm">AUDITORÍA</span>
+                                </div>
+                            </div>
+                            <div class="relative h-0">
+                                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120"
+                                    alt="Diego"
+                                    class="w-10 h-10 rounded-full border-2 border-white absolute -top-5 right-4 z-10 object-cover shadow-md"
+                                    title="Encargado: Diego Herrera (Superadmin)">
+                            </div>
+                            <div class="p-4 flex-1 flex flex-col justify-between min-h-[150px]">
+                                <div>
+                                    <span
+                                        class="text-[9px] bg-brand-coral/10 text-brand-coral font-bold px-2 py-0.5 rounded-xs tracking-wider">SEMESTRE
+                                        III</span>
+                                    <h3
+                                        class="text-xs font-black text-brand-dark mt-2 uppercase tracking-wide leading-relaxed group-hover:text-brand-coral transition-colors">
+                                        REPORTERÍA & BI</h3>
+                                    <p class="text-[11px] text-brand-textMuted mt-1 leading-relaxed">Reportes
+                                        automatizados, KPIs avanzados de respuesta del equipo y exportación de datos de
+                                        SLA.</p>
+                                </div>
+                                <div class="border-t border-slate-100 pt-3 mt-3 flex items-center justify-between">
+                                    <span class="text-[9px] text-slate-400 font-bold flex items-center"><span
+                                            class="w-1.5 h-1.5 bg-slate-400 rounded-full mr-1"></span>
+                                        Próximamente</span>
+                                    <button onclick="switchViewToReports()"
+                                        class="text-[10px] font-black text-brand-dark hover:underline flex items-center font-bold">
+                                        <span>Ver</span>
+                                        <i class="fa-solid fa-chevron-right text-[8px] ml-1"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GRÁFICAS GENERALES DEL PORTAL GLOBAL ( image_903deb.png ) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mt-6 font-sans">
+                        <!-- Card Analítica Izquierda: Métricas Clave -->
+                        <div
+                            class="lg:col-span-4 bg-white border border-slate-200 p-5 rounded-sm shadow-xs flex flex-col justify-between">
+                            <div>
+                                <h2 class="text-xs font-black text-brand-dark uppercase tracking-wider mb-1"><i
+                                        class="fa-solid fa-microchip text-brand-coral mr-1.5"></i> Activos de la
+                                    Organización</h2>
+                                <p class="text-[10px] text-brand-textMuted leading-normal">Métricas consolidadas de
+                                    hardware y software bajo control centralizado.</p>
+                            </div>
+                            <div class="py-6 flex justify-around items-center">
+                                <div class="text-center">
+                                    <span class="text-4xl font-extrabold text-brand-dark">1.2K</span>
+                                    <p class="text-[10px] text-slate-400 uppercase font-black tracking-wide mt-1">
+                                        Activos Totales</p>
+                                </div>
+                                <div class="text-center border-l pl-5">
+                                    <span class="text-4xl font-extrabold text-brand-coral">387</span>
+                                    <p class="text-[10px] text-slate-400 uppercase font-black tracking-wide mt-1">
+                                        Tickets en SLA</p>
+                                </div>
+                            </div>
+                            <p class="text-[9px] text-slate-400 leading-normal uppercase border-t pt-3 font-semibold"><i
+                                    class="fa-solid fa-circle-exclamation mr-1 text-brand-coral"></i> 34 Activos
+                                presentan vencimiento de garantía próximo.</p>
+                        </div>
+
+                        <!-- Gráfico Central (Col-span-4): Distribución de Sistemas Operativos -->
+                        <div class="lg:col-span-4 bg-white border border-slate-200 p-5 rounded-sm shadow-xs">
+                            <h2 class="text-xs font-black text-brand-dark uppercase tracking-wider mb-2">Distribución
+                                por Sistemas Operativos</h2>
+                            <div class="h-44 w-full flex items-center justify-center relative">
+                                <canvas id="globalOsChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico Derecho (Col-span-4): Top Software Instalado -->
+                        <div class="lg:col-span-4 bg-white border border-slate-200 p-5 rounded-sm shadow-xs">
+                            <h2 class="text-xs font-black text-brand-dark uppercase tracking-wider mb-2">Top Software
+                                Instalado</h2>
+                            <div class="h-44 w-full flex items-center justify-center relative">
+                                <canvas id="globalSoftwareChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANTALLA B: INTERFAZ DENTRO DEL MÓDULO (Helpdesk Activo con Gráficas Específicas) -->
+                <div id="view-active-module-content" class="hidden space-y-6">
+                    <!-- Cabecera del Módulo -->
+                    <div class="flex items-center justify-between border-b pb-4">
+                        <div class="font-sans">
+                            <h2 class="text-xl font-extrabold text-brand-dark tracking-tight">Consola Operativa Helpdesk
+                                Activa</h2>
+                            <p class="text-xs text-brand-textMuted mt-0.5">Métricas de cumplimiento de SLA e incidencias
+                                en tiempo real.</p>
+                        </div>
+                        <button onclick="exitToGlobalPortal()"
+                            class="text-xs font-bold text-slate-600 hover:text-brand-coral transition-colors flex items-center space-x-2 bg-white px-4 py-2 rounded-sm shadow-xs border border-slate-200">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            <span>Salir de Helpdesk</span>
+                        </button>
+                    </div>
+
+                    <!-- GRÁFICAS ESPECÍFICAS DEL MÓDULO HELPDESK -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 font-sans">
+                        <!-- Gráfico Izquierdo (Col-span-5): Cumplimiento de Reglas SLA -->
+                        <div
+                            class="lg:col-span-5 bg-white border border-slate-200 p-5 rounded-sm shadow-xs flex flex-col justify-between h-[280px]">
+                            <div>
+                                <h3 class="text-xs font-black text-brand-dark uppercase tracking-wider mb-1"><i
+                                        class="fa-solid fa-chart-line text-brand-coral mr-1.5"></i> Cumplimiento de
+                                    Reglas SLA</h3>
+                                <p class="text-[10px] text-brand-textMuted leading-normal">Porcentaje de tickets
+                                    resueltos antes del tiempo límite estipulado.</p>
+                            </div>
+                            <div class="flex-1 min-h-0 relative mt-4">
+                                <canvas id="moduleSlaChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico Central (Col-span-4): Tickets de Soporte por Día -->
+                        <div
+                            class="lg:col-span-4 bg-white border border-slate-200 p-5 rounded-sm shadow-xs flex flex-col justify-between h-[280px]">
+                            <div>
+                                <h3 class="text-xs font-black text-brand-dark uppercase tracking-wider mb-1">Tickets de
+                                    Soporte por Día</h3>
+                                <p class="text-[10px] text-brand-textMuted leading-normal">Volumen de incidencias
+                                    registradas en la cola operativa.</p>
+                            </div>
+                            <div class="flex-1 min-h-0 relative mt-4">
+                                <canvas id="moduleDailyTicketsChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico Derecho (Col-span-3): Incidencias más Recurrentes -->
+                        <div
+                            class="lg:col-span-3 bg-white border border-slate-200 p-5 rounded-sm shadow-xs flex flex-col justify-between h-[280px]">
+                            <div>
+                                <h3 class="text-xs font-black text-brand-dark uppercase tracking-wider mb-1">Categorías
+                                    Recurrentes</h3>
+                                <p class="text-[10px] text-brand-textMuted leading-normal">Fallas más comunes
+                                    reportadas.</p>
+                            </div>
+                            <div class="flex-1 min-h-0 relative mt-4">
+                                <canvas id="moduleCategoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ficha Operativa Adicional de Helpdesk -->
+                    <div class="bg-white border border-slate-200 rounded-sm p-6 shadow-xs text-center py-10 font-sans">
+                        <div
+                            class="w-16 h-16 bg-brand-coral/10 text-brand-coral rounded-md flex items-center justify-center text-3xl mx-auto mb-4">
+                            <i class="fa-solid fa-headset animate-pulse"></i>
+                        </div>
+                        <h2 class="text-lg font-extrabold text-brand-dark mb-2">SLA del Módulo Activo</h2>
+                        <p class="text-xs text-brand-textMuted max-w-md mx-auto mb-6">El entorno de trabajo de Helpdesk
+                            cuenta con un SLA de respuesta garantizado menor a 4 horas.</p>
+                        <button onclick="alertModal('Soporte', 'Abriendo la cola de tickets del Helpdesk.')"
+                            class="bg-brand-dark hover:bg-brand-darker text-white text-xs font-bold py-2.5 px-6 rounded-sm transition-all sharp-btn">
+                            Ver Cola de Tickets
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PANTALLA C: GESTIÓN DE USUARIOS (image_8de94c.png) -->
+                <div id="view-users-management" class="space-y-6 hidden">
+
+                    <!-- Encabezado de la Sección con controles principales -->
+                    <div
+                        class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-5 mb-4 font-sans">
+                        <div>
+                            <h1 class="text-2xl font-extrabold text-brand-dark tracking-tight">Usuarios</h1>
+                            <p class="text-xs text-brand-textMuted mt-0.5" id="users-total-counter">15 usuarios
+                                registrados en el sistema</p>
+                        </div>
+
+                        <!-- Acciones Principales -->
+                        <div class="flex items-center space-x-3 mt-4 md:mt-0">
+                            <!-- Input Invisible de simulación de archivo -->
+                            <input type="file" id="csv-file-input" accept=".csv, .xlsx, .xls" class="hidden"
+                                onchange="simulateCsvImport(event)">
+                            <button onclick="triggerCsvImportClick()"
+                                class="border border-slate-300 hover:border-brand-dark text-brand-dark bg-white hover:bg-slate-50 text-xs font-bold px-4 py-2 rounded-sm transition-all flex items-center space-x-2 shadow-xs font-bold">
+                                <i class="fa-solid fa-file-excel text-green-600"></i>
+                                <span>Importar CSV / Excel</span>
+                            </button>
+                            <button onclick="openCreateUserModal()"
+                                class="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-xs font-bold px-4 py-2.5 rounded-sm transition-all flex items-center space-x-2 shadow-sm font-bold">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <span>Crear usuario</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- NUEVA BARRA DE FILTROS AMPLIADA Y ALTAMENTE PROFESIONAL (ITSM Style) -->
+                    <div class="bg-white p-4 rounded-sm border border-slate-200 shadow-xs font-sans text-xs space-y-3">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                            <!-- Input Principal de Búsqueda Inteligente -->
+                            <div
+                                class="relative flex items-center bg-slate-50 border border-slate-200 rounded-sm px-3 py-2 w-full lg:max-w-md shadow-inner">
+                                <span class="text-slate-400 mr-2.5"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                <input type="text" id="user-search-input" oninput="filterUsersTable()"
+                                    placeholder="Buscar por nombre, email, iniciales de usuario..."
+                                    class="w-full text-xs text-slate-700 bg-transparent focus:outline-none placeholder-slate-400 font-sans font-medium">
+                            </div>
+
+                            <!-- Controles Rápidos a la Derecha -->
+                            <div class="flex items-center space-x-3 justify-end">
+                                <button onclick="toggleAdvancedFilters()"
+                                    class="text-[11px] border border-slate-300 hover:border-brand-dark text-slate-700 font-extrabold px-3.5 py-2 rounded-sm bg-slate-50 hover:bg-white transition-all flex items-center space-x-2">
+                                    <i class="fa-solid fa-sliders text-brand-coral"></i>
+                                    <span>Filtros Avanzados</span>
+                                    <i class="fa-solid fa-chevron-down text-[8px] transition-transform duration-200"
+                                        id="filter-chevron"></i>
+                                </button>
+                                <select id="filter-sort-select" onchange="filterUsersTable()"
+                                    class="bg-slate-50 border border-slate-200 rounded-sm p-2 font-bold text-slate-700 outline-none cursor-pointer">
+                                    <option value="name_asc">Ordenar: Nombre A-Z</option>
+                                    <option value="name_desc">Ordenar: Nombre Z-A</option>
+                                    <option value="email_asc">Ordenar: Email</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- PANEL DESPLEGABLE DE FILTROS AVANZADOS -->
+                        <div id="advanced-filters-panel"
+                            class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
+                            <!-- Filtro de Estado Operacional -->
+                            <div>
+                                <label
+                                    class="block text-[9px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider">Estado
+                                    de Cuenta</label>
+                                <select id="filter-state-select" onchange="filterUsersTable()"
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-sm p-2 font-semibold text-slate-700 outline-none cursor-pointer">
+                                    <option value="todos">Todos los Estados</option>
+                                    <option value="Activo">Activo</option>
+                                    <option value="Pendiente">Pendiente</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Inactivo">Inactivo</option>
+                                </select>
+                            </div>
+
+                            <!-- Filtro de Rol Global -->
+                            <div>
+                                <label
+                                    class="block text-[9px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider">Rol
+                                    Global</label>
+                                <select id="filter-role-select" onchange="filterUsersTable()"
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-sm p-2 font-semibold text-slate-700 outline-none cursor-pointer">
+                                    <option value="todos">Todos los Roles</option>
+                                    <option value="usuario">usuario</option>
+                                    <option value="superadmin">superadmin</option>
+                                </select>
+                            </div>
+
+                            <!-- Filtro de Estado de Conexión (Online/Offline/Away) -->
+                            <div>
+                                <label
+                                    class="block text-[9px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider">Disponibilidad
+                                    / Conexión</label>
+                                <select id="filter-connection-select" onchange="filterUsersTable()"
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-sm p-2 font-semibold text-slate-700 outline-none cursor-pointer">
+                                    <option value="todos">Todas las conexiones</option>
+                                    <option value="online">Online (Activos)</option>
+                                    <option value="away">Ausente (Away)</option>
+                                    <option value="offline">Desconectado (Offline)</option>
+                                </select>
+                            </div>
+
+                            <!-- Filtro de Módulo Autorizado -->
+                            <div>
+                                <label
+                                    class="block text-[9px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider">Módulo
+                                    de Acceso</label>
+                                <select id="filter-module-select" onchange="filterUsersTable()"
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-sm p-2 font-semibold text-slate-700 outline-none cursor-pointer">
+                                    <option value="todos">Todos los módulos</option>
+                                    <option value="Helpdesk">Helpdesk</option>
+                                    <option value="Gestión Administrativa">Gestión Administrativa</option>
+                                    <option value="Inventario">Inventario de Activos</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Usuarios -->
+                    <div class="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-xs">
+                        <div class="overflow-x-auto no-scrollbar">
+                            <table class="w-full text-left border-collapse font-sans text-xs">
+                                <thead>
+                                    <tr
+                                        class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 tracking-wider">
+                                        <th class="py-3.5 px-4 w-12 text-center">
+                                            <input type="checkbox" id="select-all-users-cb"
+                                                onchange="toggleSelectAllUsers(this)"
+                                                class="accent-[#4f46e5] rounded-xs cursor-pointer">
+                                        </th>
+                                        <th class="py-3.5 px-4 font-extrabold uppercase">USUARIO</th>
+                                        <th class="py-3.5 px-4 font-extrabold uppercase">EMAIL</th>
+                                        <th class="py-3.5 px-4 font-extrabold uppercase">ROL GLOBAL</th>
+                                        <th class="py-3.5 px-4 font-extrabold uppercase">MÓDULOS / ROLES</th>
+                                        <th class="py-3.5 px-4 font-extrabold uppercase">ESTADO</th>
+                                        <th class="py-3.5 px-4 font-extrabold uppercase text-center pr-6">ACCIONES</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-slate-700 font-medium"
+                                    id="users-table-body">
+                                    <!-- Los renglones de usuarios se inyectan dinámicamente con JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANTALLA D: ROLES Y PRIVILEGIOS -->
+                <div id="view-roles-management" class="space-y-6 hidden font-sans">
+
+                    <!-- Encabezado de la Sección -->
+                    <div
+                        class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-5 mb-4">
+                        <div>
+                            <h1 class="text-2xl font-extrabold text-brand-dark tracking-tight">Roles y Privilegios</h1>
+                            <p class="text-xs text-brand-textMuted mt-0.5">Control de perfiles de seguridad, niveles de
+                                acceso y matrices de permisos por módulo.</p>
+                        </div>
+                    </div>
+
+                    <!-- ESTRUCTURA EN 3 COLUMNAS DEL ROLES WORKSPACE -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                        <!-- Columna 1 (Izquierda, Col-span-4): Lista de Roles en su Contexto -->
+                        <div
+                            class="lg:col-span-4 bg-white border border-slate-200 p-5 rounded-sm shadow-xs flex flex-col justify-between min-h-[520px]">
+                            <div class="space-y-4">
+                                <div class="border-b pb-3">
+                                    <h2 class="text-xs font-black text-brand-dark uppercase tracking-wide">Roles del
+                                        Sistema</h2>
+                                    <p class="text-[10px] text-brand-textMuted mt-0.5">Selecciona el ámbito del rol para
+                                        ver y configurar sus permisos.</p>
+                                </div>
+
+                                <!-- SELECT DROPDOWN MÓDULOS -->
+                                <div class="space-y-1.5 text-left">
+                                    <label class="text-[10px] font-extrabold text-slate-400 uppercase">Contexto o
+                                        Módulo</label>
+                                    <select id="roles-context-selector" onchange="changeRolesContextDropdown()"
+                                        class="w-full bg-slate-50 border border-slate-200 rounded-sm p-2 text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                                        <option value="global">Sistema Global (General)</option>
+                                        <option value="Helpdesk">Helpdesk (Mesa de ayuda)</option>
+                                        <option value="Gestión Administrativa">Gestión Administrativa</option>
+                                        <option value="Inventario">Inventario de Activos</option>
+                                    </select>
+                                </div>
+
+                                <!-- Listado dinámico de roles de ese contexto -->
+                                <div id="roles-cards-list"
+                                    class="space-y-2.5 max-h-[300px] overflow-y-auto no-scrollbar pt-2">
+                                    <!-- Se inyecta por JS con botón "Editar Permisos ⚙️" -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Columna 2 (Centro, Col-span-5): Árbol de Permisos Filesystem-style -->
+                        <div
+                            class="lg:col-span-5 bg-white border border-slate-200 p-5 rounded-sm shadow-xs flex flex-col justify-between min-h-[520px]">
+                            <div class="space-y-4">
+                                <div class="border-b pb-3 flex items-center justify-between">
+                                    <div>
+                                        <h2 class="text-xs font-black text-brand-dark uppercase tracking-wide">Árbol de
+                                            Permisos</h2>
+                                        <p class="text-[10px] text-brand-textMuted mt-0.5">Estructura jerárquica modular
+                                            de accesos.</p>
+                                    </div>
+                                    <span
+                                        class="text-[10px] bg-slate-900 text-white font-extrabold px-2 py-0.5 rounded-sm"
+                                        id="selected-role-badge-label">SUPERADMIN</span>
+                                </div>
+
+                                <!-- Caja de aviso de regla crítica de activación de padres -->
+                                <div
+                                    class="bg-indigo-50 border border-indigo-150 p-2.5 text-[10px] text-indigo-800 leading-normal">
+                                    <strong>Regla Crítica:</strong> Activar un permiso padre (ej. <i>Tickets</i>) no
+                                    activa sus hijos automáticamente. Solo los habilita/desbloquea para su activación
+                                    granular. Desactivar un padre desactiva e inhabilita sus hijos.
+                                </div>
+
+                                <!-- Árbol filesystem interactivo con líneas y plegado modular -->
+                                <div class="space-y-1 overflow-y-auto max-h-[320px] no-scrollbar font-mono text-xs border p-3 bg-slate-50/50 rounded-sm"
+                                    id="permissions-tree-container">
+                                    <!-- Inyectado dinámicamente -->
+                                </div>
+                            </div>
+
+                            <button onclick="saveActiveRolePermissions()"
+                                class="w-full bg-[#4f46e5] hover:bg-[#4338ca] text-white text-xs font-black py-2.5 rounded-sm transition-all sharp-btn shadow-md uppercase tracking-wider">
+                                Guardar Permisos del Rol
+                            </button>
+                        </div>
+
+                        <!-- Columna 3 (Derecha, Col-span-3): Ficha de Detalle de Permiso e Impacto -->
+                        <div
+                            class="lg:col-span-3 bg-white border border-slate-200 p-5 rounded-sm shadow-xs flex flex-col justify-between min-h-[520px]">
+                            <div class="space-y-4" id="permission-info-box">
+                                <div class="border-b pb-3">
+                                    <h2 class="text-xs font-black text-brand-dark uppercase tracking-wide">Inspección de
+                                        Permiso</h2>
+                                    <p class="text-[10px] text-brand-textMuted mt-0.5">Haz clic sobre un permiso para
+                                        auditarlo.</p>
+                                </div>
+
+                                <div class="text-center py-8 text-slate-400 italic">
+                                    <p>Selecciona un permiso granular del árbol central para analizar su impacto
+                                        operacional, riesgos e implicaciones de seguridad.</p>
+                                </div>
+                            </div>
+
+                            <div class="border-t pt-4 text-[10px] text-slate-400 font-medium leading-relaxed font-sans">
+                                <p class="uppercase font-black text-brand-dark mb-1">☉ Registro de Auditoría</p>
+                                <p>Todos los cambios de permisos son auditados dinámicamente por el sistema global para
+                                    prevenir fallos de seguridad.</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- PANTALLA E: CONSOLA DE REPORTES Y AUDITORÍA (NUEVA VISTA OPERATIVA COMPLETA) -->
+                <div id="view-reports-workspace" class="space-y-6 hidden font-sans">
+                    <!-- Encabezado de Reportes -->
+                    <div
+                        class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-5 mb-4">
+                        <div>
+                            <h1 class="text-2xl font-extrabold text-brand-dark tracking-tight">Centro de Reportes y
+                                Auditoría</h1>
+                            <p class="text-xs text-brand-textMuted mt-0.5">Estadísticas avanzadas, nivel de servicio de
+                                acuerdos de SLA y registro de auditoría de seguridad global.</p>
+                        </div>
+                    </div>
+
+                    <!-- Fichas de Métricas Rápidas -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-white border border-slate-200 p-4 rounded-sm shadow-xs">
+                            <span
+                                class="text-[9px] font-black text-slate-400 uppercase block tracking-wider">Cumplimiento
+                                SLA General</span>
+                            <span class="text-2xl font-black text-[#20c933] block mt-1">96.3%</span>
+                            <span class="text-[10px] text-slate-400 font-semibold block mt-1"><i
+                                    class="fa-solid fa-caret-up text-emerald-500 mr-1"></i> +1.4% este mes</span>
+                        </div>
+                        <div class="bg-white border border-slate-200 p-4 rounded-sm shadow-xs">
+                            <span class="text-[9px] font-black text-slate-400 uppercase block tracking-wider">Tiempo
+                                Promedio de Cierre</span>
+                            <span class="text-2xl font-black text-brand-dark block mt-1">2.4 hs</span>
+                            <span class="text-[10px] text-slate-400 font-semibold block mt-1"><i
+                                    class="fa-solid fa-caret-down text-emerald-500 mr-1"></i> -15 min de meta</span>
+                        </div>
+                        <div class="bg-white border border-slate-200 p-4 rounded-sm shadow-xs">
+                            <span class="text-[9px] font-black text-slate-400 uppercase block tracking-wider">Eventos de
+                                Auditoría Activos</span>
+                            <span class="text-2xl font-black text-brand-coral block mt-1">1,248</span>
+                            <span class="text-[10px] text-slate-400 font-semibold block mt-1"><i
+                                    class="fa-solid fa-circle-info text-brand-coral mr-1"></i> Conectados con
+                                SIEM</span>
+                        </div>
+                        <div class="bg-white border border-slate-200 p-4 rounded-sm shadow-xs">
+                            <span class="text-[9px] font-black text-slate-400 uppercase block tracking-wider">Operadores
+                                en Turno</span>
+                            <span class="text-2xl font-black text-brand-dark block mt-1">12 Activos</span>
+                            <span class="text-[10px] text-slate-400 font-semibold block mt-1"><span
+                                    class="w-1.5 h-1.5 bg-[#20c933] rounded-full inline-block mr-1"></span> 100% de
+                                cobertura</span>
+                        </div>
+                    </div>
+
+                    <!-- Split Gráficas Específicas de la Suite -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                        <!-- Cumplimiento de Reglas SLA del módulo (Col-span-7) -->
+                        <div
+                            class="lg:col-span-7 bg-white border border-slate-200 p-5 rounded-sm shadow-xs flex flex-col justify-between h-[320px]">
+                            <div>
+                                <h3 class="text-xs font-black text-brand-dark uppercase tracking-wider mb-1"><i
+                                        class="fa-solid fa-chart-line text-brand-coral mr-1.5"></i> Cumplimiento de
+                                    Reglas SLA (Mesa de Soporte)</h3>
+                                <p class="text-[10px] text-brand-textMuted leading-normal">Porcentaje de tickets
+                                    resueltos antes del vencimiento límite.</p>
+                            </div>
+                            <div class="flex-1 min-h-0 relative mt-4">
+                                <canvas id="workspaceSlaChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico de Incidencias Recurrentes por Categoría (Col-span-5) -->
+                        <div
+                            class="lg:col-span-5 bg-white border border-slate-200 p-5 rounded-sm shadow-xs flex flex-col justify-between h-[320px]">
+                            <div>
+                                <h3 class="text-xs font-black text-brand-dark uppercase tracking-wider mb-1">Volumen de
+                                    Incidentes por Categoría</h3>
+                                <p class="text-[10px] text-brand-textMuted leading-normal">Fallas más recurrentes en el
+                                    ecosistema organizacional.</p>
+                            </div>
+                            <div class="flex-1 min-h-0 relative mt-4">
+                                <canvas id="workspaceCategoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Logs de Auditoría Técnica (Requerimiento) -->
+                    <div class="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-xs">
+                        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+                            <span class="text-xs font-black text-brand-dark uppercase tracking-wide">Logs e Historial de
+                                Auditoría de Seguridad</span>
+                            <span
+                                class="text-[9px] bg-slate-200 text-slate-700 font-extrabold px-2.5 py-0.5 rounded-sm">AUDIT
+                                REALTIME</span>
+                        </div>
+                        <div class="overflow-x-auto no-scrollbar max-h-[300px]">
+                            <table class="w-full text-left border-collapse font-sans text-xs">
+                                <thead>
+                                    <tr
+                                        class="bg-slate-100 text-slate-500 font-bold border-b border-slate-200 tracking-wider">
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px]">TIMESTAMP</th>
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px]">ACTOR / OPERADOR
+                                        </th>
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px]">ACCIÓN / SUBSISTEMA
+                                        </th>
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px]">DESCRIPCIÓN DEL
+                                            EVENTO DE AUDITORÍA</th>
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px] text-right pr-6">IP
+                                            ORIGEN</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-slate-600 font-medium"
+                                    id="audits-table-body">
+                                    <!-- Inyectado dinámicamente con logs de cambios reales -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL DE CREACIÓN DE USUARIO MANUAL (Bordes rectos e industrial) -->
+    <div id="modal-create-user"
+        class="fixed inset-0 bg-black/65 backdrop-blur-xs z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white rounded-sm p-7 max-w-lg w-full mx-4 shadow-2xl transform scale-95 transition-all duration-300 max-h-[90vh] overflow-y-auto"
+            onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                <div class="flex items-center space-x-2">
+                    <span class="text-brand-coral text-lg"><i class="fa-solid fa-user-plus"></i></span>
+                    <h3 class="text-sm font-black text-brand-dark uppercase tracking-wider font-sans">Crear Nuevo
+                        Usuario</h3>
+                </div>
+                <button onclick="closeCreateUserModal()" class="text-slate-400 hover:text-brand-dark"><i
+                        class="fa-solid fa-x"></i></button>
+            </div>
+
+            <div class="space-y-4 text-xs font-sans text-slate-700">
+                <!-- Nombre -->
+                <div>
+                    <label class="block font-bold text-slate-500 mb-1.5">Nombre Completo *</label>
+                    <input id="user-new-name" type="text" placeholder="Ej: Natalia López"
+                        class="w-full border border-slate-300 rounded-sm p-2.5 text-xs text-slate-800 focus:outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand-dark sharp-input">
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label class="block font-bold text-slate-500 mb-1.5">Correo Electrónico *</label>
+                    <input id="user-new-email" type="email" placeholder="Ej: natalia.lopez@empresa.co"
+                        class="w-full border border-slate-300 rounded-sm p-2.5 text-xs text-slate-800 focus:outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand-dark sharp-input">
+                </div>
+
+                <!-- Dos Columnas: Rol Global y Estado Inicial -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-bold text-slate-500 mb-1.5">Rol Global *</label>
+                        <select id="user-new-role"
+                            class="w-full border border-slate-300 rounded-sm p-2.5 text-xs text-slate-800 focus:outline-none focus:border-brand-dark sharp-input">
+                            <option value="usuario">usuario</option>
+                            <option value="superadmin">superadmin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-500 mb-1.5">Estado Inicial *</label>
+                        <select id="user-new-state"
+                            class="w-full border border-slate-300 rounded-sm p-2.5 text-xs text-slate-800 focus:outline-none focus:border-brand-dark sharp-input">
+                            <option value="Activo">Activo</option>
+                            <option value="Pendiente">Pendiente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Selección de Módulos y Roles -->
+                <div>
+                    <label class="block font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Módulos / Roles
+                        Permitidos</label>
+                    <div class="space-y-2 bg-slate-50 p-3.5 border rounded-sm">
+                        <!-- Módulo 1: Helpdesk -->
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center space-x-2 text-xs font-semibold text-slate-700">
+                                <input type="checkbox" id="module-check-helpdesk" class="accent-[#4f46e5]">
+                                <span>Helpdesk</span>
+                            </label>
+                            <select id="module-role-helpdesk"
+                                class="bg-white border rounded p-1 text-[11px] focus:outline-none font-sans">
+                                <option value="usuario">usuario</option>
+                                <option value="tecnico">tecnico</option>
+                                <option value="jefe_tecnico">jefe_tecnico</option>
+                            </select>
+                        </div>
+                        <!-- Módulo 2: Gestión Administrativa -->
+                        <div class="flex items-center justify-between border-t pt-2 mt-2">
+                            <label class="flex items-center space-x-2 text-xs font-semibold text-slate-700">
+                                <input type="checkbox" id="module-check-admin" class="accent-[#4f46e5]">
+                                <span>Gestión Administrativa</span>
+                            </label>
+                            <select id="module-role-admin"
+                                class="bg-white border rounded p-1 text-[11px] focus:outline-none font-sans">
+                                <option value="usuario">usuario</option>
+                                <option value="admin_modulo">admin_modulo</option>
+                            </select>
+                        </div>
+                        <!-- Módulo 3: Inventario -->
+                        <div class="flex items-center justify-between border-t pt-2 mt-2">
+                            <label class="flex items-center space-x-2 text-xs font-semibold text-slate-700">
+                                <input type="checkbox" id="module-check-inventory" class="accent-[#4f46e5]">
+                                <span>Inventario de Activos</span>
+                            </label>
+                            <select id="module-role-inventory"
+                                class="bg-white border rounded p-1 text-[11px] focus:outline-none font-sans">
+                                <option value="usuario">usuario</option>
+                                <option value="tecnico">tecnico</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex space-x-3 mt-6 font-sans">
+                <button onclick="closeCreateUserModal()"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-sm text-xs transition-all sharp-btn">Cancelar</button>
+                <button onclick="saveNewUserDirectly()"
+                    class="w-1/2 bg-[#4f46e5] hover:bg-[#4338ca] text-white font-bold py-2.5 rounded-sm text-xs transition-all shadow-md sharp-btn">Guardar
+                    Usuario</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE DETALLE DE PERFIL DE USUARIO -->
+    <div id="modal-user-profile"
+        class="fixed inset-0 bg-black/65 backdrop-blur-xs z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white rounded-sm p-7 max-w-md w-full mx-4 shadow-2xl transform scale-95 transition-all duration-300"
+            onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-5 font-sans">
+                <h3 class="text-sm font-black text-brand-dark uppercase tracking-wider">Ficha de Perfil Técnico</h3>
+                <button onclick="closeUserProfileModal()" class="text-slate-400 hover:text-brand-dark"><i
+                        class="fa-solid fa-x"></i></button>
+            </div>
+
+            <div class="text-center font-sans space-y-4">
+                <!-- Avatar grande -->
+                <div class="w-20 h-20 rounded-full bg-brand-dark text-white mx-auto flex items-center justify-center text-3xl font-black border-4 border-slate-100 shadow-sm"
+                    id="profile-avatar-box">
+                    US
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-brand-dark" id="profile-name">Natalia López</h3>
+                    <p class="text-xs text-brand-textMuted mt-0.5 font-mono" id="profile-email">natalia.lopez@empresa.co
+                    </p>
+                </div>
+
+                <div class="text-left bg-slate-50 border p-4 rounded-sm text-xs space-y-3 font-sans">
+                    <div>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">ROL
+                            GLOBAL</span>
+                        <span class="font-extrabold text-brand-dark" id="profile-role">usuario</span>
+                    </div>
+                    <div>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">MÓDULOS
+                            ACTIVOS</span>
+                        <div class="flex flex-wrap gap-1.5 mt-1.5" id="profile-modules">
+                            <!-- Badges -->
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">ESTADO</span>
+                        <span class="inline-flex items-center mt-1" id="profile-status-badge">
+                            <!-- Status -->
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeUserProfileModal()"
+                class="w-full mt-6 bg-brand-dark hover:bg-slate-800 text-white text-xs font-bold py-3 rounded-sm transition-all sharp-btn font-sans">
+                Cerrar Ficha de Perfil
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL DE OPERACIONES -->
+    <div id="modal-success"
+        class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300"
+        onclick="closeModal()">
+        <div class="bg-white rounded-sm border border-slate-200 p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-all duration-300 text-center"
+            id="modal-content" onclick="event.stopPropagation()">
+            <div
+                class="w-12 h-12 bg-slate-100 text-brand-dark rounded flex items-center justify-center mx-auto mb-4 text-xl border border-slate-200">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <h3 class="text-sm font-black text-brand-dark uppercase tracking-wider mb-2 font-sans">Notificación de
+                Acceso</h3>
+            <p class="text-xs text-brand-textMuted leading-relaxed mb-6 font-sans" id="modal-details-text">
+                Tu acción ha sido auditada y registrada de forma segura en la consola ITSM.
+            </p>
+            <button onclick="closeModal()"
+                class="w-full bg-brand-dark hover:bg-brand-darker text-white text-xs font-bold py-2.5 rounded-sm transition-colors uppercase tracking-wider border border-brand-dark font-sans">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <!-- SCRIPTS DE CONTROLADOR DINÁMICO -->
+    <script>
+        // --- BASE DE DATOS DE LOGS DE AUDITORÍA TÉCNICA REAL ---
+        let systemAuditsDatabase = [
+            { time: '2026-05-24 16:35:10', actor: 'Diego Herrera (Superadmin)', category: 'RBAC', msg: 'Permiso "dashboard.edit" activado para el rol Admin HelpDesk.', ip: '192.168.1.45' },
+            { time: '2026-05-24 16:32:05', actor: 'Diego Herrera (Superadmin)', category: 'RBAC', msg: 'Permiso "users.delete" desmarcado para el rol de Técnico.', ip: '192.168.1.45' },
+            { time: '2026-05-24 16:10:42', actor: 'Diego Herrera (Superadmin)', category: 'Usuarios', msg: 'Carga de lote de usuarios mediante importación de archivo CSV "usuarios_nuevos.csv".', ip: '192.168.1.45' },
+            { time: '2026-05-24 15:45:12', actor: 'Sistema SLA', category: 'Helpdesk SLA', msg: 'Ticket de prueba #501F9A entró en fase de alerta de SLA de resolución.', ip: 'localhost' },
+            { time: '2026-05-24 14:20:30', actor: 'Mónica Martínez (Finanzas)', category: 'Módulo GA', msg: 'Aprobación de presupuesto anual de licenciamiento de software TI.', ip: '192.168.1.80' },
+            { time: '2026-05-24 11:15:22', actor: 'Sebastián Castro (Hardware)', category: 'Inventario', msg: 'QR generado y asociado para el activo LaserJet HP 232.', ip: '192.168.1.92' }
+        ];
+
+        // --- ARQUITECTURA GENERAL DE PERMISOS (RBAC + ÁRBOL JERÁRQUICO) ---
+        let systemPermissionsList = [
+            // Rama: Dashboard
+            { id: 'dash', name: 'Dashboard', slug: 'dashboard', description: 'Acceso general al panel de inicio del sistema.', parentId: null, isActive: true },
+            { id: 'dash_view', name: 'Ver dashboard', slug: 'dashboard.view', description: 'Carga visual de la pantalla principal de módulos.', parentId: 'dash', isActive: true },
+            { id: 'dash_metrics', name: 'Ver métricas', slug: 'dashboard.metrics', description: 'Lectura en tiempo real de kpis de SLAs operacionales.', parentId: 'dash', isActive: true },
+            { id: 'dash_edit', name: 'Editar métricas', slug: 'dashboard.edit', description: 'Configuración y recalibración de metas operativas.', parentId: 'dash', isActive: false },
+
+            // Rama: Usuarios
+            { id: 'users', name: 'Usuarios', slug: 'users', description: 'Administración del directorio de personal corporativo.', parentId: null, isActive: true },
+            { id: 'users_view', name: 'Ver usuarios', slug: 'users.view', description: 'Visualizar tabla de usuarios con estados de conexión.', parentId: 'users', isActive: true },
+            { id: 'users_create', name: 'Crear usuario', slug: 'users.create', description: 'Dar de alta nuevos perfiles y asignar roles.', parentId: 'users', isActive: true },
+            { id: 'users_edit', name: 'Editar usuario', slug: 'users.edit', description: 'Modificar credenciales o datos de contacto.', parentId: 'users', isActive: false },
+            { id: 'users_delete', name: 'Eliminar usuario', slug: 'users.delete', description: 'Dar de baja permanentemente a un usuario del directorio.', parentId: 'users', isActive: false },
+            { id: 'users_activate', name: 'Activar usuario', slug: 'users.activate', description: 'Habilitar acceso operacional al sistema.', parentId: 'users', isActive: true },
+            { id: 'users_deactivate', name: 'Desactivar usuario', slug: 'users.deactivate', description: 'Suspender temporalmente las credenciales del usuario.', parentId: 'users', isActive: true },
+
+            // Rama: Roles
+            { id: 'roles', name: 'Roles', slug: 'roles', description: 'Seguridad basada en roles (RBAC) y control de accesos.', parentId: null, isActive: true },
+            { id: 'roles_view', name: 'Ver roles', slug: 'roles.view', description: 'Cargar pantalla de roles y matriz de permisos por módulos.', parentId: 'roles', isActive: true },
+            { id: 'roles_create', name: 'Crear rol', slug: 'roles.create', description: 'Creación de nuevos perfiles de seguridad contextuales.', parentId: 'roles', isActive: false },
+            { id: 'roles_edit', name: 'Editar rol', slug: 'roles.edit', description: 'Modificar árbol de permisos jerárquicos.', parentId: 'roles', isActive: true },
+            { id: 'roles_delete', name: 'Eliminar rol', slug: 'roles.delete', description: 'Baja lógica de roles. Los usuarios pierden permisos activos.', parentId: 'roles', isActive: false },
+
+            // Rama: Tickets
+            { id: 'tickets', name: 'Tickets', slug: 'tickets', description: 'Flujos operativos de la mesa de soporte.', parentId: null, isActive: true },
+            { id: 'tickets_view', name: 'Ver tickets', slug: 'tickets.view', description: 'Lectura de bandeja de incidentes asignados.', parentId: 'tickets', isActive: true },
+            { id: 'tickets_take', name: 'Tomar ticket', slug: 'tickets.take', description: 'Habilidad de autoasignarse incidentes e iniciar SLA.', parentId: 'tickets', isActive: true },
+            { id: 'tickets_reassign', name: 'Reasignar ticket', slug: 'tickets.reassign', description: 'Derivación de tickets a otros técnicos de soporte.', parentId: 'tickets', isActive: false },
+            { id: 'tickets_close', name: 'Cerrar ticket', slug: 'tickets.close', description: 'Declarar la resolución técnica permanente de una falla.', parentId: 'tickets', isActive: true },
+            { id: 'tickets_meeting', name: 'Crear reunión', slug: 'tickets.meeting', description: 'Agendar llamadas Meet integradas a la bitácora.', parentId: 'tickets', isActive: true },
+            { id: 'tickets_invite', name: 'Invitar técnicos', slug: 'tickets.invite', description: 'Solicitar colaboración externa de soporte.', parentId: 'tickets', isActive: true }
+        ];
+
+        // Base de Datos de Roles
+        let rolesDatabase = [
+            // Roles Globales
+            { id: 'superadmin', name: 'Superadmin', description: 'Control absoluto del entorno operativo global y administración total de módulos.', moduleId: null, status: 'Activo', permissions: ['dash', 'dash_view', 'dash_metrics', 'dash_edit', 'users', 'users_view', 'users_create', 'users_edit', 'users_delete', 'users_activate', 'users_deactivate', 'roles', 'roles_view', 'roles_create', 'roles_edit', 'roles_delete', 'tickets', 'tickets_view', 'tickets_take', 'tickets_reassign', 'tickets_close', 'tickets_meeting', 'tickets_invite'] },
+            { id: 'usuario', name: 'Usuario', description: 'Perfil general de lectura pasiva de módulos sin privilegios de control.', moduleId: null, status: 'Activo', permissions: ['dash', 'dash_view', 'tickets', 'tickets_view'] },
+
+            // Roles por Módulo: Helpdesk
+            { id: 'tecnico_hd', name: 'Técnico', description: 'Operador asignatario de incidentes L1 y soporte directo.', moduleId: 'Helpdesk', status: 'Activo', permissions: ['dash', 'dash_view', 'dash_metrics', 'tickets', 'tickets_view', 'tickets_take', 'tickets_close', 'tickets_meeting'] },
+            { id: 'jefe_tecnico_hd', name: 'Jefe Técnico', description: 'Supervisor del módulo Helpdesk. Controla colas de derivación y aprobación.', moduleId: 'Helpdesk', status: 'Activo', permissions: ['dash', 'dash_view', 'dash_metrics', 'users', 'users_view', 'tickets', 'tickets_view', 'tickets_take', 'tickets_reassign', 'tickets_close', 'tickets_meeting', 'tickets_invite'] },
+            { id: 'admin_hd', name: 'Admin HelpDesk', description: 'Administrador dedicado al comportamiento del SLA de la mesa de soporte.', moduleId: 'Helpdesk', status: 'Activo', permissions: ['dash', 'dash_view', 'dash_metrics', 'dash_edit', 'users', 'users_view', 'users_create', 'tickets', 'tickets_view', 'tickets_take', 'tickets_reassign', 'tickets_close', 'tickets_meeting', 'tickets_invite'] },
+            { id: 'tecnico_hw_hd', name: 'Técnico Hardware', description: 'Especialista en sustitución de piezas físicas y calibraciones.', moduleId: 'Helpdesk', status: 'Activo', permissions: ['dash', 'dash_view', 'tickets', 'tickets_view', 'tickets_take'] },
+
+            // Roles por Módulo: Gestión Administrativa
+            { id: 'admin_modulo_ga', name: 'Admin Modulo GA', description: 'Control de flujos administrativos.', moduleId: 'Gestión Administrativa', status: 'Activo', permissions: ['dash', 'dash_view', 'users', 'users_view'] },
+            { id: 'usuario_ga', name: 'Usuario Administrativo', description: 'Solicitante de licencias.', moduleId: 'Gestión Administrativa', status: 'Activo', permissions: ['dash', 'dash_view'] },
+
+            // Roles por Módulo: Inventario
+            { id: 'tecnico_inv', name: 'Técnico Inventario', description: 'Encargado del stock.', moduleId: 'Inventario', status: 'Activo', permissions: ['dash', 'dash_view', 'users', 'users_view'] }
+        ];
+
+        let activeEditingRoleId = 'superadmin'; // Rol seleccionado para edición de permisos
+
+        // --- BASE DE DATOS DE USUARIOS ---
+        let usersDatabase = [
+            {
+                name: 'Natalia López',
+                email: 'natalia.lopez@empresa.co',
+                globalRole: 'usuario',
+                status: 'Activo',
+                connectionStatus: 'online', // online, offline, away
+                avatar: 'NL',
+                modules: [
+                    { name: 'Helpdesk', role: 'usuario' },
+                    { name: 'Gestión Administrativa', role: 'usuario' }
+                ]
+            },
+            {
+                name: 'Andrés Gómez',
+                email: 'andres.gomez@empresa.co',
+                globalRole: 'usuario',
+                status: 'Activo',
+                connectionStatus: 'offline',
+                avatar: 'AG',
+                modules: []
+            },
+            {
+                name: 'Camila Pérez',
+                email: 'camila.perez@empresa.co',
+                globalRole: 'usuario',
+                status: 'Activo',
+                connectionStatus: 'away',
+                avatar: 'CP',
+                modules: [
+                    { name: 'Inventario', role: 'usuario' },
+                    { name: 'Gestión Administrativa', role: 'usuario' }
+                ]
+            },
+            {
+                name: 'Sebastián Castro',
+                email: 'sebastian.castro@empresa.co',
+                globalRole: 'usuario',
+                status: 'Activo',
+                connectionStatus: 'online',
+                avatar: 'SC',
+                modules: [
+                    { name: 'Helpdesk', role: 'tecnico' }
+                ]
+            },
+            {
+                name: 'Juliana Mora',
+                email: 'juliana.mora@empresa.co',
+                globalRole: 'usuario',
+                status: 'Activo',
+                connectionStatus: 'offline',
+                avatar: 'JM',
+                modules: []
+            },
+            {
+                name: 'Diego Herrera',
+                email: 'diego.herrera@empresa.co',
+                globalRole: 'superadmin',
+                status: 'Activo',
+                connectionStatus: 'online',
+                avatar: 'DH',
+                modules: [
+                    { name: 'Helpdesk', role: 'tecnico' },
+                    { name: 'Inventario', role: 'tecnico' }
+                ]
+            },
+            {
+                name: 'Valentina Ríos',
+                email: 'valentina.rios@empresa.co',
+                globalRole: 'usuario',
+                status: 'Activo',
+                connectionStatus: 'away',
+                avatar: 'VR',
+                modules: []
+            },
+            {
+                name: 'Miguel Torres',
+                email: 'miguel.torres@empresa.co',
+                globalRole: 'usuario',
+                status: 'Activo',
+                connectionStatus: 'online',
+                avatar: 'MT',
+                modules: [
+                    { name: 'Helpdesk', role: 'jefe_tecnico' },
+                    { name: 'Gestión Administrativa', role: 'admin_modulo' }
+                ]
+            },
+            {
+                name: 'Asmn Alhona',
+                email: 'martetli@gmaill2.com',
+                globalRole: 'superadmin',
+                status: 'Pendiente',
+                connectionStatus: 'offline',
+                avatar: 'AA',
+                modules: []
+            },
+            {
+                name: 'Alden Allerton',
+                email: 'administri@gmail.com',
+                globalRole: 'tecnico',
+                status: 'In Progress',
+                connectionStatus: 'online',
+                avatar: 'AL',
+                modules: [
+                    { name: 'Helpdesk', role: 'tecnico' }
+                ]
+            }
+        ];
+
+        // --- RENDERIZADO DE LA TABLA DE LOGS DE AUDITORÍA (NUEVO REQUERIMIENTO) ---
+        function renderAuditLogsTable() {
+            const tableBody = document.getElementById('audits-table-body');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = '';
+            systemAuditsDatabase.forEach(log => {
+                let catBadgeClass = 'bg-slate-100 text-slate-700';
+                if (log.category === 'RBAC') catBadgeClass = 'bg-indigo-50 text-indigo-700 border border-indigo-150';
+                else if (log.category === 'Usuarios') catBadgeClass = 'bg-blue-50 text-blue-700 border border-blue-150';
+                else if (log.category === 'Helpdesk SLA') catBadgeClass = 'bg-red-50 text-brand-coral border border-red-150';
+                else if (log.category === 'Módulo GA') catBadgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-150';
+
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors font-mono text-[11px] text-slate-600 border-b border-slate-100">
+                        <td class="py-2.5 px-4 font-sans font-semibold text-slate-400">${log.time}</td>
+                        <td class="py-2.5 px-4 font-sans font-bold text-slate-800">${log.actor}</td>
+                        <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded-sm text-[9px] font-black uppercase ${catBadgeClass}">${log.category}</span></td>
+                        <td class="py-2.5 px-4 font-sans font-medium text-slate-700">${log.msg}</td>
+                        <td class="py-2.5 px-4 text-right pr-6 font-semibold">${log.ip}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- SISTEMA DINÁMICO DE NAVEGACIÓN COMPLETA (Sincroniza sidebar activo e inactivo) ---
+        function switchViewToUsers() {
+            resetSidebarButtonsActiveState();
+            const btn = document.getElementById('sidebar-nav-users');
+            if (btn) btn.className = "w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 bg-slate-50 border border-slate-200 text-brand-dark transition-all";
+
+            hideAllWorkspacesPanels();
+            document.getElementById('view-users-management').classList.remove('hidden');
+        }
+
+        function switchViewToRoles() {
+            resetSidebarButtonsActiveState();
+            const btn = document.getElementById('sidebar-nav-roles');
+            if (btn) btn.className = "w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 bg-slate-50 border border-slate-200 text-brand-dark transition-all";
+
+            hideAllWorkspacesPanels();
+            document.getElementById('view-roles-management').classList.remove('hidden');
+
+            renderRolesContextList();
+            editRolePermissionsWorkspace('superadmin');
+        }
+
+        function switchViewToReports() {
+            resetSidebarButtonsActiveState();
+            const btn = document.getElementById('sidebar-nav-reports');
+            if (btn) btn.className = "w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 bg-slate-50 border border-slate-200 text-brand-dark transition-all";
+
+            hideAllWorkspacesPanels();
+            document.getElementById('view-reports-workspace').classList.remove('hidden');
+
+            // Renderizar logs de auditoría en la tabla
+            renderAuditLogsTable();
+
+            // Inicializar las gráficas avanzadas en su respectiva pantalla
+            setTimeout(initializeReportsWorkspaceCharts, 50);
+        }
+
+        // --- INICIALIZADOR DE GRÁFICAS DE LA PANTALLA REPORTES ---
+        function initializeReportsWorkspaceCharts() {
+            if (moduleSlaChartRef) moduleSlaChartRef.destroy();
+            if (moduleCategoryChartRef) moduleCategoryChartRef.destroy();
+
+            // SLA Chart de Reportes
+            const slaCtx = document.getElementById('workspaceSlaChart');
+            if (slaCtx) {
+                moduleSlaChartRef = new Chart(slaCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                        datasets: [{
+                            label: 'Tasa de Cumplimiento de SLA (%)',
+                            data: [94.5, 95.8, 96.2, 95.1, 96.3, 97.4],
+                            borderColor: '#ff5e3a',
+                            backgroundColor: 'rgba(255, 94, 58, 0.05)',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { font: { size: 8 } } },
+                            y: { min: 90, max: 100, ticks: { font: { size: 8 } } }
+                        }
+                    }
+                });
+            }
+
+            // Category Chart de Reportes
+            const catCtx = document.getElementById('workspaceCategoryChart');
+            if (catCtx) {
+                moduleCategoryChartRef = new Chart(catCtx.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: ['Hardware', 'Redes', 'Accesos/Permisos', 'Software', 'Otros'],
+                        datasets: [{
+                            data: [420, 310, 260, 190, 68],
+                            backgroundColor: ['#ff5e3a', '#0e2235', '#4f46e5', '#cbd5e1', '#64748b'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { font: { size: 8, family: 'Inter' }, boxWidth: 8 }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Auxiliares de navegación
+        function hideAllWorkspacesPanels() {
+            document.getElementById('view-modules-portal').classList.add('hidden');
+            document.getElementById('view-active-module-content').classList.add('hidden');
+            document.getElementById('view-users-management').classList.add('hidden');
+            document.getElementById('view-roles-management').classList.add('hidden');
+            document.getElementById('view-reports-workspace').classList.add('hidden');
+        }
+
+        function resetSidebarButtonsActiveState() {
+            const btns = ['sidebar-nav-btn1', 'sidebar-nav-users', 'sidebar-nav-roles', 'sidebar-nav-reports'];
+            btns.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.className = "w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 text-slate-500 hover:text-brand-dark hover:bg-slate-50 transition-all border border-transparent";
+                }
+            });
+        }
+
+        function handleButton1Click() {
+            exitToGlobalPortal();
+        }
+
+        // --- SISTEMA DINÁMICO DE CARGA DE ROLES (Columna Izquierda de la Pestaña D) ---
+        function renderRolesContextList() {
+            const context = document.getElementById('roles-context-selector').value;
+            const container = document.getElementById('roles-cards-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            // Filtrar roles según contexto
+            let filteredRoles = [];
+            if (context === 'global') {
+                filteredRoles = rolesDatabase.filter(r => r.moduleId === null);
+            } else {
+                filteredRoles = rolesDatabase.filter(r => r.moduleId === context);
+            }
+
+            if (filteredRoles.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">No hay roles configurados para este contexto.</p>`;
+                return;
+            }
+
+            filteredRoles.forEach(role => {
+                const isSelected = activeEditingRoleId === role.id;
+                container.innerHTML += `
+                    <div class="p-3.5 border ${isSelected ? 'border-brand-coral bg-brand-coral/5' : 'border-slate-200 bg-white'} rounded-sm flex flex-col justify-between hover:border-slate-300 transition-all font-sans">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-black text-brand-dark uppercase tracking-wide truncate max-w-[140px]">${role.name}</span>
+                                <span class="text-[9px] ${role.status === 'Activo' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-500 border-red-100'} border px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wider">
+                                    ${role.status}
+                                </span>
+                            </div>
+                            <p class="text-[10px] text-brand-textMuted leading-relaxed line-clamp-2 mb-3">${role.description}</p>
+                        </div>
+                        <div class="flex items-center justify-between border-t pt-2.5 mt-1">
+                            <span class="text-[9px] text-slate-400 font-extrabold uppercase">${role.permissions.length} permisos</span>
+                            <button onclick="editRolePermissionsWorkspace('${role.id}')" class="text-[10px] bg-brand-dark hover:bg-slate-800 text-white font-extrabold px-3 py-1.5 rounded-sm transition-all shadow-sm flex items-center space-x-1.5 sharp-btn uppercase">
+                                <i class="fa-solid fa-gears text-[10px]"></i>
+                                <span>Editar Permisos</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- SISTEMA DINÁMICO DE ÁRBOL DE PERMISOS (Columna Central de la Pestaña D) ---
+        // Implementa la regla crítica: Activar padre habilita los hijos (no los activa directamente). Desactivar padre deshabilita e inactiva los hijos.
+        function editRolePermissionsWorkspace(roleId) {
+            activeEditingRoleId = roleId;
+            const role = rolesDatabase.find(r => r.id === roleId);
+            if (!role) return;
+
+            // Actualizar etiqueta del rol activo
+            safeSetText('selected-role-badge-label', role.name.toUpperCase());
+
+            // Renderizar árbol de permisos
+            const treeContainer = document.getElementById('permissions-tree-container');
+            if (!treeContainer) return;
+
+            treeContainer.innerHTML = '';
+
+            // Obtener los permisos raíz (parentId: null)
+            const parentPermissions = systemPermissionsList.filter(p => p.parentId === null);
+
+            parentPermissions.forEach(parent => {
+                // Verificar si el rol posee el permiso padre activo
+                const isParentChecked = role.permissions.includes(parent.id);
+
+                // Obtener hijos directos
+                const children = systemPermissionsList.filter(p => p.parentId === parent.id);
+
+                let childrenHTML = '';
+                children.forEach(child => {
+                    const isChildChecked = role.permissions.includes(child.id);
+                    // Regla Crítica: Hijo deshabilitado si el padre no está checked
+                    const isChildDisabled = !isParentChecked;
+
+                    childrenHTML += `
+                        <div class="flex items-center justify-between pl-6 py-1 hover:bg-slate-100/50 rounded-sm font-mono text-[11px] text-slate-600 transition-colors">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-slate-300">├──</span>
+                                <input type="checkbox" 
+                                       id="perm-${child.id}" 
+                                       onchange="handleChildCheckboxChange('${child.id}')"
+                                       ${isChildChecked && isParentChecked ? 'checked' : ''} 
+                                       ${isChildDisabled ? 'disabled' : ''} 
+                                       class="accent-[#4f46e5] rounded-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span class="font-bold hover:underline cursor-pointer ${isChildDisabled ? 'text-slate-400' : 'text-slate-700'}" 
+                                      onclick="inspectPermissionDetail('${child.id}')">
+                                    ${child.name}
+                                </span>
+                            </div>
+                            <span class="text-[9px] text-slate-400 font-semibold tracking-wider font-sans uppercase">${child.slug}</span>
+                        </div>
+                    `;
+                });
+
+                treeContainer.innerHTML += `
+                    <div class="border-b pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+                        <!-- Nodo Padre -->
+                        <div class="flex items-center justify-between py-1.5 bg-slate-100/40 px-2 border-l-2 border-brand-dark/30">
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" 
+                                       id="perm-${parent.id}" 
+                                       onchange="handleParentCheckboxChange('${parent.id}')"
+                                       ${isParentChecked ? 'checked' : ''} 
+                                       class="accent-[#4f46e5] rounded-xs cursor-pointer">
+                                <span class="font-black text-brand-dark hover:underline cursor-pointer" 
+                                      onclick="inspectPermissionDetail('${parent.id}')">
+                                    ${parent.name}
+                                </span>
+                            </div>
+                            <span class="text-[9px] bg-slate-200 text-slate-700 font-extrabold px-1.5 py-0.5 rounded-sm uppercase tracking-wider font-sans">${parent.slug}</span>
+                        </div>
+                        <!-- Nodos Hijos -->
+                        <div class="mt-1 space-y-0.5">
+                            ${childrenHTML}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Refrescar lista de roles para pintar la tarjeta seleccionada
+            renderRolesContextList();
+        }
+
+        function handleParentCheckboxChange(parentId) {
+            const parentCheckbox = document.getElementById(`perm-${parentId}`);
+            if (!parentCheckbox) return;
+
+            const isChecked = parentCheckbox.checked;
+            const role = rolesDatabase.find(r => r.id === activeEditingRoleId);
+            if (!role) return;
+
+            // Actualizar el estado del padre en el rol activo
+            if (isChecked) {
+                if (!role.permissions.includes(parentId)) {
+                    role.permissions.push(parentId);
+                }
+            } else {
+                // Al deseleccionar el padre, remover el padre y desmarcar todos los hijos
+                role.permissions = role.permissions.filter(pId => pId !== parentId);
+
+                // Buscar e inhabilitar/desmarcar todos los hijos de este padre
+                const children = systemPermissionsList.filter(p => p.parentId === parentId);
+                children.forEach(child => {
+                    role.permissions = role.permissions.filter(pId => pId !== child.id);
+                });
+            }
+
+            // Volver a renderizar el árbol para aplicar cambios visuales y de habilitación instantánea
+            editRolePermissionsWorkspace(activeEditingRoleId);
+        }
+
+        function handleChildCheckboxChange(childId) {
+            const childCheckbox = document.getElementById(`perm-${childId}`);
+            if (!childCheckbox) return;
+
+            const isChecked = childCheckbox.checked;
+            const role = rolesDatabase.find(r => r.id === activeEditingRoleId);
+            if (!role) return;
+
+            if (isChecked) {
+                if (!role.permissions.includes(childId)) {
+                    role.permissions.push(childId);
+                }
+            } else {
+                role.permissions = role.permissions.filter(pId => pId !== childId);
+            }
+
+            addAuditLog('RBAC', `Modificado permiso del rol '${role.name}': '${childId}' es ahora ${isChecked ? 'Permitido' : 'Revocado'}`);
+        }
+
+        function saveActiveRolePermissions() {
+            const role = rolesDatabase.find(r => r.id === activeEditingRoleId);
+            if (!role) return;
+
+            alertModal('Matriz Salvada', `Los privilegios jerárquicos del rol '${role.name}' han sido sincronizados y actualizados de forma persistente.`);
+            addAuditLog('RBAC', `Cambios de permisos guardados para el rol: ${role.name}`);
+
+            // Forzar actualización de barra de permisos y sidebar dinámico
+            applyRolePermissionsToSidebarAndUIVisibility();
+        }
+
+        function inspectPermissionDetail(permissionId) {
+            const perm = systemPermissionsList.find(p => p.id === permissionId);
+            if (!perm) return;
+
+            const infoBox = document.getElementById('permission-info-box');
+            if (!infoBox) return;
+
+            let riskLabel = 'Bajo';
+            let riskBadgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+            let riskDescription = 'Este permiso concede acceso a funcionalidades de consulta y lectura ordinaria, con nulo riesgo de alteración o desestabilización del sistema.';
+
+            if (perm.parentId === null) {
+                riskLabel = 'Agrupador Raíz';
+                riskBadgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
+                riskDescription = 'Este es un permiso de nodo padre. Habilitarlo permite el acceso general a la sección pero no otorga permisos de alteración.';
+            } else {
+                if (perm.id.includes('delete') || perm.id.includes('edit') || perm.id.includes('reassign')) {
+                    riskLabel = 'Alto';
+                    riskBadgeClass = 'bg-red-50 text-red-500 border-red-200 animate-pulse';
+                    riskDescription = 'Alerta de Seguridad: Este permiso faculta la eliminación o edición de datos operacionales críticos. Su otorgamiento a personal no autorizado puede derivar en brechas de datos o alteración de auditorías.';
+                } else if (perm.id.includes('create') || perm.id.includes('take') || perm.id.includes('deactivate')) {
+                    riskLabel = 'Medio';
+                    riskBadgeClass = 'bg-amber-50 text-amber-600 border-amber-200';
+                    riskDescription = 'Este permiso faculta la inserción de nuevos registros y operaciones ejecutivas. Debe asignarse bajo supervisión del administrador de mesa.';
+                }
+            }
+
+            infoBox.innerHTML = `
+                <div class="border-b pb-3 animate-fade-in font-sans">
+                    <span class="text-[9px] text-brand-coral font-bold uppercase tracking-wider block">Inspección de Permiso</span>
+                    <h2 class="text-sm font-black text-brand-dark uppercase tracking-wide mt-1">${perm.name}</h2>
+                    <span class="text-[10px] font-mono text-slate-400 mt-0.5 block">${perm.slug}</span>
+                </div>
+
+                <div class="space-y-4 font-sans text-xs text-slate-700 mt-4">
+                    <div>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">DESCRIPCIÓN OPERACIONAL</span>
+                        <p class="text-xs text-slate-600 leading-relaxed mt-1">${perm.description}</p>
+                    </div>
+
+                    <div>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">IMPACTO EN EL SISTEMA</span>
+                        <p class="text-xs text-slate-600 leading-relaxed mt-1">Concede accesibilidad técnica directa al subsistema global de base de datos ITSM en el alcance operacional de ${perm.slug}.</p>
+                    </div>
+
+                    <div>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">NIVEL DE RIESGO</span>
+                        <span class="inline-flex items-center border rounded px-2.5 py-1 text-[10px] font-black mt-1.5 uppercase ${riskBadgeClass}">
+                            <i class="fa-solid fa-triangle-exclamation mr-1.5"></i>
+                            <span>${riskLabel}</span>
+                        </span>
+                        <p class="text-[11px] text-slate-500 leading-normal mt-2">${riskDescription}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- SISTEMA DE SEGURIDAD RBAC: COMPORTAMIENTO DINÁMICO DE UI SEGÚN PERMISOS ---
+        function applyRolePermissionsToSidebarAndUIVisibility() {
+            const simulatedValue = document.getElementById('sim-role-selector').value;
+            let activeSimRole = null;
+            if (simulatedValue === 'admin') {
+                activeSimRole = rolesDatabase.find(r => r.id === 'superadmin');
+            } else {
+                activeSimRole = rolesDatabase.find(r => r.id === 'usuario');
+            }
+
+            if (!activeSimRole) return;
+
+            const userFullname = document.getElementById('topbar-user-fullname');
+            const userAvatar = document.getElementById('topbar-user-avatar');
+            if (simulatedValue === 'admin') {
+                if (userFullname) userFullname.innerText = 'Diego Herrera';
+                if (userAvatar) userAvatar.innerText = 'DH';
+            } else {
+                if (userFullname) userFullname.innerText = 'Alexander Rubio';
+                if (userAvatar) userAvatar.innerText = 'AR';
+            }
+
+            // Ocultar sección Roles si roles.view no está permitido
+            const rolesSidebarBtn = document.getElementById('sidebar-nav-roles');
+            const hasRolesViewPermission = activeSimRole.permissions.includes('roles_view');
+            if (rolesSidebarBtn) {
+                if (hasRolesViewPermission) rolesSidebarBtn.classList.remove('hidden');
+                else {
+                    rolesSidebarBtn.classList.add('hidden');
+                    const rolesPanel = document.getElementById('view-roles-management');
+                    if (rolesPanel && !rolesPanel.classList.contains('hidden')) {
+                        handleButton1Click();
+                    }
+                }
+            }
+
+            // Ocultar sección Usuarios si users.view no está permitido
+            const usersSidebarBtn = document.getElementById('sidebar-nav-users');
+            const hasUsersViewPermission = activeSimRole.permissions.includes('users_view');
+            if (usersSidebarBtn) {
+                if (hasUsersViewPermission) usersSidebarBtn.classList.remove('hidden');
+                else {
+                    usersSidebarBtn.classList.add('hidden');
+                    const usersPanel = document.getElementById('view-users-management');
+                    if (usersPanel && !usersPanel.classList.contains('hidden')) {
+                        handleButton1Click();
+                    }
+                }
+            }
+
+            // Crear usuario ocultar
+            const createUserBtn = document.querySelector('button[onclick="openCreateUserModal()"]');
+            const hasUsersCreatePermission = activeSimRole.permissions.includes('users_create');
+            if (createUserBtn) {
+                if (hasUsersCreatePermission) createUserBtn.classList.remove('hidden');
+                else createUserBtn.classList.add('hidden');
+            }
+
+            // Importación CSV ocultar
+            const importCsvBtn = document.querySelector('button[onclick="triggerCsvImportClick()"]');
+            if (importCsvBtn) {
+                if (hasUsersCreatePermission) importCsvBtn.classList.remove('hidden');
+                else importCsvBtn.classList.add('hidden');
+            }
+        }
+
+        // Evento dropdown de cambio de contexto en pestaña Roles
+        function changeRolesContextDropdown() {
+            renderRolesContextList();
+        }
+
+        // --- RENDERIZADO DINÁMICO DE LA TABLA DE USUARIOS ---
+        function renderUsersTableList(dataList) {
+            const tableBody = document.getElementById('users-table-body');
+            const totalCounter = document.getElementById('users-total-counter');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = '';
+
+            // Actualizar contador del header
+            if (totalCounter) {
+                totalCounter.innerText = `${dataList.length} usuarios registrados en el sistema`;
+            }
+
+            if (dataList.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-10 text-center text-slate-400 font-sans text-xs italic">
+                            No se encontraron usuarios con los filtros aplicados.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            dataList.forEach((user, index) => {
+                let modulesBadgeHTML = '';
+                if (user.modules && user.modules.length > 0) {
+                    user.modules.forEach(m => {
+                        modulesBadgeHTML += `
+                            <span class="inline-flex items-center bg-slate-50 border border-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-sm text-[10px] space-x-1">
+                                <span>${m.name}</span>
+                                <span class="text-slate-300">•</span>
+                                <span class="text-brand-coral">${m.role}</span>
+                            </span>
+                        `;
+                    });
+                } else {
+                    modulesBadgeHTML = `<span class="text-slate-400 font-normal italic text-[11px] font-sans">—</span>`;
+                }
+
+                let statusBadgeClass = '';
+                if (user.status === 'Activo') {
+                    statusBadgeClass = 'bg-emerald-50 text-emerald-600 border border-emerald-200';
+                } else if (user.status === 'Pendiente') {
+                    statusBadgeClass = 'bg-red-50 text-red-500 border-red-100';
+                } else if (user.status === 'In Progress') {
+                    statusBadgeClass = 'bg-blue-50 text-blue-600 border border-blue-200';
+                } else {
+                    statusBadgeClass = 'bg-slate-50 text-slate-500 border border-slate-200';
+                }
+
+                let connectionDotClass = 'bg-slate-300';
+                let connectionLabel = 'Desconectado';
+                if (user.connectionStatus === 'online') {
+                    connectionDotClass = 'bg-emerald-500 animate-pulse';
+                    connectionLabel = 'Conectado (Online)';
+                } else if (user.connectionStatus === 'away') {
+                    connectionDotClass = 'bg-amber-400';
+                    connectionLabel = 'Ausente (Away)';
+                }
+
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-slate-50/75 transition-colors font-sans text-xs border-b border-slate-100">
+                        <td class="py-3.5 px-4 text-center">
+                            <input type="checkbox" name="user-row-cb" value="${user.email}" class="accent-[#4f46e5] rounded-xs cursor-pointer">
+                        </td>
+                        <td class="py-3.5 px-4 flex items-center space-x-3">
+                            <div class="relative">
+                                <div class="w-8 h-8 rounded-full bg-brand-dark/15 text-brand-dark flex items-center justify-center font-extrabold text-[10px]">
+                                    ${user.avatar}
+                                </div>
+                                <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white ${connectionDotClass}" title="${connectionLabel}"></span>
+                            </div>
+                            <div>
+                                <p class="font-extrabold text-slate-800 leading-tight">${user.name}</p>
+                                <p class="text-[9px] text-slate-400 mt-0.5 font-bold uppercase tracking-wider">${connectionLabel}</p>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 font-medium font-mono text-[11px]">${user.email}</td>
+                        <td class="py-3.5 px-4"><span class="text-slate-600 bg-slate-100 border px-2 py-0.5 rounded-sm text-[10px] font-bold">${user.globalRole}</span></td>
+                        <td class="py-3.5 px-4">
+                            <div class="flex flex-wrap gap-1.5 max-w-sm">
+                                ${modulesBadgeHTML}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold ${statusBadgeClass}">${user.status}</span>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <div class="flex items-center justify-center space-x-3">
+                                <button onclick="inspectUserProfile('${user.email}')" class="p-1 hover:bg-slate-100 rounded text-indigo-600 hover:text-indigo-800 transition-all flex items-center justify-center" title="Ver Perfil Completo">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                </button>
+                                <button onclick="toggleUserActivationState('${user.email}')" class="p-1 hover:bg-slate-100 rounded transition-all flex items-center justify-center" title="${user.status === 'Activo' ? 'Desactivar Cuenta' : 'Activar Cuenta'}">
+                                    ${user.status === 'Activo' ? `
+                                        <svg class="w-4 h-4 text-emerald-600 hover:text-emerald-800" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                        </svg>
+                                    ` : `
+                                        <svg class="w-4 h-4 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                        </svg>
+                                    `}
+                                </button>
+                                <button onclick="deleteUserFromSystem('${user.email}')" class="p-1 hover:bg-red-50 rounded text-red-500 hover:text-red-700 transition-all flex items-center justify-center" title="Eliminar Registro">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- TOGGLE ADVANCED FILTERS PANEL ---
+        function toggleAdvancedFilters() {
+            const panel = document.getElementById('advanced-filters-panel');
+            const chevron = document.getElementById('filter-chevron');
+            if (panel && chevron) {
+                panel.classList.toggle('hidden');
+                chevron.classList.toggle('rotate-180');
+            }
+        }
+
+        // --- FILTRADO AVANZADO DE TABLA ---
+        function filterUsersTable() {
+            const query = document.getElementById('user-search-input').value.toLowerCase().trim();
+            const stateFilter = document.getElementById('filter-state-select').value;
+            const roleFilter = document.getElementById('filter-role-select').value;
+            const connectionFilter = document.getElementById('filter-connection-select').value;
+            const moduleFilter = document.getElementById('filter-module-select').value;
+            const sortVal = document.getElementById('filter-sort-select').value;
+
+            let filteredList = usersDatabase.filter(user => {
+                const matchesSearch = user.name.toLowerCase().includes(query) ||
+                    user.email.toLowerCase().includes(query) ||
+                    user.avatar.toLowerCase().includes(query);
+
+                const matchesState = (stateFilter === 'todos') || (user.status === stateFilter);
+                const matchesRole = (roleFilter === 'todos') || (user.globalRole === roleFilter);
+                const matchesConnection = (connectionFilter === 'todos') || (user.connectionStatus === connectionFilter);
+                const matchesModule = (moduleFilter === 'todos') ||
+                    user.modules.some(m => m.name === moduleFilter);
+
+                return matchesSearch && matchesState && matchesRole && matchesConnection && matchesModule;
+            });
+
+            if (sortVal === 'name_asc') {
+                filteredList.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (sortVal === 'name_desc') {
+                filteredList.sort((a, b) => b.name.localeCompare(a.name));
+            } else if (sortVal === 'email_asc') {
+                filteredList.sort((a, b) => a.email.localeCompare(b.email));
+            }
+
+            renderUsersTableList(filteredList);
+        }
+
+        // --- SISTEMAS DE SOPORTE E INTERACCIONES DE INTERFAZ GENERALES ---
+        function toggleSidebar() {
+            sidebarExpanded = !sidebarExpanded;
+            const sidebar = document.getElementById('sidebar-panel');
+            const arrow = document.getElementById('sidebar-arrow');
+            const header = document.getElementById('sidebar-module-header');
+
+            if (sidebarExpanded) {
+                sidebar.style.width = '240px';
+                if (arrow) arrow.className = "fa-solid fa-chevron-left text-xs";
+                document.querySelectorAll('.sidebar-label').forEach(l => l.classList.remove('hidden'));
+                if (currentScope === 'helpdesk' && header) {
+                    header.classList.remove('hidden');
+                }
+            } else {
+                sidebar.style.width = '70px';
+                if (arrow) arrow.className = "fa-solid fa-chevron-right text-xs";
+                document.querySelectorAll('.sidebar-label').forEach(l => l.classList.add('hidden'));
+                if (header) header.classList.add('hidden');
+            }
+        }
+
+        function updateSidebarScopeUI() {
+            const header = document.getElementById('sidebar-module-header');
+            const btn1 = document.getElementById('sidebar-nav-btn1');
+            const btn5Container = document.getElementById('sidebar-nav-btn5-container');
+            const globalConfigContainer = document.getElementById('sidebar-global-config-container');
+
+            if (currentScope === 'global') {
+                if (header) header.classList.add('hidden');
+                if (btn1) {
+                    btn1.querySelector('.sidebar-label').innerText = 'Módulos Disponibles';
+                    btn1.className = "w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 bg-slate-50 border border-slate-200 text-brand-dark transition-all";
+                }
+                if (btn5Container) btn5Container.classList.add('hidden');
+                if (globalConfigContainer) globalConfigContainer.classList.remove('hidden');
+            } else {
+                if (header && sidebarExpanded) {
+                    header.classList.remove('hidden');
+                }
+                if (btn1) {
+                    btn1.querySelector('.sidebar-label').innerText = 'administración por modulo';
+                    btn1.className = "w-full text-left px-3.5 py-2.5 rounded-sm text-xs font-semibold flex items-center space-x-3 text-slate-500 hover:text-brand-dark hover:bg-slate-50 transition-all border border-transparent";
+                }
+                if (btn5Container) btn5Container.classList.remove('hidden');
+                if (globalConfigContainer) globalConfigContainer.classList.add('hidden');
+            }
+        }
+
+        function searchModules() {
+            const query = document.getElementById('module-search-input').value.toLowerCase();
+            const cards = ['helpdesk', 'admin', 'inventory', 'reports'];
+
+            cards.forEach(c => {
+                const el = document.getElementById(`card-${c}`);
+                if (el) {
+                    const text = el.innerText.toLowerCase();
+                    if (text.includes(query)) el.classList.remove('hidden');
+                    else el.classList.add('hidden');
+                }
+            });
+        }
+
+        function alertModal(title, text) {
+            const modal = document.getElementById('modal-success');
+            const content = document.getElementById('modal-content');
+
+            content.querySelector('h3').innerText = title.toUpperCase();
+            document.getElementById('modal-details-text').innerText = text;
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal-success');
+            const content = document.getElementById('modal-content');
+
+            if (modal) modal.classList.add('opacity-0', 'pointer-events-none');
+            if (content) {
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+        }
+    </script>
+</body>
+
+</html>

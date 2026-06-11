@@ -13,6 +13,7 @@ export default function DynamicModuleReportsPage() {
     queryKey: ['module', id],
     queryFn:  () => modulesService.getModule(id),
     enabled:  !!id,
+    staleTime: 5 * 60_000,
   });
   const navItems = useMemo(
     () => buildDynamicModuleNav(mod?.slug ?? id),

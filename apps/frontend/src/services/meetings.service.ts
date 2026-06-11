@@ -54,7 +54,7 @@ export const STATUS_LABELS: Record<MeetingStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<MeetingStatus, string> = {
-  scheduled: '#6366f1',
+  scheduled: '#0e2235',
   active:    '#22c55e',
   completed: '#64748b',
   cancelled: '#ef4444',

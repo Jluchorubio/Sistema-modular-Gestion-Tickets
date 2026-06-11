@@ -57,44 +57,55 @@ export class RequestsController {
     return this.service.completeMineTask(req.user.sub, id);
   }
 
-  @Get('user/:id')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
+  @Get('stats')
   @RequirePermission('gestion:requests:view_all')
-  @ApiOperation({ summary: 'Solicitudes de un usuario específico. Superadmin / admin_modulo.' })
+  @ApiOperation({ summary: 'Stats de solicitudes para admin/superadmin.' })
+  @ApiQuery({ name: 'moduleId', required: false })
+  getStats(@Req() req: any, @Query('moduleId') moduleId?: string) {
+    return this.service.getStats(req.user.sub, moduleId);
+  }
+
+  @Get('stats/mine')
+  @RequirePermission('gestion:requests:view_own')
+  @ApiOperation({ summary: 'Stats propias del usuario autenticado.' })
+  getMyStats(@Req() req: any) {
+    return this.service.getMyStats(req.user.sub);
+  }
+
+  @Get('user/:id')
+  @RequirePermission('gestion:requests:view_all')
+  @ApiOperation({ summary: 'Solicitudes de un usuario específico.' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   findByUser(@Param('id') id: string, @Query('limit') limit?: string) {
     return this.service.findByUser(id, limit ? parseInt(limit, 10) : 10);
   }
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:view_all')
   @ApiOperation({ summary: 'Listar todas las solicitudes. Superadmin / admin_modulo.' })
   @ApiQuery({ name: 'status',    required: false })
   @ApiQuery({ name: 'type',      required: false })
   @ApiQuery({ name: 'source',    required: false })
   @ApiQuery({ name: 'escalated', required: false, type: Boolean })
+  @ApiQuery({ name: 'moduleId',  required: false })
   @ApiQuery({ name: 'page',      required: false, type: Number })
   @ApiQuery({ name: 'limit',     required: false, type: Number })
   findAll(
     @Req() req: any,
-    @Query() q: { status?: string; type?: string; source?: string; escalated?: string; page?: string; limit?: string },
+    @Query() q: { status?: string; type?: string; source?: string; escalated?: string; moduleId?: string; page?: string; limit?: string },
   ) {
     return this.service.findAll(req.user.sub, {
       status:    q.status,
       type:      q.type,
       source:    q.source,
       escalated: q.escalated === 'true' ? true : undefined,
+      moduleId:  q.moduleId,
       page:      q.page  ? parseInt(q.page,  10) : 1,
       limit:     q.limit ? parseInt(q.limit, 10) : 20,
     });
   }
 
   @Patch(':id/review')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:approve')
   @ApiOperation({ summary: 'Revisar solicitud (aprobar / rechazar / en revisión). Superadmin / admin_modulo.' })
   review(
@@ -106,8 +117,6 @@ export class RequestsController {
   }
 
   @Post(':id/take')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:take')
   @ApiOperation({ summary: 'Tomar solicitud pendiente — inicia SLA de 4 horas.' })
   take(@Req() req: any, @Param('id') id: string) {
@@ -115,8 +124,6 @@ export class RequestsController {
   }
 
   @Patch(':id/progress')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:progress')
   @ApiOperation({ summary: 'Actualizar progreso: in_progress | completed.' })
   updateProgress(
@@ -128,8 +135,6 @@ export class RequestsController {
   }
 
   @Post(':id/escalate')
-  @UseGuards(RolesGuard)
-  @Roles('superadmin', 'admin_modulo')
   @RequirePermission('gestion:requests:escalate')
   @ApiOperation({ summary: 'Escalar solicitud al superadmin.' })
   escalate(

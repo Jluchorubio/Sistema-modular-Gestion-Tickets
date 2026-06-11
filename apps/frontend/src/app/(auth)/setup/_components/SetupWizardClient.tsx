@@ -52,7 +52,7 @@ export function SetupWizardClient() {
 
   async function onCompanySubmit(values: CompanyForm) {
     try {
-      await systemConfigService.updateCompany({
+      await systemConfigService.setupCompany({
         name:          values.name,
         contact_email: values.contact_email || undefined,
         contact_phone: values.contact_phone || undefined,

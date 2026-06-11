@@ -19,7 +19,9 @@ export interface User {
   gender: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
-  primary_sede: string | null;
+  primary_sede:     string | null;
+  org_node_id:      string | null;
+  position_node_id: string | null;
   avatar_url: string | null;
   is_superadmin: boolean;
   is_active: boolean;

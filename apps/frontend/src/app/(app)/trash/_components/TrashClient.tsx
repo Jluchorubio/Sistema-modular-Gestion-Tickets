@@ -11,7 +11,9 @@ import { Modal } from '@/components/ui/Modal';
 import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { usePermission } from '@/hooks/usePermission';
 import { usePermissionsStore } from '@/stores/permissions.store';
+import { ContextNav } from '@/components/ui/ContextNav';
 import styles from '../trash.module.css';
+import mgmt   from '@/styles/mgmt.module.css';
 import mstyles from '@/components/ui/modal.module.css';
 
 const TABS: { label: string; value: TrashType }[] = [
@@ -31,9 +33,11 @@ const TYPE_BADGE: Record<string, string> = {
 };
 
 export function TrashClient() {
-  const loaded  = usePermissionsStore(s => s.loaded);
-  const canView = usePermission('global:sidebar:trash');
-  const qc      = useQueryClient();
+  const loaded     = usePermissionsStore(s => s.loaded);
+  const canView    = usePermission('global:sidebar:trash');
+  const canRestore = usePermission('global:trash:restore');
+  const canPurge   = usePermission('global:trash:purge');
+  const qc         = useQueryClient();
 
   const [filter, setFilter] = useState<TrashType>('all');
 
@@ -71,6 +75,11 @@ export function TrashClient() {
 
   const permDeleteMut = useMutation({
     mutationFn: ({ type, id }: { type: string; id: string }) => adminService.permanentDelete(type, id),
+    onSuccess:  invalidate,
+  });
+
+  const purgeExpiredMut = useMutation({
+    mutationFn: () => adminService.purgeExpired(),
     onSuccess:  invalidate,
   });
 
@@ -130,8 +139,10 @@ export function TrashClient() {
   }
 
   if (loaded && !canView) return (
-    <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
-      No tienes permiso para ver esta sección.
+    <div className={mgmt.pageWrap}>
+      <div className={mgmt.pageContent}>
+        <p className={styles.errorMsg}>No tienes permiso para ver esta sección.</p>
+      </div>
     </div>
   );
 
@@ -139,16 +150,46 @@ export function TrashClient() {
 
   return (
     <>
+    <ContextNav
+      back
+      crumbs={[
+        { label: 'Dashboard', href: '/dashboard' },
+        { label: 'Papelera' },
+      ]}
+    />
+    <div className={mgmt.pageWrap}>
+      <div className={mgmt.pageContent}>
+
       <div className={styles.header}>
         <div>
-          <div className={styles.title}>Papelera</div>
-          {data && <div className={styles.count}>{total} en papelera</div>}
+          <h1 className={styles.title}>Papelera</h1>
+          <p className={styles.count}>
+            {data
+              ? `${total} elemento${total !== 1 ? 's' : ''} en papelera · conservados 90 días`
+              : 'Items eliminados. Se conservan 90 días antes del borrado permanente.'}
+          </p>
         </div>
+        {canPurge && (
+          <button
+            type="button"
+            disabled={purgeExpiredMut.isPending}
+            onClick={() => {
+              if (confirm('¿Eliminar permanentemente todos los elementos con retención vencida (>90 días)? Esta acción no se puede deshacer.')) {
+                purgeExpiredMut.mutate();
+              }
+            }}
+            style={{
+              padding: '7px 14px', borderRadius: 6, border: '1px solid #fecaca',
+              background: purgeExpiredMut.isPending ? '#fef2f2' : 'transparent',
+              color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: purgeExpiredMut.isPending ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5,
+              opacity: purgeExpiredMut.isPending ? 0.6 : 1,
+            }}
+          >
+            {purgeExpiredMut.isPending ? 'Purgando…' : 'Purgar expirados'}
+          </button>
+        )}
       </div>
-
-      <p className={styles.sub}>
-        Items eliminados. Se conservan 90 días antes del borrado permanente.
-      </p>
 
       <div className={styles.tabs}>
         {TABS.map((tab) => (
@@ -230,20 +271,24 @@ export function TrashClient() {
               <span className={`${styles.daysPill}${urgent ? ` ${styles.daysPillUrgent}` : ''}`}>
                 {days}d restantes
               </span>
-              <button
-                className={styles.btnSecondary}
-                onClick={() => restoreMut.mutate({ type: item.item_type, id: item.id })}
-                disabled={restoreMut.isPending}
-              >
-                Restaurar
-              </button>
-              <button
-                className={styles.btnDanger}
-                onClick={() => openReAuthFor(item, false)}
-                disabled={permDeleteMut.isPending}
-              >
-                Eliminar def.
-              </button>
+              {canRestore && (
+                <button
+                  className={styles.btnSecondary}
+                  onClick={() => restoreMut.mutate({ type: item.item_type, id: item.id })}
+                  disabled={restoreMut.isPending}
+                >
+                  Restaurar
+                </button>
+              )}
+              {canPurge && (
+                <button
+                  className={styles.btnDanger}
+                  onClick={() => openReAuthFor(item, false)}
+                  disabled={permDeleteMut.isPending}
+                >
+                  Eliminar def.
+                </button>
+              )}
             </div>
           </div>
         );
@@ -254,19 +299,19 @@ export function TrashClient() {
         selectedCount={selected.size}
         onClear={() => clearSelection()}
         actions={[
-          {
+          ...(canRestore ? [{
             label:   'Restaurar',
-            variant: 'success',
+            variant: 'success' as const,
             loading: bulkRestoreMut.isPending,
             disabled: bulkPending,
             onClick: () => bulkRestoreMut.mutate(selectedItems),
-          },
-          {
+          }] : []),
+          ...(canPurge ? [{
             label:   'Eliminar definitivamente',
-            variant: 'danger',
+            variant: 'danger' as const,
             disabled: bulkPending,
             onClick: () => openReAuthFor(null, true),
-          },
+          }] : []),
         ]}
       />
 
@@ -324,6 +369,8 @@ export function TrashClient() {
           </button>
         </div>
       </Modal>
+      </div>
+    </div>
     </>
   );
 }

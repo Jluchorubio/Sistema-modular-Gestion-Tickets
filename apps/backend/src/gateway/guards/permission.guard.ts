@@ -30,11 +30,11 @@ export class PermissionGuard implements CanActivate {
     const userId: string | undefined =
       request.user?.sub ?? this.extractUserIdFromToken(request);
 
-    // No valid identity — let JwtAuthGuard produce the proper 401
-    if (!userId) return true;
+    // No valid identity — deny; JwtAuthGuard will emit the proper 401
+    if (!userId) return false;
 
     const has = await this.permissionsService.hasPermission(userId, required);
-    if (!has) throw new ForbiddenException(`Permiso requerido: ${required}`);
+    if (has === null || !has) throw new ForbiddenException(`Permiso requerido: ${required}`);
 
     return true;
   }

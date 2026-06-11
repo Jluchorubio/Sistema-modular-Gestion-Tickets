@@ -57,7 +57,14 @@ export class NotificationsService {
   /* ── Event handlers ──────────────────────────────────────────────────────── */
 
   @OnEvent('ticket.created')
-  async onTicketCreated(ev: { ticketId: string; title: string; createdBy: string; moduleId: string }) {
+  async onTicketCreated(ev: {
+    ticketId:     string;
+    title:        string;
+    createdBy:    string;
+    moduleId:     string;
+    autoEscalated?: boolean;
+    assignedTo?:    string;
+  }) {
     await this.notifyUser({
       userId:    ev.createdBy,
       eventType: 'ticket.created',
@@ -66,6 +73,28 @@ export class NotificationsService {
       channels:  ['in_app', 'email'],
       meta:      { ticketId: ev.ticketId },
     });
+
+    if (ev.autoEscalated) {
+      const chiefs = await this.db.query<{ user_id: string }[]>(
+        `SELECT umr.user_id
+         FROM   modules.user_module_roles umr
+         JOIN   modules.module_roles      mr  ON mr.id = umr.role_id
+         WHERE  umr.module_id = $1
+           AND  mr.name       = 'jefe_tecnico'
+           AND  umr.is_active = true`,
+        [ev.moduleId],
+      );
+      for (const { user_id } of chiefs) {
+        await this.notifyUser({
+          userId:    user_id,
+          eventType: 'ticket.escalated',
+          subject:   `Ticket auto-escalado: ${ev.title}`,
+          body:      `El ticket "${ev.title}" fue escalado automáticamente por reincidencia. Requiere atención prioritaria.`,
+          channels:  ['in_app', 'email'],
+          meta:      { ticketId: ev.ticketId, moduleId: ev.moduleId },
+        });
+      }
+    }
   }
 
   @OnEvent('ticket.assigned')
@@ -114,6 +143,86 @@ export class NotificationsService {
       channels:  ['in_app'],
       meta:      { requestId: ev.requestId },
     });
+  }
+
+  @OnEvent('ticket.validation_required')
+  async onTicketValidationRequired(ev: { ticketId: string; title: string; createdBy: string }) {
+    await this.notifyUser({
+      userId:    ev.createdBy,
+      eventType: 'ticket.validation_required',
+      subject:   `Ticket resuelto: ${ev.title}`,
+      body:      `El equipo técnico ha resuelto tu ticket "${ev.title}". Revisa y valida la solución.`,
+      channels:  ['in_app', 'email'],
+      meta:      { ticketId: ev.ticketId },
+    });
+  }
+
+  @OnEvent('ticket.state_changed')
+  async onTicketStateChanged(ev: { ticketId: string; title: string; createdBy: string; toLabel: string; actorId: string }) {
+    if (ev.createdBy === ev.actorId) return; // don't notify creator when they move their own ticket
+    await this.notifyUser({
+      userId:    ev.createdBy,
+      eventType: 'ticket.state_changed',
+      subject:   `Actualización: ${ev.title}`,
+      body:      `Tu ticket "${ev.title}" cambió a estado "${ev.toLabel}".`,
+      channels:  ['in_app'],
+      meta:      { ticketId: ev.ticketId },
+    });
+  }
+
+  @OnEvent('ticket.comment_added')
+  async onCommentAdded(ev: {
+    ticketId:   string;
+    title:      string;
+    createdBy:  string;
+    authorName: string;
+    actorId:    string;
+  }) {
+    if (ev.actorId === ev.createdBy) return;
+    await this.notifyUser({
+      userId:    ev.createdBy,
+      eventType: 'ticket.comment_added',
+      subject:   `Respuesta en tu ticket: ${ev.title}`,
+      body:      `${ev.authorName} respondió a tu ticket "${ev.title}". Revisa la actualización.`,
+      channels:  ['in_app'],
+      meta:      { ticketId: ev.ticketId },
+    });
+  }
+
+  @OnEvent('ticket.approval_expired')
+  async onApprovalExpired(ev: { ticketId: string; title: string; createdBy: string; reopenCount: number }) {
+    await this.notifyUser({
+      userId:    ev.createdBy,
+      eventType: 'ticket.approval_expired',
+      subject:   `Aprobación expirada: ${ev.title}`,
+      body:      `Tu aprobación para el ticket "${ev.title}" expiró sin respuesta y el ticket fue reabierto (reapertura #${ev.reopenCount}).`,
+      channels:  ['in_app', 'email'],
+      meta:      { ticketId: ev.ticketId },
+    });
+  }
+
+  @OnEvent('ticket.escalated')
+  async onTicketEscalated(ev: { ticketId: string; title: string; moduleId: string; reason?: string }) {
+    if (!ev.moduleId) return;
+    const chiefs = await this.db.query<{ user_id: string }[]>(
+      `SELECT umr.user_id
+       FROM   modules.user_module_roles umr
+       JOIN   modules.module_roles      mr  ON mr.id = umr.role_id
+       WHERE  umr.module_id = $1
+         AND  mr.name       = 'jefe_tecnico'
+         AND  umr.is_active = true`,
+      [ev.moduleId],
+    );
+    for (const { user_id } of chiefs) {
+      await this.notifyUser({
+        userId:    user_id,
+        eventType: 'ticket.escalated',
+        subject:   `Ticket escalado: ${ev.title}`,
+        body:      `El ticket "${ev.title}" fue escalado. ${ev.reason ?? 'Requiere atención prioritaria.'}`,
+        channels:  ['in_app', 'email'],
+        meta:      { ticketId: ev.ticketId, moduleId: ev.moduleId },
+      });
+    }
   }
 
   @OnEvent('meeting.scheduled')

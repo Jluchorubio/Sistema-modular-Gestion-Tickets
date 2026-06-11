@@ -7,6 +7,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ApiBearerAuth, ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
+import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 import { FilesService } from './files.service';
 
 @ApiTags('files')
@@ -17,6 +18,7 @@ export class FilesController {
   constructor(private readonly service: FilesService) {}
 
   @Post('upload')
+  @RequirePermission('global:system:access')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },
@@ -38,6 +40,7 @@ export class FilesController {
   }
 
   @Post('attachment')
+  @RequirePermission('global:system:access')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },

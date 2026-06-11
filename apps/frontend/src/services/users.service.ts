@@ -16,6 +16,7 @@ export interface UserListItem extends User {
   global_role:    string | null;
   global_role_id: string | null;
   last_login_at:  string | null;
+  last_seen_at:   string | null;
   roles:          UserModuleRoleBrief[];
 }
 
@@ -77,16 +78,50 @@ export interface UpdateMeDto {
 }
 
 export interface CompleteProfileDto {
-  phone:          string;
-  username?:      string;
-  job_title:      string;
-  department:     string;
-  primary_sede:   string;
-  address:        string;
-  phone_prefix?:  string;
-  country?:       string;
-  state_province?: string;
-  city?:          string;
+  phone:            string;
+  username?:        string;
+  job_title:        string;
+  department:       string;
+  primary_sede:     string;
+  address:          string;
+  phone_prefix?:    string;
+  country?:         string;
+  state_province?:  string;
+  city?:            string;
+  org_node_id?:     string;
+  position_node_id?: string;
+}
+
+export interface TechnicianAvailability {
+  id:               string;
+  module_id:        string;
+  module_name:      string;
+  module_slug:      string | null;
+  status:           string;
+  is_available:     boolean;
+  reason:           string | null;
+  unavailable_from: string | null;
+  unavailable_to:   string | null;
+  notes:            string | null;
+  updated_at:       string;
+}
+
+export interface TechnicianProfile {
+  id:                string;
+  module_id:         string;
+  module_name:       string;
+  module_slug:       string;
+  technician_type:   'generalist' | 'specialist';
+  max_daily_tickets: number | null;
+  is_active:         boolean;
+  created_at:        string;
+  updated_at:        string;
+  category_skills: {
+    id:            string;
+    category_id:   string;
+    category_name: string;
+    category_slug: string | null;
+  }[];
 }
 
 export const usersService = {
@@ -151,6 +186,11 @@ export const usersService = {
     return data;
   },
 
+  async updateGlobalRole(id: string, name?: string, description?: string): Promise<GlobalRole> {
+    const { data } = await api.patch(`/users/global-roles/${id}`, { name, description });
+    return data;
+  },
+
   async deleteGlobalRole(id: string): Promise<void> {
     await api.delete(`/users/global-roles/${id}`);
   },
@@ -191,22 +231,55 @@ export const usersService = {
     id: string; title: string; priority: string;
     created_at: string; updated_at: string;
     module_name: string; module_slug: string | null;
-    state_label: string; state_name: string; is_final: boolean;
-    sla_status: string | null; sla_deadline_tracked: string | null;
+    state_label: string; state_name: string;
+    is_final: boolean; is_pause_state: boolean; is_approval_state: boolean;
   }[]> {
     const { data } = await api.get('/users/me/recent-tickets', { params: { limit } });
     return data;
   },
 
-  async getMyAssignedTickets(limit = 50): Promise<{
+  async getMyAssignedTickets(moduleId?: string, limit = 50): Promise<{
     id: string; title: string; priority: string;
     created_at: string; updated_at: string;
-    module_name: string; module_slug: string | null;
-    state_label: string; state_name: string; is_final: boolean;
+    module_id: string; module_name: string; module_slug: string | null;
+    category_name: string | null; environment_name: string | null;
+    current_state_id: string;
+    state_label: string; state_name: string;
+    is_final: boolean; is_pause_state: boolean; is_approval_state: boolean;
+    created_by: string; creator_name: string;
     sla_status: string | null; sla_deadline_tracked: string | null;
     assignment_role: string;
+    last_transition_reason: string | null;
   }[]> {
-    const { data } = await api.get('/users/me/assigned-tickets', { params: { limit } });
+    const params: Record<string, string> = { limit: String(limit) };
+    if (moduleId) params.module_id = moduleId;
+    const { data } = await api.get('/users/me/assigned-tickets', { params });
+    return data;
+  },
+
+  async getUserAssignedTickets(userId: string, moduleId?: string, limit = 100): Promise<{
+    id: string; title: string; priority: string;
+    created_at: string; updated_at: string;
+    module_id: string; module_name: string; module_slug: string | null;
+    category_name: string | null; environment_name: string | null;
+    current_state_id: string;
+    state_label: string; state_name: string;
+    is_final: boolean; is_pause_state: boolean; is_approval_state: boolean;
+    created_by: string; creator_name: string;
+    sla_status: string | null; sla_deadline_tracked: string | null;
+    assignment_role: string;
+    last_transition_reason: string | null;
+  }[]> {
+    const params: Record<string, string> = { limit: String(limit) };
+    if (moduleId) params.module_id = moduleId;
+    const { data } = await api.get(`/users/${userId}/assigned-tickets`, { params });
+    return data;
+  },
+
+  async getMyTechStats(moduleId?: string): Promise<{ rated_tickets: number; avg_rating: number }> {
+    const params: Record<string, string> = {};
+    if (moduleId) params.module_id = moduleId;
+    const { data } = await api.get('/users/me/tech-stats', { params });
     return data;
   },
 
@@ -286,6 +359,81 @@ export const usersService = {
   ): Promise<{ created: number; failed: { row: number; email: string; error: string }[]; total: number }> {
     const { data } = await api.post('/users/bulk-import', { rows });
     return data;
+  },
+
+  async getMyAvailability(): Promise<{
+    id: string; module_id: string; module_name: string; module_slug: string | null;
+    status: string; is_available: boolean; reason: string | null;
+    unavailable_from: string | null; unavailable_to: string | null; notes: string | null; updated_at: string;
+  }[]> {
+    const { data } = await api.get('/users/me/availability');
+    return data;
+  },
+
+  async setMyAvailability(payload: {
+    module_id: string;
+    status: string;
+    unavailable_to?: string;
+    notes?: string;
+  }): Promise<void> {
+    await api.put('/users/me/availability', payload);
+  },
+
+  async getSkills(userId: string): Promise<TechnicianProfile[]> {
+    const { data } = await api.get(`/users/${userId}/skills`);
+    return data;
+  },
+
+  async addSkill(userId: string, dto: {
+    module_id: string;
+    technician_type?: 'generalist' | 'specialist';
+    max_daily_tickets?: number | null;
+    category_ids?: string[];
+  }): Promise<TechnicianProfile[]> {
+    const { data } = await api.post(`/users/${userId}/skills`, dto);
+    return data;
+  },
+
+  async updateSkill(userId: string, skillId: string, dto: {
+    technician_type?: 'generalist' | 'specialist';
+    max_daily_tickets?: number | null;
+    category_ids_add?: string[];
+    category_ids_remove?: string[];
+  }): Promise<TechnicianProfile[]> {
+    const { data } = await api.patch(`/users/${userId}/skills/${skillId}`, dto);
+    return data;
+  },
+
+  async removeSkill(userId: string, skillId: string): Promise<{ ok: boolean; message: string }> {
+    const { data } = await api.delete(`/users/${userId}/skills/${skillId}`);
+    return data;
+  },
+
+  async getAvailabilityByUser(userId: string): Promise<TechnicianAvailability[]> {
+    const { data } = await api.get(`/users/${userId}/availability`);
+    return data;
+  },
+
+  async setAvailabilityByUser(userId: string, dto: {
+    module_id: string;
+    is_available: boolean;
+    reason?: string;
+    unavailable_from?: string;
+    unavailable_to?: string;
+    notes?: string;
+  }): Promise<TechnicianAvailability[]> {
+    const { data } = await api.put(`/users/${userId}/availability`, dto);
+    return data;
+  },
+
+  async upsertPreferences(payload: {
+    language?:              string;
+    timezone?:              string;
+    notification_email?:    boolean;
+    notification_whatsapp?: boolean;
+    notification_in_app?:   boolean;
+  }): Promise<void> {
+    await api.put('/users/me/preferences', payload);
   },
 
   async bulkImportAndAssign(

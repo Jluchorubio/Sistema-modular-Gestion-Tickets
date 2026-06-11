@@ -1,0 +1,159 @@
+# Production Docker Compose
+# Usage: docker compose -f docker-compose.prod.yml up -d
+# Required: .env file at project root (copy .env.example and fill values)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tickets_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/SCHEMA_MASTER.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+    # No external port — only accessible within Docker network
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tickets_user} -d ${POSTGRES_DB:-tickets_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: tickets_redis
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Optional: enable RabbitMQ with --profile rabbitmq
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: tickets_rabbitmq
+    restart: always
+    profiles: [rabbitmq]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-tickets}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-tickets_pass}
+    expose:
+      - "5672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    image: tickets-backend:${IMAGE_TAG:-latest}
+    container_name: tickets_backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      MIGRATIONS_DIR: /app/migrations
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?ALLOWED_ORIGINS required}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+    volumes:
+      - uploads_data:/app/uploads
+      - ./database/migrations:/app/migrations:ro
+    expose:
+      - "3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      args:
+        # Public URL reachable from the user's browser (must match your domain/nginx URL)
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL required}
+        # Internal URL used by Next.js server-side rewrite proxy — always the backend service
+        BACKEND_INTERNAL_URL: http://backend:3001
+    image: tickets-frontend:${IMAGE_TAG:-latest}
+    container_name: tickets_frontend
+    restart: always
+    environment:
+      NODE_ENV: production
+    expose:
+      - "3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  nginx:
+    image: nginx:alpine
+    container_name: tickets_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Uncomment when Let's Encrypt certs are available:
+      # - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+
+networks:
+  default:
+    name: tickets_network

@@ -1,4 +1,7 @@
 'use client';
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { usersService } from '@/services/users.service';
 import { type ProfileUser } from './profile.types';
 import styles from './profile.module.css';
 
@@ -7,6 +10,30 @@ interface Props {
 }
 
 export function ProfileSettingsTab({ user }: Props) {
+  const qc = useQueryClient();
+
+  const [notifEmail,    setNotifEmail]    = useState(user.notification_email    !== false);
+  const [notifInApp,    setNotifInApp]    = useState(user.notification_in_app   !== false);
+  const [notifWhatsapp, setNotifWhatsapp] = useState(user.notification_whatsapp === true);
+  const [language,      setLanguage]      = useState(user.preferences?.language  ?? 'es');
+  const [timezone,      setTimezone]      = useState(user.preferences?.timezone  ?? 'America/Bogota');
+  const [saved,         setSaved]         = useState(false);
+
+  const mut = useMutation({
+    mutationFn: () => usersService.upsertPreferences({
+      language,
+      timezone,
+      notification_email:    notifEmail,
+      notification_whatsapp: notifWhatsapp,
+      notification_in_app:   notifInApp,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['me'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    },
+  });
+
   return (
     <>
       <div className={styles.card} style={{ overflow: 'hidden', marginBottom: 22 }}>
@@ -14,10 +41,10 @@ export function ProfileSettingsTab({ user }: Props) {
           <p className={styles.sectionTitle}>Preferencias de notificaciones</p>
         </div>
         {([
-          ['email',    'Notificaciones por correo',  'Recibe alertas de tickets y eventos por email'],
-          ['inapp',    'Notificaciones en app',       'Alertas dentro del sistema'],
-          ['whatsapp', 'Notificaciones WhatsApp',     'Mensajes para tickets urgentes'],
-        ] as [string, string, string][]).map(([id, label, sub]) => (
+          ['email',    'Notificaciones por correo',  'Recibe alertas de tickets y eventos por email',   notifEmail,    setNotifEmail],
+          ['inapp',    'Notificaciones en app',       'Alertas dentro del sistema',                      notifInApp,    setNotifInApp],
+          ['whatsapp', 'Notificaciones WhatsApp',     'Mensajes para tickets urgentes',                  notifWhatsapp, setNotifWhatsapp],
+        ] as [string, string, string, boolean, (v: boolean) => void][]).map(([id, label, sub, val, setter]) => (
           <div key={id} className={styles.securityItem}>
             <div>
               <p className={styles.securityLabel}>{label}</p>
@@ -26,11 +53,8 @@ export function ProfileSettingsTab({ user }: Props) {
             <label className={styles.prefToggle}>
               <input
                 type="checkbox"
-                defaultChecked={
-                  id === 'email'   ? (user.notification_email    !== false) :
-                  id === 'inapp'   ? (user.notification_in_app   !== false) :
-                  (user.notification_whatsapp === true)
-                }
+                checked={val}
+                onChange={(e) => setter(e.target.checked)}
               />
               <span className={styles.prefSlider} />
             </label>
@@ -45,14 +69,14 @@ export function ProfileSettingsTab({ user }: Props) {
         <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className={styles.formGroup} style={{ margin: 0 }}>
             <label className={styles.formLabel}>Idioma</label>
-            <select className={styles.formInput} defaultValue={user.preferences?.language ?? 'es'}>
+            <select className={styles.formInput} value={language} onChange={(e) => setLanguage(e.target.value)}>
               <option value="es">Español</option>
               <option value="en">English</option>
             </select>
           </div>
           <div className={styles.formGroup} style={{ margin: 0 }}>
             <label className={styles.formLabel}>Zona horaria</label>
-            <select className={styles.formInput} defaultValue={user.preferences?.timezone ?? 'America/Bogota'}>
+            <select className={styles.formInput} value={timezone} onChange={(e) => setTimezone(e.target.value)}>
               <option value="America/Bogota">América/Bogotá (UTC-5)</option>
               <option value="America/Mexico_City">América/Ciudad de México (UTC-6)</option>
               <option value="America/Lima">América/Lima (UTC-5)</option>
@@ -63,6 +87,25 @@ export function ProfileSettingsTab({ user }: Props) {
               <option value="UTC">UTC</option>
             </select>
           </div>
+
+          <button
+            type="button"
+            onClick={() => mut.mutate()}
+            disabled={mut.isPending}
+            style={{
+              alignSelf: 'flex-start', marginTop: 4, padding: '8px 20px',
+              background: saved ? '#22c55e' : mut.isPending ? '#94a3b8' : '#ff5e3a',
+              color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              cursor: mut.isPending ? 'not-allowed' : 'pointer', transition: 'background 0.2s',
+            }}
+          >
+            {mut.isPending ? 'Guardando...' : saved ? 'Guardado' : 'Guardar preferencias'}
+          </button>
+          {mut.isError && (
+            <p style={{ fontSize: 12, color: '#ef4444', margin: 0 }}>
+              {(mut.error as any)?.response?.data?.message ?? 'Error al guardar'}
+            </p>
+          )}
         </div>
       </div>
     </>

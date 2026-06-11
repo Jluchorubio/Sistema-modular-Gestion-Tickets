@@ -1,0 +1,217 @@
+/*
+ * Management / Table Page Layout — shared across all sidebar list views.
+ *
+ * Usage:
+ *   import mgmt from '@/styles/mgmt.module.css';
+ *
+ *   <div className={mgmt.pageWrap}>
+ *     <div className={mgmt.pageContent}>
+ *       <div className={mgmt.surface}>
+ *         <div className={mgmt.surfaceHeader}> title + actions </div>
+ *         <div className={mgmt.surfaceToolbar}> search + filters </div>
+ *         { table / list }
+ *         <div className={mgmt.surfaceFooter}> pagination </div>
+ *       </div>
+ *     </div>
+ *   </div>
+ */
+
+/* ── Page shell ── */
+.pageWrap {
+  width: 100%;
+  min-height: calc(100vh - 52px);
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+/* ── Content area — consistent responsive gutter ── */
+.pageContent {
+  padding: 20px 16px 32px;
+}
+
+@media (min-width: 640px) {
+  .pageContent { padding: 20px 24px 32px; }
+}
+
+@media (min-width: 1024px) {
+  .pageContent { padding: 20px 32px 32px; }
+}
+
+/* ── Free-standing page header (title outside card) ── */
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.pageHeaderTitle {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0e2235;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.pageHeaderSub {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.pageHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .pageHeader        { flex-direction: column; align-items: flex-start; padding-bottom: 16px; }
+  .pageHeaderActions { width: 100%; }
+}
+
+/* ── Unified surface card: header + toolbar + table ── */
+.surface {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(14, 34, 53, 0.06);
+}
+
+/* ── Surface header — page title + primary action buttons ── */
+.surfaceHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  .surfaceHeader  { flex-direction: column; align-items: flex-start; padding: 14px 16px 12px; }
+  .surfaceActions { width: 100%; }
+  .pageContent    { padding: 16px 12px 24px; }
+}
+
+@media (min-width: 768px) {
+  .surfaceHeader {
+    align-items: center;
+    flex-wrap: nowrap;
+    padding: 18px 24px;
+  }
+}
+
+/* Title block inside surfaceHeader */
+.surfaceTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0e2235;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.surfaceCount {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Actions block inside surfaceHeader */
+.surfaceActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Toolbar — search + filter controls ── */
+.surfaceToolbar {
+  padding: 12px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+@media (min-width: 768px) {
+  .surfaceToolbar { padding: 12px 24px; }
+}
+
+/* ── Table scroll wrapper (no extra padding — cells manage their own) ── */
+.surfaceBody {
+  overflow-x: auto;
+}
+
+/* ── Footer — pagination, counts ── */
+.surfaceFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 768px) {
+  .surfaceFooter { padding: 12px 24px; }
+}
+
+/* ── Loader area inside surface ── */
+.surfaceLoader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+/* ── Error / empty inside surface ── */
+.surfaceError {
+  color: #ef4444;
+  font-size: 12px;
+  padding: 20px 24px;
+}
+
+/* ── Empty state inside surface ── */
+.surfaceEmpty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ── Pagination info + buttons ── */
+.pageInfo {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.pageBtns {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pageBtn {
+  padding: 6px 12px;
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+  font-family: inherit;
+}
+
+.pageBtn:hover    { border-color: #0e2235; color: #0e2235; }
+.pageBtn:disabled { opacity: .4; cursor: not-allowed; }

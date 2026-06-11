@@ -1,15 +1,17 @@
 import { Injectable } from '@nestjs/common';
+import { SlaEvaluatorService, SlaContext, SlaResult } from './sla-evaluator.service';
 
-export type Priority = 'low' | 'medium' | 'high' | 'critical';
+export type { SlaContext, SlaResult };
 
 @Injectable()
 export class SlaService {
-  calculatePriority(_context: Record<string, unknown>): Priority {
-    // Rules are loaded dynamically from system-modules config
-    return 'medium';
+  constructor(private readonly evaluator: SlaEvaluatorService) {}
+
+  compute(ctx: SlaContext): Promise<SlaResult> {
+    return this.evaluator.compute(ctx);
   }
 
-  calculateDeadline(_priority: Priority, _createdAt: Date): Date {
-    return new Date();
+  suggestPriority(damageTypeId: string): Promise<string | null> {
+    return this.evaluator.suggestPriorityFromDamageType(damageTypeId);
   }
 }

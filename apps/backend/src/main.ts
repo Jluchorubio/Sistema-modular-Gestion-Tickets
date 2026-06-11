@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { RedisIoAdapter } from './gateway/adapters/redis-io.adapter';
+import { Transport } from '@nestjs/microservices';
 import * as helmet from 'helmet';
 import * as compression from 'compression';
 import * as express from 'express';
@@ -23,11 +25,57 @@ async function bootstrap() {
   // Trust Railway/nginx reverse proxy so req.ip reflects the real client IP
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // WebSocket adapter (socket.io)
-  app.useWebSocketAdapter(new IoAdapter(app));
+  // WebSocket adapter — Redis when REDIS_URL set (multi-pod), else single-process IoAdapter
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    try {
+      const redisAdapter = new RedisIoAdapter(app);
+      await redisAdapter.connectToRedis(redisUrl);
+      app.useWebSocketAdapter(redisAdapter);
+      console.log('  Redis Socket.IO adapter conectado.');
+    } catch (err) {
+      console.warn(`  Redis no disponible (${(err as Error).message}) — usando IoAdapter local.`);
+      app.useWebSocketAdapter(new IoAdapter(app));
+    }
+  } else {
+    app.useWebSocketAdapter(new IoAdapter(app));
+  }
+
+  // RabbitMQ hybrid microservice — active only when RABBITMQ_URL is set
+  const rabbitmqUrl = process.env.RABBITMQ_URL;
+  if (rabbitmqUrl) {
+    app.connectMicroservice({
+      transport: Transport.RMQ,
+      options: {
+        urls: [rabbitmqUrl],
+        queue: 'notifications_queue',
+        queueOptions: { durable: true },
+        noAck: false,
+        prefetchCount: 10,
+      },
+    });
+    await app.startAllMicroservices();
+    console.log('  RabbitMQ microservice conectado.');
+  }
 
   // ── Security ────────────────────────────────────────────────────────────────
-  app.use((helmet as any).default());
+  app.use((helmet as any).default({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc:     ["'self'"],
+        scriptSrc:      ["'self'"],
+        styleSrc:       ["'self'", "'unsafe-inline'"],
+        imgSrc:         ["'self'", 'data:', 'https:'],
+        connectSrc:     ["'self'", 'wss:', 'ws:'],
+        fontSrc:        ["'self'", 'https:'],
+        objectSrc:      ["'none'"],
+        frameAncestors: ["'none'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  }));
   app.use(compression());
 
   // CORS: en producción leer ALLOWED_ORIGINS del env
@@ -36,7 +84,7 @@ async function bootstrap() {
     .map(o => o.trim());
 
   app.enableCors({
-    origin: (origin, cb) => {
+    origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
       // Permitir sin origin (mobile apps, curl, Swagger)
       if (!origin || allowed.includes(origin)) return cb(null, true);
       cb(new Error(`CORS: origin ${origin} no permitido`));

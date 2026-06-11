@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Control - Consola de Activos Corporativos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter para tipografía corporativa limpia -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#0e2235',       // Azul oscuro corporativo principal
+                            darker: '#061320',     // Fondo profundo para contraste
+                            neonGreen: '#2ecc71',   // Verde de estado "Disponible"
+                            neonOrange: '#ff9f43',  // Naranja de estado "Asignado"
+                            lightBg: '#f8fafc',    // Fondo general limpio
+                            borderColor: '#cbd5e1' // Bordes finos de precisión
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 0px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Estilos de acordeón para hardware */
+        .hardware-details[open] summary i {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+
+<body class="bg-brand-lightBg font-sans text-slate-800 flex h-screen overflow-hidden">
+
+    <!-- NOTIFICACIONES TOAST MINIMALISTAS -->
+    <div id="toast"
+        class="fixed top-4 right-4 z-50 transform translate-y-[-150%] transition-all duration-300 bg-brand-dark text-white px-4 py-3 rounded-none shadow-lg border border-slate-700 border-l-4 border-l-brand-neonGreen flex items-center gap-3 pointer-events-none">
+        <i id="toast-icon" class="fa-solid fa-microchip text-brand-neonGreen text-xs"></i>
+        <div>
+            <p id="toast-title" class="font-extrabold text-[9px] uppercase tracking-wider text-slate-400 font-mono">
+                SYS_STATUS</p>
+            <p id="toast-message" class="text-xs font-semibold">Operación completada.</p>
+        </div>
+    </div>
+
+    <!-- SIDEBAR (Navegación Técnica Estrecha) -->
+    <aside
+        class="w-64 bg-brand-dark text-slate-300 flex flex-col justify-between hidden lg:flex shrink-0 border-r border-slate-800">
+        <div>
+            <!-- Header de la Aplicación -->
+            <div class="p-5 flex items-center gap-3 border-b border-slate-800 bg-brand-darker">
+                <div
+                    class="w-8 h-8 rounded-none bg-gradient-to-tr from-brand-neonOrange to-brand-neonGreen flex items-center justify-center text-brand-darker font-black text-sm">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-black text-xs tracking-wider leading-none">IT CONTROL</h1>
+                    <span class="text-[9px] font-mono text-slate-500 font-bold block mt-0.5">V3.5 HARDWARE SUITE</span>
+                </div>
+            </div>
+
+            <!-- Navegación Primaria -->
+            <nav class="p-3 space-y-1">
+                <div class="px-3 py-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono">Monitoreo
+                </div>
+
+                <a href="#" onclick="switchRole('admin')"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-none transition text-slate-400 hover:bg-slate-800 hover:text-white group">
+                    <i class="fa-solid fa-chart-line w-4 text-center text-xs group-hover:text-brand-neonGreen"></i>
+                    <span class="text-xs font-bold">Consola Global</span>
+                </a>
+
+                <a href="#" onclick="switchRole('user')"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-none bg-slate-800 text-white font-bold border-l-2 border-brand-neonGreen">
+                    <i class="fa-solid fa-boxes-stacked w-4 text-center text-xs text-brand-neonGreen"></i>
+                    <span class="text-xs">Inventario de Activos</span>
+                </a>
+
+                <a href="#"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-none transition text-slate-400 hover:bg-slate-800 hover:text-white group">
+                    <i class="fa-solid fa-wrench w-4 text-center text-xs group-hover:text-brand-neonOrange"></i>
+                    <span class="text-xs font-bold">Incidencias & Soporte</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Usuario de Sesión -->
+        <div class="p-4 border-t border-slate-800 flex items-center gap-3 bg-brand-darker/60">
+            <div
+                class="w-8 h-8 rounded-none bg-slate-700 flex items-center justify-center text-white font-bold text-xs border border-slate-600 font-mono">
+                JR
+            </div>
+            <div class="flex-1 min-w-0 font-sans">
+                <p class="text-xs font-extrabold text-white truncate leading-none">José Rubio</p>
+                <span class="text-[8px] text-slate-400 font-mono block mt-1 tracking-wider uppercase">Operaciones
+                    TI</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- WORKSPACE PRINCIPAL -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-brand-lightBg">
+
+        <!-- HEADER DE ACCIÓN DE DISPOSITIVO -->
+        <header class="h-14 border-b border-slate-200 bg-white px-5 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2">
+                <button class="lg:hidden text-slate-600 mr-2">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <span
+                        class="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest block">Módulo
+                        Operativo</span>
+                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-wider leading-none mt-0.5">Control
+                        Físico de Activos</h2>
+                </div>
+            </div>
+
+            <!-- Alternar de Roles (Switcher elegante para demostración) -->
+            <div class="flex items-center gap-4">
+                <div class="bg-slate-100 p-0.5 rounded-none border border-slate-200 flex items-center">
+                    <button id="btn-role-user" onclick="switchRole('user')"
+                        class="px-3 py-1 text-[10px] font-bold transition-all bg-white text-slate-800 border border-slate-200/50 uppercase tracking-wide">
+                        <i class="fa-solid fa-user mr-1 text-slate-500"></i> Vista: Usuario
+                    </button>
+                    <button id="btn-role-admin" onclick="switchRole('admin')"
+                        class="px-3 py-1 text-[10px] font-bold transition-all text-slate-500 hover:text-slate-800 uppercase tracking-wide">
+                        <i class="fa-solid fa-user-gear mr-1 text-slate-500"></i> Vista: Admin
+                    </button>
+                </div>
+
+                <div class="w-px h-5 bg-slate-200"></div>
+
+                <!-- Notificaciones de Servidor -->
+                <button
+                    class="relative w-8 h-8 hover:bg-slate-100 flex items-center justify-center text-slate-600 transition border border-transparent">
+                    <i class="fa-solid fa-bolt text-xs"></i>
+                    <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-brand-neonOrange rounded-none"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTENEDOR PRINCIPAL SCROLLABLE -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5" id="main-content-view">
+
+            <!-- PANEL METRICAS ADMIN -->
+            <section id="admin-dashboard-section" class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">Métricas de
+                        Almacén e Infraestructura</h3>
+                    <span
+                        class="px-2 py-0.5 bg-brand-neonGreen/10 text-brand-neonGreen text-[9px] font-mono font-bold uppercase border border-brand-neonGreen/20">System
+                        Admin Mod</span>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Total Activos</span>
+                        <span class="text-lg font-black text-slate-800 block mt-1 leading-none">1,248</span>
+                        <span class="text-[8px] text-slate-400 block mt-1.5 font-mono">Reg: 100% de la red</span>
+                    </div>
+                    <div class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Disponibles</span>
+                        <span class="text-lg font-black text-brand-neonGreen block mt-1 leading-none">184</span>
+                        <span class="text-[8px] text-brand-neonGreen font-mono block mt-1.5">✓ En stock técnico</span>
+                    </div>
+                    <div class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Asignados</span>
+                        <span class="text-lg font-black text-brand-neonOrange block mt-1 leading-none">1,024</span>
+                        <span class="text-[8px] text-slate-400 block mt-1.5">Con custodios vigentes</span>
+                    </div>
+                    <div class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">En
+                            Mantenimiento</span>
+                        <span class="text-lg font-black text-yellow-500 block mt-1 leading-none">32</span>
+                        <span class="text-[8px] text-yellow-500 font-mono block mt-1.5">⚠️ Requieren atención</span>
+                    </div>
+                    <div
+                        class="bg-white p-3.5 border border-slate-200 hover:border-slate-300 transition-all col-span-2 md:col-span-1">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Dados de Baja</span>
+                        <span class="text-lg font-black text-slate-400 block mt-1 leading-none">8</span>
+                        <span class="text-[8px] text-slate-400 font-mono block mt-1.5">Obsolescencia física</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ACCIONES Y FILTRO -->
+            <div class="bg-white p-3 border border-slate-200 flex flex-col sm:flex-row items-center gap-3">
+                <div class="relative flex-1 w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-slate-400 text-xs"></i>
+                    <input type="text" id="asset-search" oninput="filterAssets()"
+                        placeholder="Escribe el nombre, serial, tag de inventario o ubicación para filtrar..."
+                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-dark focus:border-brand-dark transition text-xs font-medium">
+                </div>
+
+                <button onclick="openQrScannerSimulator()"
+                    class="w-full sm:w-auto px-5 py-2.5 bg-brand-dark hover:bg-brand-darker text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shrink-0">
+                    <i class="fa-solid fa-qrcode text-brand-neonGreen"></i>
+                    <span class="uppercase tracking-wider">Escanear QR</span>
+                </button>
+            </div>
+
+            <!-- NIVEL 1: CATÁLOGO DE ACTIVOS -->
+            <div class="space-y-3" id="catalog-section">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <div>
+                        <h3 id="inventory-title" class="text-xs font-black text-slate-800 uppercase tracking-wider">Mis
+                            Dispositivos Asociados</h3>
+                        <p class="text-[10px] text-slate-500 font-mono mt-0.5">Hardware bajo responsabilidad directa en
+                            planta.</p>
+                    </div>
+                    <span id="filtered-count"
+                        class="text-[10px] font-mono font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 border border-slate-200">3
+                        ACTIVOS</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="assets-grid-container">
+                    <!-- Cards inyectadas por JS -->
+                </div>
+            </div>
+
+            <!-- NIVEL 3: CENTRO DE VIDA DEL ACTIVO (FICHA COMPLETA REDISEÑADA) -->
+            <section id="level3-full-details" class="hidden space-y-5 animate-fade-in">
+                <!-- Estructura inyectada dinámicamente -->
+            </section>
+
+        </div>
+    </main>
+
+    <!-- DRAWER LATERAL (NIVEL 2: QUICK VIEW COMPACTO) -->
+    <div id="quick-view-drawer" class="fixed inset-0 z-40 pointer-events-none transition-all duration-200">
+        <div id="drawer-backdrop" onclick="closeQuickView()"
+            class="absolute inset-0 bg-brand-darker/60 opacity-0 pointer-events-none transition-opacity duration-200">
+        </div>
+        <div id="drawer-content"
+            class="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white border-l border-slate-200 transform translate-x-full transition-transform duration-200 ease-out flex flex-col pointer-events-auto">
+            <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-brand-dark text-white">
+                <div>
+                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block tracking-wider">System
+                        Quick Inspection</span>
+                    <h3 class="text-xs font-black uppercase tracking-wider">Quick View de Activo</h3>
+                </div>
+                <button onclick="closeQuickView()"
+                    class="w-6 h-6 hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4" id="drawer-body">
+                <!-- Inyección dinámica -->
+            </div>
+
+            <div class="p-4 border-t border-slate-200 bg-slate-50 space-y-2">
+                <button id="drawer-full-sheet-btn"
+                    class="w-full py-2 bg-brand-dark hover:bg-brand-darker text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 uppercase tracking-wider">
+                    <i class="fa-solid fa-network-wired text-brand-neonGreen"></i> Ver Ficha Completa
+                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="triggerIncident()"
+                        class="py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-[9px] transition-colors flex items-center justify-center gap-1.5 uppercase">
+                        <i class="fa-solid fa-triangle-exclamation text-brand-neonOrange"></i> Incidencia
+                    </button>
+                    <button onclick="showQuickHistory()"
+                        class="py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-[9px] transition-colors flex items-center justify-center gap-1.5 uppercase">
+                        <i class="fa-solid fa-timeline text-blue-500"></i> Historial
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SIMULADOR QR -->
+    <div id="qr-scanner-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-200 p-4">
+        <div class="absolute inset-0 bg-brand-darker/80" onclick="closeQrScannerSimulator()"></div>
+        <div
+            class="bg-white border border-slate-300 w-full max-w-xs p-5 relative z-10 shadow-2xl space-y-4 transform scale-95 transition-transform duration-200">
+            <button onclick="closeQrScannerSimulator()"
+                class="absolute right-3 top-3 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+            <div class="text-center">
+                <div
+                    class="w-10 h-10 bg-brand-neonOrange/10 text-brand-neonOrange flex items-center justify-center mx-auto text-lg border border-brand-neonOrange/20">
+                    <i class="fa-solid fa-qrcode"></i>
+                </div>
+                <h3 class="text-xs font-bold text-slate-800 mt-2 uppercase tracking-wider font-mono">Simulador de
+                    Lectura</h3>
+                <p class="text-[9px] text-slate-400 mt-1">Haz clic sobre un tag para simular el escaneo físico de la
+                    etiqueta del activo.</p>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+                <button onclick="simulateScan('LEN-TC-003')"
+                    class="w-full p-2 border border-slate-200 hover:border-brand-neonOrange hover:bg-slate-50 transition-all text-left flex items-center gap-2">
+                    <div class="w-6 h-6 bg-slate-100 flex items-center justify-center text-slate-500 text-xs"><i
+                            class="fa-solid fa-laptop"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-bold text-slate-800 truncate">Desktop Lenovo ThinkCentre</p>
+                        <p class="text-[8px] font-mono text-slate-400">TAG: LEN-TC-003</p>
+                    </div>
+                </button>
+                <button onclick="simulateScan('HP-450G9-002')"
+                    class="w-full p-2 border border-slate-200 hover:border-brand-neonOrange hover:bg-slate-50 transition-all text-left flex items-center gap-2">
+                    <div class="w-6 h-6 bg-slate-100 flex items-center justify-center text-slate-500 text-xs"><i
+                            class="fa-solid fa-laptop"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-bold text-slate-800 truncate">Laptop HP ProBook 450 G9</p>
+                        <p class="text-[8px] font-mono text-slate-400">TAG: HP-450G9-002</p>
+                    </div>
+                </button>
+                <button onclick="simulateScan('DELL-5420-001')"
+                    class="w-full p-2 border border-slate-200 hover:border-brand-neonOrange hover:bg-slate-50 transition-all text-left flex items-center gap-2">
+                    <div class="w-6 h-6 bg-slate-100 flex items-center justify-center text-slate-500 text-xs"><i
+                            class="fa-solid fa-laptop"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-bold text-slate-800 truncate">Laptop Dell Latitude 5420</p>
+                        <p class="text-[8px] font-mono text-slate-400">TAG: DELL-5420-001</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL QR DEL ACTIVO INDIVIDUAL (SAAS INTERACTION) -->
+    <div id="qr-detail-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-200 p-4">
+        <div class="absolute inset-0 bg-brand-darker/80" onclick="closeQrDetailModal()"></div>
+        <div
+            class="bg-white border border-slate-200 w-full max-w-sm p-6 relative z-10 shadow-2xl space-y-4 transform scale-95 transition-transform duration-200 text-center">
+            <button onclick="closeQrDetailModal()" class="absolute right-4 top-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="space-y-1">
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider font-mono">Código de Etiquetado
+                    Activo</h3>
+                <p id="qr-modal-asset-id" class="text-xs font-mono font-bold text-brand-neonOrange">LEN-TC-003</p>
+            </div>
+
+            <div class="bg-slate-50 p-6 border border-slate-200 inline-block mx-auto rounded-none">
+                <i class="fa-solid fa-qrcode text-8xl text-brand-dark"></i>
+            </div>
+
+            <p class="text-[11px] text-slate-500 leading-normal max-w-xs mx-auto">Este tag QR enlaza directamente con la
+                base de datos de control físico. El escaneo rápido desde terreno abrirá la Quick View.</p>
+
+            <div class="grid grid-cols-3 gap-2 pt-2">
+                <button
+                    onclick="showToast('Impresión', 'Enviando etiqueta de hardware a impresora cebra...', 'fa-print')"
+                    class="py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[9px] uppercase transition-colors">
+                    <i class="fa-solid fa-print block mb-1 text-slate-500"></i> Imprimir
+                </button>
+                <button
+                    onclick="showToast('Descarga', 'Descargando PNG de alta definición del código QR.', 'fa-download')"
+                    class="py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[9px] uppercase transition-colors">
+                    <i class="fa-solid fa-file-arrow-down block mb-1 text-slate-500"></i> Descargar
+                </button>
+                <button onclick="showToast('Copiado', 'Enlace único del activo copiado al portapapeles.', 'fa-link')"
+                    class="py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[9px] uppercase transition-colors">
+                    <i class="fa-solid fa-clipboard block mb-1 text-slate-500"></i> Copiar URL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGICA E INTERACCION DE LA APLICACIÓN -->
+    <script>
+        // BASE DE DATOS DE ACTIVOS DE ALTA GAMA (Alineada al catálogo real de las imágenes)
+        const assetsData = [
+            {
+                id: 'LEN-TC-003',
+                name: 'Desktop Lenovo ThinkCentre',
+                image: 'https://images.unsplash.com/photo-1587831990711-23ca6441447b?w=300&auto=format&fit=crop&q=80',
+                status: 'Disponible',
+                owner: 'José Rubio',
+                ownerType: 'Equipo Principal',
+                location: 'Sede Sur - Almacén Norte',
+                category: 'Equipos de Cómputo',
+                badgeColor: 'brand-neonGreen',
+                children: [
+                    { name: 'Mouse Logitech MX Master 3S', code: 'AST-2026-003', status: 'Activo' },
+                    { name: 'Teclado Mecánico Keychron Q1', code: 'AST-2026-441', status: 'En Mantenimiento' },
+                    { name: 'Soporte Base de Laptop de Aluminio', code: 'AST-2026-015', status: 'Activo' },
+                    { name: 'Dock USB-C Thunderbolt 4', code: 'AST-2026-192', status: 'Activo' }
+                ],
+                techSpecs: {
+                    os: 'Windows 11 Enterprise 23H2 (Build 22631.3527)',
+                    processor: 'Intel Core i5-12400 (6 Cores, 12 Threads, up to 4.4 GHz)',
+                    motherboard: 'LENOVO ThinkCentre M70q Gen 3',
+                    bios_version: 'LENOVO M41KT26A, 10/01/2026',
+                    uuid: '8B3C99D8-11EC-B909-0242-AC12000289DF',
+                    serial_number: 'MJ-082D92L',
+                    mac_ethernet: '74:DE:2B:A3:E5:1F',
+                    mac_wifi: '74:DE:2B:A3:E5:20',
+                    ip_address: '192.168.10.142 (DHCP)',
+                    ram: '16 GB DDR4 Dual-Channel @ 3200 MT/s',
+                    storage: 'Western Digital 512GB NVMe PCIe 4.0 (S.M.A.R.T: Health 99% OK)',
+                    agent_version: 'IT-Agent v3.5 (Active)'
+                },
+                financial: {
+                    provider: 'Lenovo Colombia S.A.S',
+                    invoice: 'FACT-2024-9981',
+                    purchaseDate: '15/01/2024',
+                    guarantee: 'Vigente hasta 15/01/2027',
+                    cost: '$850 USD'
+                },
+                custodians: [
+                    { name: 'José Rubio', role: 'Custodio Mañana (06:00 - 14:00)', avatar: 'JR', email: 'jose.rubio@empresa.com', active: true },
+                    { name: 'Andrés Mendoza', role: 'Custodio Tarde (14:00 - 22:00)', avatar: 'AM', email: 'andres.mendoza@empresa.com', active: false }
+                ],
+                history: [
+                    { date: '30/05/2026', title: 'Asignado a José Rubio', icon: 'fa-user-check', desc: 'Asignación complementaria del pool corporativo.' },
+                    { date: '25/05/2026', title: 'Mantenimiento Preventivo', icon: 'fa-screwdriver-wrench', desc: 'Limpieza interna de disipación y cambio de pasta térmica.' }
+                ],
+                tickets: [
+                    { id: 'TKT-554', title: 'Lentitud en booteo de disco', date: '28/05/2026', status: 'Abierto', priority: 'Media', tech: 'Sebastián Castro' }
+                ],
+                documents: [
+                    { name: 'Factura Compra Original.pdf', size: '1.2 MB', date: '15/01/2024' }
+                ]
+            },
+            {
+                id: 'HP-450G9-002',
+                name: 'Laptop HP ProBook 450 G9',
+                image: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=300&auto=format&fit=crop&q=80',
+                status: 'Disponible',
+                owner: 'José Rubio',
+                ownerType: 'Equipo Principal',
+                location: 'Sede Sur - Almacén Norte',
+                category: 'Equipos de Cómputo',
+                badgeColor: 'brand-neonGreen',
+                children: [],
+                techSpecs: {
+                    os: 'Windows 11 Pro 23H2',
+                    processor: 'Intel Core i5-1235U (10 Cores, 12 Threads)',
+                    motherboard: 'HP 89B5',
+                    bios_version: 'HP U71 v01.23, 14/09/2025',
+                    uuid: '92D731C2-82BC-4309-8812-7F31DDA99120',
+                    serial_number: '5CD23910FL',
+                    mac_ethernet: '10:72:23:45:9B:AA',
+                    mac_wifi: '10:72:23:45:9B:AB',
+                    ip_address: '192.168.10.150',
+                    ram: '8 GB DDR4 @ 3200 MT/s',
+                    storage: '512GB SSD PCIe NVMe',
+                    agent_version: 'IT-Agent v3.5 (Active)'
+                },
+                financial: {
+                    provider: 'HP Store Colombia',
+                    invoice: 'FACT-2024-1102',
+                    purchaseDate: '12/03/2024',
+                    guarantee: 'Vigente hasta 12/03/2026',
+                    cost: '$920 USD'
+                },
+                custodians: [
+                    { name: 'José Rubio', role: 'Custodio Mañana (06:00 - 14:00)', avatar: 'JR', email: 'jose.rubio@empresa.com', active: true }
+                ],
+                history: [
+                    { date: '12/03/2024', title: 'Adquisición inicial', icon: 'fa-shopping-cart', desc: 'Registro de compra y etiquetado QR.' }
+                ],
+                tickets: [],
+                documents: []
+            },
+            {
+                id: 'DELL-5420-001',
+                name: 'Laptop Dell Latitude 5420',
+                image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=300&auto=format&fit=crop&q=80',
+                status: 'Disponible',
+                owner: 'José Rubio',
+                ownerType: 'Equipo de Soporte',
+                location: 'Sede Sur - Almacén Norte',
+                category: 'Equipos de Cómputo',
+                badgeColor: 'brand-neonGreen',
+                children: [],
+                techSpecs: {
+                    os: 'Windows 11 Pro',
+                    processor: 'Intel Core i5-1135G7',
+                    motherboard: 'Dell Inc. 0WYV0Y',
+                    bios_version: 'Dell v1.21.0, 11/11/2025',
+                    uuid: 'A21D112F-92CB-4011-80AC-39180AD1929C',
+                    serial_number: 'H29A10FL',
+                    mac_ethernet: 'A4:1F:72:D2:C1:21',
+                    mac_wifi: 'A4:1F:72:D2:C1:22',
+                    ip_address: '192.168.10.155',
+                    ram: '16 GB DDR4 @ 3200 MT/s',
+                    storage: '256GB SSD PCIe NVMe',
+                    agent_version: 'IT-Agent v3.5 (Active)'
+                },
+                financial: {
+                    provider: 'Dell Colombia',
+                    invoice: 'FACT-2024-0019',
+                    purchaseDate: '20/01/2024',
+                    guarantee: 'Vigente hasta 20/01/2027',
+                    cost: '$780 USD'
+                },
+                custodians: [
+                    { name: 'José Rubio', role: 'Custodio Único', avatar: 'JR', email: 'jose.rubio@empresa.com', active: true }
+                ],
+                history: [
+                    { date: '20/01/2024', title: 'Adquisición inicial', icon: 'fa-shopping-cart', desc: 'Registro y asignación inicial.' }
+                ],
+                tickets: [],
+                documents: []
+            }
+        ];
+
+        let currentRole = 'user';
+        let activeAssetIdForDrawer = null;
+
+        window.onload = function () {
+            renderAssets();
+            switchRole('user');
+        }
+
+        function switchRole(role) {
+            currentRole = role;
+            const btnUser = document.getElementById('btn-role-user');
+            const btnAdmin = document.getElementById('btn-role-admin');
+            const dashboardSection = document.getElementById('admin-dashboard-section');
+            const inventoryTitle = document.getElementById('inventory-title');
+
+            if (role === 'admin') {
+                btnAdmin.className = "px-3 py-1 text-[10px] font-bold transition-all bg-brand-dark text-white border border-transparent uppercase tracking-wide";
+                btnUser.className = "px-3 py-1 text-[10px] font-bold transition-all text-slate-500 hover:text-slate-800 uppercase tracking-wide";
+
+                dashboardSection.classList.remove('hidden');
+                inventoryTitle.innerText = "Base de Datos de Activos de la Empresa";
+                showToast("Consola Admin", "Se ha cargado el módulo administrativo de inventario.", "fa-user-gear");
+            } else {
+                btnUser.className = "px-3 py-1 text-[10px] font-bold transition-all bg-brand-dark text-white border border-transparent uppercase tracking-wide";
+                btnAdmin.className = "px-3 py-1 text-[10px] font-bold transition-all text-slate-500 hover:text-slate-800 uppercase tracking-wide";
+
+                dashboardSection.classList.add('hidden');
+                inventoryTitle.innerText = "Mis Dispositivos Asociados";
+                showToast("Sesión de Colaborador", "Visualizando tus activos directos en planta.", "fa-user");
+            }
+            renderAssets();
+            closeFullSheet();
+        }
+
+        // RENDER DE TARJETAS TÉCNICAS (NIVEL 1 - VISTA RÁPIDA: REDISEÑADO CON EXCELENTE VISUALIZACIÓN DE IMAGEN)
+        function renderAssets(filterText = '') {
+            const container = document.getElementById('assets-grid-container');
+            container.innerHTML = '';
+
+            let filtered = assetsData;
+            if (currentRole === 'user') {
+                filtered = assetsData.filter(asset => asset.owner === 'José Rubio');
+            }
+
+            if (filterText) {
+                const search = filterText.toLowerCase();
+                filtered = filtered.filter(item =>
+                    item.name.toLowerCase().includes(search) ||
+                    item.id.toLowerCase().includes(search) ||
+                    item.location.toLowerCase().includes(search) ||
+                    item.owner.toLowerCase().includes(search)
+                );
+            }
+
+            document.getElementById('filtered-count').innerText = `${filtered.length} DISPOSITIVO${filtered.length === 1 ? '' : 'S'}`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-10 text-center bg-white border border-dashed border-slate-300">
+                        <i class="fa-solid fa-folder-open text-slate-300 text-3xl mb-1 block"></i>
+                        <p class="text-slate-500 text-xs font-bold uppercase font-mono tracking-wider">No se encontraron activos</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(asset => {
+                let stateBadge = '';
+                if (asset.status === 'Asignado') {
+                    stateBadge = `<span class="bg-orange-50 text-brand-neonOrange text-[9px] font-bold px-2 py-0.5 rounded-full border border-orange-100 uppercase tracking-wider">ASIGNADO</span>`;
+                } else if (asset.status === 'Disponible') {
+                    stateBadge = `<span class="bg-emerald-50 text-brand-neonGreen text-[9px] font-bold px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-wider">DISPONIBLE</span>`;
+                } else {
+                    stateBadge = `<span class="bg-red-50 text-red-500 text-[9px] font-bold px-2 py-0.5 rounded-full border border-red-100 uppercase tracking-wider">SOPORTE</span>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-slate-200 overflow-hidden hover:border-slate-350 hover:shadow-sm transition-all duration-150 flex flex-col justify-between rounded-none";
+                card.innerHTML = `
+                    <div class="p-4 flex gap-4 items-start">
+                        <!-- Imagen grande del dispositivo para visualizarlo con nitidez premium -->
+                        <div class="w-24 h-24 border border-slate-200 overflow-hidden bg-slate-50 flex-shrink-0 relative flex items-center justify-center">
+                            <img src="${asset.image}" alt="${asset.name}" class="w-full h-full object-cover rounded-none" onerror="this.src='https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=80'">
+                        </div>
+
+                        <!-- Detalle de jerarquía alineado con Opción 1 de la referencia -->
+                        <div class="flex-1 min-w-0 flex flex-col justify-between h-24">
+                            <div class="flex justify-end items-start">
+                                ${stateBadge}
+                            </div>
+                            
+                            <div class="space-y-1">
+                                <h4 class="text-xs font-black text-slate-800 leading-tight uppercase tracking-wide truncate" title="${asset.name}">
+                                    ${asset.name}
+                                </h4>
+                                <p class="text-[10px] text-slate-400 font-semibold truncate leading-none">
+                                    ${asset.category} • Almacén Norte
+                                </p>
+                            </div>
+
+                            <div class="flex items-center justify-between text-[9px] text-slate-400 font-mono mt-1 border-t border-slate-100 pt-1.5">
+                                <span>Sede Sur</span>
+                                <span class="font-extrabold text-slate-500 font-sans">${asset.id}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Acción (Quick View & Ver Detalles) -->
+                    <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-150 flex items-center justify-between">
+                        <button onclick="openQuickView('${asset.id}')" class="text-[9px] font-black text-slate-400 hover:text-brand-dark uppercase tracking-wider transition-colors focus:outline-none">
+                            Quick View
+                        </button>
+                        <button onclick="openLevel3FullDetails('${asset.id}')" class="text-[9px] font-black text-slate-800 hover:text-brand-neonOrange uppercase tracking-wider transition-colors flex items-center gap-1 focus:outline-none">
+                            <span>Ver Detalles</span>
+                            <i class="fa-solid fa-arrow-right text-[8px]"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterAssets() {
+            const val = document.getElementById('asset-search').value;
+            renderAssets(val);
+        }
+
+        function openQrScannerSimulator() {
+            const modal = document.getElementById('qr-scanner-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-95');
+            modal.querySelector('.transform').classList.add('scale-100');
+        }
+
+        function closeQrScannerSimulator() {
+            const modal = document.getElementById('qr-scanner-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-100');
+            modal.querySelector('.transform').classList.add('scale-95');
+        }
+
+        function simulateScan(assetId) {
+            closeQrScannerSimulator();
+            showToast("Lectura QR Exitosa", `Dispositivo mapeado: ${assetId}`, "fa-qrcode");
+            setTimeout(() => {
+                openQuickView(assetId);
+            }, 250);
+        }
+
+        // NIVEL 2: QUICK VIEW DRAWER
+        function openQuickView(id) {
+            activeAssetIdForDrawer = id;
+            const asset = assetsData.find(a => a.id === id);
+            if (!asset) return;
+
+            const drawerBody = document.getElementById('drawer-body');
+
+            let childrenTreeHtml = `
+                <div class="text-center py-2 bg-slate-50 rounded-none border border-dashed border-slate-200 text-slate-400 text-[10px] font-medium">
+                    <i class="fa-solid fa-circle-nodes block mb-0.5"></i> Sin periféricos asociados directos
+                </div>
+            `;
+            if (asset.children && asset.children.length > 0) {
+                childrenTreeHtml = `<div class="space-y-1 border-l border-slate-250 ml-2 pl-2.5 pt-0.5">`;
+                asset.children.forEach((child, index) => {
+                    const lineSymbol = index === asset.children.length - 1 ? '└─' : '├─';
+                    childrenTreeHtml += `
+                        <div class="flex items-center gap-1.5 text-[11px] text-slate-600 py-0.5">
+                            <span class="text-slate-400 font-mono text-[11px]">${lineSymbol}</span>
+                            <span class="w-1.5 h-1.5 bg-brand-neonGreen"></span>
+                            <span class="font-bold text-slate-800 truncate flex-1">${child.name}</span>
+                            <span class="text-[8px] font-mono font-bold text-slate-400 bg-slate-100 px-1 border border-slate-200">${child.code}</span>
+                        </div>
+                    `;
+                });
+                childrenTreeHtml += `</div>`;
+            }
+
+            let historyHtml = '';
+            asset.history.slice(0, 2).forEach(item => {
+                historyHtml += `
+                    <div class="flex gap-2 text-[11px] bg-slate-50 p-2 border border-slate-100">
+                        <div class="w-5 h-5 rounded-none bg-white flex items-center justify-center text-slate-500 shrink-0 border border-slate-200 text-[9px]">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold text-slate-800 leading-tight">${item.title}</p>
+                            <span class="text-[8px] text-slate-400 block mt-0.5 font-mono">${item.date}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            drawerBody.innerHTML = `
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-150">
+                    <div class="w-12 h-12 border border-slate-200 overflow-hidden bg-slate-50 flex-shrink-0">
+                        <img src="${asset.image}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=100&auto=format&fit=crop&q=80'">
+                    </div>
+                    <div>
+                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 uppercase">${asset.id}</span>
+                        <h4 class="text-xs font-black text-slate-800 mt-0.5 leading-tight">${asset.name}</h4>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                    <div class="space-y-0.5">
+                        <span class="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-wider block">Custodio Asignado</span>
+                        <p class="text-xs font-bold text-slate-800">${asset.owner}</p>
+                        <p class="text-[10px] font-bold text-brand-neonOrange flex items-center gap-1 mt-0.5">
+                            <i class="fa-solid fa-circle-user text-[9px]"></i> ${asset.ownerType}
+                        </p>
+                    </div>
+                    <button onclick="openQrDetailModal('${asset.id}')" class="w-10 h-10 bg-white hover:bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0 transition-colors" title="Ver código QR">
+                        <i class="fa-solid fa-qrcode text-xl text-brand-dark"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-2">
+                    <h5 class="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info"></i> Ubicación & Tiempos
+                    </h5>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-slate-50 p-2 border border-slate-150">
+                            <span class="text-[8px] text-slate-400 block uppercase font-mono">Ubicación</span>
+                            <span class="text-[10px] font-bold text-slate-700 block mt-0.5 truncate">${asset.location}</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 border border-slate-150">
+                            <span class="text-[8px] text-slate-400 block uppercase font-mono">Fecha Asignación</span>
+                            <span class="text-[10px] font-bold text-slate-700 block mt-0.5 truncate">01/05/2026</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h5 class="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                            <i class="fa-solid fa-network-wired"></i> Dispositivos Asociados
+                        </h5>
+                        <span class="text-[9px] font-mono font-bold bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5">${asset.children.length} ITEMS</span>
+                    </div>
+                    ${childrenTreeHtml}
+                </div>
+
+                <div class="space-y-2">
+                    <h5 class="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <i class="fa-solid fa-timeline"></i> Trazabilidad Reciente
+                    </h5>
+                    <div class="space-y-2">
+                        ${historyHtml}
+                    </div>
+                </div>
+            `;
+
+            const fullSheetBtn = document.getElementById('drawer-full-sheet-btn');
+            fullSheetBtn.onclick = function () {
+                closeQuickView();
+                openLevel3FullDetails(id);
+            };
+
+            const drawer = document.getElementById('quick-view-drawer');
+            const backdrop = document.getElementById('drawer-backdrop');
+            const content = document.getElementById('drawer-content');
+
+            drawer.classList.remove('pointer-events-none');
+            backdrop.classList.remove('opacity-0', 'pointer-events-none');
+            backdrop.classList.add('opacity-100', 'pointer-events-auto');
+            content.classList.remove('translate-x-full');
+            content.classList.add('translate-x-0');
+        }
+
+        function closeQuickView() {
+            const drawer = document.getElementById('quick-view-drawer');
+            const backdrop = document.getElementById('drawer-backdrop');
+            const content = document.getElementById('drawer-content');
+
+            backdrop.classList.remove('opacity-100', 'pointer-events-auto');
+            backdrop.classList.add('opacity-0', 'pointer-events-none');
+            content.classList.remove('translate-x-0');
+            content.classList.add('translate-x-full');
+            setTimeout(() => {
+                drawer.classList.add('pointer-events-none');
+            }, 200);
+        }
+
+        function triggerIncident() {
+            showToast("Nueva Incidencia", "Abriendo ticket de soporte en cola operativa TI.", "fa-ticket");
+        }
+
+        function showQuickHistory() {
+            showToast("Trazabilidad TI", "Cargando log de auditoría completo desde el servidor.", "fa-timeline");
+        }
+
+        // --- MANEJO DE MODAL QR INDIVIDUAL ---
+        function openQrDetailModal(assetId) {
+            document.getElementById('qr-modal-asset-id').innerText = assetId;
+            const modal = document.getElementById('qr-detail-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-95');
+            modal.querySelector('.transform').classList.add('scale-100');
+        }
+
+        function closeQrDetailModal() {
+            const modal = document.getElementById('qr-detail-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-100');
+            modal.querySelector('.transform').classList.add('scale-95');
+        }
+
+        // --- SISTEMA INTERACTIVO DE PESTAÑAS (TABS) ---
+        function switchTab(tabId) {
+            const panes = document.querySelectorAll('.tab-pane');
+            panes.forEach(p => p.classList.add('hidden'));
+
+            const activePane = document.getElementById(`pane-${tabId}`);
+            if (activePane) activePane.classList.remove('hidden');
+
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(t => {
+                t.classList.remove('border-brand-neonOrange', 'text-brand-neonOrange', 'font-black');
+                t.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if (activeTab) {
+                activeTab.classList.remove('border-transparent', 'text-slate-400');
+                activeTab.classList.add('border-brand-neonOrange', 'text-brand-neonOrange', 'font-black');
+            }
+        }
+
+        // --- SIMULADOR DE ACCIONES DE RELACIÓN HIERARCHY ---
+        function handleRelationAction(actionType, code) {
+            if (actionType === 'add') {
+                showToast("Vincular Dispositivo", "Abriendo catálogo de periféricos para asociar al activo padre...", "fa-link");
+            } else if (actionType === 'unlink') {
+                showToast("Desvincular", `Desasociando periférico ${code} de forma segura.`, "fa-link-slash");
+            } else if (actionType === 'move') {
+                showToast("Mover Jerarquía", `Moviendo periférico ${code} a un nuevo activo padre en planta.`, "fa-arrows-spin");
+            }
+        }
+
+        // NIVEL 3: DETALLE COMPLETO (CENTRO DE VIDA DEL ACTIVO - REDISEÑO SAAS)
+        function openLevel3FullDetails(id) {
+            const asset = assetsData.find(a => a.id === id);
+            if (!asset) return;
+
+            document.getElementById('catalog-section').classList.add('hidden');
+            const level3Container = document.getElementById('level3-full-details');
+            level3Container.classList.remove('hidden');
+
+            // 1. Pre-calculamos los responsables por turnos (Turnos dinámicos)
+            let custodiansHtml = '';
+            asset.custodians.forEach(c => {
+                const activeClass = c.active ? 'border-brand-neonGreen bg-brand-neonGreen/5' : 'border-slate-100 bg-slate-50';
+                const activeBadge = c.active
+                    ? '<span class="px-1.5 py-0.5 bg-brand-neonGreen text-brand-darker font-mono font-bold text-[8px]">CUSTODIO ACTIVO</span>'
+                    : `<button onclick="activateCustodianShift('${asset.id}', '${c.name}')" class="px-1.5 py-0.5 bg-white border border-slate-200 hover:border-slate-450 text-slate-600 font-mono text-[8px] transition-colors font-bold uppercase">ASIGNAR</button>`;
+
+                custodiansHtml += `
+                    <div class="p-2 border ${activeClass} flex items-center justify-between gap-3 transition-all duration-150">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="w-6 h-6 bg-brand-dark text-white font-extrabold text-[9px] flex items-center justify-center font-mono">
+                                ${c.avatar}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[11px] font-black text-slate-800 leading-none">${c.name}</p>
+                                <p class="text-[9px] text-slate-500 mt-0.5 leading-none font-medium">${c.role}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            ${activeBadge}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 2. Pre-calculamos la línea de tiempo resumida de Vida
+            let summaryTimelineHtml = '<div class="relative pl-3 border-l border-slate-200 space-y-3 pt-1">';
+            asset.history.slice(0, 3).forEach(item => {
+                summaryTimelineHtml += `
+                    <div class="relative">
+                        <span class="absolute -left-[18.5px] top-1 w-2 h-2 rounded-none bg-brand-neonOrange"></span>
+                        <div class="space-y-0.5">
+                            <span class="text-[8px] font-mono text-slate-400 block">${item.date}</span>
+                            <h5 class="text-[11px] font-bold text-slate-800 leading-tight">${item.title}</h5>
+                            <p class="text-[10px] text-slate-500 leading-relaxed">${item.desc}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            summaryTimelineHtml += '</div>';
+
+            // 3. Pre-calculamos la Tabla de Tickets de Soporte
+            let ticketsTableHtml = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse font-sans text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 tracking-wider">
+                                <th class="py-2.5 px-3 uppercase font-mono text-[9px]">ID TICKET</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">ASUNTO / INCIDENCIA</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">FECHA REPORTE</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">PRIORIDAD</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">ESTADO</th>
+                                <th class="py-2.5 px-3 uppercase text-[9px]">TÉCNICO</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-600 font-medium">
+            `;
+            if (asset.tickets && asset.tickets.length > 0) {
+                asset.tickets.forEach(t => {
+                    const statusBadge = t.status === 'Abierto' ? 'bg-orange-50 text-brand-neonOrange border border-orange-100' : 'bg-slate-100 text-slate-500 border border-slate-200';
+                    const priorityClass = t.priority === 'Alta' ? 'text-red-500 font-extrabold' : 'text-slate-500';
+                    ticketsTableHtml += `
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="py-3 px-3 font-mono text-brand-neonOrange font-bold">${t.id}</td>
+                            <td class="py-3 px-3 text-slate-800 font-semibold">${t.title}</td>
+                            <td class="py-3 px-3 font-mono text-[10px]">${t.date}</td>
+                            <td class="py-3 px-3"><span class="text-[10px] ${priorityClass}">${t.priority}</span></td>
+                            <td class="py-3 px-3"><span class="px-1.5 py-0.5 rounded-none text-[8px] font-bold ${statusBadge}">${t.status}</span></td>
+                            <td class="py-3 px-3 font-semibold text-slate-700">${t.tech}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                ticketsTableHtml += `<tr><td colspan="6" class="py-8 text-center text-slate-400 italic">No hay tickets de Helpdesk vinculados a este hardware.</td></tr>`;
+            }
+            ticketsTableHtml += `</tbody></table></div>`;
+
+            // 4. Pre-calculamos el Árbol Visual de Relaciones (Estructura jerárquica premium)
+            let relationsTreeHtml = `
+                <div class="space-y-4 font-sans text-xs">
+                    <div class="flex items-center justify-between border-b border-slate-150 pb-2">
+                        <span class="text-[9px] font-mono font-bold text-slate-400 uppercase block tracking-wider">Estructura Jerárquica del Activo Principal</span>
+                        <button onclick="handleRelationAction('add')" class="px-2.5 py-1 bg-brand-dark hover:bg-brand-darker text-white font-mono text-[8px] font-bold uppercase transition-colors">
+                            <i class="fa-solid fa-plus mr-1"></i> Agregar Dispositivo Hijo
+                        </button>
+                    </div>
+
+                    <!-- Nodo Principal -->
+                    <div class="p-3 bg-brand-dark text-white border border-brand-darker flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-laptop text-brand-neonOrange text-sm"></i>
+                            <div>
+                                <h4 class="font-extrabold text-[11px] uppercase tracking-wide leading-none">${asset.name}</h4>
+                                <span class="text-[8px] font-mono text-slate-400 block mt-1">${asset.id}</span>
+                            </div>
+                        </div>
+                        <span class="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-brand-neonOrange/20 text-brand-neonOrange border border-brand-neonOrange/30">ACTIVO PADRE</span>
+                    </div>
+
+                    <!-- Hijos Directos en Ramificación -->
+                    <div class="pl-6 border-l border-slate-200 space-y-2 relative">
+            `;
+            if (asset.children && asset.children.length > 0) {
+                asset.children.forEach(child => {
+                    relationsTreeHtml += `
+                        <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-300 font-mono text-sm">├──</span>
+                                <i class="fa-solid fa-plug text-brand-neonGreen text-xs"></i>
+                                <div>
+                                    <p class="font-bold text-slate-800 leading-none">${child.name}</p>
+                                    <p class="text-[8px] font-mono text-slate-400 mt-1">UUID: ${child.code}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 uppercase">${child.status}</span>
+                                <button onclick="handleRelationAction('unlink', '${child.code}')" class="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Desvincular periférico">
+                                    <i class="fa-solid fa-link-slash text-[10px]"></i>
+                                </button>
+                                <button onclick="handleRelationAction('move', '${child.code}')" class="p-1 hover:bg-slate-100 text-slate-400 hover:text-brand-dark transition-colors" title="Mover de activo principal">
+                                    <i class="fa-solid fa-arrows-spin text-[10px]"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                relationsTreeHtml += `<p class="text-xs text-slate-400 italic">No se han registrado elementos secundarios asociados.</p>`;
+            }
+            relationsTreeHtml += `</div></div>`;
+
+            // 5. Pre-calculamos el Acordeón Técnico de Hardware
+            let hardwareAccordionHtml = `
+                <div class="space-y-2">
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden" open>
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-microchip text-brand-neonOrange"></i> Procesador / Chipset (CPU)
+                            </h4>
+                            <span class="text-slate-400 group-open:text-brand-neonOrange"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150">
+                            ${asset.techSpecs.processor}
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-memory text-brand-neonGreen"></i> Memoria RAM Instalada
+                            </h4>
+                            <span class="text-slate-400 group-open:text-brand-neonGreen"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150">
+                            ${asset.techSpecs.ram}
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-hdd text-blue-500"></i> Almacenamiento & S.M.A.R.T. (SSD)
+                            </h4>
+                            <span class="text-slate-400 group-open:text-blue-500"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150">
+                            ${asset.techSpecs.storage}
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-network-wired text-indigo-500"></i> Interfaces de Red (MAC / IP)
+                            </h4>
+                            <span class="text-slate-400 group-open:text-indigo-500"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150 space-y-1">
+                            <p><strong>IPv4 Principal:</strong> ${asset.techSpecs.ip_address}</p>
+                            <p><strong>Ethernet MAC:</strong> ${asset.techSpecs.mac_ethernet}</p>
+                            <p><strong>Wireless MAC:</strong> ${asset.techSpecs.mac_wifi}</p>
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-fingerprint text-purple-500"></i> Sistema Operativo & Agente
+                            </h4>
+                            <span class="text-slate-400 group-open:text-purple-500"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150 space-y-1">
+                            <p><strong>Compilación OS:</strong> ${asset.techSpecs.os}</p>
+                            <p><strong>Versión Agente:</strong> ${asset.techSpecs.agent_version}</p>
+                            <p><strong>UUID de Registro:</strong> ${asset.techSpecs.uuid}</p>
+                        </div>
+                    </details>
+
+                    <details class="hardware-details group border border-slate-200 bg-white p-3 [&_summary::-webkit-details-marker]:hidden">
+                        <summary class="flex items-center justify-between cursor-pointer focus:outline-none">
+                            <h4 class="text-[10px] font-mono font-bold uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-gears text-slate-500"></i> BIOS de Placa Base (Motherboard)
+                            </h4>
+                            <span class="text-slate-400 group-open:text-slate-500"><i class="fa-solid fa-angle-down transition-transform duration-150"></i></span>
+                        </summary>
+                        <div class="mt-3 text-xs text-slate-600 font-medium pl-6 font-mono leading-relaxed bg-slate-50 p-2.5 border border-slate-150 space-y-1">
+                            <p><strong>Motherboard:</strong> ${asset.techSpecs.motherboard}</p>
+                            <p><strong>Versión BIOS:</strong> ${asset.techSpecs.bios_version}</p>
+                        </div>
+                    </details>
+                </div>
+            `;
+
+            // 6. Pre-calculamos los Documentos Adjuntos
+            let documentsHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 font-sans">';
+            asset.documents.forEach(doc => {
+                documentsHtml += `
+                    <div class="p-3 bg-slate-50 border border-slate-200 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-8 h-8 bg-slate-200 text-slate-600 flex items-center justify-center text-sm rounded-none">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h5 class="text-xs font-bold text-slate-800 truncate">${doc.name}</h5>
+                                <p class="text-[9px] text-slate-400 font-mono mt-0.5">${doc.size} • Subido el ${doc.date}</p>
+                            </div>
+                        </div>
+                        <button onclick="showToast('Descarga', 'Descargando archivo adjunto de los servidores corporativos...', 'fa-download')" class="p-1 hover:bg-white border border-transparent hover:border-slate-200 text-slate-600 transition-all">
+                            <i class="fa-solid fa-download text-xs"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            documentsHtml += '</div>';
+
+            // 7. Pre-calculamos la Trazabilidad Histórica Completa (Auditoría)
+            let auditTimelineHtml = '<div class="relative pl-3.5 border-l border-slate-200 space-y-4 pt-1 font-sans">';
+            asset.history.forEach(item => {
+                auditTimelineHtml += `
+                    <div class="relative">
+                        <span class="absolute -left-[19px] top-0.5 w-2.5 h-2.5 rounded-none bg-white border border-brand-neonOrange flex items-center justify-center">
+                            <span class="w-1 h-1 bg-brand-neonOrange block"></span>
+                        </span>
+                        <div class="space-y-0.5">
+                            <span class="text-[8px] font-bold text-slate-400 block font-mono leading-none">${item.date}</span>
+                            <h5 class="text-xs font-bold text-slate-800 leading-tight">${item.title}</h5>
+                            <p class="text-[10px] text-slate-500 leading-normal mt-0.5">${item.desc}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            auditTimelineHtml += '</div>';
+
+            // 8. Renderizamos la Ficha Completa SaaS en Rejilla de alta Jerarquía
+            level3Container.innerHTML = `
+                <!-- HERO SUPERIOR (ESTILO NOTION/LINEAR) -->
+                <div class="bg-white border border-slate-200 p-5 flex flex-col md:flex-row gap-5 items-start justify-between">
+                    <div class="flex flex-col md:flex-row gap-5 items-start">
+                        <!-- Imagen Grande del Activo -->
+                        <div class="w-20 h-20 md:w-28 md:h-28 border border-slate-200 overflow-hidden bg-slate-50 flex-shrink-0">
+                            <img src="${asset.image}" alt="${asset.name}" class="w-full h-full object-cover">
+                        </div>
+                        
+                        <!-- Identidad del Hardware -->
+                        <div class="space-y-2 min-w-0">
+                            <div>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[10px] font-mono font-bold bg-brand-dark text-white px-1.5 py-0.5 uppercase tracking-wide">${asset.id}</span>
+                                    <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 border border-slate-200 uppercase">${asset.category}</span>
+                                    <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 border border-slate-200 uppercase">${asset.location}</span>
+                                </div>
+                                <h2 class="text-lg md:text-xl font-black text-slate-800 mt-1 uppercase tracking-wide leading-tight">${asset.name}</h2>
+                            </div>
+                            
+                            <div class="flex items-center gap-4 text-xs font-semibold text-slate-500">
+                                <span>Custodio: <strong class="text-slate-800">${asset.owner}</strong></span>
+                                <span class="w-1.5 h-1.5 bg-slate-300"></span>
+                                <span>Garantía: <strong class="text-brand-neonOrange">${asset.financial.guarantee}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Badges de Estado y Acciones Rápidas -->
+                    <div class="flex flex-col items-end gap-2.5 w-full md:w-auto shrink-0 border-t md:border-t-0 pt-3 md:pt-0">
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 bg-brand-neonGreen/10 text-brand-neonGreen text-[9px] font-mono font-bold uppercase border border-brand-neonGreen/20">🟢 OPERATIVO</span>
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-mono font-bold uppercase border border-slate-200">🟟 GARANTÍA ACTIVA</span>
+                            <span class="px-2 py-0.5 bg-orange-50 text-brand-neonOrange text-[9px] font-mono font-bold uppercase border border-orange-100">🔵 ${asset.tickets.length} INCIDENCIAS</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-1.5 w-full md:w-auto">
+                            <button onclick="triggerIncident()" class="flex-1 md:flex-none px-3 py-1.5 bg-brand-neonOrange hover:bg-brand-neonOrange/90 text-white font-bold text-[10px] uppercase transition-colors">Crear Incidencia</button>
+                            <button onclick="showQuickHistory()" class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[10px] uppercase transition-colors">Historial</button>
+                            <button onclick="window.print()" class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[10px] uppercase transition-colors"><i class="fa-solid fa-print"></i></button>
+                            <button onclick="openQrDetailModal('${asset.id}')" class="px-3 py-1.5 bg-brand-dark hover:bg-brand-darker text-white font-bold text-[10px] uppercase transition-colors"><i class="fa-solid fa-qrcode mr-1"></i> QR</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ARQUITECTURA EN DOS COLUMNAS (CONTENIDO + SIDEBAR DERECHO) -->
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+                    
+                    <!-- COLUMNA PRINCIPAL IZQUIERDA (Páginas con TABS) -> lg:col-span-3 -->
+                    <div class="lg:col-span-3 space-y-4">
+                        
+                        <!-- Barra de Navegación de Tabs (Estilo SaaS Premium) -->
+                        <div class="bg-white border border-slate-200 p-1 flex items-center gap-1 border-b-2">
+                            <button id="tab-resumen" onclick="switchTab('resumen')" class="tab-btn px-4 py-2 border-b-2 border-brand-neonOrange text-brand-neonOrange font-black text-xs uppercase tracking-wider transition-all">Resumen</button>
+                            <button id="tab-tickets" onclick="switchTab('tickets')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Tickets</button>
+                            <button id="tab-relaciones" onclick="switchTab('relaciones')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Relaciones</button>
+                            <button id="tab-hardware" onclick="switchTab('hardware')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Hardware</button>
+                            <button id="tab-documentos" onclick="switchTab('documentos')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Documentos</button>
+                            <button id="tab-auditoria" onclick="switchTab('auditoria')" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 text-xs uppercase tracking-wider transition-all">Auditoría</button>
+                        </div>
+
+                        <!-- PANEL CONTENEDOR DE TABS -->
+                        <div class="bg-white border border-slate-200 p-5">
+                            
+                            <!-- TAB 1: RESUMEN -->
+                            <div id="pane-resumen" class="tab-pane space-y-5">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Custodio Principal</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1">${asset.owner}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Ubicación Actual</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 truncate">${asset.location}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Vigencia Garantía</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 text-brand-neonOrange">${asset.financial.guarantee}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Proveedor Homologado</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 truncate">${asset.financial.provider}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Valor Comercial</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 font-mono">${asset.financial.cost}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">Fecha Adquisición</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 font-mono">${asset.financial.purchaseDate}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">N° Factura Compra</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1 font-mono">${asset.financial.invoice}</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 border border-slate-150">
+                                        <span class="text-[8px] font-mono font-bold text-slate-400 block uppercase">SLA Soporte</span>
+                                        <span class="text-xs font-bold text-slate-800 block mt-1">Menor a 4 Horas</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2 pt-2">
+                                    <h4 class="text-[9px] font-mono font-bold uppercase text-slate-400 tracking-wider">Línea de Vida Reciente</h4>
+                                    ${summaryTimelineHtml}
+                                </div>
+                            </div>
+
+                            <!-- TAB 2: TICKETS -->
+                            <div id="pane-tickets" class="tab-pane hidden space-y-4">
+                                ${ticketsTableHtml}
+                            </div>
+
+                            <!-- TAB 3: RELACIONES -->
+                            <div id="pane-relaciones" class="tab-pane hidden space-y-4">
+                                ${relationsTreeHtml}
+                            </div>
+
+                            <!-- TAB 4: HARDWARE (Plegables por defecto para evitar saturar) -->
+                            <div id="pane-hardware" class="tab-pane hidden space-y-4">
+                                ${hardwareAccordionHtml}
+                            </div>
+
+                            <!-- TAB 5: DOCUMENTOS -->
+                            <div id="pane-documentos" class="tab-pane hidden space-y-4">
+                                ${documentsHtml}
+                            </div>
+
+                            <!-- TAB 6: AUDITORÍA -->
+                            <div id="pane-auditoria" class="tab-pane hidden space-y-4">
+                                ${auditTimelineHtml}
+                            </div>
+
+                        </div>
+
+                        <!-- Botón Volver de Ficha -->
+                        <button onclick="closeFullSheet()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 border border-slate-250 text-slate-700 font-bold text-xs uppercase transition-all tracking-wider rounded-none">
+                            Volver al Catálogo General de Activos
+                        </button>
+
+                    </div>
+
+                    <!-- COLUMNA SIDEBAR DERECHO (INFORMACIÓN FIJA) -> lg:col-span-1 -->
+                    <div class="lg:col-span-1 space-y-4">
+                        
+                        <!-- Panel de Control Técnico Directo -->
+                        <div class="bg-white border border-slate-200 p-4 space-y-4">
+                            <div class="border-b border-slate-100 pb-2">
+                                <span class="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-widest block">Operational Dashboard</span>
+                                <h3 class="text-xs font-black uppercase tracking-wider">Estado en Planta</h3>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Disponibilidad / Estado</span>
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 mt-1">
+                                        <span class="w-2 h-2 bg-brand-neonGreen"></span>
+                                        <span>Operando Correctamente</span>
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Custodio Técnico Asignado</span>
+                                    <span class="text-xs font-extrabold text-slate-800 block mt-1">${asset.owner}</span>
+                                </div>
+
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Ubicación Física de Planta</span>
+                                    <span class="text-xs font-semibold text-slate-600 block mt-1 truncate">${asset.location}</span>
+                                </div>
+
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Incidentes Activos Helpdesk</span>
+                                    <span class="text-xs font-extrabold text-brand-neonOrange block mt-1">1 Tickets en Proceso</span>
+                                </div>
+
+                                <div>
+                                    <span class="text-[8px] font-mono font-bold text-slate-400 uppercase block">Última Sincronización Agente</span>
+                                    <span class="text-[10px] font-mono font-bold text-slate-500 block mt-1">Hace 2 minutos (OK)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel de Turnos / Responsables Secundarios (image_d3bb87.png) -->
+                        <div class="bg-white border border-slate-200 p-4 space-y-3">
+                            <div class="border-b border-slate-100 pb-2">
+                                <h4 class="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-users text-brand-neonGreen text-xs"></i> Custodia Compartida
+                                </h4>
+                            </div>
+                            <div class="space-y-2">
+                                ${custodiansHtml}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            `;
+        }
+
+        function closeFullSheet() {
+            document.getElementById('level3-full-details').classList.add('hidden');
+            document.getElementById('catalog-section').classList.remove('hidden');
+        }
+
+        // ALTERNAR EL TURNO DE CUSTODIOS DE FORMA INTERACTIVA (Fiel al esquema de image_d3bb87.png)
+        function activateCustodianShift(assetId, custodianName) {
+            const asset = assetsData.find(a => a.id === assetId);
+            if (!asset) return;
+
+            asset.custodians.forEach(c => {
+                c.active = (c.name === custodianName);
+            });
+
+            const activeCust = asset.custodians.find(c => c.active);
+            if (activeCust) {
+                asset.owner = activeCust.name;
+            }
+
+            showToast("Cambio de Turno", `Custodia asignada a: ${custodianName}`, "fa-user-check");
+
+            openLevel3FullDetails(assetId);
+            renderAssets();
+        }
+
+        // SISTEMA DE TOASTS
+        function showToast(title, message, iconClass = 'fa-circle-check') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-title').innerText = title.toUpperCase();
+            document.getElementById('toast-message').innerText = message;
+            document.getElementById('toast-icon').className = `fa-solid ${iconClass} text-brand-neonGreen text-xs`;
+
+            toast.classList.remove('translate-y-[-150%]');
+            toast.classList.add('translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0');
+                toast.classList.add('translate-y-[-150%]');
+            }, 3000);
+        }
+    </script>
+</body>
+
+</html>

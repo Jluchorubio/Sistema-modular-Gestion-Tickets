@@ -18,7 +18,7 @@ export interface ProfileViewProps {
   onUserUpdated?:     (u: ProfileUser) => void;
 }
 
-export type ActiveTab = 'overview' | 'security' | 'settings';
+export type ActiveTab = 'overview' | 'security' | 'settings' | 'skills';
 
 export { fmtDate, fmtRelative } from '@/lib/formatters';
 

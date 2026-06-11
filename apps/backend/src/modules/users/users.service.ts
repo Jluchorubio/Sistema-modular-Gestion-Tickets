@@ -55,53 +55,59 @@ export class UsersService {
     if (uConflict) throw new ConflictException(`Nombre de usuario '${autoUsername}' ya está en uso`);
 
     const hasAllProfileFields = !!(dto.phone && dto.address && dto.job_title && dto.department && dto.primary_sede);
-
-    const [profile] = await this.db.query<{ id: string }[]>(
-      `INSERT INTO users.profiles
-         (first_name, last_name, phone, username, address, job_title, department, primary_sede,
-          is_superadmin, global_role_id, profile_complete)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
-         COALESCE($10::uuid, (SELECT id FROM config.global_roles WHERE name = 'usuario')),
-         $11
-       )
-       RETURNING id`,
-      [
-        dto.first_name,
-        dto.last_name,
-        dto.phone        ?? null,
-        autoUsername,
-        dto.address      ?? null,
-        dto.job_title    ?? null,
-        dto.department   ?? null,
-        dto.primary_sede ?? null,
-        dto.is_superadmin ?? false,
-        dto.global_role_id ?? null,
-        hasAllProfileFields,
-      ],
-    );
-
     const forcePasswordChange = !dto.email;
+
+    const qr = this.db.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    let profileId: string;
     try {
-      await this.db.query(
+      const [profile] = (await qr.query(
+        `INSERT INTO users.profiles
+           (first_name, last_name, phone, username, address, job_title, department, primary_sede,
+            is_superadmin, global_role_id, profile_complete)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+           COALESCE($10::uuid, (SELECT id FROM config.global_roles WHERE name = 'usuario')),
+           $11
+         )
+         RETURNING id`,
+        [
+          dto.first_name,
+          dto.last_name,
+          dto.phone        ?? null,
+          autoUsername,
+          dto.address      ?? null,
+          dto.job_title    ?? null,
+          dto.department   ?? null,
+          dto.primary_sede ?? null,
+          dto.is_superadmin ?? false,
+          dto.global_role_id ?? null,
+          hasAllProfileFields,
+        ],
+      )) as { id: string }[];
+      profileId = profile.id;
+
+      await qr.query(
         `INSERT INTO auth.credentials (user_id, email, password_hash, force_password_change)
          VALUES ($1, $2, $3, $4)`,
-        [profile.id, email, passwordHash, forcePasswordChange],
+        [profileId, email, passwordHash, forcePasswordChange],
       );
-    } catch {
-      await this.db.query(
-        `INSERT INTO auth.credentials (user_id, email, password_hash)
-         VALUES ($1, $2, $3)`,
-        [profile.id, email, passwordHash],
+
+      await qr.query(
+        `INSERT INTO users.preferences (user_id) VALUES ($1) ON CONFLICT DO NOTHING`,
+        [profileId],
       );
+
+      await qr.commitTransaction();
+    } catch (e) {
+      await qr.rollbackTransaction();
+      throw e;
+    } finally {
+      await qr.release();
     }
 
-    await this.db.query(
-      `INSERT INTO users.preferences (user_id) VALUES ($1) ON CONFLICT DO NOTHING`,
-      [profile.id],
-    );
-
-    this.logger.log(`Usuario creado: ${profile.id} por actor ${actorId}`);
-    return this.getUser(profile.id);
+    this.logger.log(`Usuario creado: ${profileId!} por actor ${actorId}`);
+    return this.getUser(profileId!);
   }
 
   async listUsers(query: {
@@ -154,6 +160,7 @@ export class UsersService {
               p.is_active,
               p.profile_complete,
               p.created_at,
+              p.last_seen_at,
               c.email,
               c.last_login_at,
               p.global_role_id,
@@ -176,7 +183,7 @@ export class UsersService {
        LEFT JOIN modules.modules           m   ON m.id        = umr.module_id
        LEFT JOIN modules.module_roles      mr  ON mr.id       = umr.role_id
        WHERE  ${where}
-       GROUP  BY p.id, c.email, c.last_login_at, gr.id, gr.name
+       GROUP  BY p.id, p.last_seen_at, c.email, c.last_login_at, gr.id, gr.name
        ORDER  BY p.created_at DESC
        LIMIT  $${limitIdx} OFFSET $${offsetIdx}`,
       params,

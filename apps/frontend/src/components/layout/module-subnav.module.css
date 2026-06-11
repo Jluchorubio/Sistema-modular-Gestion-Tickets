@@ -1,0 +1,109 @@
+/* ── Module operational sub-nav ────────────────────────── */
+.subnav {
+  display: flex;
+  align-items: center;
+  /* flex-start on mobile: justify-content:center breaks left-scroll when overflowing */
+  justify-content: flex-start;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0 16px;
+  height: 40px;
+  width: 100%;
+  flex-shrink: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  position: sticky;
+  top: 52px; /* below main app header */
+  z-index: 10;
+  box-shadow: 0 1px 4px rgba(14, 34, 53, 0.04);
+}
+
+.subnav::-webkit-scrollbar {
+  display: none;
+}
+
+/* Trailing spacer — ensures last item has right padding even in Safari */
+.subnav::after {
+  content: '';
+  display: block;
+  min-width: 16px;
+  flex-shrink: 0;
+}
+
+/* Nav item */
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .12s, color .12s;
+  border: 1px solid transparent;
+  font-family: inherit;
+  height: 30px;
+}
+
+.navItem:hover {
+  background: #f1f5f9;
+  color: #0e2235;
+}
+
+.navItem.active {
+  background: transparent;
+  border-color: transparent;
+  color: #0e2235;
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 #ff5e3a;
+}
+
+.icon {
+  width: 12px;
+  height: 12px;
+  stroke-width: 1.8;
+  flex-shrink: 0;
+}
+
+/* Desktop: center items (no overflow, so safe) */
+@media (min-width: 768px) {
+  .subnav { justify-content: center; }
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .subnav   { padding: 0 10px; height: 38px; gap: 0; }
+  .navItem  { padding: 5px 10px; font-size: 11px; height: 28px; }
+}
+
+/* ── Dark mode ── */
+:global([data-theme="dark"]) .subnav {
+  background: rgba(10, 25, 41, 0.96);
+  border-color: rgba(255,255,255,.08);
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+
+:global([data-theme="dark"]) .navItem {
+  color: rgba(255,255,255,.45);
+}
+
+:global([data-theme="dark"]) .navItem:hover {
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.9);
+}
+
+:global([data-theme="dark"]) .navItem.active {
+  background: transparent;
+  border-color: transparent;
+  color: rgba(255,255,255,.92);
+  box-shadow: inset 0 -2px 0 #ff5e3a;
+}

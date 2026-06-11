@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { ProfileCompleteGuard } from '../../gateway/guards/profile-complete.guard';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
+import { RequestWithUser } from '../../gateway/types';
 import { MeetingsService, type CreateMeetingDto, type MeetingStatus } from './meetings.service';
 
 @ApiTags('meetings')
@@ -16,11 +17,10 @@ export class MeetingsController {
   @RequirePermission('helpdesk:tickets:view')
   @ApiOperation({ summary: 'Reuniones activas/programadas para el calendario del usuario.' })
   getCalendarMeetings(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Query('module_id') moduleId?: string,
   ) {
-    const isSuperadmin: boolean = req.user?.is_superadmin ?? false;
-    return this.service.getCalendarMeetings(req.user.sub, isSuperadmin, moduleId);
+    return this.service.getCalendarMeetings(req.user.sub, moduleId);
   }
 
   @Get('tickets/:ticketId/meetings')
@@ -34,7 +34,7 @@ export class MeetingsController {
   @RequirePermission('helpdesk:tickets:edit')
   @ApiOperation({ summary: 'Programar reunión para un ticket.' })
   createMeeting(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('ticketId', ParseUUIDPipe) ticketId: string,
     @Body() dto: CreateMeetingDto & { participant_ids?: string[] },
   ) {
@@ -45,7 +45,7 @@ export class MeetingsController {
   @RequirePermission('helpdesk:tickets:edit')
   @ApiOperation({ summary: 'Actualizar estado o URL de reunión.' })
   updateMeeting(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('meetingId', ParseUUIDPipe) meetingId: string,
     @Body() dto: { status?: MeetingStatus; meeting_url?: string },
   ) {
@@ -56,7 +56,7 @@ export class MeetingsController {
   @RequirePermission('helpdesk:tickets:edit')
   @ApiOperation({ summary: 'Cancelar reunión.' })
   cancelMeeting(
-    @Req() req: any,
+    @Req() req: RequestWithUser,
     @Param('meetingId', ParseUUIDPipe) meetingId: string,
   ) {
     return this.service.cancelMeeting(meetingId, req.user.sub);

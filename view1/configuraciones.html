@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Configuración y Gobernanza - Plataforma IT</title>
+
+    <!-- Tailwind CSS para maquetación -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Inter para una tipografía premium -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome para Iconografía -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#0e2235',      // Azul oscuro de operaciones
+                            darker: '#061320',    // Azul marino profundo
+                            coral: '#ff5e3a',     // Coral de acento técnico
+                            green: '#20c933',     // Verde de éxito/activo
+                            bg: '#f8fafc',        // Fondo gris ultra limpio
+                            border: '#e2e8f0',    // Gris de borde técnico fino
+                            textMuted: '#64748b'  // Texto secundario
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f1f5f9;
+            color: #0e2235;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Custom scrollbar para diseño industrial limpio */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff5e3a;
+        }
+
+        /* Clases de bordes rectos (Sharp Design) de tu plataforma */
+        .sharp-card {
+            border-radius: 2px;
+        }
+
+        .sharp-input {
+            border-radius: 2px;
+        }
+
+        .sharp-btn {
+            border-radius: 2px;
+        }
+
+        /* Cuadrícula de ingeniería interactiva estilo Miro / Whimsical */
+        .grid-canvas {
+            background-color: #ffffff;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            cursor: grab;
+        }
+
+        .grid-canvas:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- BARRA SUPERIOR (HEADER GLOBAL) -->
+    <header class="h-16 border-b border-brand-border bg-white flex items-center justify-between px-6 z-10 shrink-0">
+        <div class="flex items-center space-x-4">
+            <div class="bg-brand-dark/5 border border-brand-border text-brand-dark p-2 rounded-sm">
+                <i class="fa-solid fa-sliders text-sm"></i>
+            </div>
+            <div>
+                <h1 class="text-xs font-black text-brand-dark uppercase tracking-widest">Configuración del Sistema</h1>
+                <p class="text-[9px] text-brand-textMuted font-mono">SINGLE TENANT &middot; ARQUITECTURA DE DATOS
+                    UNIFICADA</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-6 text-slate-700">
+            <div class="bg-brand-bg border border-brand-border px-3 py-1.5 rounded-sm flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-coral animate-pulse"></span>
+                <span class="text-[10px] font-bold font-mono text-brand-dark uppercase">SUPERADMIN CONSOLE v2.5</span>
+            </div>
+            <button onclick="descartarCambios()"
+                class="text-xs font-bold text-slate-500 hover:text-brand-coral transition-colors">
+                <i class="fa-solid fa-rotate-left mr-1"></i> Descartar Cambios
+            </button>
+        </div>
+    </header>
+
+    <!-- CUERPO PRINCIPAL (Navegación Claude en Tema Claro Industrial) -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- SIDEBAR DE NAVEGACIÓN (Estilo Claude Claro y Estructural) -->
+        <aside class="w-64 border-r border-brand-border bg-white flex flex-col justify-between shrink-0">
+            <div class="py-6 px-4 space-y-6 overflow-y-auto">
+                <!-- SECCIÓN 1 -->
+                <div>
+                    <span
+                        class="text-[9px] uppercase tracking-widest font-black text-brand-textMuted block px-3 mb-2">Despliegue
+                        Rápido</span>
+                    <nav class="space-y-1">
+                        <button onclick="activeTab('tab-onboarding', this)"
+                            class="sidebar-tab w-full flex items-center justify-between px-3 py-2.5 rounded-sm text-xs font-bold transition bg-slate-50 border border-brand-border text-brand-dark border-l-2 border-l-brand-coral shadow-sm">
+                            <span class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-compass text-brand-coral"></i> Onboarding Inicial
+                            </span>
+                            <span
+                                class="text-[9px] bg-brand-coral/10 px-1.5 py-0.5 rounded-sm text-brand-coral font-mono font-bold">1</span>
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- SECCIÓN 2 -->
+                <div>
+                    <span
+                        class="text-[9px] uppercase tracking-widest font-black text-brand-textMuted block px-3 mb-2">Ajustes
+                        Base del Sistema</span>
+                    <nav class="space-y-1">
+                        <button onclick="activeTab('tab-empresa', this)"
+                            class="sidebar-tab w-full flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-xs font-semibold transition text-slate-500 hover:text-brand-dark hover:bg-slate-50 border border-transparent">
+                            <i class="fa-solid fa-briefcase text-sm w-4 text-center"></i> Empresa Unificada
+                        </button>
+                        <button onclick="activeTab('tab-estructura', this)"
+                            class="sidebar-tab w-full flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-xs font-semibold transition text-slate-500 hover:text-brand-dark hover:bg-slate-50 border border-transparent">
+                            <i class="fa-solid fa-sitemap text-sm w-4 text-center"></i> Estructura y Árbol Org
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- SECCIÓN 3 -->
+                <div>
+                    <span
+                        class="text-[9px] uppercase tracking-widest font-black text-brand-textMuted block px-3 mb-2">Inteligencia
+                        y Pesos</span>
+                    <nav class="space-y-1">
+                        <button onclick="activeTab('tab-pesos', this)"
+                            class="sidebar-tab w-full flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-xs font-semibold transition text-slate-500 hover:text-brand-dark hover:bg-slate-50 border border-transparent">
+                            <i class="fa-solid fa-scale-balanced text-sm w-4 text-center"></i> Motor de Prioridad
+                        </button>
+                        <button onclick="activeTab('tab-modulos', this)"
+                            class="sidebar-tab w-full flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-xs font-semibold transition text-slate-500 hover:text-brand-dark hover:bg-slate-50 border border-transparent">
+                            <i class="fa-solid fa-cubes-stacked text-sm w-4 text-center"></i> Configuración por Módulo
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- SECCIÓN 4 -->
+                <div>
+                    <span
+                        class="text-[9px] uppercase tracking-widest font-black text-brand-textMuted block px-3 mb-2">Control
+                        y Auditoría</span>
+                    <nav class="space-y-1">
+                        <button onclick="activeTab('tab-seguridad', this)"
+                            class="sidebar-tab w-full flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-xs font-semibold transition text-slate-500 hover:text-brand-dark hover:bg-slate-50 border border-transparent">
+                            <i class="fa-solid fa-shield-halved text-sm w-4 text-center"></i> Seguridad de Cambios
+                        </button>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- FOOTER SIDEBAR -->
+            <div class="p-4 border-t border-brand-border bg-brand-bg/50">
+                <div class="bg-white border border-brand-border p-3 rounded-sm flex flex-col gap-1.5 shadow-xs">
+                    <div class="flex items-center gap-1.5 text-brand-coral">
+                        <i class="fa-solid fa-shield text-xs"></i>
+                        <span class="text-[9px] font-black uppercase tracking-wider">Protocolo de Confianza</span>
+                    </div>
+                    <p class="text-[10px] text-brand-textMuted leading-relaxed">Las modificaciones en umbrales o
+                        jerarquías requieren autenticación 2FA para prevenir desajustes operativos.</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CONTENEDOR DE CONTENIDO (CON SCROLL INDEPENDIENTE) -->
+        <main class="flex-1 bg-brand-bg overflow-y-auto p-8 relative">
+            <div id="content-container" class="max-w-5xl mx-auto space-y-8">
+
+                <!-- BANNER DE ESTADO EXCLUSIVO -->
+                <div
+                    class="bg-emerald-50 border border-brand-green/30 px-4 py-3 rounded-sm flex items-center justify-between shadow-xs text-brand-dark animate-fade-in">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-regular fa-circle-check text-brand-green text-base"></i>
+                        <span class="text-xs font-bold text-slate-800">Sistema configurado correctamente</span>
+                    </div>
+                    <button class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- QUICK ACCESS LINKS -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div
+                        class="bg-white border border-brand-border rounded-sm p-4 flex items-center justify-between shadow-xs hover:border-brand-coral/30 transition-all">
+                        <div class="flex items-center space-x-3">
+                            <div
+                                class="w-10 h-10 bg-slate-50 border border-brand-border rounded-sm flex items-center justify-center text-brand-dark">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-black text-brand-dark uppercase tracking-wide">Roles y Permisos
+                                </h4>
+                                <p class="text-[10px] text-brand-textMuted">Gestionar roles globales y de módulo,
+                                    asignar permisos</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-slate-400 text-xs cursor-pointer"></i>
+                    </div>
+
+                    <div
+                        class="bg-white border border-brand-border rounded-sm p-4 flex items-center justify-between shadow-xs hover:border-brand-coral/30 transition-all">
+                        <div class="flex items-center space-x-3">
+                            <div
+                                class="w-10 h-10 bg-slate-50 border border-brand-border rounded-sm flex items-center justify-center text-brand-dark">
+                                <i class="fa-solid fa-user-group"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-black text-brand-dark uppercase tracking-wide">Importar Usuarios
+                                </h4>
+                                <p class="text-[10px] text-brand-textMuted">Importación masiva de usuarios desde CSV</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-slate-400 text-xs cursor-pointer"></i>
+                    </div>
+                </div>
+
+                <!-- ================= TAB: ONBOARDING INICIAL ================= -->
+                <section id="tab-onboarding" class="tab-pane space-y-6">
+                    <div class="border-b border-brand-border pb-4">
+                        <h2 class="text-xl font-extrabold tracking-tight text-brand-dark flex items-center gap-2">
+                            <i class="fa-solid fa-compass text-brand-coral"></i>
+                            Asistente de Onboarding Inicial (Single Tenant)
+                        </h2>
+                        <p class="text-xs text-brand-textMuted mt-1">Sigue esta guía secuencial para estructurar la base
+                            jerárquica de tu empresa antes de habilitar las automatizaciones del motor de prioridad.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Tarjeta Paso 1 -->
+                        <div
+                            class="bg-white border border-brand-border rounded-sm p-5 relative overflow-hidden flex flex-col justify-between shadow-xs">
+                            <div
+                                class="absolute -right-4 -top-4 w-16 h-16 bg-brand-coral/5 rounded-full flex items-center justify-center font-mono text-3xl font-black text-brand-coral/10">
+                                1</div>
+                            <div class="space-y-2">
+                                <span
+                                    class="text-[9px] uppercase font-mono tracking-widest text-brand-coral font-extrabold">Fase
+                                    1: Identidad</span>
+                                <h3 class="text-xs font-black text-brand-dark uppercase tracking-wide">Configuración de
+                                    Empresa</h3>
+                                <p class="text-[11px] text-brand-textMuted leading-relaxed">Configura los parámetros
+                                    globales de tu tenant único como huso horario, dominio de correo y logotipo
+                                    corporativo.</p>
+                            </div>
+                            <button onclick="document.querySelector('[onclick*=\'tab-empresa\']').click()"
+                                class="mt-4 w-full bg-brand-coral/10 hover:bg-brand-coral/20 text-brand-coral text-xs font-extrabold py-2 rounded-sm transition-colors border border-brand-coral/20 uppercase tracking-wider sharp-btn">
+                                Completar Identidad
+                            </button>
+                        </div>
+
+                        <!-- Tarjeta Paso 2 -->
+                        <div
+                            class="bg-white border border-brand-border rounded-sm p-5 relative overflow-hidden flex flex-col justify-between shadow-xs">
+                            <div
+                                class="absolute -right-4 -top-4 w-16 h-16 bg-brand-dark/5 rounded-full flex items-center justify-center font-mono text-3xl font-black text-brand-dark/10">
+                                2</div>
+                            <div class="space-y-2">
+                                <span
+                                    class="text-[9px] uppercase font-mono tracking-widest text-brand-dark font-extrabold">Fase
+                                    2: Estructura</span>
+                                <h3 class="text-xs font-black text-brand-dark uppercase tracking-wide">Árbol y Nodos Org
+                                </h3>
+                                <p class="text-[11px] text-brand-textMuted leading-relaxed">Crea libremente tus niveles
+                                    internos e inyecta nodos en el árbol de dependencias con el diseñador visual.</p>
+                            </div>
+                            <button onclick="document.querySelector('[onclick*=\'tab-estructura\']').click()"
+                                class="mt-4 w-full bg-brand-dark/10 hover:bg-brand-dark/20 text-brand-dark text-xs font-extrabold py-2 rounded-sm transition-colors border border-brand-dark/20 uppercase tracking-wider sharp-btn">
+                                Modelar Estructura
+                            </button>
+                        </div>
+
+                        <!-- Tarjeta Paso 3 -->
+                        <div
+                            class="bg-white border border-brand-border rounded-sm p-5 relative overflow-hidden flex flex-col justify-between shadow-xs">
+                            <div
+                                class="absolute -right-4 -top-4 w-16 h-16 bg-brand-coral/5 rounded-full flex items-center justify-center font-mono text-3xl font-black text-brand-coral/10">
+                                3</div>
+                            <div class="space-y-2">
+                                <span
+                                    class="text-[9px] uppercase font-mono tracking-widest text-brand-coral font-extrabold">Fase
+                                    3: Pesos</span>
+                                <h3 class="text-xs font-black text-brand-dark uppercase tracking-wide">Fórmula SLA e
+                                    Impacto</h3>
+                                <p class="text-[11px] text-brand-textMuted leading-relaxed">Establece las ponderaciones
+                                    porcentuales y simula la prioridad final de los tickets.</p>
+                            </div>
+                            <button onclick="document.querySelector('[onclick*=\'tab-pesos\']').click()"
+                                class="mt-4 w-full bg-brand-coral/10 hover:bg-brand-coral/20 text-brand-coral text-xs font-extrabold py-2 rounded-sm transition-colors border border-brand-coral/20 uppercase tracking-wider sharp-btn">
+                                Ajustar Pesos SLA
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB: EMPRESA GLOBAL ================= -->
+                <section id="tab-empresa" class="tab-pane hidden space-y-6">
+                    <div class="border-b border-brand-border pb-4 flex justify-between items-end">
+                        <div class="flex items-center space-x-3">
+                            <div
+                                class="w-12 h-12 bg-slate-100 border border-brand-border rounded-sm flex items-center justify-center text-brand-dark">
+                                <i class="fa-solid fa-building text-base"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-black uppercase text-brand-dark">SENA</h2>
+                                <p class="text-xs text-brand-textMuted">America/Bogota · es</p>
+                            </div>
+                        </div>
+                        <button
+                            onclick="gatillarGuardadoCritico('EMPRESA_GLOBAL', 'Cambio en parámetros de identidad de empresa')"
+                            class="bg-slate-50 border border-slate-200 hover:border-brand-coral hover:text-brand-coral text-brand-dark text-xs font-bold px-4 py-2 rounded-sm transition-colors uppercase tracking-wider sharp-btn flex items-center gap-1.5 shadow-xs">
+                            <i class="fa-solid fa-pen text-[10px]"></i> Editar
+                        </button>
+                    </div>
+
+                    <div class="bg-white border border-brand-border rounded-sm p-6 space-y-6 shadow-xs">
+                        <h3
+                            class="text-xs font-black uppercase tracking-wider text-brand-dark border-b border-brand-border pb-2">
+                            Datos de la Empresa</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-xs font-medium">
+                            <div class="grid grid-cols-3 border-b border-slate-50 pb-2">
+                                <span class="text-brand-textMuted font-bold">Web</span>
+                                <span
+                                    class="col-span-2 text-brand-dark font-mono break-all">http://senasofiaplus.edu.co/sofia-public/</span>
+                            </div>
+                            <div class="grid grid-cols-3 border-b border-slate-50 pb-2">
+                                <span class="text-brand-textMuted font-bold">Email contacto</span>
+                                <span class="col-span-2 text-brand-dark italic">—</span>
+                            </div>
+                            <div class="grid grid-cols-3 border-b border-slate-50 pb-2">
+                                <span class="text-brand-textMuted font-bold">Teléfono</span>
+                                <span class="col-span-2 text-brand-dark font-mono">123456789</span>
+                            </div>
+                            <div class="grid grid-cols-3 border-b border-slate-50 pb-2">
+                                <span class="text-brand-textMuted font-bold">Tenant Type</span>
+                                <span class="col-span-2 text-brand-coral font-bold uppercase">Single-Tenant</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB: NODOS ORGANIZACIONALES (CON ORGANIGRAMA INTERACTIVO ESTILO MIRO) ================= -->
+                <section id="tab-estructura" class="tab-pane hidden space-y-6">
+                    <div class="border-b border-brand-border pb-4 flex justify-between items-end">
+                        <div>
+                            <h2 class="text-xl font-extrabold tracking-tight text-brand-dark flex items-center gap-2">
+                                <i class="fa-solid fa-sitemap text-brand-coral"></i>
+                                Estructura de la Organización
+                            </h2>
+                            <p class="text-xs text-brand-textMuted mt-1">Diseña la arquitectura viva de la empresa.
+                                Crea, edita y conecta nodos directamente en el canvas jerárquico.</p>
+                        </div>
+                        <button
+                            onclick="gatillarGuardadoCritico('ORGANIZATIONAL_STRUCTURE', 'Modificación de niveles y estructura de nodos organizativos')"
+                            class="bg-brand-coral hover:bg-brand-coral/95 text-white text-xs font-black px-4 py-2 rounded-sm transition-colors uppercase tracking-wider sharp-btn shadow-sm">
+                            Guardar Cambios Estructurales
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                        <!-- VISOR DE DIAGRAMA INTERACTIVO (Miro / Whimsical Style con Panning) -->
+                        <div
+                            class="lg:col-span-8 bg-white border border-brand-border rounded-sm p-4 shadow-xs space-y-4">
+                            <div class="flex items-center justify-between border-b border-brand-border pb-2.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-brand-coral"></span>
+                                    <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Lienzo
+                                        Jerárquico Vivo</h3>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <!-- Controles de Navegación del Canvas (Zoom) -->
+                                    <button onclick="zoomCanvas(0.1)"
+                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark font-bold"
+                                        title="Acercar">
+                                        <i class="fa-solid fa-magnifying-glass-plus"></i>
+                                    </button>
+                                    <button onclick="zoomCanvas(-0.1)"
+                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark font-bold"
+                                        title="Alejar">
+                                        <i class="fa-solid fa-magnifying-glass-minus"></i>
+                                    </button>
+                                    <button onclick="resetZoom()"
+                                        class="w-7 h-7 border border-brand-border hover:bg-slate-50 rounded-sm flex items-center justify-center text-xs text-brand-dark font-bold"
+                                        title="Restablecer Zoom">
+                                        <i class="fa-solid fa-expand"></i>
+                                    </button>
+                                    <span
+                                        class="text-[10px] text-brand-textMuted font-mono font-bold bg-slate-50 border px-2 py-1 rounded-sm">Arrastra
+                                        para mover</span>
+                                </div>
+                            </div>
+
+                            <!-- CONTENEDOR DEL CANVAS DE DIAGRAMACIÓN -->
+                            <div class="relative bg-slate-50 border border-brand-border rounded-sm h-[480px] overflow-hidden grid-canvas"
+                                id="canvas-workspace">
+
+                                <!-- Capa de transformación que sufre zoom y panning -->
+                                <div id="canvas-transform-wrapper"
+                                    class="absolute top-0 left-0 w-[1500px] h-[1000px] origin-top-left transition-transform duration-100 ease-out"
+                                    style="transform: translate(0px, 0px) scale(1);">
+                                    <!-- Canvas de Líneas Conectoras Dinámicas SVG -->
+                                    <svg id="svg-connections"
+                                        class="absolute top-0 left-0 w-full h-full pointer-events-none z-0"></svg>
+
+                                    <!-- Espacio de renderizado de nodos organizacionales en árbol -->
+                                    <div id="canvas-nodes-container" class="absolute top-0 left-0 w-full h-full z-10">
+                                        <!-- Los nodos se inyectan y calculan dinámicamente con JS de acuerdo a la relación Padre-Hijo -->
+                                    </div>
+                                </div>
+
+                                <!-- MINIMAP EN ESQUINA INFERIOR DERECHA (Miro Style) -->
+                                <div
+                                    class="absolute bottom-4 right-4 w-28 h-20 bg-white border border-brand-border rounded-sm shadow-md p-1 pointer-events-none z-20 flex flex-col justify-between">
+                                    <span
+                                        class="text-[8px] font-black uppercase text-brand-textMuted tracking-wider">Minimap</span>
+                                    <div class="flex-1 bg-slate-50 border border-slate-200 relative overflow-hidden"
+                                        id="minimap-preview-container">
+                                        <!-- Miniaturas de nodos simuladas -->
+                                        <div
+                                            class="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-2 bg-brand-coral opacity-50">
+                                        </div>
+                                        <div class="absolute top-5 left-1/3 w-6 h-2 bg-brand-dark opacity-50"></div>
+                                        <div class="absolute top-5 right-1/4 w-6 h-2 bg-brand-dark opacity-50"></div>
+                                        <div class="absolute top-9 left-2 w-5 h-2 bg-slate-400 opacity-50"></div>
+                                        <div class="absolute top-9 right-2 w-5 h-2 bg-slate-400 opacity-50"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANEL DERECHO: CONTEXTUAL DE CREACIÓN Y EDICIÓN DE NODOS -->
+                        <div
+                            class="lg:col-span-4 bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-5">
+                            <div>
+                                <h3
+                                    class="text-xs font-black uppercase tracking-wider text-brand-dark border-b border-brand-border pb-2">
+                                    Creación y Edición de Nodos</h3>
+                                <p class="text-[10px] text-brand-textMuted mt-1 leading-normal">Agrega nodos de forma
+                                    interactiva en la estructura de tu organización asignando pesos y relaciones
+                                    directas.</p>
+                            </div>
+
+                            <div class="space-y-3 text-xs font-medium">
+                                <div>
+                                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Nombre del Nodo
+                                        *</label>
+                                    <input type="text" id="input-node-name"
+                                        placeholder="E.g., Dirección Operativa, Mesa de Ayuda"
+                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark font-sans focus:outline-none focus:border-brand-coral sharp-input font-semibold">
+                                </div>
+                                <div>
+                                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Tipo de
+                                        Estructura *</label>
+                                    <select id="select-node-type"
+                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark focus:outline-none focus:border-brand-coral sharp-input cursor-pointer font-bold">
+                                        <option value="departamento">Departamento / Área</option>
+                                        <option value="area">Área / Sección</option>
+                                        <option value="cargo">Cargo Específico</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Asociar Nodo
+                                        Padre *</label>
+                                    <select id="select-node-parent"
+                                        class="w-full bg-slate-50 border border-brand-border p-2.5 text-xs text-brand-dark focus:outline-none focus:border-brand-coral sharp-input cursor-pointer font-bold">
+                                        <!-- Se llena dinámicamente con los nodos creados -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-brand-textMuted uppercase mb-1 font-bold">Peso Operativo (1
+                                        - 10)</label>
+                                    <input type="number" id="input-node-weight" min="1" max="10" value="5"
+                                        class="w-full bg-slate-50 border border-brand-border p-2 text-xs text-brand-dark font-bold font-mono focus:outline-none focus:border-brand-coral sharp-input">
+                                </div>
+
+                                <div class="pt-2">
+                                    <button onclick="crearNuevoNodoDesdePanel()"
+                                        class="w-full bg-brand-coral hover:bg-brand-coral/95 text-white text-xs font-black py-2.5 rounded-sm transition-colors uppercase tracking-wider sharp-btn flex items-center justify-center gap-1.5 shadow-sm">
+                                        <i class="fa-solid fa-plus"></i> Añadir Nodo al Organigrama
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB: PESOS E IA SLA (MOTOR DE PRIORIDAD) ================= -->
+                <section id="tab-pesos" class="tab-pane hidden space-y-6">
+                    <div class="border-b border-brand-border pb-4 flex justify-between items-end">
+                        <div>
+                            <h2 class="text-xl font-extrabold tracking-tight text-brand-dark flex items-center gap-2">
+                                <i class="fa-solid fa-scale-balanced text-brand-coral"></i>
+                                Motor de Prioridad
+                            </h2>
+                            <p class="text-xs text-brand-textMuted mt-1">Configure los coeficientes porcentuales de la
+                                fórmula matemática para calcular el nivel de prioridad de cada ticket.</p>
+                        </div>
+                    </div>
+
+                    <!-- FÓRMULA DE PESOS -->
+                    <div class="bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-6">
+                        <div>
+                            <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Pesos de la Fórmula
+                            </h3>
+                            <p class="text-[10px] text-brand-textMuted font-mono mt-1">score = peso_cargo &times;
+                                w_cargo + peso_nodo &times; w_nodo + peso_daño &times; w_daño + urgency_bonus +
+                                impact_bonus</p>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Cargo (w_cargo) -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-xs font-bold text-brand-dark">
+                                    <span>w_cargo</span>
+                                    <span id="pct-lbl-cargo" class="text-brand-coral font-mono font-bold">25%</span>
+                                </div>
+                                <input type="range" id="pct-slider-cargo" min="0" max="100" value="25"
+                                    oninput="ajustarPorcentajeFórmula('cargo')"
+                                    class="w-full accent-brand-coral cursor-pointer h-1.5 bg-slate-200 rounded-sm">
+                            </div>
+
+                            <!-- Nodo (w_nodo) -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-xs font-bold text-brand-dark">
+                                    <span>w_nodo</span>
+                                    <span id="pct-lbl-nodo" class="text-brand-coral font-mono font-bold">35%</span>
+                                </div>
+                                <input type="range" id="pct-slider-nodo" min="0" max="100" value="35"
+                                    oninput="ajustarPorcentajeFórmula('nodo')"
+                                    class="w-full accent-brand-coral cursor-pointer h-1.5 bg-slate-200 rounded-sm">
+                            </div>
+
+                            <!-- Daño (w_daño) -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-xs font-bold text-brand-dark">
+                                    <span>w_daño</span>
+                                    <span id="pct-lbl-dano" class="text-brand-coral font-mono font-bold">40%</span>
+                                </div>
+                                <input type="range" id="pct-slider-dano" min="0" max="100" value="40"
+                                    oninput="ajustarPorcentajeFórmula('dano')"
+                                    class="w-full accent-brand-coral cursor-pointer h-1.5 bg-slate-200 rounded-sm">
+                            </div>
+
+                            <!-- Suma de Verificación -->
+                            <div class="flex justify-between items-center border-t border-brand-border pt-4">
+                                <span class="text-xs font-bold text-slate-700">Suma total de coeficientes:</span>
+                                <span id="suma-porcentaje-badge"
+                                    class="text-xs font-black font-mono bg-brand-green/10 text-brand-green px-2.5 py-1 rounded-sm border border-brand-green/20">
+                                    Suma: 100%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- UMBRALES DE PRIORIDAD -->
+                    <div class="bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-4">
+                        <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Umbrales de Prioridad
+                        </h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label
+                                    class="block text-[9px] font-black text-brand-coral uppercase tracking-wider mb-1.5 font-bold">Crítica
+                                    &ge;</label>
+                                <input type="number" id="umb-critica" value="9" min="1" max="20" step="0.5"
+                                    oninput="calcularSimulacionPrioridad()"
+                                    class="w-full bg-brand-bg border border-brand-border p-2.5 text-xs text-brand-dark font-mono font-bold focus:outline-none focus:border-brand-coral sharp-input">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-[9px] font-black text-amber-500 uppercase tracking-wider mb-1.5 font-bold">Alta
+                                    &ge;</label>
+                                <input type="number" id="umb-alta" value="7" min="1" max="20" step="0.5"
+                                    oninput="calcularSimulacionPrioridad()"
+                                    class="w-full bg-brand-bg border border-brand-border p-2.5 text-xs text-brand-dark font-mono font-bold focus:outline-none focus:border-brand-coral sharp-input">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-[9px] font-black text-brand-dark uppercase tracking-wider mb-1.5 font-bold">Media
+                                    &ge;</label>
+                                <input type="number" id="umb-media" value="5" min="1" max="20" step="0.5"
+                                    oninput="calcularSimulacionPrioridad()"
+                                    class="w-full bg-brand-bg border border-brand-border p-2.5 text-xs text-brand-dark font-mono font-bold focus:outline-none focus:border-brand-coral sharp-input">
+                            </div>
+                        </div>
+
+                        <div class="pt-2">
+                            <label
+                                class="block text-[9px] font-black text-brand-textMuted uppercase tracking-wider mb-1.5 font-bold">Descripción
+                                de la Fórmula</label>
+                            <input type="text" id="desc-formula"
+                                value="Fórmula por defecto: cargo 25% · nodo org 35% · daño 40%"
+                                class="w-full bg-brand-bg border border-brand-border p-2.5 text-xs text-slate-700 font-sans focus:outline-none focus:border-brand-coral sharp-input font-semibold">
+                        </div>
+
+                        <div class="pt-2">
+                            <button onclick="guardarFormulaSLA()"
+                                class="bg-[#1e293b] hover:bg-slate-800 text-white text-xs font-black py-2.5 px-6 rounded-sm transition-colors uppercase tracking-wider sharp-btn shadow-xs">
+                                <i class="fa-solid fa-floppy-disk mr-1.5"></i> Guardar Fórmula
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SIMULADOR DE PRIORIDAD EN TIEMPO REAL -->
+                    <div class="bg-white border border-brand-border rounded-sm p-6 shadow-xs space-y-6">
+                        <div>
+                            <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Simulador de
+                                Prioridad</h3>
+                            <p class="text-[10px] text-brand-textMuted mt-1">Ingresa pesos de cargo, nodo y daño (1–10)
+                                para ver el score resultante con la fórmula actual.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Peso Cargo -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-xs font-bold text-slate-700">
+                                    <span>Peso Cargo</span>
+                                    <span id="val-lbl-cargo" class="text-brand-coral font-mono font-bold">5</span>
+                                </div>
+                                <input type="range" id="val-slider-cargo" min="1" max="10" value="5"
+                                    oninput="document.getElementById('val-lbl-cargo').innerText = this.value; calcularSimulacionPrioridad()"
+                                    class="w-full accent-brand-coral cursor-pointer h-1.5 bg-slate-200 rounded-sm">
+                            </div>
+
+                            <!-- Peso Nodo -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-xs font-bold text-slate-700">
+                                    <span>Peso Nodo</span>
+                                    <span id="val-lbl-nodo" class="text-brand-coral font-mono font-bold">5</span>
+                                </div>
+                                <input type="range" id="val-slider-nodo" min="1" max="10" value="5"
+                                    oninput="document.getElementById('val-lbl-nodo').innerText = this.value; calcularSimulacionPrioridad()"
+                                    class="w-full accent-brand-coral cursor-pointer h-1.5 bg-slate-200 rounded-sm">
+                            </div>
+
+                            <!-- Peso Daño -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-xs font-bold text-slate-700">
+                                    <span>Peso Daño</span>
+                                    <span id="val-lbl-dano" class="text-brand-coral font-mono font-bold">5</span>
+                                </div>
+                                <input type="range" id="val-slider-dano" min="1" max="10" value="5"
+                                    oninput="document.getElementById('val-lbl-dano').innerText = this.value; calcularSimulacionPrioridad()"
+                                    class="w-full accent-brand-coral cursor-pointer h-1.5 bg-slate-200 rounded-sm">
+                            </div>
+                        </div>
+
+                        <!-- Urgencia, Impacto y Botón de Acción -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label
+                                    class="block text-[9px] font-black text-brand-textMuted uppercase tracking-wider mb-1.5 font-bold">Urgencia
+                                    (urgency_bonus)</label>
+                                <select id="sel-urgencia" onchange="calcularSimulacionPrioridad()"
+                                    class="w-full bg-brand-bg border border-brand-border p-2 text-xs text-brand-dark focus:outline-none focus:border-brand-coral font-bold sharp-input cursor-pointer">
+                                    <option value="0">baja (+0)</option>
+                                    <option value="0.5" selected>media (+0.5)</option>
+                                    <option value="1">alta (+1.0)</option>
+                                    <option value="2">crítica (+2.0)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="block text-[9px] font-black text-brand-textMuted uppercase tracking-wider mb-1.5 font-bold">Impacto
+                                    (impact_bonus)</label>
+                                <select id="sel-impacto" onchange="calcularSimulacionPrioridad()"
+                                    class="w-full bg-brand-bg border border-brand-border p-2 text-xs text-brand-dark focus:outline-none focus:border-brand-coral font-bold sharp-input cursor-pointer">
+                                    <option value="0">bajo (+0)</option>
+                                    <option value="0.5" selected>medio (+0.5)</option>
+                                    <option value="1">alto (+1.0)</option>
+                                    <option value="2">crítico (+2.0)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <button onclick="ejecutarSimulacionAnimada()"
+                                    class="w-full bg-brand-coral hover:bg-brand-coral/90 text-white text-xs font-black py-2.5 rounded-sm transition-colors uppercase tracking-wider sharp-btn flex items-center justify-center gap-1.5 shadow-sm">
+                                    <i class="fa-solid fa-bolt"></i> Simular Prioridad
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Caja de Salida del Score Calculado -->
+                        <div
+                            class="bg-brand-bg border border-brand-border p-4 rounded-sm text-center shadow-xs flex flex-col justify-center items-center">
+                            <span class="text-[9px] font-black uppercase tracking-wider text-brand-textMuted">Score de
+                                Prioridad Calculado</span>
+                            <div id="prioridad-sim-score" class="text-3xl font-black text-brand-coral mt-1">6.0</div>
+                            <div class="mt-2">
+                                <span id="prioridad-sim-badge"
+                                    class="text-[10px] font-mono font-bold bg-slate-100 text-brand-dark border px-2 py-0.5 rounded-sm uppercase tracking-wider">MEDIA</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB: CONFIGURACIÓN POR MÓDULOS ================= -->
+                <section id="tab-modulos" class="tab-pane hidden space-y-6">
+                    <div class="border-b border-brand-border pb-4">
+                        <h2 class="text-xl font-extrabold tracking-tight text-brand-dark flex items-center gap-2">
+                            <i class="fa-solid fa-cubes-stacked text-brand-coral"></i>
+                            Configuraciones Específicas por Módulo
+                        </h2>
+                        <p class="text-xs text-brand-textMuted mt-1">Cada módulo operativo cuenta con sus propios
+                            parámetros de negocio y catálogos, sin contaminar la configuración global.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Módulo Helpdesk -->
+                        <div class="bg-white border border-brand-border rounded-sm p-5 space-y-4 shadow-xs">
+                            <div class="flex justify-between items-center border-b border-brand-border pb-2">
+                                <h3
+                                    class="text-xs font-black uppercase tracking-wider text-brand-dark flex items-center gap-2">
+                                    <i class="fa-solid fa-headset text-brand-coral"></i> Mesa de Ayuda (Helpdesk)
+                                </h3>
+                                <span
+                                    class="text-[9px] bg-brand-coral/15 text-brand-coral px-2 py-0.5 rounded-sm font-mono font-bold uppercase border border-brand-coral/20">Activo</span>
+                            </div>
+
+                            <div class="space-y-3 text-xs">
+                                <div>
+                                    <label
+                                        class="block text-[10px] text-brand-textMuted font-bold uppercase mb-1 font-sans">Catálogo
+                                        de Daño Híbrido</label>
+                                    <textarea
+                                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-[11px] font-mono text-slate-700 h-16 resize-none focus:outline-none focus:border-brand-coral sharp-input font-semibold">Hardware: No enciende&#10;Software: Falta Licencia&#10;Red: Sin conexión</textarea>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-brand-textMuted font-semibold font-sans">Campo libre adicional en
+                                        tickets</span>
+                                    <input type="checkbox" checked class="w-4 h-4 accent-brand-coral cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Módulo Inventario -->
+                        <div class="bg-white border border-brand-border rounded-sm p-5 space-y-4 shadow-xs">
+                            <div class="flex justify-between items-center border-b border-brand-border pb-2">
+                                <h3
+                                    class="text-xs font-black uppercase tracking-wider text-brand-dark flex items-center gap-2">
+                                    <i class="fa-solid fa-boxes-stacked text-brand-coral"></i> Control de Activos
+                                </h3>
+                                <span
+                                    class="text-[9px] bg-brand-coral/15 text-brand-coral px-2 py-0.5 rounded-sm font-mono font-bold uppercase border border-brand-coral/20">Activo</span>
+                            </div>
+
+                            <div class="space-y-3 text-xs">
+                                <div>
+                                    <label
+                                        class="block text-[10px] text-brand-textMuted font-bold uppercase mb-1 font-sans">Estructura
+                                        Base del Código QR</label>
+                                    <input type="text" value="https://techglobal.com/inv/asset-{ID}"
+                                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-brand-coral sharp-input font-semibold">
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-brand-textMuted font-semibold font-sans">Préstamos entre
+                                        diferentes sedes</span>
+                                    <input type="checkbox" checked class="w-4 h-4 accent-brand-coral cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Módulo Gestión Administrativa -->
+                        <div class="bg-white border border-brand-border rounded-sm p-5 space-y-4 shadow-xs">
+                            <div class="flex justify-between items-center border-b border-brand-border pb-2">
+                                <h3
+                                    class="text-xs font-black uppercase tracking-wider text-brand-dark flex items-center gap-2">
+                                    <i class="fa-solid fa-file-signature text-brand-coral"></i> Gestión Administrativa
+                                </h3>
+                                <span
+                                    class="text-[9px] bg-brand-coral/15 text-brand-coral px-2 py-0.5 rounded-sm font-mono font-bold uppercase border border-brand-coral/20">Activo</span>
+                            </div>
+
+                            <div class="space-y-3 text-xs">
+                                <div>
+                                    <label
+                                        class="block text-[10px] text-brand-textMuted font-bold uppercase mb-1 font-sans">Tipos
+                                        de Solicitud Permitidas</label>
+                                    <textarea
+                                        class="w-full bg-white border border-brand-border rounded-sm p-2 text-[11px] font-mono text-slate-700 h-16 resize-none focus:outline-none focus:border-brand-coral sharp-input font-semibold">Cambio de Rol&#10;Acceso Temporal a Red&#10;Traslado de Dispositivos</textarea>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-brand-textMuted font-semibold font-sans">Aprobación obligatoria
+                                        C-Level</span>
+                                    <input type="checkbox" class="w-4 h-4 accent-brand-coral cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB: SEGURIDAD Y AUDITORÍA ================= -->
+                <section id="tab-seguridad" class="tab-pane hidden space-y-6">
+                    <div class="border-b border-brand-border pb-4 flex justify-between items-end">
+                        <div>
+                            <h2 class="text-xl font-extrabold tracking-tight text-brand-dark flex items-center gap-2">
+                                <i class="fa-solid fa-shield-halved text-brand-coral"></i>
+                                Control de Cambios Críticos y Auditorías
+                            </h2>
+                            <p class="text-xs text-brand-textMuted mt-1">Bitácora técnica de seguridad e historial
+                                inmutable de cambios críticos para prevenir fallos de gobernanza en la organización.</p>
+                        </div>
+                        <span
+                            class="text-[10px] font-mono font-bold text-brand-coral bg-brand-coral/10 px-2.5 py-1 rounded-sm border border-brand-coral/25 uppercase tracking-wider">MFA
+                            OBLIGATORIO ACTIVADO</span>
+                    </div>
+
+                    <!-- Panel de Configuración de Gobernancia -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white border border-brand-border rounded-sm p-5 space-y-4 shadow-xs">
+                            <h3
+                                class="text-xs font-black uppercase tracking-wider text-brand-dark border-b border-brand-border pb-2">
+                                Protección de Datos</h3>
+                            <div class="space-y-3 text-xs">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-bold text-brand-dark">Reautenticación o Contraseña</h4>
+                                        <p class="text-[10px] text-brand-textMuted">Solicitar confirmación antes de
+                                            cualquier acción crítica.</p>
+                                    </div>
+                                    <input type="checkbox" checked disabled class="w-4 h-4 accent-brand-coral">
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-bold text-brand-dark">Motivo Obligatorio para Guardar</h4>
+                                        <p class="text-[10px] text-brand-textMuted">Exigir una justificación registrada
+                                            en la bitácora.</p>
+                                    </div>
+                                    <input type="checkbox" checked disabled class="w-4 h-4 accent-brand-coral">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="bg-white border border-brand-border rounded-sm p-5 flex flex-col justify-between shadow-xs">
+                            <div class="space-y-1">
+                                <h3 class="text-xs font-black uppercase tracking-wider text-brand-dark">Autenticación de
+                                    Dos Factores (2FA)</h3>
+                                <p class="text-[11px] text-brand-textMuted leading-relaxed">Los SuperAdministradores
+                                    validan de forma obligatoria las actualizaciones mediante claves temporales TOTP
+                                    generadas por un autenticador móvil.</p>
+                            </div>
+                            <div
+                                class="flex items-center gap-3 bg-brand-bg border border-brand-border p-3 rounded-sm mt-3 shadow-xs">
+                                <i class="fa-solid fa-key text-brand-coral text-base"></i>
+                                <span class="text-xs font-bold text-slate-700">Clave Token vinculada con Google
+                                    Authenticator</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bitácora de Auditoría Técnica -->
+                    <div class="bg-white border border-brand-border rounded-sm overflow-hidden shadow-xs">
+                        <div class="p-4 border-b border-brand-border flex justify-between items-center bg-slate-50/50">
+                            <span class="text-xs font-black text-brand-dark uppercase tracking-wide">Bitácora de
+                                Auditoría en Tiempo Real (<code
+                                    class="font-mono text-brand-coral">system_configuration_audit_logs</code>)</span>
+                            <span
+                                class="text-[9px] bg-slate-200 text-slate-700 font-extrabold px-2.5 py-0.5 rounded-sm">AUDIT
+                                REALTIME</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse font-sans text-xs">
+                                <thead>
+                                    <tr
+                                        class="bg-slate-50 text-slate-500 font-bold border-b border-brand-border tracking-wider">
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px]">Acción</th>
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px]">Entidad</th>
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px]">Justificación
+                                            (Motivo)</th>
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px]">Valor Anterior</th>
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px]">Nuevo Valor</th>
+                                        <th class="py-2.5 px-4 uppercase font-extrabold text-[9px] text-right pr-6">
+                                            Firma Digital / IP</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="contenedor-logs-auditoria"
+                                    class="divide-y divide-brand-border/60 text-slate-700 font-medium font-mono text-[11px]">
+                                    <tr class="hover:bg-slate-50/50 transition-colors">
+                                        <td class="py-3 px-4 text-brand-coral font-bold font-sans">INIT_DB</td>
+                                        <td class="py-3 px-4 font-sans">SYSTEM_CORE</td>
+                                        <td class="py-3 px-4 italic font-sans text-brand-textMuted">Puesta en marcha e
+                                            inicialización del núcleo base</td>
+                                        <td class="py-3 px-4 text-brand-textMuted">N/A</td>
+                                        <td class="py-3 px-4 text-brand-green">ACTIVE</td>
+                                        <td class="py-3 px-4 text-right pr-6 text-brand-textMuted font-sans">192.168.1.1
+                                            &middot; Diego Herrera</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= MODAL CRÍTICO DE DOBLE FACTOR (2FA) Y CONFIRMACIÓN ================= -->
+    <div id="modal-confirmacion-critica"
+        class="fixed inset-0 bg-brand-darker/60 backdrop-blur-xs flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 z-50 px-4">
+        <div id="panel-modal-critico"
+            class="bg-white border border-brand-coral/30 p-6 rounded-sm w-full max-w-lg space-y-6 transform scale-95 transition-transform relative overflow-hidden shadow-2xl sharp-card">
+            <!-- Línea coral superior distintiva de tu tema -->
+            <div class="absolute top-0 left-0 right-0 h-1 bg-brand-coral"></div>
+
+            <div class="flex gap-4 items-start">
+                <div class="p-3 bg-brand-coral/10 text-brand-coral rounded-sm border border-brand-coral/20 shrink-0">
+                    <i class="fa-solid fa-shield text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black uppercase tracking-wider text-brand-dark">Firma Digital y Confirmación
+                        de Cambio</h3>
+                    <p class="text-xs text-brand-textMuted mt-1 leading-relaxed">Estás realizando modificaciones en los
+                        coeficientes del motor de prioridad o estructura. Esta acción modificará en tiempo real la cola
+                        de SLAs.</p>
+                </div>
+            </div>
+
+            <div class="bg-brand-bg border border-brand-border p-4 rounded-sm space-y-1.5 shadow-xs">
+                <div class="text-[9px] font-black text-brand-textMuted uppercase tracking-wider">Acción Solicitada</div>
+                <div id="critico-accion-tag" class="text-xs font-bold text-brand-dark uppercase font-mono">
+                    CAMBIO_REGLAS_SLA</div>
+                <div id="critico-descripcion-tag" class="text-xs text-slate-600">Modificación de la fórmula matemática
+                    para calcular prioridades de incidentes.</div>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <!-- Contraseña -->
+                <div>
+                    <label
+                        class="block text-[10px] font-bold text-brand-textMuted uppercase mb-1.5 tracking-wide">Contraseña
+                        de Administrador *</label>
+                    <input type="password" id="mfa-password" placeholder="••••••••••••"
+                        class="w-full bg-white border border-brand-border rounded-sm px-3 py-2 text-xs text-brand-dark focus:outline-none focus:border-brand-coral transition-colors sharp-input">
+                </div>
+
+                <!-- Token 2FA -->
+                <div>
+                    <label
+                        class="block text-[10px] font-bold text-brand-textMuted uppercase mb-1.5 tracking-wide">Código
+                        de Doble Factor (TOTP 2FA) *</label>
+                    <div class="flex gap-2">
+                        <input type="text" maxlength="6" id="mfa-token" placeholder="000000"
+                            class="w-full bg-white border border-brand-border rounded-sm px-3 py-2 text-xs text-center font-mono text-brand-coral tracking-widest focus:outline-none focus:border-brand-coral transition-colors sharp-input">
+                        <div
+                            class="bg-brand-bg border border-brand-border px-3 py-2 rounded-sm flex items-center gap-1.5 text-brand-textMuted shrink-0">
+                            <i class="fa-regular fa-clock text-xs animate-spin text-brand-coral"></i>
+                            <span class="text-[10px] font-mono font-bold">30s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Justificación -->
+                <div>
+                    <label
+                        class="block text-[10px] font-bold text-brand-textMuted uppercase mb-1.5 tracking-wide">Justificación
+                        de Auditoría / Motivo *</label>
+                    <textarea id="mfa-motivo"
+                        placeholder="Ej. Reajuste de pesos por actualización de prioridades según criticidad de cargos."
+                        class="w-full bg-white border border-brand-border rounded-sm p-2.5 text-xs text-brand-dark h-20 resize-none focus:outline-none focus:border-brand-coral transition-colors leading-relaxed sharp-input"></textarea>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex gap-2 justify-end pt-3 border-t border-brand-border">
+                <button onclick="cerrarModalCritico()"
+                    class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-sm transition-colors border border-brand-border sharp-btn">
+                    Cancelar Acción
+                </button>
+                <button onclick="validarYGuardarCritico()"
+                    class="bg-[#1e293b] hover:bg-slate-800 text-white font-black text-xs px-5 py-2.5 rounded-sm transition-colors sharp-btn shadow-sm uppercase tracking-wider">
+                    Firmar y Confirmar Cambio
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= NOTIFICACIÓN TOAST FLOTANTE ================= -->
+    <div id="toast"
+        class="fixed bottom-6 right-6 bg-white border border-brand-border border-l-4 border-l-brand-green text-brand-dark p-4 rounded-sm shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50 sharp-card">
+        <i class="fa-regular fa-circle-check text-brand-green text-xl"></i>
+        <div>
+            <div class="text-xs font-black uppercase tracking-wide text-brand-dark" id="toast-titulo">Transacción
+                Completada</div>
+            <div class="text-[10px] text-brand-textMuted" id="toast-mensaje">El cambio ha sido encriptado y guardado con
+                éxito.</div>
+        </div>
+    </div>
+
+    <!-- LÓGICA DE PROGRAMACIÓN E INTERACTIVIDAD EN EL FRONTEND -->
+    <script>
+        let entidadCriticaActual = '';
+        let descripcionCriticaActual = '';
+        let sidebarExpanded = true;
+        let scaleFactor = 1.0;
+
+        // Variables de Panning (Miro Style)
+        let isPanning = false;
+        let startX, startY;
+        let panX = 0;
+        let panY = 0;
+
+        // Estructura de Datos Base en Memoria para Nodos Organizacionales
+        let nodesDatabase = [
+            { id: "root-1", name: "SENA Bogotá Central", type: "root", weight: 10, parentId: null, x: 500, y: 40 },
+            { id: "node-2", name: "Área de Tecnología (TI)", type: "departamento", weight: 8, parentId: "root-1", x: 500, y: 140 },
+            { id: "node-3", name: "Soporte Técnico L1", type: "area", weight: 6, parentId: "node-2", x: 280, y: 240 },
+            { id: "node-4", name: "Infraestructura Core", type: "area", weight: 7, parentId: "node-2", x: 720, y: 240 },
+            { id: "node-5", name: "Ingeniero de Sistemas", type: "cargo", weight: 5, parentId: "node-4", x: 720, y: 340 }
+        ];
+
+        // Función para cambiar de Tabs
+        function activeTab(tabId, el) {
+            document.querySelectorAll('.tab-pane').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            document.querySelectorAll('.sidebar-tab').forEach(btn => {
+                btn.className = "sidebar-tab w-full flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-xs font-semibold transition text-slate-500 hover:text-brand-dark hover:bg-slate-50 border border-transparent";
+            });
+
+            document.getElementById(tabId).classList.remove('hidden');
+            el.className = "sidebar-tab w-full flex items-center justify-between px-3 py-2.5 rounded-sm text-xs font-bold transition bg-slate-50 border border-brand-border text-brand-dark border-l-2 border-l-brand-coral shadow-sm";
+
+            // Si se activa la pestaña de estructura, forzar el renderizado del organigrama
+            if (tabId === 'tab-estructura') {
+                setTimeout(() => {
+                    renderOrganigrama();
+                    inicializarSoporteMiroPanning();
+                }, 50);
+            }
+        }
+
+        // ================= SOPORTE MIRO PANNING & DRAG =================
+        function inicializarSoporteMiroPanning() {
+            const workspace = document.getElementById('canvas-workspace');
+            const wrapper = document.getElementById('canvas-transform-wrapper');
+            if (!workspace || !wrapper) return;
+
+            workspace.addEventListener('mousedown', (e) => {
+                // Prevenir drag sobre botones de nodos o sliders
+                if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+                isPanning = true;
+                startX = e.clientX - panX;
+                startY = e.clientY - panY;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isPanning) return;
+                panX = e.clientX - startX;
+                panY = e.clientY - startY;
+                actualizarTransformacionCanvas();
+            });
+
+            window.addEventListener('mouseup', () => {
+                isPanning = false;
+            });
+        }
+
+        function actualizarTransformacionCanvas() {
+            const wrapper = document.getElementById('canvas-transform-wrapper');
+            if (wrapper) {
+                wrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${scaleFactor})`;
+            }
+        }
+
+        function zoomCanvas(amount) {
+            scaleFactor = Math.max(0.4, Math.min(1.6, scaleFactor + amount));
+            actualizarTransformacionCanvas();
+            lanzarToast('Zoom Ajustado', `Nivel de zoom actual: ${(scaleFactor * 100).toFixed(0)}%`);
+        }
+
+        function resetZoom() {
+            scaleFactor = 1.0;
+            panX = 0;
+            panY = 0;
+            actualizarTransformacionCanvas();
+            lanzarToast('Zoom Restablecido', 'Zoom del canvas ajustado al 100%');
+        }
+
+        // ================= SISTEMA DEL ORGANIGRAMA INTERACTIVO =================
+
+        // Renderizado del árbol de dependencias y conexiones vectoriales SVG
+        function renderOrganigrama() {
+            const container = document.getElementById('canvas-nodes-container');
+            const svg = document.getElementById('svg-connections');
+            if (!container || !svg) return;
+
+            // Limpiar canvas
+            container.innerHTML = '';
+            svg.innerHTML = '';
+
+            // 1. Recalcular las posiciones de los nodos en base a su jerarquía
+            recalcularCoordenadasJerarquia();
+
+            // 2. Renderizar las líneas conectoras SVG en background
+            nodesDatabase.forEach(node => {
+                if (node.parentId) {
+                    const parent = nodesDatabase.find(n => n.id === node.parentId);
+                    if (parent) {
+                        renderLineSVG(parent.x + 100, parent.y + 50, node.x + 100, node.y);
+                    }
+                }
+            });
+
+            // 3. Renderizar los nodos HTML interactivos
+            nodesDatabase.forEach(node => {
+                const card = document.createElement('div');
+                card.className = `absolute bg-white border-2 p-3 rounded-sm shadow-sm w-[200px] z-10 hover:shadow-md transition-all font-mono text-[10px] select-none`;
+                card.style.left = `${node.x}px`;
+                card.style.top = `${node.y}px`;
+
+                // Aplicar estilo de borde según el tipo de nodo
+                if (node.type === 'root') {
+                    card.classList.add('border-brand-coral');
+                } else if (node.type === 'departamento') {
+                    card.classList.add('border-brand-dark');
+                } else {
+                    card.classList.add('border-brand-border');
+                }
+
+                // Generar contenido interno del Nodo con menú contextual
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1.5">
+                        <span class="text-[8px] font-black uppercase tracking-wider text-brand-coral">${node.type}</span>
+                        <button onclick="eliminarNodoJerarquico('${node.id}')" class="text-brand-textMuted hover:text-brand-coral transition-colors" title="Eliminar nodo">
+                            <i class="fa-regular fa-trash-can text-[11px]"></i>
+                        </button>
+                    </div>
+                    <span class="font-extrabold text-brand-dark text-xs block truncate" title="${node.name}">${node.name}</span>
+                    <div class="mt-2 flex items-center justify-between border-t border-brand-border/40 pt-1.5">
+                        <span class="text-[8px] text-brand-textMuted uppercase font-bold">Peso Operativo</span>
+                        <span class="text-[9px] bg-brand-coral/10 text-brand-coral px-1.5 py-0.2 rounded-sm font-bold">${node.weight}</span>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            // 4. Actualizar el selector de nodos padres para que la base de datos se mantenga coherente
+            refrescarSelectorPadres();
+            actualizarMinimapPreview();
+        }
+
+        // Calcula automáticamente la disposición limpia de los nodos para que no se superpongan
+        function recalcularCoordenadasJerarquia() {
+            const root = nodesDatabase.find(n => n.parentId === null);
+            if (!root) return;
+
+            // Asignar raíz en el centro superior del canvas de forma absoluta
+            root.x = 650;
+            root.y = 40;
+
+            const niveles = {};
+
+            // Agrupar nodos por nivel de profundidad de forma recursiva
+            function agruparNivel(nodeId, depth) {
+                if (!niveles[depth]) niveles[depth] = [];
+                const node = nodesDatabase.find(n => n.id === nodeId);
+                if (node && !niveles[depth].includes(node)) {
+                    niveles[depth].push(node);
+                }
+                const hijos = nodesDatabase.filter(n => n.parentId === nodeId);
+                hijos.forEach(h => agruparNivel(h.id, depth + 1));
+            }
+
+            agruparNivel(root.id, 0);
+
+            // Calcular X de forma equidistante en cada nivel para evitar superposición
+            Object.keys(niveles).forEach(depth => {
+                const depthInt = parseInt(depth);
+                if (depthInt === 0) return; // Omitir raíz
+
+                const nodosNivel = niveles[depthInt];
+                const totalNodos = nodosNivel.length;
+                const widthCanvas = 1500;
+                const gap = widthCanvas / (totalNodos + 1);
+
+                nodosNivel.forEach((node, index) => {
+                    node.x = gap * (index + 1) - 100;
+                    node.y = 40 + (depthInt * 100);
+                });
+            });
+        }
+
+        // Renderiza conexiones vectoriales estilizadas con curvas suavizadas Bezier
+        function renderLineSVG(x1, y1, x2, y2) {
+            const svg = document.getElementById('svg-connections');
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+            // Generar ruta de curva suavizada Whimsical-style
+            const midY = (y1 + y2) / 2;
+            const d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+
+            path.setAttribute('d', d);
+            path.setAttribute('stroke', '#ff5e3a');
+            path.setAttribute('stroke-width', '1.5');
+            path.setAttribute('fill', 'none');
+            svg.appendChild(path);
+        }
+
+        // Lógica de inyección dinámica de nuevos nodos desde el formulario
+        function crearNuevoNodoDesdePanel() {
+            const nombre = document.getElementById('input-node-name').value.trim();
+            const tipo = document.getElementById('select-node-type').value;
+            const parentId = document.getElementById('select-node-parent').value;
+            const weight = parseInt(document.getElementById('input-node-weight').value) || 5;
+
+            if (!nombre) {
+                lanzarToast('Campos Incompletos', 'Por favor ingresa un nombre para el nodo organizacional.', true);
+                return;
+            }
+
+            const nuevoId = 'node-' + (nodesDatabase.length + 1);
+
+            // Añadir al árbol en memoria
+            nodesDatabase.push({
+                id: nuevoId,
+                name: nombre,
+                type: tipo,
+                weight: weight,
+                parentId: parentId,
+                x: 500, // Se recalculará en el render
+                y: 200
+            });
+
+            // Actualizar interfaz del canvas y lanzar confirmación
+            renderOrganigrama();
+            lanzarToast('Organigrama Actualizado', `Nodo "${nombre}" inyectado de forma jerárquica.`);
+
+            // Resetear inputs del formulario
+            document.getElementById('input-node-name').value = '';
+        }
+
+        function eliminarNodoJerarquico(nodeId) {
+            const nodo = nodesDatabase.find(n => n.id === nodeId);
+            if (!nodo) return;
+
+            if (nodo.type === 'root') {
+                lanzarToast('Acción Inadmisible', 'No puedes eliminar el nodo raíz (Sede Central) en arquitectura Single-Tenant.', true);
+                return;
+            }
+
+            if (confirm(`¿Estás seguro de que deseas eliminar el nodo "${nodo.name}"? Los sub-nodos y cargos dependientes se reasociarán de forma jerárquica.`)) {
+                // Reasociar hijos de este nodo al abuelo
+                const hijos = nodesDatabase.filter(n => n.parentId === nodeId);
+                hijos.forEach(h => {
+                    h.parentId = nodo.parentId;
+                });
+
+                // Remover el nodo de la base de datos
+                nodesDatabase = nodesDatabase.filter(n => n.id !== nodeId);
+
+                renderOrganigrama();
+                lanzarToast('Organigrama Sincronizado', `El nodo "${nodo.name}" ha sido removido de la jerarquía.`);
+            }
+        }
+
+        function refrescarSelectorPadres() {
+            const selector = document.getElementById('select-node-parent');
+            if (!selector) return;
+
+            selector.innerHTML = '';
+            nodesDatabase.forEach(node => {
+                // Solo pueden ser padres los nodos que no sean de tipo 'cargo'
+                if (node.type !== 'cargo') {
+                    const opt = document.createElement('option');
+                    opt.value = node.id;
+                    opt.innerText = `${node.name} (${node.type.toUpperCase()})`;
+                    selector.appendChild(opt);
+                }
+            });
+        }
+
+        // Actualización dinámica del Minimapa Miro Style
+        function actualizarMinimapPreview() {
+            const mapContainer = document.getElementById('minimap-preview-container');
+            if (!mapContainer) return;
+            mapContainer.innerHTML = '';
+
+            nodesDatabase.forEach(node => {
+                const mini = document.createElement('div');
+                mini.className = 'absolute rounded-sm opacity-60';
+
+                // Reducir la escala de X e Y para que quepan en la caja de 112x80
+                const miniX = (node.x / 1500) * 100;
+                const miniY = (node.y / 1000) * 60;
+
+                mini.style.left = `${miniX}px`;
+                mini.style.top = `${miniY}px`;
+                mini.style.width = '10px';
+                mini.style.height = '4px';
+
+                if (node.type === 'root') {
+                    mini.classList.add('bg-brand-coral');
+                } else if (node.type === 'departamento') {
+                    mini.classList.add('bg-brand-dark');
+                } else {
+                    mini.classList.add('bg-slate-400');
+                }
+
+                mapContainer.appendChild(mini);
+            });
+        }
+
+
+        // ================= MOTOR DE PESOS Y SIMULADOR SLA =================
+        function ajustarPorcentajeFórmula(sliderCambiado) {
+            let sCargo = document.getElementById('pct-slider-cargo');
+            let sNodo = document.getElementById('pct-slider-nodo');
+            let sDano = document.getElementById('pct-slider-dano');
+
+            let vCargo = parseInt(sCargo.value);
+            let vNodo = parseInt(sNodo.value);
+            let vDano = parseInt(sDano.value);
+
+            let suma = vCargo + vNodo + vDano;
+
+            // Actualizar etiquetas de texto
+            document.getElementById('pct-lbl-cargo').innerText = vCargo + "%";
+            document.getElementById('pct-lbl-nodo').innerText = vNodo + "%";
+            document.getElementById('pct-lbl-dano').innerText = vDano + "%";
+
+            const sumBadge = document.getElementById('suma-porcentaje-badge');
+            sumBadge.innerText = `Suma: ${suma}%`;
+
+            if (suma === 100) {
+                sumBadge.className = "text-xs font-black font-mono bg-brand-green/10 text-brand-green px-2.5 py-1 rounded-sm border border-brand-green/20";
+            } else {
+                sumBadge.className = "text-xs font-black font-mono bg-brand-coral/10 text-brand-coral px-2.5 py-1 rounded-sm border border-brand-coral/20 animate-pulse";
+            }
+
+            calcularSimulacionPrioridad();
+        }
+
+        function calcularSimulacionPrioridad() {
+            // Coeficientes de la fórmula (porcentajes de 0.00 a 1.00)
+            const wCargo = (parseInt(document.getElementById('pct-slider-cargo').value) || 0) / 100;
+            const wNodo = (parseInt(document.getElementById('pct-slider-nodo').value) || 0) / 100;
+            const wDano = (parseInt(document.getElementById('pct-slider-dano').value) || 0) / 100;
+
+            // Valores de prueba del simulador (1-10)
+            const pesoCargoSim = parseInt(document.getElementById('val-slider-cargo').value) || 5;
+            const pesoNodoSim = parseInt(document.getElementById('val-slider-nodo').value) || 5;
+            const pesoDanoSim = parseInt(document.getElementById('val-slider-dano').value) || 5;
+
+            // Bonus agregados
+            const bonusUrgencia = parseFloat(document.getElementById('sel-urgencia').value) || 0;
+            const bonusImpacto = parseFloat(document.getElementById('sel-impacto').value) || 0;
+
+            // FÓRMULA MATEMÁTICA EXACTA:
+            // score = (peso_cargo * w_cargo) + (peso_nodo * w_nodo) + (peso_daño * w_daño) + urgency_bonus + impact_bonus
+            const scoreFinal = (pesoCargoSim * wCargo) + (pesoNodoSim * wNodo) + (pesoDanoSim * wDano) + bonusUrgencia + bonusImpacto;
+
+            // Obtener Umbrales configurados
+            const uCritica = parseFloat(document.getElementById('umb-critica').value) || 9;
+            const uAlta = parseFloat(document.getElementById('umb-alta').value) || 7;
+            const uMedia = parseFloat(document.getElementById('umb-media').value) || 5;
+
+            // Actualizar vista del simulador
+            const labelScore = document.getElementById('prioridad-sim-score');
+            const badgePrioridad = document.getElementById('prioridad-sim-badge');
+
+            labelScore.innerText = scoreFinal.toFixed(2);
+
+            if (scoreFinal >= uCritica) {
+                labelScore.className = "text-3xl font-black text-brand-coral animate-pulse";
+                badgePrioridad.innerText = "CRÍTICO";
+                badgePrioridad.className = "text-[10px] font-mono font-bold bg-brand-coral/10 text-brand-coral border border-brand-coral/20 px-2 py-0.5 rounded-sm uppercase tracking-wider";
+            } else if (scoreFinal >= uAlta) {
+                labelScore.className = "text-3xl font-black text-amber-500";
+                badgePrioridad.innerText = "ALTO";
+                badgePrioridad.className = "text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-sm uppercase tracking-wider";
+            } else if (scoreFinal >= uMedia) {
+                labelScore.className = "text-3xl font-black text-brand-dark";
+                badgePrioridad.innerText = "MEDIO";
+                badgePrioridad.className = "text-[10px] font-mono font-bold bg-slate-100 text-brand-dark border border-brand-border px-2 py-0.5 rounded-sm uppercase tracking-wider";
+            } else {
+                labelScore.className = "text-3xl font-black text-brand-green";
+                badgePrioridad.innerText = "BAJO";
+                badgePrioridad.className = "text-[10px] font-mono font-bold bg-brand-green/10 text-brand-green border border-brand-green/20 px-2 py-0.5 rounded-sm uppercase tracking-wider";
+            }
+        }
+
+        function ejecutarSimulacionAnimada() {
+            calcularSimulacionPrioridad();
+            lanzarToast('Simulación Completada', 'Fórmula aplicada dinámicamente sobre las variables del Sandbox.');
+        }
+
+        function guardarFormulaSLA() {
+            const wCargo = parseInt(document.getElementById('pct-slider-cargo').value) || 0;
+            const wNodo = parseInt(document.getElementById('pct-slider-nodo').value) || 0;
+            const wDano = parseInt(document.getElementById('pct-slider-dano').value) || 0;
+            const suma = wCargo + wNodo + wDano;
+
+            if (suma !== 100) {
+                lanzarToast('Error de Ponderación', 'La suma de coeficientes w_cargo, w_nodo y w_daño debe ser exactamente 100%.', true);
+                return;
+            }
+
+            gatillarGuardadoCritico('SLA_ENGINE_FORMULA', 'Modificación de ponderaciones de prioridad de tickets y umbrales operacionales');
+        }
+
+        // ================= FLUJO SEGURO DE CAMBIOS CRÍTICOS (2FA) =================
+        function gatillarGuardadoCritico(entidad, descripcion) {
+            entidadCriticaActual = entidad;
+            descripcionCriticaActual = descripcion;
+
+            document.getElementById('critico-accion-tag').innerText = entidad;
+            document.getElementById('critico-descripcion-tag').innerText = descripcion;
+
+            const modal = document.getElementById('modal-confirmacion-critica');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('panel-modal-critico').classList.remove('scale-95');
+            document.getElementById('panel-modal-critico').classList.add('scale-100');
+        }
+
+        function cerrarModalCritico() {
+            const modal = document.getElementById('modal-confirmacion-critica');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('panel-modal-critico').classList.remove('scale-100');
+            document.getElementById('panel-modal-critico').classList.add('scale-95');
+
+            document.getElementById('mfa-password').value = '';
+            document.getElementById('mfa-token').value = '';
+            document.getElementById('mfa-motivo').value = '';
+        }
+
+        function validarYGuardarCritico() {
+            const pass = document.getElementById('mfa-password').value;
+            const token = document.getElementById('mfa-token').value;
+            const motivo = document.getElementById('mfa-motivo').value.trim();
+
+            if (!pass || !token || !motivo) {
+                lanzarToast('Verificación Fallida', 'Todos los campos de gobernabilidad son obligatorios.', true);
+                return;
+            }
+
+            if (token.length !== 6 || isNaN(token)) {
+                lanzarToast('Token Erróneo', 'El código de seguridad de 2FA debe constar de 6 dígitos numéricos.', true);
+                return;
+            }
+
+            const timestamp = new Date().toISOString();
+            const logContenedor = document.getElementById('contenedor-logs-auditoria');
+
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/50 transition-colors font-mono text-[11px] text-slate-700 border-b border-brand-border/60";
+            tr.innerHTML = `
+                <td class="py-3 px-4 text-brand-coral font-bold font-sans">MUTATE_SETTING</td>
+                <td class="py-3 px-4 font-sans">${entidadCriticaActual}</td>
+                <td class="py-3 px-4 italic font-sans text-brand-textMuted">${motivo}</td>
+                <td class="py-3 px-4 text-brand-textMuted">SNAPSHOT_PREV_v1</td>
+                <td class="py-3 px-4 text-brand-green font-bold">SNAPSHOT_NEW_v2</td>
+                <td class="py-3 px-4 text-right pr-6 font-sans text-brand-textMuted font-bold">192.168.4.110 &middot; Diego Herrera</td>
+            `;
+
+            logContenedor.insertBefore(tr, logContenedor.firstChild);
+
+            cerrarModalCritico();
+            lanzarToast('Éxito Criptográfico', 'Configuración inyectada de forma segura. Auditoría registrada.');
+        }
+
+        // ================= NOTIFICACIONES TOAST =================
+        function lanzarToast(titulo, mensaje, esError = false) {
+            const toast = document.getElementById('toast');
+            const icon = toast.querySelector('i');
+
+            document.getElementById('toast-titulo').innerText = titulo;
+            document.getElementById('toast-mensaje').innerText = mensaje;
+
+            if (esError) {
+                toast.classList.remove('border-l-brand-green');
+                toast.classList.add('border-l-brand-coral');
+                icon.className = "fa-solid fa-triangle-exclamation text-brand-coral text-xl";
+            } else {
+                toast.classList.remove('border-l-brand-coral');
+                toast.classList.add('border-l-brand-green');
+                icon.className = "fa-regular fa-circle-check text-brand-green text-xl";
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 4000);
+        }
+
+        function descartarCambios() {
+            if (confirm("¿Estás seguro de que deseas restablecer los valores de simulación? Se perderán las pruebas actuales.")) {
+                window.location.reload();
+            }
+        }
+
+        window.onload = function () {
+            calcularSimulacionPrioridad();
+        };
+    </script>
+</body>
+
+</html>

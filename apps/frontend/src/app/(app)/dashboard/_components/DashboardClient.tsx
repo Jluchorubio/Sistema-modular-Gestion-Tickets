@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useModules } from '@/hooks/useModules';
@@ -15,12 +15,11 @@ import { DeleteModuleModal } from './DeleteModuleModal';
 import { MaintenanceModal } from './MaintenanceModal';
 import styles from '../dashboard.module.css';
 
-// Fallback shapes used when built-in modules are not yet returned by the API
 const HELPDESK_DEFAULTS: SystemModule = {
   id: '__helpdesk__', name: 'Mesa de Ayuda', slug: 'helpdesk',
   description: 'Gestión de tickets de soporte técnico, incidencias y solicitudes de servicio',
   type: 'helpdesk', image_url: null, color: '#3B82F6',
-  is_active: true, has_access: true,
+  is_active: true, has_access: false, access_mode: 'request',
   maintenance_mode: false, maintenance_since: null, maintenance_message: null,
   created_at: new Date(0).toISOString(), deleted_at: null,
 };
@@ -29,7 +28,7 @@ const INVENTORY_DEFAULTS: SystemModule = {
   id: '__inventory__', name: 'Inventario', slug: 'inventario',
   description: 'Control de activos, equipos, materiales y recursos físicos de la organización',
   type: 'inventario', image_url: null, color: '#10B981',
-  is_active: true, has_access: true,
+  is_active: true, has_access: false, access_mode: 'open',
   maintenance_mode: false, maintenance_since: null, maintenance_message: null,
   created_at: new Date(0).toISOString(), deleted_at: null,
 };
@@ -37,8 +36,8 @@ const INVENTORY_DEFAULTS: SystemModule = {
 const GESTION_DEFAULTS: SystemModule = {
   id: '__gestion__', name: 'Gestión Administrativa', slug: 'gestion',
   description: 'Solicitudes de acceso, cambio de rol, corrección de perfil y escalaciones',
-  type: 'gestion', image_url: null, color: '#6366F1',
-  is_active: true, has_access: true,
+  type: 'gestion', image_url: null, color: '#0e2235',
+  is_active: true, has_access: true, access_mode: 'open',
   maintenance_mode: false, maintenance_since: null, maintenance_message: null,
   created_at: new Date(0).toISOString(), deleted_at: null,
 };
@@ -54,19 +53,31 @@ function isRealModule(m: SystemModule): boolean {
 }
 
 export function DashboardClient() {
-  const qc           = useQueryClient();
-  const { user }     = useCurrentUser();
-  const authUser     = useAuthStore(s => s.user);
+  const qc       = useQueryClient();
+  const { user } = useCurrentUser();
+  const authUser = useAuthStore(s => s.user);
   const { modules, active: activeRaw, inactive: inactiveRaw, isLoading, isError } = useModules();
+
+  const firstName    = user?.first_name    ?? '';
+  const lastName     = user?.last_name     ?? '';
+  const isSuperadmin = user?.is_superadmin ?? false;
 
   const helpdeskModule  = modules?.find(m =>
     ['helpdesk', 'tickets', 'soporte', 'soporte-tecnico', 'soporte_tecnico', 'support'].includes(m.slug) ||
     ['helpdesk', 'soporte'].includes(m.type ?? '')
-  ) ?? HELPDESK_DEFAULTS;
-  const inventoryModule = modules?.find(m => ['inventario','inventory'].includes(m.slug) || m.type === 'inventario')                           ?? INVENTORY_DEFAULTS;
-  const gestionModule   = modules?.find(m => ['gestion', 'gestion-adm', 'gestion-administrativa'].includes(m.slug) || (!!m.type && ['administrative', 'gestion'].includes(m.type))) ?? GESTION_DEFAULTS;
+  ) ?? { ...HELPDESK_DEFAULTS, has_access: isSuperadmin };
+  const inventoryModule = (() => {
+    const m = modules?.find(m => ['inventario', 'inventory'].includes(m.slug) || m.type === 'inventario');
+    return m ? { ...m, has_access: true } : { ...INVENTORY_DEFAULTS, has_access: true };
+  })();
+  const gestionModule = (() => {
+    const m = modules?.find(m =>
+      ['gestion', 'gestion-adm', 'gestion-administrativa'].includes(m.slug) ||
+      (!!m.type && ['administrative', 'gestion'].includes(m.type))
+    );
+    return m ? { ...m, has_access: true } : { ...GESTION_DEFAULTS, has_access: true };
+  })();
 
-  // Filter custom sections by slug AND by ID of found built-ins (robustness)
   const builtinIds = new Set(
     [helpdeskModule.id, inventoryModule.id, gestionModule.id].filter(id => !id.startsWith('__'))
   );
@@ -75,27 +86,50 @@ export function DashboardClient() {
   const active   = activeRaw.filter(m => !isBuiltin(m));
   const inactive = inactiveRaw.filter(m => !isBuiltin(m));
 
-  const firstName    = user?.first_name    ?? '';
-  const isSuperadmin = user?.is_superadmin ?? false;
-
   const { data: sysStats } = useQuery({
     queryKey:  ['system-stats'],
     queryFn:   () => usersService.getSystemStats(),
     enabled:   isSuperadmin,
-    staleTime: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
-  // ── Edit / Create modal ────────────────────────────────────────────────────
-  const [editModule, setEditModule] = useState<SystemModule | null>(null);
-  const [modalOpen,  setModalOpen]  = useState(false);
+  /* ── Search ── */
+  const [search, setSearch] = useState('');
+  const [moduleView, setModuleView] = useState<'card' | 'list' | 'summary'>('card');
+  const q = search.toLowerCase().trim();
 
-  // ── Delete modal ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    const stored = window.localStorage.getItem('dashboard:modules:view');
+    if (stored === 'card' || stored === 'list' || stored === 'summary') setModuleView(stored);
+  }, []);
+
+  function changeModuleView(view: 'card' | 'list' | 'summary') {
+    setModuleView(view);
+    window.localStorage.setItem('dashboard:modules:view', view);
+  }
+
+  function matchesQuery(m: SystemModule) {
+    return m.name.toLowerCase().includes(q) || (m.type ?? '').toLowerCase().includes(q);
+  }
+
+  const filteredHelpdesk  = q ? (matchesQuery(helpdeskModule)  ? helpdeskModule  : null) : helpdeskModule;
+  const filteredInventory = q ? (matchesQuery(inventoryModule) ? inventoryModule : null) : inventoryModule;
+  const filteredGestion   = q ? (matchesQuery(gestionModule)   ? gestionModule   : null) : gestionModule;
+
+  const filteredActive   = q ? active.filter(matchesQuery)   : active;
+  const filteredInactive = q ? inactive.filter(matchesQuery) : inactive;
+
+  /* ── Modals ── */
+  const [editModule,   setEditModule]   = useState<SystemModule | null>(null);
+  const [modalOpen,    setModalOpen]    = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SystemModule | null>(null);
+  const [maintTarget,  setMaintTarget]  = useState<SystemModule | null>(null);
 
-  // ── Maintenance modal ──────────────────────────────────────────────────────
-  const [maintTarget, setMaintTarget] = useState<SystemModule | null>(null);
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['modules'] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['modules'] });
+    qc.invalidateQueries({ queryKey: ['system-stats'] });
+  };
 
   const toggleMut = useMutation({
     mutationFn: (m: SystemModule) => modulesService.updateModule(m.id, { is_active: !m.is_active }),
@@ -107,30 +141,55 @@ export function DashboardClient() {
   function openDelete(m: SystemModule) { setDeleteTarget(m); }
   function openMaint(m: SystemModule)  { setMaintTarget(m); }
 
+  const displayName = [firstName, lastName].filter(Boolean).join(' ');
+
   return (
-    <div>
-      <div className={styles.welcome}>
-        {firstName ? `Hola, ${firstName}` : 'Hola'}
-      </div>
-      <p className={styles.sub}>Selecciona el módulo al que deseas acceder</p>
+    <div className={styles.pageWrap}>
+      <main className={styles.mainContent}>
+        {/* ── Header — border-b pb-5 mb-8 flex justify-between ── */}
+        <div className={styles.dashHeader}>
+          <div>
+            <h1 className={styles.welcome}>
+              Bienvenido{displayName ? `, ${displayName}` : ''} 👋
+            </h1>
+            <p className={styles.sub}>
+              Selecciona el entorno operativo al cual deseas ingresar para gestionar incidentes, activos o aprobaciones.
+            </p>
+          </div>
+          {/* ── Search ── */}
+          <div className={styles.searchRow}>
+            <span className={styles.searchLabel}>Buscar módulos</span>
+            <input
+              type="text"
+              placeholder="Escribe para buscar..."
+              className={styles.searchInput}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <button type="button" className={styles.searchBtn}>Ir</button>
+          </div>
+        </div>
 
-      {isSuperadmin && sysStats && <DashboardStats stats={sysStats} />}
+        {isSuperadmin && sysStats && <DashboardStats stats={sysStats} />}
 
-      <ModulesGrid
-        builtins={{ helpdesk: helpdeskModule, inventory: inventoryModule, gestion: gestionModule }}
-        active={active}
-        inactive={inactive}
-        hasModules={!!modules}
-        isSuperadmin={isSuperadmin}
-        isLoading={isLoading}
-        isError={isError}
-        isRealModule={isRealModule}
-        onEdit={openEdit}
-        onToggleActive={m => toggleMut.mutate(m)}
-        onDelete={openDelete}
-        onMaintenance={openMaint}
-        onCreate={openCreate}
-      />
+        <ModulesGrid
+          builtins={{ helpdesk: filteredHelpdesk, inventory: filteredInventory, gestion: filteredGestion }}
+          active={filteredActive}
+          inactive={filteredInactive}
+          viewMode={moduleView}
+          onViewModeChange={changeModuleView}
+          hasModules={!!modules}
+          isSuperadmin={isSuperadmin}
+          isLoading={isLoading}
+          isError={isError}
+          isRealModule={isRealModule}
+          onEdit={openEdit}
+          onToggleActive={m => toggleMut.mutate(m)}
+          onDelete={openDelete}
+          onMaintenance={openMaint}
+          onCreate={openCreate}
+        />
+      </main>
 
       <ModuleFormModal
         open={modalOpen}
@@ -138,13 +197,11 @@ export function DashboardClient() {
         onClose={() => setModalOpen(false)}
         onSuccess={() => setModalOpen(false)}
       />
-
       <DeleteModuleModal
         target={deleteTarget}
         username={authUser?.username ?? ''}
         onClose={() => setDeleteTarget(null)}
       />
-
       <MaintenanceModal
         target={maintTarget}
         onClose={() => setMaintTarget(null)}

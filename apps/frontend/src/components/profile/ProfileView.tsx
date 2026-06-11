@@ -1,11 +1,13 @@
 'use client';
 import { useState, useCallback } from 'react';
-import { LayoutGrid, ShieldCheck, Settings, ChevronLeft } from 'lucide-react';
+import { LayoutGrid, ShieldCheck, Settings, ChevronLeft, Wrench } from 'lucide-react';
 import type { CurrentUser } from '@/types/user.types';
 import { ProfileSidebar } from './ProfileSidebar';
 import { ProfileOverviewTab } from './ProfileOverviewTab';
 import { ProfileSecurityTab } from './ProfileSecurityTab';
 import { ProfileSettingsTab } from './ProfileSettingsTab';
+import { ProfileSkillsTab } from './ProfileSkillsTab';
+import { ContextNav } from '@/components/ui/ContextNav';
 import { type ProfileUser, type ActiveTab } from './profile.types';
 import styles from './profile.module.css';
 
@@ -36,6 +38,16 @@ export function ProfileView({ user: initialUser, isOwnProfile, viewerIsSuperadmi
   }, []);
 
   return (
+    <>
+      {!onBack && (
+        <ContextNav
+          back
+          crumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: isOwnProfile ? 'Mi Perfil' : fullName },
+          ]}
+        />
+      )}
     <div style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 0 60px' }}>
       {onBack && (
         <button className={styles.btnBack} onClick={onBack}>
@@ -75,6 +87,14 @@ export function ProfileView({ user: initialUser, isOwnProfile, viewerIsSuperadmi
                 </button>
               </>
             )}
+            {(isOwnProfile || viewerIsSuperadmin) && (
+              <button
+                className={`${styles.navTab}${activeTab === 'skills' ? ` ${styles.navTabActive}` : ''}`}
+                onClick={() => setActiveTab('skills')}
+              >
+                <Wrench size={13} />Habilidades
+              </button>
+            )}
           </div>
 
           {activeTab === 'overview' && (
@@ -92,8 +112,16 @@ export function ProfileView({ user: initialUser, isOwnProfile, viewerIsSuperadmi
           {(isOwnProfile || viewerIsSuperadmin) && activeTab === 'settings' && (
             <ProfileSettingsTab user={user} />
           )}
+          {(isOwnProfile || viewerIsSuperadmin) && activeTab === 'skills' && (
+            <ProfileSkillsTab
+              user={user}
+              targetUserId={user.id}
+              canEdit={viewerIsSuperadmin}
+            />
+          )}
         </div>
       </div>
     </div>
+    </>
   );
 }

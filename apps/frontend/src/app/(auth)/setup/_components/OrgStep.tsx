@@ -89,6 +89,14 @@ export function OrgStep({ onNext, onBack }: Props) {
   const [error, setError]  = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Seeded UUIDs from migration 011
+  const TYPE_IDS = {
+    sede:         '10000000-0000-0000-0000-000000000001',
+    departamento: '10000000-0000-0000-0000-000000000002',
+    area:         '10000000-0000-0000-0000-000000000003',
+    cargo:        '10000000-0000-0000-0000-000000000004',
+  } as const;
+
   async function handleNext() {
     if (hqs.length === 0) {
       setError('Agrega al menos una sede antes de continuar.');
@@ -99,16 +107,16 @@ export function OrgStep({ onNext, onBack }: Props) {
     try {
       await Promise.all([
         ...hqs.map(name =>
-          systemConfigService.createHeadquarter({ name, address: null, city: null, country: 'Colombia', phone: null, email: null }),
+          systemConfigService.createOrgNode({ type_id: TYPE_IDS.sede, name }),
         ),
         ...depts.map(name =>
-          systemConfigService.createDepartment({ name }),
+          systemConfigService.createOrgNode({ type_id: TYPE_IDS.departamento, name }),
         ),
         ...areas.map(name =>
-          systemConfigService.createArea({ name }),
+          systemConfigService.createOrgNode({ type_id: TYPE_IDS.area, name }),
         ),
-        ...pos.map((name, i) =>
-          systemConfigService.createPosition({ name, level: i + 1 }),
+        ...pos.map(name =>
+          systemConfigService.createOrgNode({ type_id: TYPE_IDS.cargo, name }),
         ),
       ]);
       onNext({ headquarters: hqs, departments: depts, areas, positions: pos });

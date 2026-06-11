@@ -6,6 +6,7 @@ import { Mail, LockKeyhole } from 'lucide-react';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
+import { useAuthStore } from '@/stores/auth.store';
 import { RequestModuleAccessModal } from '@/components/modules/RequestModuleAccessModal';
 import styles from './module-layout.module.css';
 
@@ -14,6 +15,9 @@ interface Props {
   title: string;
   description?: string | null;
   isSuperadmin?: boolean;
+  subBar?: React.ReactNode;
+  hideInfo?: boolean;
+  alwaysOpen?: boolean;
   children: React.ReactNode;
 }
 
@@ -22,10 +26,13 @@ export function ModuleLayout({
   title,
   description,
   isSuperadmin = false,
+  subBar,
+  hideInfo = false,
+  alwaysOpen = false,
   children,
 }: Props) {
   const [showAccessModal, setShowAccessModal] = useState(false);
-  const { hasAccess, isChecking } = useModuleAccess(moduleId);
+  const authUser = useAuthStore((s) => s.user);
 
   /* ── Fetch module data & members ── */
   const { data: mod } = useQuery({
@@ -35,10 +42,18 @@ export function ModuleLayout({
     staleTime: 5 * 60_000,
   });
 
+  const { hasAccess, isChecking } = useModuleAccess(moduleId, alwaysOpen ? 'open' : mod?.access_mode);
+
+  const canViewMembers = isSuperadmin || (
+    !!moduleId && !!authUser?.module_roles?.some(
+      (r) => r.module_id === moduleId && r.status === 'active' && r.role_name === 'admin_modulo',
+    )
+  );
+
   const { data: members } = useQuery({
     queryKey: ['module-members', moduleId],
     queryFn: () => usersService.getModuleUsers(moduleId!),
-    enabled: !!moduleId,
+    enabled: !!moduleId && canViewMembers,
     staleTime: 5 * 60_000,
   });
 
@@ -103,8 +118,25 @@ export function ModuleLayout({
     );
   }
 
+  if (hideInfo) {
+    return (
+      <div className={styles.card}>
+        {subBar}
+        <div style={{ padding: '20px 28px 28px' }}>
+          {displayDescription && (
+            <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.5 }}>
+              {displayDescription}
+            </p>
+          )}
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.card}>
+      {subBar}
       {/* ── Module info ── */}
       <div className={styles.info}>
 
@@ -140,27 +172,7 @@ export function ModuleLayout({
 
         {/* Description */}
         {displayDescription && (
-          <div className={styles.descCard}>
-            <div className={styles.descIcon}>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-            </div>
-            <div>
-              <span className={styles.descLabel}>Descripción del módulo</span>
-              <p className={styles.descText}>{displayDescription}</p>
-            </div>
-          </div>
+          <p className={styles.descText}>{displayDescription}</p>
         )}
 
         {/* Page content */}

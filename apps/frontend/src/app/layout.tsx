@@ -30,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={jakarta.variable}>
+    <html lang="es" className={jakarta.variable} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#0e2235" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />

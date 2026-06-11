@@ -7,6 +7,11 @@ import type {
 } from '@/types/auth.types';
 
 export const authService = {
+  async getAccessContact(): Promise<{ email: string | null }> {
+    const { data } = await api.get('/auth/access-contact');
+    return data;
+  },
+
   async login(credentials: LoginRequest): Promise<LoginResponse | MfaChallenge> {
     const { data } = await api.post('/auth/login', credentials);
     return data;
@@ -51,6 +56,15 @@ export const authService = {
 
   async logout(refreshToken: string): Promise<void> {
     await api.post('/auth/logout', { refresh_token: refreshToken });
+  },
+
+  async verifyTotpLogin(code: string, otpToken: string): Promise<OtpVerifyResponse> {
+    const { data } = await api.post(
+      '/auth/totp/verify-login',
+      { code },
+      { headers: { Authorization: `Bearer ${otpToken}` } },
+    );
+    return data;
   },
 
   async setupTotp(): Promise<{ qr: string; secret: string }> {

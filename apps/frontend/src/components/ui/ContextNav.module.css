@@ -1,0 +1,91 @@
+/* ══════════════════════════════════════════════════════════════
+   ContextNav — slim contextual breadcrumb / back nav
+   ══════════════════════════════════════════════════════════════ */
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 32px;
+  height: 34px;
+  background: #fafbfc;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  transition: color 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.backBtn:hover { color: #0e2235; }
+
+.divider {
+  width: 1px;
+  height: 13px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.crumbItem {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.crumbItem:last-child { min-width: 0; flex-shrink: 1; }
+
+.crumbSep { color: #cbd5e1; margin: 0 3px; flex-shrink: 0; }
+
+.crumbLink {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-decoration: none;
+  transition: color 0.12s;
+  white-space: nowrap;
+}
+
+.crumbLink:hover { color: #0e2235; }
+
+.crumbText {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crumbActive {
+  color: #0e2235;
+  font-weight: 700;
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .nav    { padding: 0 12px; height: 32px; }
+  .crumbs { display: none; }
+  .divider { display: none; }
+}

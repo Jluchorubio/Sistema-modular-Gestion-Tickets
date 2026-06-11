@@ -3,6 +3,96 @@
 @tailwind utilities;
 
 :root {
+  /* ── Brand (overridden at runtime by SystemConfigProvider via JS) ── */
+  --brand-primary:      #0e2235;
+  --brand-primary-rgb:  14,34,53;
+  --brand-primary-10:   rgba(14,34,53,0.10);
+  --brand-primary-20:   rgba(14,34,53,0.20);
+  --brand-primary-hover:rgba(14,34,53,0.85);
+
+  /* ── App light-mode tokens (use these in new components) ── */
+  --app-coral:       #ff5e3a;
+  --app-coral-10:    rgba(255,94,58,0.10);
+  --app-coral-20:    rgba(255,94,58,0.20);
+  --app-navy:        #0e2235;
+  --app-page:        #f8fafc;
+  --app-card:        #ffffff;
+  --app-border:      #e2e8f0;
+  --app-border-soft: #f1f5f9;
+  --app-text:        #334155;
+  --app-text-main:   #0e2235;
+  --app-text-sub:    #64748b;
+  --app-text-muted:  #94a3b8;
+  --app-success:     #16a34a;
+  --app-warning:     #f59e0b;
+  --app-danger:      #ef4444;
+
+  /* ── Semantic status system ──────────────────────────────────────────── */
+  /* Each state: -text / -bg / -border / -glow (urgent states only)        */
+
+  /* success — completed, resolved, approved, active */
+  --status-success-text:   #15803d;
+  --status-success-bg:     #f0fdf4;
+  --status-success-border: #bbf7d0;
+
+  /* warning — pending, waiting */
+  --status-warning-text:   #92400e;
+  --status-warning-bg:     #fffbeb;
+  --status-warning-border: #fde68a;
+
+  /* danger — rejected, failed, critical */
+  --status-danger-text:    #991b1b;
+  --status-danger-bg:      #fef2f2;
+  --status-danger-border:  #fecaca;
+
+  /* info — taken, in_progress (normal pace) */
+  --status-info-text:      #1d4ed8;
+  --status-info-bg:        #eff6ff;
+  --status-info-border:    #bfdbfe;
+
+  /* paused — ticket on hold */
+  --status-paused-text:    #6d28d9;
+  --status-paused-bg:      #f5f3ff;
+  --status-paused-border:  #ddd6fe;
+
+  /* approval — under_review, awaiting decision */
+  --status-approval-text:   #7c2d12;
+  --status-approval-bg:     #fff7ed;
+  --status-approval-border: #fed7aa;
+
+  /* escalated — escalated requests/tickets (orange, high urgency) */
+  --status-escalated-text:   #c2410c;
+  --status-escalated-bg:     #fff7ed;
+  --status-escalated-border: #fdba74;
+  --status-escalated-glow:   rgba(249,115,22,.18);
+
+  /* breached — SLA deadline exceeded (red-hot) */
+  --status-breached-text:   #dc2626;
+  --status-breached-bg:     #fef2f2;
+  --status-breached-border: #fca5a5;
+  --status-breached-glow:   rgba(239,68,68,.18);
+
+  /* closed — closed, cancelled, archived */
+  --status-closed-text:   #475569;
+  --status-closed-bg:     #f8fafc;
+  --status-closed-border: #e2e8f0;
+
+  /* neutral — draft, unknown, not_started */
+  --status-neutral-text:   #64748b;
+  --status-neutral-bg:     #f1f5f9;
+  --status-neutral-border: #e2e8f0;
+
+  /* ── Ticket status semantic aliases ─────────────────────────────────── */
+  --ticket-open:        var(--status-success-text);
+  --ticket-waiting:     var(--status-warning-text);
+  --ticket-inprogress:  var(--status-info-text);
+  --ticket-paused:      var(--status-paused-text);
+  --ticket-done:        var(--status-paused-text);
+  --ticket-closed:      var(--status-closed-text);
+  --ticket-rework:      var(--status-danger-text);
+  --ticket-escalated:   var(--status-escalated-text);
+  --ticket-breached:    var(--status-breached-text);
+
   /* Dark surfaces (auth pages) */
   --color-bg: #0f172a;
   --color-surface: #1e293b;
@@ -12,9 +102,7 @@
   --color-text-muted: #94a3b8;
   --color-text-subtle: #475569;
 
-  /* Accent */
-  --color-accent: #6366f1;
-  --color-accent-hover: #4f46e5;
+  /* Accent (legacy — use --app-coral or --app-navy instead) */
 
   /* Brand */
   --color-brand-dark: #0f2a3d;
@@ -50,6 +138,48 @@
   --sidebar-collapsed: 76px;
   --sidebar-expanded: 220px;
   --header-height: 56px;
+
+  /* Z-index scale — single source of truth */
+  --z-dropdown:       110;   /* page-level inline menus */
+  --z-drawer-overlay: 150;   /* drawer backdrop (above sticky header 100) */
+  --z-drawer:         151;   /* side drawer panel */
+  --z-modal-overlay:  210;   /* modal backdrop (above header dropdowns 200) */
+  --z-modal:          211;   /* modal dialog */
+  --z-inner-dropdown: 220;   /* select/dropdown inside a modal or drawer */
+  --z-toast:          300;   /* toasts / notifications */
+  --z-lightbox:       400;   /* fullscreen image / camera viewer */
+
+  /* Border-radius scale */
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-2xl:  20px;
+  --radius-pill: 9999px;
+
+  /* Shadow / elevation scale */
+  --shadow-xs: 0 1px 3px rgba(15,23,42,.035);
+  --shadow-sm: 0 1px 4px rgba(15,23,42,.06);
+  --shadow-md: 0 4px 16px rgba(15,23,42,.08);
+  --shadow-lg: 0 6px 24px rgba(0,0,0,.10);
+  --shadow-xl: 0 8px 40px rgba(0,0,0,.14);
+
+  /* Letter-spacing scale */
+  --tracking-wide:   .04em;
+  --tracking-wider:  .06em;
+  --tracking-widest: .10em;
+
+  /* Font-weight scale */
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold:   700;
+  --fw-heavy:  800;
+  --fw-black:  900;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .3; }
 }
 
 *,
@@ -61,8 +191,14 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: #ff5e3a;
 }
 
 [data-theme="dark"] body {

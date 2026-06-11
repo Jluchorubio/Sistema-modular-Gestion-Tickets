@@ -1,115 +1,128 @@
-/* ── Card shell ── */
+/* ── Card shell — bg-white rounded border border-slate-200 shadow-xs ── */
 .card {
-  display: flex;
-  flex-direction: row;
   background: #ffffff;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: border-color .2s, box-shadow .2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  transition: box-shadow .15s;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   position: relative;
+  cursor: pointer;
   text-align: left;
-  width: 100%;
-  height: 120px;
 }
 
-/* Elevate card in stacking context while its kebab menu is open so the
-   dropdown paints above sibling cards (which have no explicit z-index). */
 .cardMenuOpen { z-index: 20; }
 
 .card:hover {
-  border-color: #6366f1;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, .12);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,.10), 0 2px 4px -2px rgba(0,0,0,.10);
 }
 
 /* ── States ── */
-.locked {
-  opacity: 0.55;
-  filter: grayscale(50%);
+.locked      { opacity: 0.55; filter: grayscale(50%); }
+.inactive    { opacity: 0.5;  filter: grayscale(60%); cursor: default; }
+.maintenance { border-color: #f59e0b; }
+
+.inactive:hover { box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.inactive:hover .coverImg { transform: none; }
+.inactive:hover .name     { color: #0e2235; }
+
+/* ── Image panel — h-40 overflow-hidden bg-brand-dark ── */
+.imagePanel {
+  height: 160px;
+  overflow: hidden;
+  position: relative;
+  background: #0e2235;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.locked:hover {
-  border-color: #4f46e5;
+/* Per-type gradient bg (used when no image_url) */
+.imagePanelTickets    { background: #1e3a5f; }
+.imagePanelInventario { background: #1a3a2a; }
+.imagePanelCrm        { background: #2d1f3d; }
+.imagePanelRrhh       { background: #1c2a1c; }
+.imagePanelCustom     { background: #1e293b; }
+.imagePanelGestion    { background: #1e1b4b; }
+.imagePanelDefault    { background: #0e2235; }
+
+/* object-contain: imagen completa sin cortar (user requirement) */
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  opacity: 0.85;
+  transition: transform .5s;
+}
+.card:hover .coverImg { transform: scale(1.05); }
+
+.iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  opacity: 0.8;
+}
+.card:hover .iconWrap { opacity: 1; }
+
+/* ── Type badge — bg-white/95 border shadow text-[9px] font-black rounded-xs ── */
+.typeBadge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255,255,255,.95);
+  color: #0e2235;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 2px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  z-index: 3;
+  white-space: nowrap;
 }
 
-.inactive {
-  opacity: 0.5;
-  filter: grayscale(60%);
-  cursor: default;
+/* ── State badges ── */
+.inactiveBadge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(66,32,6,.9);
+  color: #fb923c;
+  padding: 2px 7px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  z-index: 3;
 }
 
-.maintenance {
-  border-color: #f59e0b;
-}
-
-.maintenance:hover {
-  border-color: #d97706;
-  box-shadow: 0 4px 16px rgba(245, 158, 11, .15);
-}
-
-/* ── Maintenance badge ── */
 .maintenanceBadge {
   position: absolute;
-  bottom: 7px;
-  left: 7px;
-  font-size: 9px;
+  top: 10px;
+  right: 10px;
+  font-size: 10px;
   font-weight: 700;
-  background: rgba(120, 53, 15, .9);
+  background: rgba(120,53,15,.9);
   color: #fbbf24;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 2px 7px;
+  border-radius: 2px;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: .05em;
   z-index: 3;
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
-.inactive:hover {
-  opacity: 0.75;
-  box-shadow: none;
-  border-color: #e2e8f0;
-}
-
-/* ── Left image panel (30%) ── */
-.imagePanel {
-  width: 30%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-  border-radius: 12px 0 0 12px;
-  background: #1e293b;
-}
-
-.iconTickets    .imagePanel,
-.imagePanelTickets    { background: #1e3a5f; color: #93c5fd; }
-.iconInventario .imagePanel,
-.imagePanelInventario { background: #1a3a2a; color: #6ee7b7; }
-.imagePanelCrm        { background: #2d1f3d; color: #c4b5fd; }
-.imagePanelRrhh       { background: #1c2a1c; color: #86efac; }
-.imagePanelCustom     { background: #1e293b; color: #c4b5fd; }
-.imagePanelGestion    { background: #1e1b4b; color: #a5b4fc; }
-.imagePanelDefault    { background: #1e293b; color: #94a3b8; }
-
-.iconWrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.85;
-}
-
-.coverImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* ── Locked overlay (inside image panel) ── */
+/* ── Locked overlay ── */
 .lockedOverlay {
   position: absolute;
   inset: 0;
@@ -117,122 +130,165 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  background: rgba(15, 23, 42, .85);
+  gap: 6px;
+  background: rgba(15,23,42,.85);
   color: #e2e8f0;
   opacity: 0;
   transition: opacity .18s ease;
-  z-index: 2;
+  z-index: 4;
+}
+.card.locked:hover .lockedOverlay { opacity: 1; }
+.lockedLabel { font-size: 12px; font-weight: 700; color: #f1f5f9; }
+.lockedHint  {
+  font-size: 10px; color: #94a3b8;
+  border: 1px solid var(--app-border); padding: 2px 8px; border-radius: 20px; margin-top: 2px;
 }
 
-.card.locked:hover .lockedOverlay { opacity: 1; }
-
-.lockedLabel {
+/* ── Admin avatar bridge — relative h-0 ── */
+.adminBridge {
+  position: relative;
+  height: 0;
+  z-index: 5;
+}
+.adminAvatar {
+  position: absolute;
+  top: -20px;   /* -top-5 */
+  right: 16px;  /* right-4 */
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,.10), 0 2px 4px -2px rgba(0,0,0,.10);
+  overflow: hidden;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: #475569;
+  cursor: default;
+  user-select: none;
 }
+.adminAvatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.lockedHint {
-  font-size: 10px;
-  color: #818cf8;
-  border: 1px solid #4f46e5;
-  padding: 2px 8px;
-  border-radius: 20px;
-  margin-top: 2px;
-}
-
-/* ── Inactive badge ── */
-.inactiveBadge {
-  position: absolute;
-  top: 7px;
-  left: 7px;
-  font-size: 9px;
-  font-weight: 700;
-  background: rgba(66, 32, 6, .9);
-  color: #fb923c;
-  padding: 2px 6px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  z-index: 3;
-}
-
-/* ── Right content panel (70%) ── */
+/* ── Content panel — p-5 flex-1 flex flex-col justify-between min-h-[160px] ── */
 .contentPanel {
+  padding: 20px;
   flex: 1;
-  padding: 14px 16px 14px 18px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
+  min-height: 160px;
   position: relative;
-  min-width: 0;
 }
 
-.name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 4px;
-  padding-right: 28px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.desc {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.typePill {
+/* ── Period / type coral badge — text-[9px] bg-coral/10 text-coral rounded-xs ── */
+.periodBadge {
   display: inline-block;
-  padding: 2px 7px;
-  border-radius: 20px;
   font-size: 10px;
-  font-weight: 600;
+  background: rgba(255,94,58,.10);
+  color: #ff5e3a;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 2px;
+  letter-spacing: .07em;
   text-transform: uppercase;
-  align-self: flex-start;
 }
 
-.typeTickets    { background: #1e3a5f; color: #93c5fd; }
-.typeInventario { background: #1a3a2a; color: #6ee7b7; }
-.typeCrm        { background: #2d1f3d; color: #c4b5fd; }
-.typeRrhh       { background: #1c2a1c; color: #86efac; }
-.typeCustom     { background: #2d1f3d; color: #c4b5fd; }
-.typeHelpdesk   { background: #1e3a5f; color: #93c5fd; }
-.typeInventory  { background: #1a3a2a; color: #6ee7b7; }
-.typeGestion    { background: #1e1b4b; color: #a5b4fc; }
+/* ── Module name — text-xs font-black text-brand-dark mt-2 uppercase ── */
+.name {
+  font-size: 12px;
+  font-weight: 900;
+  color: #0e2235;
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: .025em;
+  line-height: 1.625;
+  transition: color .15s;
+  padding-right: 24px;
+}
+.card:hover .name { color: #ff5e3a; }
 
-/* ── Kebab menu (top-right of content panel) ── */
+/* ── Description — text-[11px] text-brand-textMuted mt-1.5 leading-relaxed ── */
+.desc {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 6px;
+  line-height: 1.625;
+  flex: 1;
+}
+
+/* ── Footer — border-t border-slate-100 pt-3 mt-4 flex items-center justify-between ── */
+.cardFooter {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Status badge — text-[9px] font-bold flex items-center ── */
+.statusBadge {
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+/* ── Enter button — text-[10px] font-black text-brand-dark hover:underline ── */
+.enterBtn {
+  font-size: 10px;
+  font-weight: 900;
+  color: #0e2235;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  transition: text-decoration .1s;
+  text-decoration: none;
+  line-height: 1;
+}
+.enterBtn:hover { text-decoration: underline; }
+
+/* ── Kebab menu — below admin avatar overlap zone ── */
 .menuWrap {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 26px;
+  right: 10px;
   z-index: 10;
 }
 
 .kebabBtn {
-  background: none;
-  border: none;
-  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 0;
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
   display: flex;
   align-items: center;
-  transition: background .15s, color .15s;
+  justify-content: center;
+  transition: background .15s, color .15s, border-color .15s;
 }
-
 .kebabBtn:hover {
-  background: #f1f5f9;
-  color: #475569;
+  background: #e2e8f0;
+  color: #0e2235;
+  border-color: #cbd5e1;
 }
 
 .dropdown {
@@ -243,13 +299,12 @@
   margin-top: 4px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  min-width: 160px;
+  border-radius: 8px;
+  min-width: 180px;
   padding: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
   z-index: 100;
 }
-
 .dropdownOpen { display: block; }
 
 .ddItem {
@@ -257,7 +312,7 @@
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
-  border-radius: 7px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
   color: #475569;
@@ -267,17 +322,7 @@
   width: 100%;
   text-align: left;
 }
-
-.ddItem:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-}
-
-.ddDanger { color: #f87171; }
+.ddItem:hover  { background: #f1f5f9; color: #0f172a; }
+.ddDanger      { color: #f87171; }
 .ddDanger:hover { background: #450a0a; color: #fca5a5; }
-
-.ddSep {
-  height: 1px;
-  background: #e2e8f0;
-  margin: 4px 0;
-}
+.ddSep         { height: 1px; background: #e2e8f0; margin: 4px 0; }

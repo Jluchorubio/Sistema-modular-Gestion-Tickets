@@ -59,7 +59,7 @@ export function ForcePwModal() {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
+      position: 'fixed', inset: 0, zIndex: 210,
       background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 24,
@@ -124,7 +124,7 @@ export function ForcePwModal() {
             type="submit"
             disabled={loading || !current || !newPwd || !confirm}
             style={{
-              width: '100%', padding: '11px 0', background: loading ? '#6366F1aa' : '#6366F1',
+              width: '100%', padding: '11px 0', background: loading ? 'rgba(14,34,53,0.65)' : '#0e2235',
               color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600,
               cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
             }}

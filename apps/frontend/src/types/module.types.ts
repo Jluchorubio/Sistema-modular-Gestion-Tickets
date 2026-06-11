@@ -1,7 +1,8 @@
-export type AccessMode      = 'open' | 'request';
-export type AssignmentMode  = 'manual' | 'round_robin' | 'hybrid';
-export type PriorityMode    = 'auto' | 'manual';
-export type PriorityEditors = 'jefe_tecnico' | 'any_tech';
+export type AccessMode           = 'open' | 'request';
+export type AssignmentMode       = 'manual' | 'round_robin' | 'hybrid';
+export type PriorityMode         = 'auto' | 'manual';
+export type PriorityEditors      = 'jefe_tecnico' | 'any_tech';
+export type SpecializationMode   = 'general' | 'specialist' | 'hybrid';
 
 export interface SystemModule {
   id: string;
@@ -23,6 +24,9 @@ export interface SystemModule {
   priority_editors?:        PriorityEditors;
   priority_period_start?:   string | null;
   priority_period_end?:     string | null;
+  /* ── Extended behavior config (migration 019) ── */
+  specialization_mode?:     SpecializationMode;
+  auto_close_hours?:        number;
   created_at: string;
   deleted_at: string | null;
 }
@@ -49,6 +53,29 @@ export interface Environment {
   location_id: string;
   name: string;
   description: string | null;
+}
+
+export type TechAvailStatus =
+  | 'disponible'
+  | 'ocupado'
+  | 'en_reunion'
+  | 'fuera_horario'
+  | 'ausente'
+  | 'offline';
+
+export interface ModuleTechnician {
+  id:             string;
+  first_name:     string;
+  last_name:      string;
+  username:       string | null;
+  avatar_url:     string | null;
+  role_name:      string;
+  avg_rating:     number;
+  active_tickets: number;
+  is_available:   boolean;
+  avail_status:   TechAvailStatus;
+  unavailable_to: string | null;
+  last_seen_at?:  string | null;
 }
 
 export interface ModuleMember {

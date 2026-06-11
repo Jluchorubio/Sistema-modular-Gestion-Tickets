@@ -80,7 +80,7 @@ export function FileUpload({
           <>
             {isUploading ? (
               <>
-                <span className={styles.spinner} style={{ borderColor: 'rgba(99,102,241,0.3)', borderTopColor: '#6366f1' }} />
+                <span className={styles.spinner} style={{ borderColor: 'rgba(14,34,53,0.2)', borderTopColor: '#0e2235' }} />
                 <span className={styles.label}>Subiendo...</span>
               </>
             ) : (

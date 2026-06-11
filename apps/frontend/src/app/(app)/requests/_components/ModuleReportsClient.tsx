@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { BarChart2, TrendingUp, Clock, CheckCircle2, AlertCircle, Users } from 'lucide-react';
 import { useUIStore } from '@/stores/ui.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { requestsService, type RequestStatus } from '@/services/requests.service';
 import { usersService } from '@/services/users.service';
 import { REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS } from '@/constants/requests';
@@ -19,18 +20,24 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
 };
 
 export function ModuleReportsClient() {
-  const moduleId = useUIStore((s) => s.moduleId);
+  const moduleId  = useUIStore((s) => s.moduleId);
+  const authUser  = useAuthStore((s) => s.user);
+  const isSuperadmin  = authUser?.is_superadmin ?? false;
+  const isAdminModulo = !!moduleId && !!authUser?.module_roles?.some(
+    (r) => r.module_id === moduleId && r.status === 'active' && r.role_name === 'admin_modulo',
+  );
+  const canViewAll = isSuperadmin || isAdminModulo;
 
   const { data: reqData, isLoading: loadingReqs } = useQuery({
     queryKey: ['module-reports-requests', moduleId],
     queryFn:  () => requestsService.getAll({ limit: 500 }),
-    enabled:  !!moduleId,
+    enabled:  !!moduleId && canViewAll,
   });
 
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['module-users', moduleId],
     queryFn:  () => usersService.getModuleUsers(moduleId!),
-    enabled:  !!moduleId,
+    enabled:  !!moduleId && canViewAll,
   });
 
   const isLoading = loadingReqs || loadingUsers;

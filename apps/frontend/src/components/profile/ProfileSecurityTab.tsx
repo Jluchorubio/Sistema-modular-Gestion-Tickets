@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,7 +40,11 @@ function countryFlag(code: string | null): string {
 
 const pwdSchema = z.object({
   current: z.string().min(1, 'Requerido'),
-  newPwd:  z.string().min(8, 'Mínimo 8 caracteres'),
+  newPwd:  z.string()
+    .min(8, 'Mínimo 8 caracteres')
+    .regex(/[A-Z]/, 'Debe incluir al menos una mayúscula')
+    .regex(/[a-z]/, 'Debe incluir al menos una minúscula')
+    .regex(/[0-9]/, 'Debe incluir al menos un número'),
   confirm: z.string(),
 }).refine(d => d.newPwd === d.confirm, {
   message: 'Las contraseñas no coinciden',
@@ -76,7 +80,6 @@ export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props)
 
   // ── Password change ───────────────────────────────────────────────────────────
   const [showPwd,     setShowPwd]     = useState({ current: false, newPwd: false, confirm: false });
-  const [pwdStrength, setPwdStrength] = useState(0);
   const [pwdMsg,      setPwdMsg]      = useState<{ ok: boolean; text: string } | null>(null);
 
   const { register: regPwd, handleSubmit: submitPwd, reset: resetPwd, watch: watchPwd,
@@ -85,14 +88,13 @@ export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props)
 
   const newPwdVal = watchPwd('newPwd', '');
 
-  useEffect(() => {
-    let score = 0;
-    if (newPwdVal.length >= 8)          score++;
-    if (/[A-Z]/.test(newPwdVal))        score++;
-    if (/[0-9]/.test(newPwdVal))        score++;
-    if (/[^a-zA-Z0-9]/.test(newPwdVal)) score++;
-    setPwdStrength(score);
-  }, [newPwdVal]);
+  const pwdReqs = [
+    { label: 'Al menos 8 caracteres', ok: newPwdVal.length >= 8 },
+    { label: 'Una mayúscula',          ok: /[A-Z]/.test(newPwdVal) },
+    { label: 'Una minúscula',          ok: /[a-z]/.test(newPwdVal) },
+    { label: 'Un número',              ok: /[0-9]/.test(newPwdVal) },
+  ];
+  const pwdStrength = pwdReqs.filter(r => r.ok).length;
 
   const pwdColors = ['#D8E0EA', '#EF4444', '#F59E0B', '#22C55E', '#16A34A'];
   const pwdLabels = ['', 'Débil', 'Regular', 'Buena', 'Excelente'];
@@ -102,7 +104,6 @@ export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props)
     onSuccess: () => {
       setPwdMsg({ ok: true, text: 'Contraseña actualizada correctamente' });
       resetPwd();
-      setPwdStrength(0);
     },
     onError: (e: Error) => setPwdMsg({ ok: false, text: e.message ?? 'Error al cambiar contraseña' }),
   });
@@ -186,6 +187,15 @@ export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props)
                 style={{ width: `${pwdStrength * 25}%`, background: pwdColors[pwdStrength] ?? '#D8E0EA' }}
               />
             </div>
+            {newPwdVal.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, margin: '6px 0 10px' }}>
+                {pwdReqs.map((r) => (
+                  <span key={r.label} style={{ fontSize: 11, color: r.ok ? '#22c55e' : '#94a3b8', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontWeight: 700 }}>{r.ok ? '✓' : '○'}</span> {r.label}
+                  </span>
+                ))}
+              </div>
+            )}
             <p style={{ fontSize: 11, color: '#64748B', marginBottom: 18 }}>{pwdLabels[pwdStrength]}</p>
             {pwdMsg && <p className={pwdMsg.ok ? styles.msgOk : styles.msgErr}>{pwdMsg.text}</p>}
             <button
@@ -412,13 +422,6 @@ export function ProfileSecurityTab({ user, isOwnProfile, onTotpToggled }: Props)
                       {s.geo_city && s.geo_country
                         ? `${s.geo_city}, ${s.geo_country}`
                         : (s.geo_country ?? s.geo_city)}
-                    </p>
-                  )}
-
-                  {/* IP (active sessions only — backend hides it for closed) */}
-                  {s.ip_address && (
-                    <p className={styles.securitySub} style={{ margin: '2px 0', fontFamily: 'monospace', fontSize: 11 }}>
-                      {s.ip_address}
                     </p>
                   )}
 

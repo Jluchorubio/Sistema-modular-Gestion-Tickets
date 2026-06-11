@@ -1,28 +1,34 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessagingService } from '../../shared/messaging/messaging.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ReviewRequestDto } from './dto/review-request.dto';
 import { calculatePriority } from './priority.engine';
-import { resolveAssignee, resolveSlaDeadline } from './routing.engine';
+import { resolveAssignee } from './routing.engine';
 import { SystemConfigService } from '../system-config/system-config.service';
+import { SlaEvaluatorService } from '../tickets/sla/sla-evaluator.service';
+
+const PRIORITY_HOURS: Record<string, number> = { critica: 2, alta: 8, media: 24, baja: 72 };
 
 @Injectable()
 export class RequestsService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
-    private readonly events: EventEmitter2,
+    private readonly messaging: MessagingService,
     private readonly systemConfig: SystemConfigService,
+    private readonly slaEvaluator: SlaEvaluatorService,
   ) {}
 
   async create(requesterId: string, dto: CreateRequestDto & { task_source?: 'user' | 'system' }) {
     const isActive = await this.systemConfig.isRequestTypeActive(dto.type);
     if (!isActive) throw new BadRequestException(`Tipo de solicitud "${dto.type}" no existe o no está activo`);
 
+    const now        = new Date();
     const taskSource = dto.task_source === 'system' ? 'system' : 'user';
     const meta       = dto.metadata ?? null;
     const metaJson   = meta ? JSON.stringify(meta) : null;
+    const moduleId   = (meta as any)?.module_id as string | undefined;
 
     // Auto-calculate priority from rules
     const { priority, auto } = await calculatePriority(
@@ -32,8 +38,9 @@ export class RequestsService {
     // Auto-route to module admin or superadmin queue
     const { assignedTo, autoEscalated } = await resolveAssignee(this.db, meta);
 
-    // SLA deadline at creation time
-    const slaDeadline = await resolveSlaDeadline(this.db, dto.type, priority);
+    // SLA: resolve hours from config.sla_rules, then compute business-hours-aware deadline
+    const hours = await this.resolveRequestSlaHours(dto.type, priority);
+    const slaDeadline = await this.slaEvaluator.resolveDeadline(hours, now, moduleId ?? '');
 
     const [row] = await this.db.query<any[]>(
       `INSERT INTO requests.admin_requests
@@ -130,12 +137,12 @@ export class RequestsService {
     return { ok: true };
   }
 
-  async findAll(userId: string, opts: { status?: string; type?: string; source?: string; escalated?: boolean; page?: number; limit?: number }) {
+  async findAll(userId: string, opts: { status?: string; type?: string; source?: string; escalated?: boolean; moduleId?: string; page?: number; limit?: number }) {
     const page   = Math.max(1, opts.page  ?? 1);
     const limit  = Math.min(100, Math.max(1, opts.limit ?? 20));
     const offset = (page - 1) * limit;
 
-    // Determine scope: superadmin sees all; admin_modulo sees only their modules' requests
+    // Determine scope: superadmin sees all; module staff see requests for their module(s)
     const [profile] = await this.db.query<{ is_superadmin: boolean }[]>(
       `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
       [userId],
@@ -147,22 +154,22 @@ export class RequestsService {
 
     if (!isSuperadmin) {
       params.push(userId);
+      // Any active module role (admin or staff) scopes visibility to that module's requests
       conditions.push(`(
         r.assigned_to = $${params.length}
         OR r.metadata->>'module_id' IN (
           SELECT umr.module_id::text
           FROM   modules.user_module_roles umr
-          JOIN   modules.module_roles      mr ON mr.id = umr.role_id
           WHERE  umr.user_id   = $${params.length}
             AND  umr.is_active = true
-            AND  mr.is_admin   = true
         )
       )`);
     }
 
-    if (opts.status)              { params.push(opts.status);  conditions.push(`r.status      = $${params.length}`); }
-    if (opts.type)                { params.push(opts.type);    conditions.push(`r.type        = $${params.length}`); }
-    if (opts.source)              { params.push(opts.source);  conditions.push(`r.task_source = $${params.length}`); }
+    if (opts.status)              { params.push(opts.status);     conditions.push(`r.status                  = $${params.length}`); }
+    if (opts.type)                { params.push(opts.type);       conditions.push(`r.type                    = $${params.length}`); }
+    if (opts.source)              { params.push(opts.source);     conditions.push(`r.task_source             = $${params.length}`); }
+    if (opts.moduleId)            { params.push(opts.moduleId);   conditions.push(`r.metadata->>'module_id'  = $${params.length}`); }
     if (opts.escalated === true)  { conditions.push(`r.escalated = TRUE`); }
 
     const where = `WHERE ${conditions.join(' AND ')}`;
@@ -248,11 +255,39 @@ export class RequestsService {
   }
 
   async review(reviewerId: string, requestId: string, dto: ReviewRequestDto) {
-    const [req] = await this.db.query<{ id: string; status: string }[]>(
-      `SELECT id, status FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
+    const [req] = await this.db.query<{
+      id: string; status: string; requester_id: string; module_id: string | null;
+    }[]>(
+      `SELECT id, status, requester_id, metadata->>'module_id' AS module_id
+       FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
       [requestId],
     );
     if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
+
+    if (req.requester_id === reviewerId)
+      throw new ForbiddenException('No puedes revisar tu propia solicitud');
+
+    if (req.module_id) {
+      const [actor] = await this.db.query<{ is_superadmin: boolean; role_name: string | null }[]>(
+        `SELECT u.is_superadmin, mr.name AS role_name
+         FROM   users.profiles u
+         LEFT JOIN modules.user_module_roles umr ON umr.user_id = u.id AND umr.module_id = $2 AND umr.is_active = true
+         LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
+         WHERE  u.id = $1 LIMIT 1`,
+        [reviewerId, req.module_id],
+      );
+      if (!actor?.is_superadmin && !actor?.role_name)
+        throw new ForbiddenException('No tienes rol en el módulo de esta solicitud');
+    }
+
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+      pending:      ['approved', 'rejected', 'under_review'],
+      under_review: ['approved', 'rejected'],
+      taken:        ['approved', 'rejected', 'under_review'],
+      in_progress:  ['approved', 'rejected'],
+    };
+    if (!VALID_TRANSITIONS[req.status]?.includes(dto.status))
+      throw new BadRequestException(`Transición inválida: "${req.status}" → "${dto.status}"`);
 
     const [updated] = await this.db.query<any[]>(
       `UPDATE requests.admin_requests
@@ -274,7 +309,7 @@ export class RequestsService {
 
     if (dto.status === 'approved' || dto.status === 'rejected') {
       const event = dto.status === 'approved' ? 'request.approved' : 'request.rejected';
-      this.events.emit(event, {
+      this.messaging.emit(event, {
         requestId:   updated.id,
         title:       updated.title,
         requesterId: updated.requester_id,
@@ -286,18 +321,40 @@ export class RequestsService {
   }
 
   async take(userId: string, requestId: string) {
-    const [req] = await this.db.query<{ id: string; status: string; type: string; priority: string; sla_due_at: string | null }[]>(
-      `SELECT id, status, type, priority, sla_due_at
+    const [req] = await this.db.query<{
+      id: string; status: string; type: string; priority: string;
+      sla_due_at: string | null; module_id: string | null;
+    }[]>(
+      `SELECT id, status, type, priority, sla_due_at,
+              metadata->>'module_id' AS module_id
        FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
       [requestId],
     );
     if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
     if (req.status !== 'pending') throw new BadRequestException('Solo se pueden tomar solicitudes pendientes');
 
+    if (req.module_id) {
+      const [actor] = await this.db.query<{ is_superadmin: boolean; role_name: string | null }[]>(
+        `SELECT u.is_superadmin, mr.name AS role_name
+         FROM   users.profiles u
+         LEFT JOIN modules.user_module_roles umr
+               ON umr.user_id   = u.id
+              AND umr.module_id = $2
+              AND umr.is_active = true
+         LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
+         WHERE  u.id = $1 LIMIT 1`,
+        [userId, req.module_id],
+      );
+      if (!actor?.is_superadmin && !actor?.role_name)
+        throw new ForbiddenException('No tienes rol en el módulo de esta solicitud');
+    }
+
     // Only recalculate SLA if not already set at creation
-    const slaDeadline = req.sla_due_at
-      ? req.sla_due_at
-      : await resolveSlaDeadline(this.db, req.type, req.priority);
+    let slaDeadline: Date | string = req.sla_due_at ?? '';
+    if (!req.sla_due_at) {
+      const hours = await this.resolveRequestSlaHours(req.type, req.priority);
+      slaDeadline = await this.slaEvaluator.resolveDeadline(hours, new Date(), '');
+    }
 
     const [updated] = await this.db.query<any[]>(
       `UPDATE requests.admin_requests
@@ -316,7 +373,7 @@ export class RequestsService {
       [requestId, userId],
     );
 
-    this.events.emit('request.taken', {
+    this.messaging.emit('request.taken', {
       requestId:   updated.id,
       title:       updated.title,
       requesterId: updated.requester_id,
@@ -326,11 +383,19 @@ export class RequestsService {
   }
 
   async updateProgress(userId: string, requestId: string, status: 'in_progress' | 'completed') {
-    const [req] = await this.db.query<{ id: string; status: string }[]>(
-      `SELECT id, status FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
+    const [req] = await this.db.query<{ id: string; status: string; taken_by: string | null }[]>(
+      `SELECT id, status, taken_by FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
       [requestId],
     );
     if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
+
+    if (req.taken_by !== userId) {
+      const [actor] = await this.db.query<{ is_superadmin: boolean }[]>(
+        `SELECT is_superadmin FROM users.profiles WHERE id = $1`,
+        [userId],
+      );
+      if (!actor?.is_superadmin) throw new ForbiddenException('Solo quien tomó la solicitud puede avanzar su estado');
+    }
 
     const validFrom: Record<string, string[]> = {
       in_progress: ['taken'],
@@ -384,6 +449,93 @@ export class RequestsService {
       [requestId, userId, req.status],
     );
     return { ok: true };
+  }
+
+  /* ── Private: SLA hours for requests ────────────────────────────────── */
+
+  private async resolveRequestSlaHours(requestType: string, priority: string): Promise<number> {
+    // Type-specific rule first, then global (request_type IS NULL), then hard fallback
+    const [specific] = await this.db.query<{ hours_to_resolve: number }[]>(
+      `SELECT hours_to_resolve FROM config.sla_rules
+       WHERE request_type = $1 AND priority = $2 AND is_active = TRUE LIMIT 1`,
+      [requestType, priority],
+    );
+    if (specific) return specific.hours_to_resolve;
+
+    const [generic] = await this.db.query<{ hours_to_resolve: number }[]>(
+      `SELECT hours_to_resolve FROM config.sla_rules
+       WHERE request_type IS NULL AND priority = $1 AND is_active = TRUE LIMIT 1`,
+      [priority],
+    );
+    if (generic) return generic.hours_to_resolve;
+
+    return PRIORITY_HOURS[priority] ?? 24;
+  }
+
+  async getStats(userId: string, moduleId?: string) {
+    const [profile] = await this.db.query<{ is_superadmin: boolean }[]>(
+      `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
+      [userId],
+    );
+    const isSuperadmin = profile?.is_superadmin ?? false;
+
+    const conditions: string[] = ['r.deleted_at IS NULL'];
+    const params: unknown[]   = [];
+
+    if (!isSuperadmin) {
+      params.push(userId);
+      conditions.push(`(r.assigned_to = $${params.length} OR r.metadata->>'module_id' IN (SELECT umr.module_id::text FROM modules.user_module_roles umr WHERE umr.user_id = $${params.length} AND umr.is_active = TRUE))`);
+    }
+    if (moduleId) {
+      params.push(moduleId);
+      conditions.push(`r.metadata->>'module_id' = $${params.length}`);
+    }
+
+    const scopeClause = `WHERE ${conditions.join(' AND ')}`;
+
+    const [stats] = await this.db.query<any[]>(
+      `SELECT
+         COUNT(*)                                                               AS total,
+         COUNT(*) FILTER (WHERE r.status = 'pending')                         AS pending,
+         COUNT(*) FILTER (WHERE r.status = 'taken')                           AS taken,
+         COUNT(*) FILTER (WHERE r.status = 'in_progress')                     AS in_progress,
+         COUNT(*) FILTER (WHERE r.escalated = TRUE)                           AS escalated,
+         COUNT(*) FILTER (WHERE r.sla_due_at < now()
+                          AND r.status NOT IN ('completed','approved','rejected','cancelled')) AS sla_breached
+       FROM requests.admin_requests r
+       ${scopeClause}`,
+      params,
+    );
+
+    return {
+      total:        parseInt(stats.total,        10),
+      pending:      parseInt(stats.pending,      10),
+      taken:        parseInt(stats.taken,        10),
+      in_progress:  parseInt(stats.in_progress,  10),
+      escalated:    parseInt(stats.escalated,    10),
+      sla_breached: parseInt(stats.sla_breached, 10),
+    };
+  }
+
+  async getMyStats(userId: string) {
+    const [stats] = await this.db.query<any[]>(
+      `SELECT
+         COUNT(*) FILTER (WHERE r.status = 'pending')                  AS pending,
+         COUNT(*) FILTER (WHERE r.status IN ('taken', 'in_progress'))  AS in_progress,
+         COUNT(*) FILTER (WHERE r.status IN ('completed', 'approved')) AS completed,
+         COUNT(*) FILTER (WHERE r.status = 'rejected')                 AS rejected,
+         COUNT(*)                                                       AS total
+       FROM requests.admin_requests r
+       WHERE r.requester_id = $1 AND r.deleted_at IS NULL`,
+      [userId],
+    );
+    return {
+      pending:     parseInt(stats.pending,     10),
+      in_progress: parseInt(stats.in_progress, 10),
+      completed:   parseInt(stats.completed,   10),
+      rejected:    parseInt(stats.rejected,    10),
+      total:       parseInt(stats.total,       10),
+    };
   }
 
   async findByUser(targetUserId: string, limit = 10) {

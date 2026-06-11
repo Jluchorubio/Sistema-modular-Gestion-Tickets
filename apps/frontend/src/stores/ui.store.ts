@@ -4,28 +4,36 @@ import type { ModuleNavItem } from '@/types/nav.types';
 export type AppTheme = 'light' | 'dark' | 'system';
 
 interface UIState {
-  sidebarExpanded: boolean;
-  moduleNav:       ModuleNavItem[] | null;
-  moduleName:      string | null;
-  moduleId:        string | null;
-  theme:           AppTheme;
+  sidebarExpanded:   boolean;
+  mobileSidebarOpen: boolean;
+  moduleNav:         ModuleNavItem[] | null;
+  moduleName:        string | null;
+  moduleId:          string | null;
+  theme:             AppTheme;
 
   toggleSidebar:      () => void;
   setSidebarExpanded: (expanded: boolean) => void;
+  openMobileSidebar:   () => void;
+  closeMobileSidebar:  () => void;
+  toggleMobileSidebar: () => void;
   setModuleNav:       (name: string, items: ModuleNavItem[], moduleId?: string) => void;
   clearModuleNav:     () => void;
   setTheme:           (t: AppTheme) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
-  sidebarExpanded: false,
-  moduleNav:       null,
-  moduleName:      null,
-  moduleId:        null,
-  theme:           'light',
+  sidebarExpanded:   true,
+  mobileSidebarOpen: false,
+  moduleNav:         null,
+  moduleName:        null,
+  moduleId:          null,
+  theme:             'light',
 
   toggleSidebar:      () => set((s) => ({ sidebarExpanded: !s.sidebarExpanded })),
   setSidebarExpanded: (expanded) => set({ sidebarExpanded: expanded }),
+  openMobileSidebar:   () => set({ mobileSidebarOpen: true }),
+  closeMobileSidebar:  () => set({ mobileSidebarOpen: false }),
+  toggleMobileSidebar: () => set((s) => ({ mobileSidebarOpen: !s.mobileSidebarOpen })),
   setModuleNav:       (name, items, moduleId) => set({ moduleName: name, moduleNav: items, moduleId: moduleId ?? null }),
   clearModuleNav:     () => set({ moduleName: null, moduleNav: null, moduleId: null }),
   setTheme: (t) => {

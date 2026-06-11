@@ -238,8 +238,8 @@ DECLARE
     v_st_process   UUID;
     v_st_wait      UUID;
     v_st_done      UUID;
+    v_st_rejected  UUID;
     v_st_closed    UUID;
-    v_st_reprocess UUID;
     v_scope        TEXT;
 BEGIN
     v_scope := COALESCE(p_permission_scope, p_slug);
@@ -285,27 +285,29 @@ BEGIN
         VALUES (v_module_id, 1, 'Workflow estándar v1', true)
         RETURNING id INTO v_wfv_id;
 
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'abierto',    'Abierto',    true,  false) RETURNING id INTO v_st_open;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'en_proceso', 'En proceso', false, false) RETURNING id INTO v_st_process;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'en_espera',  'En espera',  false, false) RETURNING id INTO v_st_wait;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'realizado',  'Realizado',  false, false) RETURNING id INTO v_st_done;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'reproceso',  'Reproceso',  false, false) RETURNING id INTO v_st_reprocess;
-        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final)
-        VALUES (v_wfv_id, v_module_id, 'cerrado',    'Cerrado',    false, true)  RETURNING id INTO v_st_closed;
+        -- FSM states (current spec — no realizado/reproceso)
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'abierto',    'Abierto',    true,  false, false, false) RETURNING id INTO v_st_open;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'en_proceso', 'En proceso', false, false, false, false) RETURNING id INTO v_st_process;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'en_espera',  'En espera',  false, false, false, true)  RETURNING id INTO v_st_wait;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'resuelto',   'Resuelto',   false, false, true,  false) RETURNING id INTO v_st_done;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'rechazado',  'Rechazado',  false, true,  false, false) RETURNING id INTO v_st_rejected;
+        INSERT INTO tickets.states (workflow_version_id, module_id, name, label, is_initial, is_final, is_approval_state, is_pause_state)
+        VALUES (v_wfv_id, v_module_id, 'cerrado',    'Cerrado',    false, true,  false, false) RETURNING id INTO v_st_closed;
 
-        INSERT INTO tickets.transitions (workflow_version_id, module_id, from_state_id, to_state_id, name) VALUES
-        (v_wfv_id, v_module_id, v_st_open,      v_st_process,   'Tomar ticket'),
-        (v_wfv_id, v_module_id, v_st_process,   v_st_wait,      'Solicitar información'),
-        (v_wfv_id, v_module_id, v_st_process,   v_st_done,      'Marcar realizado'),
-        (v_wfv_id, v_module_id, v_st_wait,      v_st_process,   'Reanudar'),
-        (v_wfv_id, v_module_id, v_st_done,      v_st_closed,    'Aprobar y cerrar'),
-        (v_wfv_id, v_module_id, v_st_done,      v_st_reprocess, 'Rechazar solución'),
-        (v_wfv_id, v_module_id, v_st_reprocess, v_st_process,   'Retomar para reproceso');
+        -- FSM transitions with role matrix and UI variants
+        INSERT INTO tickets.transitions (workflow_version_id, module_id, from_state_id, to_state_id, name, variant, allowed_roles) VALUES
+        (v_wfv_id, v_module_id, v_st_open,    v_st_process,   'Tomar ticket',        'primary', ARRAY['tecnico','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_process, v_st_wait,      'Solicitar información','warning', ARRAY['tecnico','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_wait,    v_st_process,   'Reanudar',            'primary', ARRAY['tecnico','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_process, v_st_done,      'Marcar resuelto',     'primary', ARRAY['tecnico','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_done,    v_st_closed,    'Cerrar',              'success', ARRAY['usuario','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_done,    v_st_process,   'Reabrir',             'default', ARRAY['usuario','jefe_tecnico','admin_modulo']),
+        (v_wfv_id, v_module_id, v_st_process, v_st_rejected,  'Rechazar',            'danger',  ARRAY['jefe_tecnico','admin_modulo']);
     ELSE
         SELECT id INTO v_wfv_id FROM tickets.workflow_versions
         WHERE module_id = v_module_id AND version = 1;
@@ -800,10 +802,6 @@ CREATE TABLE IF NOT EXISTS users.profiles (
     emergency_contact_name  varchar(100),
     emergency_contact_phone varchar(50),
     last_seen_at            timestamptz,
-    headquarters_id         uuid,
-    department_id           uuid,
-    area_id                 uuid,
-    position_id             uuid,
     scheduled_hard_delete_at timestamptz,
     deleted_at              timestamptz,
     created_at              timestamptz  NOT NULL DEFAULT now(),
@@ -829,21 +827,8 @@ CREATE TABLE IF NOT EXISTS users.preferences (
 );
 
 -- ── org ──────────────────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS org.headquarters (
-    id         uuid         NOT NULL DEFAULT gen_random_uuid(),
-    name       varchar(200) NOT NULL,
-    address    text,
-    city       varchar(100),
-    country    varchar(100) NOT NULL DEFAULT 'Colombia',
-    phone      varchar(30),
-    email      varchar(255),
-    is_active  boolean      NOT NULL DEFAULT true,
-    created_at timestamptz  NOT NULL DEFAULT now(),
-    updated_at timestamptz  NOT NULL DEFAULT now(),
-    CONSTRAINT pk_headquarters PRIMARY KEY (id),
-    CONSTRAINT uq_headquarters_name UNIQUE (name)
-);
+-- Note: org.headquarters, org.departments, org.areas, org.positions were
+-- dropped in migration 013 (replaced by the dynamic org.nodes tree).
 
 CREATE TABLE IF NOT EXISTS org.departments (
     id          uuid         NOT NULL DEFAULT gen_random_uuid(),
@@ -1336,6 +1321,8 @@ CREATE TABLE IF NOT EXISTS tickets.states (
     label               varchar(100) NOT NULL,
     is_initial          boolean     NOT NULL DEFAULT false,
     is_final            boolean     NOT NULL DEFAULT false,
+    is_approval_state   boolean     NOT NULL DEFAULT false,
+    is_pause_state      boolean     NOT NULL DEFAULT false,
     is_active           boolean     NOT NULL DEFAULT true,
     version             integer     NOT NULL DEFAULT 1,
     deprecated_at       timestamptz,
@@ -1351,6 +1338,8 @@ CREATE TABLE IF NOT EXISTS tickets.transitions (
     from_state_id       uuid         NOT NULL,
     to_state_id         uuid         NOT NULL,
     name                varchar(100) NOT NULL,
+    variant             varchar(50)  NOT NULL DEFAULT 'default',
+    allowed_roles       text[]       NOT NULL DEFAULT '{}',
     is_active           boolean      NOT NULL DEFAULT true,
     version             integer      NOT NULL DEFAULT 1,
     deprecated_at       timestamptz,
@@ -1995,8 +1984,6 @@ CREATE INDEX IF NOT EXISTS idx_users_profiles_active      ON users.profiles (is_
 CREATE INDEX IF NOT EXISTS idx_users_profiles_deleted     ON users.profiles (deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_profiles_superadmin  ON users.profiles (is_superadmin) WHERE is_superadmin = true AND deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_profiles_last_seen_at      ON users.profiles (last_seen_at) WHERE last_seen_at IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_profiles_headquarters      ON users.profiles (headquarters_id) WHERE headquarters_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_profiles_position          ON users.profiles (position_id) WHERE position_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_profiles_username    ON users.profiles (username) WHERE username IS NOT NULL AND deleted_at IS NULL;
 
 -- reports (materialized view index — se crea junto con la vista en Parte 11)
@@ -2011,14 +1998,7 @@ ALTER TABLE users.preferences ADD CONSTRAINT preferences_user_id_fkey
     FOREIGN KEY (user_id) REFERENCES users.profiles(id) ON DELETE CASCADE;
 ALTER TABLE users.profiles ADD CONSTRAINT profiles_global_role_id_fkey
     FOREIGN KEY (global_role_id) REFERENCES config.global_roles(id);
-ALTER TABLE users.profiles ADD CONSTRAINT profiles_headquarters_id_fkey
-    FOREIGN KEY (headquarters_id) REFERENCES org.headquarters(id) ON DELETE SET NULL;
-ALTER TABLE users.profiles ADD CONSTRAINT profiles_department_id_fkey
-    FOREIGN KEY (department_id) REFERENCES org.departments(id) ON DELETE SET NULL;
-ALTER TABLE users.profiles ADD CONSTRAINT profiles_area_id_fkey
-    FOREIGN KEY (area_id) REFERENCES org.areas(id) ON DELETE SET NULL;
-ALTER TABLE users.profiles ADD CONSTRAINT profiles_position_id_fkey
-    FOREIGN KEY (position_id) REFERENCES org.positions(id) ON DELETE SET NULL;
+-- Note: org.headquarters/departments/areas/positions FKs removed in migration 013.
 
 -- org
 ALTER TABLE org.areas ADD CONSTRAINT areas_department_id_fkey
@@ -2273,10 +2253,6 @@ CREATE TRIGGER trg_notif_templates_updated_at
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- org
-CREATE TRIGGER trg_org_headquarters_updated_at
-  BEFORE UPDATE ON org.headquarters
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
 CREATE TRIGGER trg_org_departments_updated_at
   BEFORE UPDATE ON org.departments
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();

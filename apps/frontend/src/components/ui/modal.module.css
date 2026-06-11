@@ -3,7 +3,7 @@
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, .55);
-  z-index: 200;
+  z-index: var(--z-modal-overlay);
   align-items: center;
   justify-content: center;
 }
@@ -11,7 +11,7 @@
 .modal {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 28px;
   width: 440px;
   max-width: 95vw;
@@ -40,7 +40,7 @@
   display: flex;
   align-items: center;
   padding: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: color .15s;
 }
 
@@ -71,19 +71,26 @@
 .actCancel:hover { background: #e2e8f0; }
 
 .actConfirm {
-  background: #6366f1;
+  background: var(--app-coral);
   color: #fff;
 }
 
 .actConfirm:hover { opacity: .88; }
 .actConfirm:disabled { opacity: .4; cursor: not-allowed; }
 
+.actSubmit {
+  background: var(--app-coral);
+  color: #fff;
+}
+.actSubmit:hover { opacity: .88; }
+.actSubmit:disabled { opacity: .4; cursor: not-allowed; }
+
 .actDanger {
-  background: #7f1d1d;
-  color: #fca5a5;
+  background: var(--app-danger);
+  color: #fff;
 }
 
-.actDanger:hover { background: #991b1b; }
+.actDanger:hover { opacity: .88; }
 .actDanger:disabled { opacity: .35; cursor: not-allowed; }
 
 /* ── Form helpers ── */
@@ -111,7 +118,7 @@
   font-family: inherit;
 }
 
-.fieldInput:focus { border-color: #6366f1; }
+.fieldInput:focus { border-color: var(--app-navy); }
 .fieldInput::placeholder { color: #94a3b8; }
 
 .fieldHint {
@@ -165,7 +172,7 @@
   cursor: pointer;
 }
 
-.toggleOn { background: #6366f1; }
+.toggleOn { background: var(--app-coral); }
 
 .toggle::after {
   content: '';

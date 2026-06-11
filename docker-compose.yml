@@ -1,17 +1,19 @@
-version: '3.8'
-
 services:
+  # ── PostgreSQL local ─────────────────────────────────────────────────────────
+  # Solo arranca con: docker compose --profile local-db up -d
+  # Para producción/Railway NO usar este servicio.
   postgres:
     image: postgres:16-alpine
     container_name: tickets_postgres
     restart: unless-stopped
+    profiles: [local-db]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-tickets_db}
       POSTGRES_USER: ${POSTGRES_USER:-tickets_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tickets_pass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/schemas:/docker-entrypoint-initdb.d:ro
+      - ./database/SCHEMA_MASTER.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
@@ -20,6 +22,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Redis ─────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: tickets_redis
@@ -35,39 +38,105 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── RabbitMQ (opcional) ───────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: tickets_rabbitmq
+    restart: unless-stopped
+    profiles: [rabbitmq]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-tickets}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-tickets_pass}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend ───────────────────────────────────────────────────────────────────
   backend:
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
     container_name: tickets_backend
     restart: unless-stopped
-    env_file: ./apps/backend/.env
+    env_file:
+      # DATABASE_URL debe estar aquí apuntando a Railway.
+      # El bloque environment NO sobreescribe DATABASE_URL — Railway tiene prioridad.
+      - path: ./apps/backend/.env
+        required: false
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-tickets_user}:${POSTGRES_PASSWORD:-tickets_pass}@postgres:5432/${POSTGRES_DB:-tickets_db}
+      # DATABASE_URL viene de env_file (apps/backend/.env → Railway URL)
+      # NO se define aquí para no sobreescribir la variable del env_file.
       REDIS_URL: redis://redis:6379
+      # Railway tiene el schema aplicado — no correr migraciones por defecto.
+      # Para postgres local ver docker-compose.local.yml.
+      MIGRATIONS_DIR: /app/migrations-disabled
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      # S3 / R2 (descomentar cuando STORAGE_DRIVER=s3):
+      # R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      # R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      # R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      # R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      # R2_PUBLIC_URL: ${R2_PUBLIC_URL}
+      # RabbitMQ (descomentar cuando --profile rabbitmq):
+      # RABBITMQ_URL: amqp://${RABBITMQ_USER:-tickets}:${RABBITMQ_PASS:-tickets_pass}@rabbitmq:5672
+    volumes:
+      - ./apps/backend/uploads:/app/uploads
     ports:
       - "${BACKEND_PORT:-3001}:3001"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+  # ── Frontend ──────────────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost}
+        BACKEND_INTERNAL_URL: http://backend:3001
     container_name: tickets_frontend
     restart: unless-stopped
-    env_file: ./apps/frontend/.env
+    env_file:
+      - path: ./apps/frontend/.env
+        required: false
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:3001
+      NODE_ENV: production
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
+      backend:
+        condition: service_healthy
+
+  # ── Nginx ─────────────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: tickets_nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # - ./nginx/certs:/etc/nginx/certs:ro  # descomentar con Let's Encrypt
+    depends_on:
+      - frontend
       - backend
 
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:

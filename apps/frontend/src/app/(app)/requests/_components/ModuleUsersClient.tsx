@@ -12,6 +12,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { AssignUsersModal } from '@/app/(app)/modules/[id]/AssignUsersModal';
 import type { User } from '@/types/user.types';
 import styles from './moduleUsers.module.css';
+import mgmt  from '@/styles/mgmt.module.css';
 
 interface ModuleUser extends User {
   role_name: string;
@@ -22,6 +23,10 @@ export function ModuleUsersClient() {
   const moduleId     = useUIStore((s) => s.moduleId);
   const authUser     = useAuthStore((s) => s.user);
   const isSuperadmin = authUser?.is_superadmin ?? false;
+  const isAdminModulo = !!moduleId && !!authUser?.module_roles?.some(
+    (r) => r.module_id === moduleId && r.status === 'active' && r.role_name === 'admin_modulo',
+  );
+  const canViewMembers = isSuperadmin || isAdminModulo;
 
   const [assignOpen,    setAssignOpen]    = useState(false);
   const [assignTarget,  setAssignTarget]  = useState<ModuleUser | null>(null);
@@ -31,7 +36,7 @@ export function ModuleUsersClient() {
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['module-users', moduleId],
     queryFn:  () => usersService.getModuleUsers(moduleId!),
-    enabled:  !!moduleId,
+    enabled:  !!moduleId && canViewMembers,
   });
 
   const { data: roles = [] } = useQuery({
@@ -62,6 +67,8 @@ export function ModuleUsersClient() {
   );
 
   return (
+    <div className={mgmt.pageWrap}>
+    <div className={mgmt.pageContent}>
     <div className={styles.wrap}>
       <div className={styles.header}>
         <div>
@@ -170,6 +177,8 @@ export function ModuleUsersClient() {
           </div>
         </div>
       )}
+    </div>
+    </div>
     </div>
   );
 }

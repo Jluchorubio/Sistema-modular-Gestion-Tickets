@@ -6,7 +6,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  z-index: 500;
+  z-index: var(--z-modal-overlay);
   padding: 40px 16px 24px;
   overflow-y: auto;
 }
@@ -63,8 +63,8 @@
   gap: 5px;
   font-size: 11px;
   font-weight: 700;
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--brand-primary-10);
+  color: var(--app-navy);
   border-radius: 6px;
   padding: 4px 9px;
   letter-spacing: .02em;
@@ -255,7 +255,7 @@
   background-position: right 10px center;
   padding-right: 30px;
 }
-.select:focus { outline: none; border-color: #6366f1; }
+.select:focus { outline: none; border-color: var(--app-navy); }
 .select:disabled { opacity: .5; background-color: #f8fafc; cursor: not-allowed; }
 
 .input {
@@ -269,7 +269,7 @@
   font-family: inherit;
   box-sizing: border-box;
 }
-.input:focus { outline: none; border-color: #6366f1; }
+.input:focus { outline: none; border-color: var(--app-navy); }
 .input:disabled { opacity: .5; background-color: #f8fafc; cursor: not-allowed; }
 
 .textarea {
@@ -286,7 +286,7 @@
   box-sizing: border-box;
   line-height: 1.5;
 }
-.textarea:focus { outline: none; border-color: #6366f1; }
+.textarea:focus { outline: none; border-color: var(--app-navy); }
 
 /* ── Actions ── */
 .actions {
@@ -298,11 +298,11 @@
 
 .btnPrimary {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 8px 16px; background: #6366f1; color: #fff;
+  padding: 8px 16px; background: var(--app-coral); color: #fff;
   border: none; border-radius: 8px; font-size: 12px; font-weight: 600;
-  cursor: pointer; font-family: inherit; transition: background .12s;
+  cursor: pointer; font-family: inherit; transition: opacity .15s;
 }
-.btnPrimary:hover:not(:disabled) { background: #4f46e5; }
+.btnPrimary:hover:not(:disabled) { opacity: .88; }
 .btnPrimary:disabled { opacity: .5; cursor: not-allowed; }
 
 .btnSuccess {

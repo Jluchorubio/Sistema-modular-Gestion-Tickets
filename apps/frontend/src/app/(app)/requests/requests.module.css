@@ -10,7 +10,7 @@
 
 .btnPrimary {
   padding: 8px 16px;
-  background: #6366f1;
+  background: var(--app-coral);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -50,8 +50,8 @@
 .tab:hover { color: #0f172a; }
 
 .tabActive {
-  color: #6366f1;
-  border-bottom-color: #6366f1;
+  color: var(--app-coral);
+  border-bottom-color: var(--app-coral);
   font-weight: 600;
 }
 
@@ -76,7 +76,7 @@
   transition: border-color .15s;
   font-family: inherit;
 }
-.filterSelect:focus { border-color: #6366f1; }
+.filterSelect:focus { border-color: var(--app-navy); }
 
 .onlyMine {
   display: flex;
@@ -86,13 +86,13 @@
   color: #475569;
   cursor: pointer;
 }
-.onlyMineCb { width: 14px; height: 14px; accent-color: #6366f1; }
+.onlyMineCb { width: 14px; height: 14px; accent-color: var(--app-coral); }
 
 /* ── Request card ── */
 .card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 18px 20px;
   margin-bottom: 12px;
 }
@@ -122,7 +122,7 @@
   color: #475569;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 2px 6px;
 }
 
@@ -150,9 +150,9 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
-.pillPending     { background: #eff6ff; color: #1d4ed8; }
-.pillTaken       { background: #f5f3ff; color: #6d28d9; }
-.pillInProgress  { background: #eff6ff; color: #1d4ed8; }
+.pillPending     { background: #f1f5f9; color: #475569; }
+.pillTaken       { background: #fff7ed; color: #9a3412; }
+.pillInProgress  { background: #fef3c7; color: #92400e; }
 .pillCompleted   { background: #f0fdf4; color: #15803d; }
 .pillUnderReview { background: #fffbeb; color: #92400e; }
 .pillApproved    { background: #f0fdf4; color: #15803d; }
@@ -208,7 +208,7 @@
   font-family: inherit;
 }
 .cancelBtn:hover  { border-color: #fca5a5; color: #ef4444; background: #fef2f2; }
-.expandBtn:hover  { border-color: #c7d2fe; color: #6366f1; background: #eef2ff; }
+.expandBtn:hover  { border-color: var(--app-coral-20); color: var(--app-coral); background: var(--app-coral-10); }
 
 /* ── Timeline ── */
 .timelineWrap {
@@ -282,4 +282,107 @@
   transition: border-color .15s;
   margin-top: 6px;
 }
-.rejectNotes:focus { border-color: #6366f1; }
+.rejectNotes:focus { border-color: var(--app-navy); }
+
+/* ── Oversight tabs (Operacional / Supervisión) ── */
+.oversightTabBar {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.oversightTab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 20px;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
+  font-family: inherit;
+  transition: background .15s, border-color .15s;
+}
+
+.oversightTabActive {
+  background: #fff;
+  border-color: #e2e8f0;
+  border-bottom-color: #fff;
+}
+
+.oversightTabLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.oversightTabLabelActive { color: #0e2235; }
+
+.oversightTabBadge {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 94, 58, 0.08);
+  color: #ff5e3a;
+}
+
+.oversightTabDesc {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* ── Supervision mode banner ── */
+.supervisionBanner {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-left: 3px solid #ff5e3a;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.supervisionBannerTitle {
+  font-weight: 700;
+  color: #c2410c;
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .header      { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .btnPrimary  { width: 100%; justify-content: center; text-align: center; }
+  .tabBar      { overflow-x: auto; scrollbar-width: none; padding-bottom: 0; flex-shrink: 0; }
+  .tabBar::-webkit-scrollbar { display: none; }
+  .tab         { padding: 8px 12px; font-size: 12px; flex-shrink: 0; }
+  .card        { padding: 14px 16px; }
+  .filterBar   { gap: 6px; }
+  .filterSelect { width: 100%; font-size: 12px; }
+  .oversightTabBar { flex-wrap: wrap; gap: 0; }
+  .oversightTab    { flex: 1; min-width: 140px; padding: 8px 12px; border-radius: 6px 6px 0 0; }
+  .oversightTabDesc { display: none; }
+  .cardHeader  { flex-wrap: wrap; }
+  .reviewActions { flex-wrap: wrap; }
+  .reviewBtn   { flex: 0 0 calc(50% - 4px); }
+  .supervisionBanner { padding: 10px 14px; font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  .oversightTab  { flex: 1 1 100%; border-radius: 6px; margin-bottom: 2px; }
+  .reviewBtn     { flex: 1 1 100%; }
+  .timelineEntry { gap: 8px; }
+  .cardMeta      { font-size: 11px; gap: 4px; }
+  .tabBar        { gap: 0; }
+  .tab           { padding: 7px 10px; font-size: 11px; }
+}

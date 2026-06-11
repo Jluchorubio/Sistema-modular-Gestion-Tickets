@@ -1,0 +1,597 @@
+---
+  PLAN DE ACCIÓN ENTERPRISE — NEXO ITSM
+
+  Mapping completo antes de ejecutar
+
+  ---
+  VISIÓN GENERAL
+
+  FASE 0 — Security/Correctness (bloqueante)           ~1 día
+  FASE 1 — Gaps operacionales del flujo de tickets     ~2 días
+  FASE 2 — Ticket Workspace UX (core)                  ~4 días
+  FASE 3 — Views & Queue UX                            ~2 días
+  FASE 4 — Enterprise hardening backend                ~1 día
+  FASE 5 — Polish final y coherencia global            ~2 días
+
+  ---
+  FASE 0 — SECURITY & CORRECTNESS
+
+  Objetivo: Fixes que bloquean correctitud funcional y seguridad. Sin
+  esto no se puede entrar a UX.
+
+  ---
+  F0.1 — Comentarios internos visibles a usuario (CRÍTICO)
+
+  Problema: ticketsService.getComments(ticketId) devuelve todos los
+  comentarios. Backend getComments() en tickets.service.ts no filtra
+  por rol. Técnicos escriben comment_type='internal' con notas
+  técnicas que el usuario NO debe ver.
+
+  Archivos:
+  - apps/backend/src/modules/tickets/tickets.service.ts →
+  getComments() query: agregar AND ($2::boolean OR tc.comment_type !=
+  'internal') con flag de staff
+  - apps/backend/src/modules/tickets/tickets.controller.ts → pasar
+  req.user a getComments()
+
+  Frontend:
+  - TicketWorkspace.tsx → comentario toggle public/internal: agregar
+  PermissionGate que solo muestra toggle a roles staff. Un usuario no
+  debería poder escribir internal.
+  - TicketTimeline.tsx → el filtro visual ya existe (yellow border)
+  pero si el backend filtrara, el dato nunca llegaría.
+
+  Verificación: Con rol usuario, hacer GET /tickets/:id/comments → no
+  debe aparecer ningún internal.
+
+  ---
+  F0.2 — rateTicket sin guardia de estado final (IMPORTANTE)
+
+  Problema: POST /tickets/:id/rate acepta rating en cualquier estado.
+  Un usuario puede calificar un ticket en_proceso.
+
+  Archivo: apps/backend/src/modules/tickets/tickets.service.ts →
+  rateTicket(): agregar check ticket.is_final === true antes de
+  insertar.
+
+  Frontend: TicketWorkspace.tsx muestra rating UI if
+  is_approval_state. Esto es incorrecto — el rating debe mostrarse if
+  is_final. El usuario en estado resuelto (approval) debería ver
+  solo los botones de aprobación/rechazo, no el rating. Rating va
+  después de cerrado.
+
+  Archivos frontend:
+  - TicketWorkspace.tsx → mover condicional de rating UI de
+  is_approval_state → is_final
+
+  ---
+  F0.3 — leave:ticket no manejado en backend (IMPORTANTE)
+
+  Problema: Frontend emite socket.emit('leave:ticket', ticketId) en
+  unmount del workspace. Backend NotificationsGateway tiene
+  @SubscribeMessage('join:ticket') pero NO
+  @SubscribeMessage('leave:ticket'). Los usuarios quedan en rooms de
+  tickets que ya cerraron en la sesión → memory leak acumulativo +
+  broadcasts innecesarios.
+
+  Archivo: apps/backend/src/gateway/notifications.gateway.ts →
+  agregar:
+  @SubscribeMessage('leave:ticket')
+  handleLeaveTicket(client: Socket, ticketId: string) {
+    client.leave(`ticket:${ticketId}`);
+  }
+
+  ---
+  Entregables Fase 0: 3 archivos backend, 2 archivos frontend. Todo
+  verificable con tests manuales.
+
+  ---
+  FASE 1 — GAPS OPERACIONALES DEL FLUJO
+
+  Objetivo: El flujo operacional real. Sin esto el sistema tiene
+  comportamientos que ningún helpdesk real toleraría.
+
+  ---
+  F1.1 — Timeout de en_espera sin cron (CRÍTICO)
+
+  Problema: Ticket en en_espera con SLA pausado puede quedarse ahí
+  indefinidamente. Nadie se entera. Crea backlog zombie.
+
+  Solución: Nuevo cron que detecta tickets en pause_state por más de
+  N días (configurable en modules.modules.waiting_timeout_days,
+  default 3) y:
+  1. Notifica al jefe_tecnico del módulo
+  2. Notifica al técnico asignado
+  3. Registra evento en ticket_state_history con
+  transitioned_by='system'
+
+  Archivos:
+  - apps/backend/src/modules/tickets/sla/waiting-timeout.service.ts →
+  nuevo servicio, cron @Cron('0 9 * * *') (diario 9am)
+  - apps/backend/src/modules/tickets/tickets.module.ts → registrar
+  provider
+  - DB: no requiere migración — usa columnas existentes
+  transitioned_at de ticket_state_history y waiting_timeout_days de
+  modules (o hardcoded default si no existe)
+
+  Nota: Si waiting_timeout_days no está en modules.modules, agregar
+  en una migración pequeña o usar config global. Evaluar al
+  implementar.
+
+  ---
+  F1.2 — Sin reminder pre-expiración de aprobación (IMPORTANTE)
+
+  Problema: Token aprobación = 48h. Auto-close ejecuta (hourly).
+  Usuario descubre que el ticket se cerró, no que estaba a punto de
+  cerrarse. Genera quejas.
+
+  Solución: En AutoCloseService o nuevo cron separado: detecta
+  ticket_approvals con status='pending' y expires_at BETWEEN now()
+  AND now() + INTERVAL '24h' → envía notificación reminder.
+
+  Archivos:
+  - apps/backend/src/modules/tickets/sla/auto-close.service.ts →
+  agregar método sendApprovalReminders() llamado desde mismo cron
+  hourly, antes del auto-close
+  - apps/backend/src/modules/notifications/notifications.service.ts →
+  agregar handler @OnEvent('ticket.approval_expiring_soon') con
+  mensaje diferenciado
+
+  ---
+  F1.3 — reprocess_count >= 2 sin escalación (IMPORTANTE)
+
+  Problema: Técnico rechazado 2 veces por el usuario en el mismo
+  ticket. Nadie se entera hasta rechazo 5 (bloqueo). Problema de
+  calidad silencioso.
+
+  Solución: En tickets.service.ts → rejectTicket(): cuando
+  reprocess_count >= 2, emitir ticket.escalated event con
+  note='Auto-escalado por reprocessamiento repetido' + notificar
+  jefe_tecnico.
+
+  Archivo: apps/backend/src/modules/tickets/tickets.service.ts → en
+  rejectTicket() after incrementar count.
+
+  ---
+  F1.4 — Internal comment write guard (SEGURIDAD)
+
+  Problema: AddCommentDto tiene comment_type: 'comment' | 'internal'
+  | 'system'. No hay guardia que impida a un usuario enviar
+  comment_type='internal'. Un usuario podría "esconderse" de técnicos
+  usando internal.
+
+  Solución: En tickets.service.ts → addComment(): si userId tiene
+  solo rol usuario en el módulo, forzar comment_type='public'
+  silenciosamente.
+
+  Archivo: apps/backend/src/modules/tickets/tickets.service.ts →
+  addComment()
+
+  Frontend: TicketWorkspace.tsx → toggle public/internal ya existe.
+  Envolver en check de rol para no mostrarlo a usuario.
+
+  ---
+  F1.5 — Guard rateTicket final state (backend) (F0.2 parte backend)
+
+  Ya mapeado en F0.2. El backend también necesita la guardia.
+
+  ---
+  Entregables Fase 1: 1 servicio nuevo, 3 archivos backend
+  modificados, 1 archivo frontend.
+
+  ---
+  FASE 2 — TICKET WORKSPACE UX
+
+  Objetivo: El workspace ya tiene buena estructura. Los cambios son
+  de comportamiento, jerarquía visual y flujo operacional correcto.
+  NO es un rediseño — es consolidación.
+
+  ---
+  F2.1 — SLA Countdown: refresh dinámico según urgencia
+
+  Problema actual: setInterval(..., 60_000) — 1 minuto. Si un ticket
+  tiene 30 min de SLA restante, el contador puede mostrar "29 min"
+  hasta 1 minuto después de vencer. Para técnicos la precisión
+  importa.
+
+  Solución: Countdown adaptivo:
+  - slaRemaining > 2h → refresh cada 60s (actual)
+  - 30min < slaRemaining <= 2h → refresh cada 30s
+  - slaRemaining <= 30min → refresh cada 10s
+  - slaRemaining <= 0 (breached) → refresh cada 60s (ya no cambia
+  operacionalmente)
+
+  Archivo: apps/frontend/src/app/(app)/tickets/_components/hooks/useT
+  icketData.ts → useTicketData hook, sección useEffect del countdown.
+
+  ---
+  F2.2 — Rating en estado correcto
+
+  Ya mapeado en F0.2 (frontend). Rating → is_final, no
+  is_approval_state.
+
+  ---
+  F2.3 — Aprobación: flujo de usuario más claro
+
+  Problema actual: En estado resuelto (approval), el usuario ve:
+  - Botones de transición en sidebar (que para el usuario solo
+  deberían ser "Aprobar" / "Rechazar")
+  - Sidebar de técnico con toda la info técnica
+  - Timeline completa
+  - Sin instrucciones claras de qué debe hacer
+
+  Solución: En estado is_approval_state Y vista del usuario
+  (capChip.label === 'Solicitante'):
+  1. Agregar banner prominente en la parte superior del workspace:
+  "Tu técnico marcó este ticket como resuelto. ¿Fue solucionado tu
+  problema?" con botones Confirmar resolución / No fue resuelto
+  2. Simplificar sidebar: ocultar sección de reassign y SLA técnico
+  para usuario en approval state. Solo mostrar countdown de
+  expiración.
+  3. Clarificar que si no responde en 48h, se cerrará automáticamente
+  (mostrar approvalCountdown prominentemente)
+
+  Archivos:
+  - TicketWorkspace.tsx → agregar ApprovalBanner component inline
+  cuando is_approval_state && isUser
+  - TicketSidebar.tsx → agregar prop isUserView para simplificar
+  vista en approval
+
+  ---
+  F2.4 — Sidebar transitions: claridad operacional
+
+  Problema actual: Los botones de transición en sidebar muestran
+  tr.to_label (nombre del estado destino). Para un técnico, ver "En
+  proceso" como botón no dice qué acción está realizando — dice a
+  dónde va.
+
+  Observación: Transición abierto → en_proceso debería decir "Tomar
+  ticket" no "En proceso". El tr.name podría ser el verbo de acción.
+  Hay que verificar qué string usa tr.name en el seed de workflows.
+
+  Solución: Mostrar tr.name como texto del botón (verbo de acción)
+  con tr.to_label como subtexto pequeño debajo. Ejemplo:
+  [  Tomar ticket  ]   ← tr.name
+     → En proceso       ← tr.to_label (small, muted)
+
+  Archivo: TicketSidebar.tsx → sección transitions.
+
+  ---
+  F2.5 — Escalation: visibilidad operacional
+
+  Problema actual: El escalation banner existe (if escalated &&
+  escalation_note), pero:
+  1. Solo aparece si hay escalation_note. Si escalated=true pero sin
+  nota, no hay indicación visual.
+  2. Está al medio de la página entre el detail y las tabs, no muy
+  prominente.
+  3. No hay indicación de quién escaló ni cuándo.
+
+  Solución:
+  1. Mostrar badge "ESCALADO" en context strip siempre que
+  escalated=true (ya existe parcialmente en el código — verificar que
+  usa ticket.escalated correctamente)
+  2. Si escalated && !escalation_note → mostrar banner genérico
+  "Ticket escalado"
+  3. Agregar timestamp de escalación (ticket.escalated_at) en el
+  banner
+
+  Archivo: TicketWorkspace.tsx → sección escalation banner.
+
+  ---
+  F2.6 — Reprocess count: advertencia visual
+
+  Problema: reprocess_count se muestra como ×{count} badge en el
+  header. Para el técnico, eso no comunica urgencia.
+
+  Solución:
+  - reprocess_count === 0: no mostrar nada
+  - reprocess_count === 1: badge neutro (ya existe)
+  - reprocess_count >= 2: badge amber con texto "Rechazado {n}×" +
+  icono AlertTriangle
+  - reprocess_count >= 4: badge rojo, texto "Rechazado {n}× — último
+  intento"
+
+  Archivo: TicketWorkspace.tsx → context strip header badges.
+
+  ---
+  F2.7 — Timeline: internal comment visual más claro
+
+  Problema actual: Internal comments tienen border-left: yellow en
+  timeline. Es sutil. Un técnico mirando rápido puede no notar que
+  está leyendo un comentario que el usuario no ve.
+
+  Solución: Agregar label explícito "Solo visible para técnicos" con
+  icono Lock en los internal comments, en lugar de solo borde yellow.
+
+  Archivo: TicketTimeline.tsx → EVENT type 'comment' rendering.
+
+  ---
+  F2.8 — Loading states en Workspace
+
+  Problema: Sin skeletons, el workspace muestra vacío mientras carga.
+  Con 8 queries paralelas, hay momentos de UI vacia.
+
+  Solución: Skeleton loader para:
+  1. Header (sticky) — mostrarse inmediatamente aunque datos no
+  carguen
+  2. Sidebar transitions — placeholder de 3 botones grises
+  3. Timeline — 4-5 placeholders de eventos
+
+  Archivo: TicketWorkspace.tsx → sección isLoading del useTicketData.
+
+  ---
+  Entregables Fase 2: 4 archivos frontend modificados, 0 archivos
+  backend nuevos.
+
+  ---
+  FASE 3 — VIEWS & QUEUE UX
+
+  Objetivo: Las vistas de lista (TechView, AdminView, UserView) son
+  el punto de entrada diario del sistema. Aquí el técnico decide en
+  qué trabajar.
+
+  ---
+  F3.1 — TechView vs AdminView helpdeskMockup: estandarizar
+
+  Problema: Existe visualVariant?: 'helpdeskMockup' | 'default'. El
+  mockup es más rico. No está claro cuándo cada variante se usa, o si
+  una es el "default real" o es experimental.
+
+  Acción: Auditar dónde se pasa visualVariant. Si helpdeskMockup es
+  la vista madura, promoverla como default y deprecar 'default'. Si
+  default es más estable, la alternativa.
+
+  Archivo: AdminView.tsx, TechView.tsx + cualquier consumidor que
+  pase la prop.
+
+  ---
+  F3.2 — UserView: clarificar 'activas' vs 'por-accion'
+
+  Problema: UserView tiene tabs activas | por-accion | cerradas.
+  activas ya muestra approval-state tickets con botones de
+  aprobación. por-accion parece duplicar lo mismo. El usuario ve dos
+  tabs que hacen lo mismo.
+
+  Solución:
+  - activas → tickets no finales, no en approval state (en_proceso,
+  en_espera, abierto)
+  - por-accion → solo tickets en is_approval_state (acción requerida
+  del usuario)
+  - Agregar badge numérico en tab por-accion si hay tickets
+  pendientes de aprobación (urgencia)
+
+  Archivo: UserView.tsx → lógica de filtrado por tab.
+
+  ---
+  F3.3 — TechQueueItem: información de SLA en lista
+
+  Problema actual: TechQueueItem muestra título, categoría, ambiente,
+  tiempo relativo, y si está pausado. NO muestra SLA status en la
+  lista. El técnico tiene que abrir el ticket para ver si el SLA está
+  rojo.
+
+  Solución: Agregar en TechQueueItem:
+  - Si sla_status === 'breached' → punto rojo pulsante en la fila +
+  texto "SLA vencido" en rojo
+  - Si sla_status === 'active' y deadline < 2h → punto naranja + "<
+  2h"
+  - Si sla_status === 'paused' → ícono pausa (ya existe parcialmente)
+
+  Archivos: Donde está definido TechQueueItem — TechView.tsx o
+  AdminView.tsx (inline).
+
+  ---
+  F3.4 — Queue: órden por prioridad + SLA
+
+  Problema: AdminView agrupa por "día anterior" / "hoy". Dentro de
+  cada grupo, ¿qué orden tienen los tickets? Si es por created_at,
+  los tickets críticos con SLA rojo pueden estar al fondo.
+
+  Solución: Verificar el sort en useTicketData / API call. Si no
+  ordena por priority desc, sla_deadline asc, agregar ese sort
+  default.
+
+  Archivos: Hook o query que popula TechView/AdminView —
+  probablemente useMyAssignedTickets o similar.
+
+  ---
+  F3.5 — AdminView: stats grid siempre visible (no solo
+  helpdeskMockup)
+
+  Observación: El stats grid (6 cards: Pendientes, En proceso,
+  Resueltos, etc.) solo aparece en helpdeskMockup. Para un admin,
+  esas métricas son importantes en cualquier variante.
+
+  Evaluación: Mover stats grid a ambas variantes o definir que
+  helpdeskMockup es la vista canónica de admin.
+
+  ---
+  Entregables Fase 3: 3-4 archivos frontend modificados.
+
+  ---
+  FASE 4 — ENTERPRISE HARDENING BACKEND
+
+  Objetivo: Aspectos no funcionales que marcan la diferencia entre
+  "funciona" y "producción real".
+
+  ---
+  F4.1 — Rate limiting en ticket creation
+
+  Problema: POST /tickets sin throttle. Un usuario o script puede
+  crear N tickets en segundos.
+
+  Solución: @Throttle({ default: { limit: 10, ttl: 60000 } }) en POST
+  /tickets usando NestJS ThrottlerModule.
+
+  Archivo: apps/backend/src/modules/tickets/tickets.controller.ts →
+  decorator en create().
+  Prerequisito: Verificar ThrottlerModule registrado en AppModule.
+
+  ---
+  F4.2 — ticket_relations bidireccional duplicado
+
+  Problema: Si existe (A→B, type='bloquea'), nada impide crear (B→A,
+  type='bloquea'). Lógicamente duplicado.
+
+  Solución: En addRelation() de tickets service: check si existe
+  relación inversa antes de insertar. Si type es simétrico
+  (relacionado), bloquear duplicado. Si type es direccional
+  (bloquea/bloqueado_por), permitir pero advertir.
+
+  Archivo: apps/backend/src/modules/tickets/tickets.service.ts →
+  addRelation().
+
+  ---
+  F4.3 — Assignment race condition: SELECT FOR UPDATE
+
+  Problema: RoundRobinStrategy y SkillBasedStrategy hacen SELECT sin
+  lock. Bajo carga (2+ tickets simultáneos en mismo módulo), mismo
+  técnico puede ser seleccionado dos veces.
+
+  Solución: Envolver la query de selección de técnico en SELECT ...
+  FOR UPDATE SKIP LOCKED dentro de una transaction del QueryRunner.
+
+  Archivos:
+  - apps/backend/src/modules/tickets/assignment/strategies/round-robi
+  n.strategy.ts
+  - apps/backend/src/modules/tickets/assignment/strategies/skill-base
+  d.strategy.ts
+  - apps/backend/src/modules/tickets/assignment/assignment.service.ts
+  → pasar QR
+
+  ---
+  F4.4 — Migración 036: waiting_timeout_days en modules
+
+  Si F1.1 usa campo de DB (mejor que hardcoded):
+
+  Archivo: database/migrations/036_waiting_timeout.sql:
+  ALTER TABLE modules.modules
+  ADD COLUMN IF NOT EXISTS waiting_timeout_days int DEFAULT 3;
+
+  ---
+  Entregables Fase 4: 3 archivos backend, 1 migración SQL.
+
+  ---
+  FASE 5 — POLISH FINAL Y COHERENCIA
+
+  Objetivo: Coherencia visual, empty states, error handling, UX
+  micro-detalles. Lo que convierte "funcional" en "producto".
+
+  ---
+  F5.1 — Empty states consistentes
+
+  Mapeado: Ya existen varios empty states. Verificar coherencia:
+  - Todas las listas vacías tienen ícono + mensaje descriptivo ✓
+  (mencionado en audit)
+  - Verificar: queue vacía en TechView, comments vacíos, assets
+  vacíos, relations vacíos
+  - Agregar CTA en empty states donde aplique (ej: "Vincular activo"
+  en AssetCmdbTab vacío — ya existe según código)
+
+  Archivos: Revisión puntual en AssetCmdbTab.tsx, DetallesTab.tsx,
+  ColaboracionTab.tsx, TechView.tsx.
+
+  ---
+  F5.2 — Error boundaries en Workspace
+
+  Problema: Si useTicketData falla, el workspace probablemente
+  muestra error no manejado.
+
+  Solución: Agregar React Error Boundary wrapper en
+  TicketWorkspace.tsx con fallback UI "Error al cargar el ticket —
+  Reintentar".
+
+  Archivo: Nuevo TicketErrorBoundary.tsx + uso en page.tsx del
+  ticket.
+
+  ---
+  F5.3 — Knowledge base lifecycle
+
+  Problema: include_drafts flag sugiere que hay estados
+  draft/published pero no hay flujo definido UI para publicar un
+  artículo.
+
+  Evaluación: Decidir si:
+  a) Ignorar por ahora (KB feature stand-by)
+  b) Agregar toggle is_published en KB article form
+
+  Esto es polish bajo — no bloquea nada operacional.
+
+  ---
+  F5.4 — SLA monitoring page: drill-down
+
+  Observación: helpdesk/sla/page.tsx muestra lista de tickets en
+  riesgo con risk badge. Cada row tiene ChevronRight. Verificar que
+  el link lleva al ticket workspace correcto y no a una página 404.
+
+  ---
+  F5.5 — Consistencia de badges y colores
+
+  Verificar:
+  - StateBadge usa los mismos colores que TECH_AVAIL_COLORS y
+  ASSET_STATUS_COLORS? Hay varios sistemas de colores por área que
+  podrían divergir.
+  - Colores de prioridad en TechQueueItem (border-left color) vs
+  colores de prioridad en el workspace header — ¿mismos valores?
+  - Colores de SLA risk en monitoring page vs colores en workspace
+  SLA strip — ¿mismos valores?
+
+  Archivo: Centralizar en src/constants/colors.ts o
+  src/lib/status-colors.ts si no existe.
+
+  ---
+  F5.6 — Workflow config: transición names en seed
+
+  Problema mapeado en F2.4: Los botones de transición muestran
+  tr.to_label. Para que F2.4 funcione bien, los tr.name del seed
+  deben ser verbos de acción.
+
+  Verificar en DB Railway: SELECT name, from_state_id, to_state_id
+  FROM tickets.transitions — confirmar que name contiene "Tomar
+  ticket", "Pausar", "Resolver", etc. Si son genéricos, actualizar
+  seed/migration.
+
+  Archivo: Posible migration 037 o UPDATE en DB si los nombres son
+  pobres.
+
+  ---
+  Entregables Fase 5: 5-6 archivos frontend, potencial migration SQL.
+
+  ---
+  RESUMEN EJECUTIVO DEL PLAN
+
+  ┌─────┬──────────────────┬──────────┬────────┬─────┬──────────┐
+  Archivo: Posible migration 037 o UPDATE en DB si los nombres son pobres.
+
+  ---
+  Entregables Fase 5: 5-6 archivos frontend, potencial migration SQL.
+
+  ---
+  RESUMEN EJECUTIVO DEL PLAN
+
+  ┌──────┬──────────────────────┬──────────────────┬───────────────────┬───────┬─────────────┐
+  │ Fase │       Objetivo       │ Archivos Backend │ Archivos Frontend │  SQL  │  Prioridad  │
+  ├──────┼──────────────────────┼──────────────────┼───────────────────┼───────┼─────────────┤
+  │ 0    │ Security/Correctness │ 2                │ 2                 │ 0     │ BLOQUEANTE  │
+  ├──────┼──────────────────────┼──────────────────┼───────────────────┼───────┼─────────────┤
+  │ 1    │ Gaps operacionales   │ 3 nuevos/mod     │ 1                 │ 1 opt │ ANTES DE UX │
+  ├──────┼──────────────────────┼──────────────────┼───────────────────┼───────┼─────────────┤
+  │ 2    │ Ticket Workspace UX  │ 0                │ 4                 │ 0     │ Core UX     │
+  ├──────┼──────────────────────┼──────────────────┼───────────────────┼───────┼─────────────┤
+  │ 3    │ Views & Queue UX     │ 0                │ 3-4               │ 0     │ UX          │
+  ├──────┼──────────────────────┼──────────────────┼───────────────────┼───────┼─────────────┤
+  │ 4    │ Enterprise hardening │ 3                │ 0                 │ 1     │ Hardening   │
+  ├──────┼──────────────────────┼──────────────────┼───────────────────┼───────┼─────────────┤
+  │ 5    │ Polish final         │ 0                │ 5-6               │ 1 opt │ Polish      │
+  └──────┴──────────────────────┴──────────────────┴───────────────────┴───────┴─────────────┘
+
+  ---
+  SECUENCIA DE EJECUCIÓN RECOMENDADA
+
+  Fase 0 → Fase 1 → Fase 2+3 (paralelas) → Fase 4 → Fase 5
+
+  Fase 2 y 3 son 100% frontend — pueden correr en paralelo si hay capacidad. Fase 4 (hardening backend) no bloquea frontend. Fase 5 es el sweep final de polish.
+
+  ---
+  ¿Arrancamos por Fase 0 o quieres ajustar algo del mapping antes?

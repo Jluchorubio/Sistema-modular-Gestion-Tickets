@@ -143,12 +143,27 @@ function ModuleAccessForm({
 export function ExecuteRequestModal({ request, onClose }: Props) {
   const qc = useQueryClient();
 
-  const requesterId = (request as any).requester_id as string | null;
+  const requesterId  = (request as any).requester_id as string | null;
+  const metaModuleId = (request.metadata?.module_id ?? '') as string;
 
   const [roleChange,   setRoleChange]   = useState({ moduleId: '', roleId: '' });
   const [moduleAccess, setModuleAccess] = useState({ moduleId: '', roleId: '' });
   const [notes,        setNotes]        = useState('');
   const [error,        setError]        = useState('');
+
+  const { data: allModules = [] } = useQuery({
+    queryKey: ['modules-list-exec'],
+    queryFn:  () => modulesService.getModules(),
+  });
+
+  const { data: userRoles = [], isLoading: rolesLoading } = useQuery<any[]>({
+    queryKey: ['user-roles-exec', requesterId],
+    queryFn:  () => usersService.getUserRoles(requesterId!) as unknown as Promise<any[]>,
+    enabled:  !!requesterId && request.type === 'access_revocation',
+  });
+
+  const targetUmr = userRoles.find((r) => r.module_id === metaModuleId && r.is_active) ?? null;
+  const targetModuleName = allModules.find((m: any) => m.id === metaModuleId)?.name ?? metaModuleId;
 
   const completeMut = useMutation({
     mutationFn: async () => {
@@ -168,13 +183,18 @@ export function ExecuteRequestModal({ request, onClose }: Props) {
         await usersService.updateUser(requesterId, { is_active: true });
       }
 
-      // Mark request as completed
+      if (request.type === 'access_revocation') {
+        if (!targetUmr) throw new Error(`El usuario no tiene acceso activo al módulo "${targetModuleName}".`);
+        await usersService.removeRole(requesterId, targetUmr.id);
+      }
+
       await requestsService.updateProgress(request.id, 'completed');
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['requests-inbox-dyn'] });
       qc.invalidateQueries({ queryKey: ['module-users'] });
       qc.invalidateQueries({ queryKey: ['users-list-dyn'] });
+      qc.invalidateQueries({ queryKey: ['user-roles-exec', requesterId] });
       onClose();
     },
     onError: (e: any) => setError(e?.message ?? 'Error ejecutando cambio.'),
@@ -186,7 +206,7 @@ export function ExecuteRequestModal({ request, onClose }: Props) {
     if (request.type === 'module_access')         return !!(moduleAccess.moduleId && moduleAccess.roleId);
     if (request.type === 'reactivation')          return true;
     if (request.type === 'permission_adjustment') return true;
-    if (request.type === 'access_revocation')     return true;
+    if (request.type === 'access_revocation')     return !rolesLoading && !!targetUmr;
     if (request.type === 'user_transfer')         return true;
     return false;
   }
@@ -249,6 +269,25 @@ export function ExecuteRequestModal({ request, onClose }: Props) {
           {request.type === 'permission_adjustment' && (
             <div className={styles.reactivationNote}>
               Revisa los permisos actuales del usuario y realiza los ajustes necesarios desde el módulo correspondiente.
+            </div>
+          )}
+          {request.type === 'access_revocation' && (
+            <div className={styles.reactivationNote}>
+              {rolesLoading ? (
+                <span style={{ color: '#94a3b8' }}>Verificando acceso del usuario…</span>
+              ) : targetUmr ? (
+                <>
+                  <strong style={{ color: '#0e2235' }}>Se eliminará el acceso a: {targetModuleName}</strong>
+                  <br />
+                  <span style={{ fontSize: 12, color: '#64748b' }}>Rol actual: {targetUmr.role_name}</span>
+                </>
+              ) : (
+                <span style={{ color: '#ef4444' }}>
+                  El usuario no tiene acceso activo al módulo solicitado
+                  {targetModuleName ? ` (${targetModuleName})` : ''}.
+                  No hay acción que ejecutar.
+                </span>
+              )}
             </div>
           )}
 

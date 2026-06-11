@@ -1,5 +1,5 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Ticket, FileText, ShieldCheck, Star } from 'lucide-react';
@@ -11,7 +11,7 @@ import styles from './profile.module.css';
 
 // login events intentionally excluded — they belong in the Security tab (sessions)
 const FEED_EVENT_CONFIG: Record<string, { icon: typeof Ticket; color: string; label: string }> = {
-  ticket_created:      { icon: Ticket,     color: '#6366F1', label: 'Ticket creado'      },
+  ticket_created:      { icon: Ticket,     color: '#1d4ed8', label: 'Ticket creado'      },
   request_pending:     { icon: FileText,   color: '#F59E0B', label: 'Solicitud enviada'  },
   request_approved:    { icon: Star,       color: '#22C55E', label: 'Solicitud aprobada' },
   request_rejected:    { icon: FileText,   color: '#EF4444', label: 'Solicitud rechazada'},
@@ -91,6 +91,52 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
     enabled:   canSeeOps,
     staleTime: 60_000,
   });
+
+  /* ── Tech rating (own profile, tech roles only) ── */
+  const isTech = useMemo(
+    () => (user.module_roles ?? []).some(r => r.status === 'active' && ['tecnico', 'jefe_tecnico'].includes(r.role_name)),
+    [user.module_roles],
+  );
+
+  const { data: techStats } = useQuery({
+    queryKey:  ['tech-stats', uid],
+    queryFn:   () => usersService.getMyTechStats(),
+    enabled:   isOwnProfile && isTech,
+    staleTime: 60_000,
+  });
+
+  /* ── Activity heatmap (26 weeks) ── */
+  const { data: activityData = [] } = useQuery({
+    queryKey:  ['activity-heatmap', uid],
+    queryFn:   () => usersService.getMyActivity(),
+    enabled:   isOwnProfile,
+    staleTime: 300_000,
+  });
+
+  const heatmapWeeks = useMemo(() => {
+    const map = new Map(activityData.map(d => [d.day, d.count]));
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - 181);
+    const weeks: { iso: string; count: number; dow: number }[][] = [];
+    let week: { iso: string; count: number; dow: number }[] = [];
+    for (let i = 0; i < 182; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const iso = d.toISOString().split('T')[0];
+      if (i > 0 && d.getDay() === 0) { weeks.push(week); week = []; }
+      week.push({ iso, count: map.get(iso) ?? 0, dow: d.getDay() });
+    }
+    if (week.length) weeks.push(week);
+    return weeks;
+  }, [activityData]);
+
+  const heatColor = useCallback((count: number): string => {
+    if (count === 0) return '#f1f5f9';
+    if (count <= 2)  return '#bfdbfe';
+    if (count <= 5)  return '#60a5fa';
+    return '#1d4ed8';
+  }, []);
 
   // operational feed excludes login/session events (those live in Security tab)
   const operationalFeed = useMemo(
@@ -203,7 +249,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
       {canSeeOps && stats && (
         <div className={styles.ticketStatGrid} style={{ marginBottom: 22 }}>
           {([
-            ['Tickets creados', stats.tickets_total,                        '#6366F1'],
+            ['Tickets creados', stats.tickets_total,                        '#1d4ed8'],
             ['Solicitudes',     stats.requests_total,                       '#0D1B2A'],
             ['Aprobadas',       stats.requests_by_status['approved']  ?? 0, '#22C55E'],
             ['Pendientes',      stats.requests_by_status['pending']   ?? 0, '#F59E0B'],
@@ -218,6 +264,69 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
         </div>
       )}
 
+      {/* ── Tech rating (own profile, tech roles only) ── */}
+      {isOwnProfile && isTech && techStats && (
+        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionTitle}>Rendimiento técnico</p>
+            <span style={{ fontSize: 10, color: '#94A3B8' }}>{techStats.rated_tickets} ticket{techStats.rated_tickets !== 1 ? 's' : ''} valorado{techStats.rated_tickets !== 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ padding: '14px 22px 16px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 3 }}>
+              {[1,2,3,4,5].map(n => (
+                <Star
+                  key={n} size={20}
+                  fill={n <= Math.round(techStats.avg_rating) ? '#F59E0B' : 'none'}
+                  stroke={n <= Math.round(techStats.avg_rating) ? '#F59E0B' : '#CBD5E1'}
+                />
+              ))}
+            </div>
+            <span style={{ fontSize: 22, fontWeight: 800, color: '#0e2235' }}>
+              {techStats.avg_rating > 0 ? techStats.avg_rating.toFixed(1) : '—'}
+            </span>
+            {techStats.rated_tickets === 0 && (
+              <span style={{ fontSize: 12, color: '#94A3B8' }}>Sin valoraciones aún</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Activity heatmap (own profile only) ── */}
+      {isOwnProfile && heatmapWeeks.length > 0 && (
+        <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
+          <div className={styles.sectionHeader}>
+            <p className={styles.sectionTitle}>Actividad</p>
+            <span style={{ fontSize: 10, color: '#94A3B8' }}>{activityData.reduce((s, d) => s + d.count, 0)} acciones en 26 semanas</span>
+          </div>
+          <div style={{ padding: '14px 22px 16px', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+              {heatmapWeeks.map((week, wi) => (
+                <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {week.map((day) => (
+                    <div
+                      key={day.iso}
+                      title={`${day.iso}: ${day.count} acción${day.count !== 1 ? 'es' : ''}`}
+                      style={{
+                        width: 10, height: 10, borderRadius: 2,
+                        background: heatColor(day.count),
+                        cursor: 'default',
+                      }}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, justifyContent: 'flex-end' }}>
+              <span style={{ fontSize: 10, color: '#94a3b8' }}>Menos</span>
+              {['#f1f5f9', '#bfdbfe', '#60a5fa', '#1d4ed8'].map(c => (
+                <div key={c} style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
+              ))}
+              <span style={{ fontSize: 10, color: '#94a3b8' }}>Más</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Recent tickets ── */}
       {canSeeOps && (
         <div className={styles.card} style={{ marginBottom: 22, overflow: 'hidden' }}>
@@ -225,7 +334,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
             <p className={styles.sectionTitle}>Últimos tickets</p>
             {isOwnProfile && (
               <button
-                style={{ fontSize: 11, color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', padding: 0 }}
+                style={{ fontSize: 11, color: '#0e2235', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', padding: 0 }}
                 onClick={() => router.push('/my-tickets')}
               >
                 Ver más →
@@ -242,7 +351,8 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
               {recentTickets.map((t, i, arr) => (
                 <div
                   key={t.id}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 22px', borderBottom: i < arr.length - 1 ? '1px solid #F1F5F9' : undefined, gap: 12 }}
+                  onClick={() => router.push(`/helpdesk/ticket/${t.id}`)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 22px', borderBottom: i < arr.length - 1 ? '1px solid #F1F5F9' : undefined, gap: 12, cursor: 'pointer' }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 13, fontWeight: 500, color: '#0F172A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -256,7 +366,7 @@ export function ProfileOverviewTab({ user, isOwnProfile, fullName, viewerIsSuper
                     <span className={styles.badge} style={{ fontSize: 10, background: `${pColor[t.priority] ?? '#94A3B8'}22`, color: pColor[t.priority] ?? '#94A3B8', border: `1px solid ${pColor[t.priority] ?? '#94A3B8'}44` }}>
                       {t.priority}
                     </span>
-                    <span className={styles.badge} style={{ fontSize: 10, background: t.is_final ? '#22C55E22' : '#6366F122', color: t.is_final ? '#22C55E' : '#6366F1', border: `1px solid ${t.is_final ? '#22C55E44' : '#6366F144'}` }}>
+                    <span className={styles.badge} style={{ fontSize: 10, background: t.is_final ? '#22C55E22' : 'var(--status-info-bg)', color: t.is_final ? '#22C55E' : 'var(--status-info-text)', border: `1px solid ${t.is_final ? '#22C55E44' : 'var(--status-info-border)'}` }}>
                       {t.state_label}
                     </span>
                   </div>

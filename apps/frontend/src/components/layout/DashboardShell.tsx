@@ -1,44 +1,52 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/stores/ui.store';
 import { useHeartbeat } from '@/hooks/useHeartbeat';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoadPermissions } from '@/hooks/usePermission';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
-import { ADMIN_ROLES } from '@/constants/roles';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
 import { ForcePwModal } from './ForcePwModal';
+import { ModuleSubNav } from './ModuleSubNav';
 import styles from './layout.module.css';
 
-function hasAdminAccess(user: { is_superadmin?: boolean; module_roles?: { status: string; role_name: string }[] } | null): boolean {
-  if (!user) return false;
-  if (user.is_superadmin) return true;
-  const roles = user.module_roles?.filter((r) => r.status === 'active').map((r) => r.role_name) ?? [];
-  return roles.some((r) => (ADMIN_ROLES as string[]).includes(r));
-}
+const MODULE_PATHS = ['/helpdesk', '/tickets', '/inventory', '/requests'];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const expanded = useUIStore((s) => s.sidebarExpanded);
+  const pathname = usePathname();
   useHeartbeat();
   useLoadPermissions();
   useRealtimeNotifications();
 
   const { user, isLoading } = useCurrentUser();
 
-  // Wait for first user fetch to avoid layout flash (admin vs user shell)
   if (isLoading) {
     return <div style={{ minHeight: '100vh', background: '#F8FAFC' }} />;
   }
 
-  const isAdmin = hasAdminAccess(user);
+  const isSuperadmin  = user?.is_superadmin ?? false;
+  const isAdminModulo = !!user?.module_roles?.some(
+    (r) => r.role_name === 'admin_modulo' && r.status === 'active',
+  );
+  const isModulePath = MODULE_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + '/'),
+  );
 
-  if (!isAdmin) {
+  // Admin shell (sidebar): superadmin always, admin_modulo only when inside a module
+  const showAdminShell = isSuperadmin || (isAdminModulo && isModulePath);
+
+  if (!showAdminShell) {
     return (
       <div className={styles.shellUser}>
         <ForcePwModal />
         <AppHeader noSidebar />
-        <main className={styles.mainUser}>{children}</main>
+        <main className={styles.mainUser}>
+          <ModuleSubNav />
+          {children}
+        </main>
       </div>
     );
   }
@@ -48,7 +56,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <ForcePwModal />
       <AppSidebar />
       <AppHeader />
-      <main className={styles.main}>{children}</main>
+      <main className={styles.main}>
+        <ModuleSubNav />
+        {children}
+      </main>
     </div>
   );
 }

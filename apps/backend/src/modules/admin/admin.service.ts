@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 import { Logger } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
 
-const VALID_TYPES = new Set(['module', 'user', 'role', 'request']);
+const VALID_TYPES = new Set(['module', 'user', 'role', 'request', 'structure_type', 'ticket', 'asset']);
 
 @Injectable()
 export class AdminService {
@@ -25,17 +25,20 @@ export class AdminService {
     // When moduleId is provided, only return requests scoped to that module
     const moduleScoped = !!moduleId;
 
+    const safe = <T>(p: Promise<T[]>): Promise<T[]> =>
+      p.catch((e) => { this.logger.warn(`Trash query skipped: ${e.message}`); return []; });
+
     if (!moduleScoped && (!type || type === 'module')) {
-      parts.push(this.db.query<any[]>(
+      parts.push(safe(this.db.query<any[]>(
         `SELECT id, name AS display_name, 'module' AS item_type,
                 deleted_at, scheduled_hard_delete_at,
                 EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
                 type AS extra
          FROM modules.modules WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
-      ));
+      )));
     }
     if (!moduleScoped && (!type || type === 'user')) {
-      parts.push(this.db.query<any[]>(
+      parts.push(safe(this.db.query<any[]>(
         `SELECT p.id, p.first_name || ' ' || p.last_name AS display_name, 'user' AS item_type,
                 p.deleted_at, p.scheduled_hard_delete_at,
                 EXTRACT(EPOCH FROM (p.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
@@ -43,20 +46,20 @@ export class AdminService {
          FROM users.profiles p
          JOIN auth.credentials c ON c.user_id = p.id
          WHERE p.deleted_at IS NOT NULL ORDER BY p.deleted_at DESC`,
-      ));
+      )));
     }
     if (!moduleScoped && (!type || type === 'role')) {
-      parts.push(this.db.query<any[]>(
+      parts.push(safe(this.db.query<any[]>(
         `SELECT id, name AS display_name, 'role' AS item_type,
                 deleted_at, scheduled_hard_delete_at,
                 EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
                 description AS extra
          FROM config.global_roles WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
-      ));
+      )));
     }
     if (!type || type === 'request') {
       if (moduleScoped) {
-        parts.push(this.db.query<any[]>(
+        parts.push(safe(this.db.query<any[]>(
           `SELECT r.id, r.title AS display_name, 'request' AS item_type,
                   r.deleted_at, r.scheduled_hard_delete_at,
                   EXTRACT(EPOCH FROM (r.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
@@ -66,16 +69,69 @@ export class AdminService {
              AND r.metadata->>'module_id' = $1
            ORDER BY r.deleted_at DESC`,
           [moduleId],
-        ));
+        )));
       } else {
-        parts.push(this.db.query<any[]>(
+        parts.push(safe(this.db.query<any[]>(
           `SELECT r.id, r.title AS display_name, 'request' AS item_type,
                   r.deleted_at, r.scheduled_hard_delete_at,
                   EXTRACT(EPOCH FROM (r.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
                   r.type AS extra
            FROM requests.admin_requests r
            WHERE r.deleted_at IS NOT NULL ORDER BY r.deleted_at DESC`,
-        ));
+        )));
+      }
+    }
+    if (!moduleScoped && (!type || type === 'structure_type')) {
+      parts.push(safe(this.db.query<any[]>(
+        `SELECT id, name AS display_name, 'structure_type' AS item_type,
+                deleted_at, scheduled_hard_delete_at,
+                EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
+                slug AS extra
+         FROM org.structure_types WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
+      )));
+    }
+    if (!type || type === 'ticket') {
+      if (moduleScoped) {
+        parts.push(safe(this.db.query<any[]>(
+          `SELECT t.id, t.title AS display_name, 'ticket' AS item_type,
+                  t.deleted_at, t.scheduled_hard_delete_at,
+                  EXTRACT(EPOCH FROM (t.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
+                  t.type AS extra
+           FROM tickets.tickets t
+           WHERE t.deleted_at IS NOT NULL AND t.module_id = $1
+           ORDER BY t.deleted_at DESC`,
+          [moduleId],
+        )));
+      } else {
+        parts.push(safe(this.db.query<any[]>(
+          `SELECT id, title AS display_name, 'ticket' AS item_type,
+                  deleted_at, scheduled_hard_delete_at,
+                  EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
+                  type AS extra
+           FROM tickets.tickets WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
+        )));
+      }
+    }
+    if (!type || type === 'asset') {
+      if (moduleScoped) {
+        parts.push(safe(this.db.query<any[]>(
+          `SELECT a.id, a.name AS display_name, 'asset' AS item_type,
+                  a.deleted_at, a.scheduled_hard_delete_at,
+                  EXTRACT(EPOCH FROM (a.scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
+                  a.serial_number AS extra
+           FROM inventory.assets a
+           WHERE a.deleted_at IS NOT NULL AND a.module_id = $1
+           ORDER BY a.deleted_at DESC`,
+          [moduleId],
+        )));
+      } else {
+        parts.push(safe(this.db.query<any[]>(
+          `SELECT id, name AS display_name, 'asset' AS item_type,
+                  deleted_at, scheduled_hard_delete_at,
+                  EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400 AS days_remaining,
+                  serial_number AS extra
+           FROM inventory.assets WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
+        )));
       }
     }
 
@@ -120,6 +176,18 @@ export class AdminService {
         SELECT title, 'solicitud',
                FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
         FROM requests.admin_requests WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
+        UNION ALL
+        SELECT name, 'tipo de estructura',
+               FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
+        FROM org.structure_types WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
+        UNION ALL
+        SELECT title, 'ticket',
+               FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
+        FROM tickets.tickets WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
+        UNION ALL
+        SELECT name, 'activo',
+               FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
+        FROM inventory.assets WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
       ) t
       WHERE days = ANY($1)
     `, [WARNING_DAYS]);
@@ -157,6 +225,9 @@ export class AdminService {
       { table: 'users.profiles',            label: 'users' },
       { table: 'config.global_roles',       label: 'roles' },
       { table: 'requests.admin_requests',   label: 'requests' },
+      { table: 'org.structure_types',       label: 'structure_types' },
+      { table: 'tickets.tickets',           label: 'tickets' },
+      { table: 'inventory.assets',          label: 'assets' },
     ];
 
     const detail: Record<string, number> = {};
@@ -188,6 +259,33 @@ export class AdminService {
       detail[label] = n;
       total += n;
     }
+
+    // Auth table cleanup — rows accumulate indefinitely, no other service purges them
+    const [rtRow] = await this.db.query<{ count: string }[]>(
+      `WITH deleted AS (
+         DELETE FROM auth.refresh_tokens
+         WHERE expires_at < now() - INTERVAL '7 days'
+         RETURNING id
+       ) SELECT COUNT(*) AS count FROM deleted`,
+    );
+    const [sessRow] = await this.db.query<{ count: string }[]>(
+      `WITH deleted AS (
+         DELETE FROM auth.sessions
+         WHERE ended_at IS NOT NULL AND ended_at < now() - INTERVAL '30 days'
+         RETURNING id
+       ) SELECT COUNT(*) AS count FROM deleted`,
+    );
+    const [otpRow] = await this.db.query<{ count: string }[]>(
+      `WITH deleted AS (
+         DELETE FROM auth.email_otp
+         WHERE used_at IS NOT NULL OR expires_at < now()
+         RETURNING id
+       ) SELECT COUNT(*) AS count FROM deleted`,
+    );
+    detail['auth.refresh_tokens'] = parseInt(rtRow?.count ?? '0', 10);
+    detail['auth.sessions']       = parseInt(sessRow?.count ?? '0', 10);
+    detail['auth.email_otp']      = parseInt(otpRow?.count ?? '0', 10);
+    total += detail['auth.refresh_tokens'] + detail['auth.sessions'] + detail['auth.email_otp'];
 
     this.logger.log(`Purge expired: ${total} items removed — ${JSON.stringify(detail)}`);
     return { purged: total, detail };
@@ -244,6 +342,22 @@ export class AdminService {
            SET deleted_at = NULL, scheduled_hard_delete_at = NULL
            WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
         );
+      } else if (type === 'structure_type') {
+        await this.db.query(
+          `UPDATE org.structure_types
+           SET deleted_at = NULL, scheduled_hard_delete_at = NULL, is_active = true
+           WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
+        );
+      } else if (type === 'ticket') {
+        await this.db.query(
+          `UPDATE tickets.tickets SET deleted_at = NULL, scheduled_hard_delete_at = NULL
+           WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
+        );
+      } else if (type === 'asset') {
+        await this.db.query(
+          `UPDATE inventory.assets SET deleted_at = NULL, scheduled_hard_delete_at = NULL
+           WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
+        );
       }
       return { id, ok: true };
     } catch (e: any) {
@@ -269,6 +383,18 @@ export class AdminService {
       } else if (type === 'request') {
         await this.db.query(
           `DELETE FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
+        );
+      } else if (type === 'structure_type') {
+        await this.db.query(
+          `DELETE FROM org.structure_types WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
+        );
+      } else if (type === 'ticket') {
+        await this.db.query(
+          `DELETE FROM tickets.tickets WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
+        );
+      } else if (type === 'asset') {
+        await this.db.query(
+          `DELETE FROM inventory.assets WHERE id = $1 AND deleted_at IS NOT NULL`, [id],
         );
       }
       return { id, ok: true };
@@ -301,6 +427,24 @@ export class AdminService {
     } else if (type === 'request') {
       await this.db.query(
         `UPDATE requests.admin_requests
+         SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days'
+         WHERE id = $1 AND deleted_at IS NULL`, [id],
+      );
+    } else if (type === 'structure_type') {
+      await this.db.query(
+        `UPDATE org.structure_types
+         SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days', is_active = false
+         WHERE id = $1 AND deleted_at IS NULL`, [id],
+      );
+    } else if (type === 'ticket') {
+      await this.db.query(
+        `UPDATE tickets.tickets
+         SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days'
+         WHERE id = $1 AND deleted_at IS NULL`, [id],
+      );
+    } else if (type === 'asset') {
+      await this.db.query(
+        `UPDATE inventory.assets
          SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days'
          WHERE id = $1 AND deleted_at IS NULL`, [id],
       );

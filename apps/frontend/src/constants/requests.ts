@@ -23,6 +23,7 @@ export const REQUEST_STATUS_LABELS: Record<string, string> = {
   approved:     'Aprobada',
   rejected:     'Rechazada',
   cancelled:    'Cancelada',
+  escalated:    'Escalada',
 };
 
 export const REQUEST_STATUS_COLORS: Record<string, string> = {
@@ -34,6 +35,7 @@ export const REQUEST_STATUS_COLORS: Record<string, string> = {
   approved:     '#22C55E',
   rejected:     '#EF4444',
   cancelled:    '#94A3B8',
+  escalated:    '#F97316',
 };
 
 export const REQUEST_PRIORITY_LABELS: Record<RequestPriority, string> = {

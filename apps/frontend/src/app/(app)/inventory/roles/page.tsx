@@ -1,15 +1,22 @@
 'use client';
+
 import { useModules } from '@/hooks/useModules';
 import { useModuleNav } from '@/hooks/useModuleNav';
 import { Spinner } from '@/components/ui/Spinner';
-import { GestionRolesClient } from '@/app/(app)/requests/_components/GestionRolesClient';
+import { ModuleScopedRolesClient } from '@/components/modules/ModuleScopedRolesClient';
+import { ContextNav } from '@/components/ui/ContextNav';
 import { INVENTORY_NAV, INVENTORY_MODULE_NAME, isInventoryModule } from '../_nav';
 
 export default function InventoryRolesPage() {
   const { modules, isLoading } = useModules();
-  const inventoryId = modules?.find(isInventoryModule)?.id;
-  useModuleNav(INVENTORY_MODULE_NAME, INVENTORY_NAV, inventoryId);
+  const inventoryRef = modules?.find(isInventoryModule);
+  useModuleNav(INVENTORY_MODULE_NAME, INVENTORY_NAV, inventoryRef?.id);
 
-  if (isLoading || !inventoryId) return <Spinner />;
-  return <GestionRolesClient moduleId={inventoryId} />;
+  if (isLoading || !inventoryRef) return <Spinner />;
+  return (
+    <>
+      <ContextNav back crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Inventario', href: '/inventory' }, { label: 'Roles' }]} />
+      <ModuleScopedRolesClient moduleId={inventoryRef.id} moduleName="Inventario de Activos" />
+    </>
+  );
 }

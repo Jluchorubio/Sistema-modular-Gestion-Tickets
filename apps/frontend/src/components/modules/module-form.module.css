@@ -7,7 +7,7 @@
 .textarea {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 7px;
+  border-radius: 8px;
   padding: 8px 12px;
   font-size: 13px;
   font-family: inherit;
@@ -19,8 +19,8 @@
 .select:focus,
 .textarea:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99,102,241,.1);
+  border-color: var(--app-navy);
+  box-shadow: 0 0 0 3px var(--brand-primary-10);
 }
 .input::placeholder,
 .textarea::placeholder { color: #94a3b8; }
@@ -85,7 +85,7 @@
   display: flex;
   align-items: center;
   padding: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: color .12s, background .12s;
 }
 .removeImgBtn:hover { color: #ef4444; background: #fef2f2; }
@@ -95,7 +95,7 @@
 .btnCancel {
   padding: 8px 18px;
   border: 1px solid #e2e8f0;
-  border-radius: 7px;
+  border-radius: 8px;
   background: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -109,16 +109,16 @@
 .btnSubmit {
   padding: 8px 20px;
   border: none;
-  border-radius: 7px;
-  background: #6366f1;
+  border-radius: 8px;
+  background: var(--app-coral);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: background .15s;
+  transition: opacity .15s;
 }
-.btnSubmit:hover    { background: #4f46e5; }
+.btnSubmit:hover    { opacity: .88; }
 .btnSubmit:disabled { opacity: .55; cursor: not-allowed; }
 
 .msgOk  { font-size: 12px; color: #15803d; font-weight: 500; margin-top: 8px; }

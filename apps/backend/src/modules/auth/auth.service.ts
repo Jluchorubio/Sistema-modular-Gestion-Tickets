@@ -15,6 +15,7 @@ import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { createHash, randomBytes } from 'crypto';
+import { enforcePasswordPolicy, DEFAULT_PASSWORD_POLICY, PasswordPolicy } from '../../shared/utils/password-policy.util';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import * as http from 'http';
@@ -33,6 +34,30 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
   ) {}
+
+  async getAccessContact(): Promise<{ email: string | null }> {
+    const [superadmin] = await this.db.query<{ email: string }[]>(
+      `SELECT c.email
+       FROM   users.profiles p
+       JOIN   auth.credentials c ON c.user_id = p.id
+       WHERE  p.is_superadmin = TRUE
+         AND  p.is_active = TRUE
+         AND  p.deleted_at IS NULL
+         AND  c.is_active = TRUE
+       ORDER BY c.last_login_at DESC NULLS LAST, p.created_at ASC
+       LIMIT 1`,
+    );
+
+    if (superadmin?.email) return { email: superadmin.email };
+
+    const [org] = await this.db.query<{ contact_email: string | null }[]>(
+      `SELECT contact_email
+       FROM users.organizations
+       WHERE id = '00000000-0000-0000-0000-000000000001'`,
+    );
+
+    return { email: org?.contact_email ?? null };
+  }
 
   // ─── Login email/password ────────────────────────────────────────────────────
 
@@ -87,6 +112,7 @@ export class AuthService {
            WHERE id = $1`,
           [cred.cred_id],
         );
+        this.auditAuthEvent('auth.login_locked', cred.user_id, ip, userAgent);
         throw new HttpException(
           {
             message: `Demasiados intentos fallidos. Cuenta bloqueada ${LOCKOUT_MINUTES} minutos.`,
@@ -99,6 +125,7 @@ export class AuthService {
         `UPDATE auth.credentials SET failed_login_attempts = $1 WHERE id = $2`,
         [newAttempts, cred.cred_id],
       );
+      this.auditAuthEvent('auth.login_failed', cred.user_id, ip, userAgent);
       throw new HttpException(
         {
           message: 'Contraseña incorrecta.',
@@ -113,7 +140,25 @@ export class AuthService {
       [cred.cred_id],
     );
 
-    // Check if OTP is enabled for this user (default true for safety)
+    // TOTP takes precedence over email OTP when enabled
+    try {
+      const [totpRow] = await this.db.query<{ totp_enabled: boolean }[]>(
+        `SELECT totp_enabled FROM auth.mfa_settings WHERE user_id = $1`,
+        [cred.user_id],
+      );
+      if (totpRow?.totp_enabled) {
+        return {
+          requires_mfa: true,
+          mfa_type: 'totp' as const,
+          otp_token: this.jwt.sign(
+            { sub: cred.user_id, email: cred.email, otp_pending: true },
+            { expiresIn: `${OTP_EXPIRY_MINUTES}m` },
+          ),
+        };
+      }
+    } catch { /* fall through to email OTP */ }
+
+    // Check if email OTP is enabled for this user (default true for safety)
     let otpEnabled = true;
     try {
       const [otpRow] = await this.db.query<{ otp_enabled: boolean }[]>(
@@ -129,7 +174,7 @@ export class AuthService {
       await this.sendEmailOtp(cred.user_id, cred.email);
       return {
         requires_mfa: true,
-        mfa_type: 'email_otp',
+        mfa_type: 'email_otp' as const,
         otp_token: this.jwt.sign(
           { sub: cred.user_id, email: cred.email, otp_pending: true },
           { expiresIn: `${OTP_EXPIRY_MINUTES}m` },
@@ -137,12 +182,46 @@ export class AuthService {
       };
     }
 
-    return this.buildSession(cred.user_id, cred.email, cred.first_name, cred.last_name, cred.is_superadmin, ip, userAgent);
+    const session = await this.buildSession(cred.user_id, cred.email, cred.first_name, cred.last_name, cred.is_superadmin, ip, userAgent);
+    this.auditAuthEvent('auth.login', cred.user_id, ip, userAgent);
+    return session;
   }
 
-  // ─── Google OAuth ────────────────────────────────────────────────────────────
+  // ─── TOTP login verify ───────────────────────────────────────────────────────
 
-  async loginWithGoogle(profile: { email: string; firstName: string; lastName: string; avatar: string | null }, ip?: string, userAgent?: string) {
+  async verifyTotpLogin(otpToken: string, code: string, ip?: string, userAgent?: string) {
+    let payload: any;
+    try { payload = this.jwt.verify(otpToken); }
+    catch { throw new UnauthorizedException('otp_token inválido o expirado'); }
+    if (!payload.otp_pending) throw new UnauthorizedException('Token no es de OTP');
+
+    const [row] = await this.db.query<{ totp_secret: string; totp_enabled: boolean }[]>(
+      `SELECT totp_secret, totp_enabled FROM auth.mfa_settings WHERE user_id = $1`,
+      [payload.sub],
+    );
+    if (!row?.totp_enabled) throw new UnauthorizedException('TOTP no está activo');
+
+    const valid = speakeasy.totp.verify({
+      secret:   row.totp_secret,
+      encoding: 'base32',
+      token:    code,
+      window:   1,
+    });
+    if (!valid) throw new UnauthorizedException('Código TOTP inválido');
+
+    const [userRow] = await this.db.query<{ first_name: string; last_name: string; is_superadmin: boolean }[]>(
+      `SELECT first_name, last_name, is_superadmin FROM users.profiles WHERE id = $1`,
+      [payload.sub],
+    );
+    if (!userRow) throw new UnauthorizedException('Usuario no encontrado');
+
+    this.auditAuthEvent('auth.login_totp', payload.sub, ip, userAgent);
+    return this.buildSession(payload.sub, payload.email, userRow.first_name, userRow.last_name, userRow.is_superadmin, ip, userAgent);
+  }
+
+  // ─── OAuth (Google / Microsoft) ──────────────────────────────────────────────
+
+  async loginWithOAuth(profile: { email: string; firstName: string; lastName: string; avatar: string | null }, ip?: string, userAgent?: string) {
     const rows = await this.db.query<any[]>(
       `SELECT c.user_id, c.email, p.first_name, p.last_name, p.is_superadmin
        FROM auth.credentials c
@@ -156,7 +235,9 @@ export class AuthService {
     }
 
     const user = rows[0];
-    return this.buildSession(user.user_id, user.email, user.first_name, user.last_name, user.is_superadmin, ip, userAgent);
+    const session = await this.buildSession(user.user_id, user.email, user.first_name, user.last_name, user.is_superadmin, ip, userAgent);
+    this.auditAuthEvent('auth.login_oauth', user.user_id, ip, userAgent);
+    return session;
   }
 
   // ─── Email OTP: verificar ────────────────────────────────────────────────────
@@ -326,6 +407,8 @@ export class AuthService {
     );
     if (!rows[0]) throw new BadRequestException('Token inválido o expirado');
 
+    enforcePasswordPolicy(newPassword, await this.fetchPasswordPolicy());
+
     const hash = await bcrypt.hash(newPassword, 10);
     await this.db.query(
       `UPDATE auth.credentials SET password_hash = $1 WHERE user_id = $2`,
@@ -341,6 +424,7 @@ export class AuthService {
       [rows[0].user_id],
     );
 
+    this.auditAuthEvent('auth.password_reset', rows[0].user_id);
     return { ok: true, message: 'Contraseña actualizada' };
   }
 
@@ -376,7 +460,7 @@ export class AuthService {
     return { access_token, refresh_token };
   }
 
-  async logout(userId: string, refreshToken?: string) {
+  async logout(userId: string, refreshToken?: string, ip?: string, userAgent?: string) {
     if (refreshToken) {
       await this.db.query(
         `UPDATE auth.refresh_tokens SET revoked_at = now() WHERE token_hash = $1`,
@@ -388,6 +472,7 @@ export class AuthService {
        WHERE user_id = $1 AND ended_at IS NULL`,
       [userId],
     );
+    this.auditAuthEvent('auth.logout', userId, ip, userAgent);
     return { ok: true };
   }
 
@@ -519,6 +604,8 @@ export class AuthService {
     if (!credRow) throw new BadRequestException('Credenciales no encontradas');
     if (credRow.password_hash.startsWith('!')) throw new BadRequestException('Cuenta OAuth — no tiene contraseña local');
 
+    enforcePasswordPolicy(newPassword, await this.fetchPasswordPolicy());
+
     const newHash = await bcrypt.hash(newPassword, 10);
     try {
       await this.db.query(
@@ -541,6 +628,17 @@ export class AuthService {
     );
     if (!cred || cred.password_hash.startsWith('!')) return false;
     return bcrypt.compare(password, cred.password_hash);
+  }
+
+  private async fetchPasswordPolicy(): Promise<PasswordPolicy> {
+    try {
+      const [org] = await this.db.query<{ password_policy: PasswordPolicy }[]>(
+        `SELECT password_policy FROM users.organizations WHERE id = '00000000-0000-0000-0000-000000000001'`,
+      );
+      return org?.password_policy ?? DEFAULT_PASSWORD_POLICY;
+    } catch {
+      return DEFAULT_PASSWORD_POLICY;
+    }
   }
 
   async validateToken(token: string) {
@@ -704,6 +802,14 @@ export class AuthService {
 
   private hash(value: string): string {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  private auditAuthEvent(action: string, userId: string | null, ip?: string, userAgent?: string): void {
+    this.db.query(
+      `INSERT INTO audit.event_log (actor_id, actor_type, action, entity_type, entity_id, ip_address, user_agent)
+       VALUES ($1, 'user', $2, 'user', $1, $3::inet, $4)`,
+      [userId, action, ip ?? null, userAgent ?? null],
+    ).catch(() => { /* non-critical — never break auth flow */ });
   }
 
   private async sendOtpEmail(to: string, code: string) {

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -10,7 +8,7 @@ services:
       POSTGRES_PASSWORD: tickets_pass
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
-      - ./database/schemas:/docker-entrypoint-initdb.d:ro
+      - ./database/SCHEMA_MASTER.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -34,6 +32,8 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgresql://tickets_user:tickets_pass@postgres:5432/tickets_db_dev
       REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-secret-change-in-production
+      PORT: 3001
     ports:
       - "3001:3001"
       - "9229:9229"
@@ -53,6 +53,7 @@ services:
     container_name: tickets_frontend_dev
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3001
+      BACKEND_INTERNAL_URL: http://backend:3001
     ports:
       - "3000:3000"
     volumes:

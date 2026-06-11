@@ -3,10 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { InventoryController } from './inventory.controller';
 import { InventoryService } from './inventory.service';
 import { QrService } from './qr/qr.service';
+import { FilesModule } from '../files/files.module';
 
-// future microservice: inventory-service
 @Module({
-  imports: [TypeOrmModule.forFeature([])],
+  imports: [TypeOrmModule.forFeature([]), FilesModule],
   controllers: [InventoryController],
   providers: [InventoryService, QrService],
   exports: [InventoryService],

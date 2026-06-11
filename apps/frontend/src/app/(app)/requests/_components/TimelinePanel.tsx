@@ -37,7 +37,7 @@ export function TimelinePanel({ requestId }: { requestId: string }) {
           <div className={styles.timelineDotWrap}>
             <div
               className={styles.timelineDot}
-              style={{ background: e.new_status ? (REQUEST_STATUS_COLORS[e.new_status] ?? '#6366F1') : '#6366F1' }}
+              style={{ background: e.new_status ? (REQUEST_STATUS_COLORS[e.new_status] ?? 'var(--status-info-text, #1d4ed8)') : 'var(--status-info-text, #1d4ed8)' }}
             />
             {i < entries.length - 1 && <div className={styles.timelineLine} />}
           </div>

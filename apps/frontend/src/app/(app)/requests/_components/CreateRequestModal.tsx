@@ -24,6 +24,14 @@ const schema = z.object({
   module_id:   z.string().uuid('ID de módulo inválido').optional().or(z.literal('')),
   role_id:     z.string().uuid().optional().or(z.literal('')),
   priority:    z.enum(['baja', 'media', 'alta', 'critica']).optional(),
+}).superRefine((val, ctx) => {
+  if (MODULE_REQUEST_TYPE_KEYS.includes(val.type) && !val.module_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['module_id'],
+      message: 'Debes seleccionar un módulo para este tipo de solicitud',
+    });
+  }
 });
 type FormData = z.infer<typeof schema>;
 
@@ -125,6 +133,11 @@ export function CreateRequestModal({ open, onClose, onSuccess }: Props) {
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
             </select>
+            {errors.module_id && (
+              <div className={mstyles.msgErr} style={{ padding: '6px 10px', marginTop: 4 }}>
+                {errors.module_id.message}
+              </div>
+            )}
           </>
         )}
 

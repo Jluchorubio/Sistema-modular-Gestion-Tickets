@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Ticket, LogOut, CheckCircle } from 'lucide-react';
+import { LogOut, CheckCircle } from 'lucide-react';
 import { tokens } from '@/lib/tokens';
 import { usersService } from '@/services/users.service';
 import { authService } from '@/services/auth.service';
@@ -19,30 +19,40 @@ type Stage = 'loading' | 'form' | 'security' | 'success';
 type StepState = 'default' | 'active' | 'done';
 
 const profileSchema = z.object({
-  phone_prefix:  z.string().max(10).optional(),
-  phone:         z.string().min(7, 'Mínimo 7 dígitos'),
+  phone_prefix:     z.string().max(10).optional(),
+  phone:            z.string().min(7, 'Mínimo 7 dígitos'),
   username: z.string().optional().refine(
     (v) => !v || (v.length >= 3 && /^[a-z0-9_]+$/.test(v)),
     'Mínimo 3 caracteres, solo letras minúsculas, números y _',
   ),
-  job_title:      z.string().min(2, 'Mínimo 2 caracteres'),
-  department:     z.string().min(1, 'Requerido'),
-  primary_sede:   z.string().min(1, 'Selecciona una sede'),
-  address:        z.string().min(5, 'Mínimo 5 caracteres'),
-  country:        z.string().max(100).optional(),
-  state_province: z.string().max(150).optional(),
-  city:           z.string().max(150).optional(),
+  job_title:        z.string().min(2, 'Mínimo 2 caracteres'),
+  department:       z.string().min(1, 'Requerido'),
+  primary_sede:     z.string().min(1, 'Selecciona una sede'),
+  address:          z.string().min(5, 'Mínimo 5 caracteres'),
+  country:          z.string().max(100).optional(),
+  state_province:   z.string().max(150).optional(),
+  city:             z.string().max(150).optional(),
+  org_node_id:      z.string().optional(),
+  position_node_id: z.string().optional(),
 });
 
 const securitySchema = z.object({
-  newPassword:     z.string().optional().refine((v) => !v || v.length >= 8, 'Mínimo 8 caracteres'),
+  newPassword: z.string().optional().refine(
+    (v) => !v || (
+      v.length >= 8 &&
+      /[A-Z]/.test(v) &&
+      /[a-z]/.test(v) &&
+      /[0-9]/.test(v)
+    ),
+    'Mínimo 8 caracteres, una mayúscula, una minúscula y un número',
+  ),
   confirmPassword: z.string().optional(),
 }).refine((d) => !d.newPassword || d.newPassword === d.confirmPassword, {
   message: 'Las contraseñas no coinciden',
   path:    ['confirmPassword'],
 });
 
-type ProfileForm  = z.infer<typeof profileSchema>;
+type ProfileForm = z.infer<typeof profileSchema>;
 type SecurityForm = z.infer<typeof securitySchema>;
 
 export function CompleteProfileClient() {
@@ -85,16 +95,18 @@ export function CompleteProfileClient() {
       if (user.profile_complete) { router.replace(ROUTES.APP.DASHBOARD); return; }
       setForcePwChange(user.force_password_change);
       profileForm.reset({
-        phone_prefix:  user.phone_prefix  ?? '',
-        phone:         user.phone         ?? '',
-        username:      user.username      ?? '',
-        job_title:     user.job_title     ?? '',
-        department:    user.department    ?? '',
-        primary_sede:  user.primary_sede  ?? '',
-        address:       user.address       ?? '',
-        country:       user.country       ?? '',
-        state_province: user.state_province ?? '',
-        city:           user.city           ?? '',
+        phone_prefix:     user.phone_prefix     ?? '',
+        phone:            user.phone            ?? '',
+        username:         user.username         ?? '',
+        job_title:        user.job_title        ?? '',
+        department:       user.department       ?? '',
+        primary_sede:     user.primary_sede     ?? '',
+        address:          user.address          ?? '',
+        country:          user.country          ?? '',
+        state_province:   user.state_province   ?? '',
+        city:             user.city             ?? '',
+        org_node_id:      user.org_node_id      ?? '',
+        position_node_id: user.position_node_id ?? '',
       });
       setStage('form');
     }).catch(() => router.replace(ROUTES.AUTH.LOGIN));
@@ -106,16 +118,18 @@ export function CompleteProfileClient() {
     setIsSubmitting(true);
     try {
       await usersService.completeProfile({
-        phone_prefix:  values.phone_prefix  || undefined,
-        phone:         values.phone,
-        username:      values.username       || undefined,
-        job_title:     values.job_title,
-        department:    values.department,
-        primary_sede:  values.primary_sede,
-        address:       values.address,
-        country:       values.country        || undefined,
-        state_province: values.state_province || undefined,
-        city:           values.city           || undefined,
+        phone_prefix:     values.phone_prefix     || undefined,
+        phone:            values.phone,
+        username:         values.username          || undefined,
+        job_title:        values.job_title,
+        department:       values.department,
+        primary_sede:     values.primary_sede,
+        address:          values.address,
+        country:          values.country           || undefined,
+        state_province:   values.state_province    || undefined,
+        city:             values.city              || undefined,
+        org_node_id:      values.org_node_id       || undefined,
+        position_node_id: values.position_node_id  || undefined,
       });
       setStage('security');
     } catch (err: unknown) {
@@ -172,9 +186,13 @@ export function CompleteProfileClient() {
       <aside className={styles.leftPanel}>
         <div className={styles.brand}>
           <div className={styles.brandIcon}>
-            <Ticket size={17} color="rgba(255,255,255,0.85)" />
+            {/* Brand mark — two bars */}
+            <svg width="16" height="14" viewBox="0 0 16 14" fill="none" aria-hidden="true">
+              <rect x="0" y="1" width="5" height="12" rx="2.5" fill="rgba(255,255,255,0.9)" transform="rotate(-8 3 7)" />
+              <rect x="7" y="1" width="5" height="12" rx="2.5" fill="rgba(255,255,255,0.75)" transform="rotate(-8 10 7)" />
+            </svg>
           </div>
-          <span className={styles.brandName}>Tickets System</span>
+          <span className={styles.brandName}>Nexo</span>
         </div>
 
         <div className={styles.leftHeadline}>

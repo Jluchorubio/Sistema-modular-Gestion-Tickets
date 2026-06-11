@@ -13,6 +13,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
@@ -34,15 +35,23 @@ export class AuthController {
     private readonly config: ConfigService,
   ) {}
 
+  @Get('access-contact')
+  @ApiOperation({ summary: 'Correo de contacto para solicitudes de acceso.' })
+  getAccessContact() {
+    return this.authService.getAccessContact();
+  }
+
   // ─── Email/password ──────────────────────────────────────────────────────────
 
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Login. Retorna { requires_mfa, mfa_type, otp_token } para verificación por email.' })
   login(@Req() req: any, @Body() dto: LoginDto) {
     return this.authService.login(dto.email, dto.password, req.ip, req.headers['user-agent']);
   }
 
   @Post('refresh')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({ summary: 'Rotar access_token con refresh_token.' })
   refresh(@Body() dto: RefreshDto) {
     return this.authService.refreshSession(dto.refresh_token);
@@ -61,7 +70,7 @@ export class AuthController {
   @Post('logout')
   @ApiOperation({ summary: 'Cerrar sesión y revocar refresh_token.' })
   logout(@Req() req: any, @Body() dto: LogoutDto) {
-    return this.authService.logout(req.user.sub, dto.refresh_token);
+    return this.authService.logout(req.user.sub, dto.refresh_token, req.ip, req.headers['user-agent']);
   }
 
   // ─── Google OAuth ────────────────────────────────────────────────────────────
@@ -78,7 +87,7 @@ export class AuthController {
   async googleCallback(@Req() req: any, @Res() res: Response) {
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
     try {
-      const result = await this.authService.loginWithGoogle(req.user, req.ip, req.headers['user-agent']);
+      const result = await this.authService.loginWithOAuth(req.user, req.ip, req.headers['user-agent']);
       const u      = result.user;
       return res.redirect(
         `${appUrl}/auth/callback` +
@@ -110,7 +119,7 @@ export class AuthController {
   async microsoftCallback(@Req() req: any, @Res() res: Response) {
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
     try {
-      const result = await this.authService.loginWithGoogle(req.user, req.ip, req.headers['user-agent']);
+      const result = await this.authService.loginWithOAuth(req.user, req.ip, req.headers['user-agent']);
       const u      = result.user;
       return res.redirect(
         `${appUrl}/auth/callback` +
@@ -131,6 +140,7 @@ export class AuthController {
   // ─── Email OTP ───────────────────────────────────────────────────────────────
 
   @Post('otp/verify')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Verificar código OTP. Requiere otp_token en Authorization.' })
   verifyEmailOtp(
     @Req() req: any,
@@ -143,6 +153,7 @@ export class AuthController {
   }
 
   @Post('otp/resend')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @ApiOperation({ summary: 'Reenviar código OTP por email. Requiere otp_token en Authorization.' })
   resendEmailOtp(@Headers('authorization') auth: string) {
     const token = auth?.replace('Bearer ', '').trim();
@@ -153,12 +164,14 @@ export class AuthController {
   // ─── Password recovery ───────────────────────────────────────────────────────
 
   @Post('password/forgot')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @ApiOperation({ summary: 'Enviar email con link de recuperación de contraseña.' })
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);
   }
 
   @Post('password/reset')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Resetear contraseña con token recibido por email.' })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.new_password);
@@ -195,6 +208,7 @@ export class AuthController {
   // ─── Heartbeat + Session management ─────────────────────────────────────────
 
   @SkipProfileCheck()
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Patch('heartbeat')
@@ -213,6 +227,19 @@ export class AuthController {
   }
 
   // ─── TOTP (Google Authenticator) ─────────────────────────────────────────────
+
+  @Post('totp/verify-login')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Verificar código TOTP durante login. Requiere otp_token en Authorization.' })
+  verifyTotpLogin(
+    @Req() req: any,
+    @Body() body: { code: string },
+    @Headers('authorization') auth: string,
+  ) {
+    const token = auth?.replace('Bearer ', '').trim();
+    if (!token) throw new UnauthorizedException('otp_token requerido en Authorization header');
+    return this.authService.verifyTotpLogin(token, body.code, req.ip, req.headers['user-agent']);
+  }
 
   @SkipProfileCheck()
   @UseGuards(JwtAuthGuard)

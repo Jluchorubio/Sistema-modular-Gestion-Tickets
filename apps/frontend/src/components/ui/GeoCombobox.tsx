@@ -130,7 +130,7 @@ export function GeoCombobox({ value, onChange, options, loading, placeholder, ic
                 width: '100%', display: 'block', padding: '8px 12px',
                 textAlign: 'left', border: 'none', background: 'none',
                 cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
-                color: opt === value ? '#6366F1' : '#0F172A',
+                color: opt === value ? '#0e2235' : '#0F172A',
                 fontWeight: opt === value ? 600 : 400,
               }}
               onMouseEnter={e => (e.currentTarget.style.background = '#F8FAFC')}

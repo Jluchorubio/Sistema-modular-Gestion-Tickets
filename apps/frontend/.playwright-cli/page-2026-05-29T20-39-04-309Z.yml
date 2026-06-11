@@ -1,0 +1,95 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "LOGOTIPO" [ref=e6] [cursor=pointer]:
+        - /url: /dashboard
+        - generic [ref=e8]: LOGOTIPO
+      - navigation [ref=e9]:
+        - link "Dashboard" [ref=e10] [cursor=pointer]:
+          - /url: /dashboard
+        - link "Solicitudes" [ref=e11] [cursor=pointer]:
+          - /url: /requests
+      - generic [ref=e12]:
+        - button "29" [ref=e14] [cursor=pointer]:
+          - generic [ref=e15]: "29"
+          - img [ref=e16]
+        - button "Notificaciones" [ref=e19] [cursor=pointer]:
+          - img [ref=e20]
+        - button "? Cargando…" [ref=e24] [cursor=pointer]:
+          - generic [ref=e26]: "?"
+          - generic [ref=e27]: Cargando…
+          - img [ref=e28]
+  - main [ref=e30]:
+    - generic [ref=e32]:
+      - generic [ref=e34]:
+        - heading "Configuración del Sistema" [level=1] [ref=e35]
+        - paragraph [ref=e36]: Solo superadmin · Cambios aplicados inmediatamente
+      - generic [ref=e37]:
+        - link "Roles y Permisos Roles globales y de módulo, asignación de permisos" [ref=e38] [cursor=pointer]:
+          - /url: /roles
+          - img [ref=e40]
+          - generic [ref=e42]:
+            - generic [ref=e43]: Roles y Permisos
+            - generic [ref=e44]: Roles globales y de módulo, asignación de permisos
+          - img [ref=e45]
+        - link "Gestión de Usuarios Importación masiva, activación, asignación de roles" [ref=e49] [cursor=pointer]:
+          - /url: /users
+          - img [ref=e51]
+          - generic [ref=e56]:
+            - generic [ref=e57]: Gestión de Usuarios
+            - generic [ref=e58]: Importación masiva, activación, asignación de roles
+          - img [ref=e59]
+        - link "Config Helpdesk SLA tickets, tipos de daño, sedes y calendario del módulo" [ref=e63] [cursor=pointer]:
+          - /url: /helpdesk/config
+          - img [ref=e65]
+          - generic [ref=e67]:
+            - generic [ref=e68]: Config Helpdesk
+            - generic [ref=e69]: SLA tickets, tipos de daño, sedes y calendario del módulo
+          - img [ref=e70]
+        - link "Config Inventario Categorías de activos, sedes, SLA y calendario del módulo" [ref=e74] [cursor=pointer]:
+          - /url: /inventory/config
+          - img [ref=e76]
+          - generic [ref=e79]:
+            - generic [ref=e80]: Config Inventario
+            - generic [ref=e81]: Categorías de activos, sedes, SLA y calendario del módulo
+          - img [ref=e82]
+        - link "Config Solicitudes SLA solicitudes, tipos de solicitud, calendario del módulo" [ref=e86] [cursor=pointer]:
+          - /url: /requests/config
+          - img [ref=e88]
+          - generic [ref=e90]:
+            - generic [ref=e91]: Config Solicitudes
+            - generic [ref=e92]: SLA solicitudes, tipos de solicitud, calendario del módulo
+          - img [ref=e93]
+      - generic [ref=e97]:
+        - button "2 configuraciónes pendientes" [ref=e98] [cursor=pointer]:
+          - img [ref=e99]
+          - generic [ref=e101]: 2 configuraciónes pendientes
+          - img [ref=e102]
+        - generic [ref=e104]:
+          - generic [ref=e105]:
+            - img [ref=e106]
+            - generic [ref=e108]: Estructura organizacionalSin nodos — motor de prioridad no puede operar
+            - button "Configurar →" [ref=e109] [cursor=pointer]
+          - generic [ref=e110]:
+            - img [ref=e111]
+            - generic [ref=e113]: Horario laboral globalSin horario — SLA calculará como 24/7
+            - button "Configurar →" [ref=e114] [cursor=pointer]
+      - generic [ref=e115]:
+        - button "Empresa" [ref=e116] [cursor=pointer]:
+          - img [ref=e117]
+          - generic [ref=e121]: Empresa
+        - button "Organigrama" [ref=e122] [cursor=pointer]:
+          - img [ref=e123]
+          - generic [ref=e128]: Organigrama
+        - button "Motor Prioridad" [ref=e129]:
+          - img [ref=e130]
+          - generic [ref=e133]: Motor Prioridad
+        - button "Calendario SLA" [ref=e134]:
+          - img [ref=e135]
+          - generic [ref=e138]: Calendario SLA
+        - button "Auditoría" [ref=e139]:
+          - img [ref=e140]
+          - generic [ref=e143]: Auditoría
+        - button "Seguridad" [ref=e144] [cursor=pointer]:
+          - img [ref=e145]
+          - generic [ref=e147]: Seguridad

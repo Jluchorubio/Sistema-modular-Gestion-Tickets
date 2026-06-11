@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 400;
+  z-index: var(--z-modal-overlay);
   padding: 20px;
 }
 
@@ -39,8 +39,8 @@
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: #eef2ff;
-  color: #6366f1;
+  background: var(--app-coral-10);
+  color: var(--app-coral);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -63,7 +63,7 @@
 .closeBtn {
   width: 30px;
   height: 30px;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1.5px solid #e2e8f0;
   background: #fff;
   color: #64748b;
@@ -124,7 +124,7 @@
   padding-right: 32px;
 }
 
-.select:focus { outline: none; border-color: #6366f1; }
+.select:focus { outline: none; border-color: var(--app-navy); }
 .select:disabled { opacity: .5; cursor: not-allowed; background-color: #f8fafc; }
 
 .input {
@@ -139,7 +139,7 @@
   box-sizing: border-box;
 }
 
-.input:focus { outline: none; border-color: #6366f1; }
+.input:focus { outline: none; border-color: var(--app-navy); }
 .input:disabled { opacity: .5; cursor: not-allowed; background-color: #f8fafc; }
 
 .textarea {
@@ -157,7 +157,7 @@
   line-height: 1.5;
 }
 
-.textarea:focus { outline: none; border-color: #6366f1; }
+.textarea:focus { outline: none; border-color: var(--app-navy); }
 
 .reactivationNote {
   font-size: 13px;
@@ -191,7 +191,7 @@
   align-items: center;
   gap: 6px;
   padding: 9px 18px;
-  background: #6366f1;
+  background: var(--app-coral);
   color: #fff;
   border: none;
   border-radius: 9px;
@@ -199,10 +199,10 @@
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: background .12s;
+  transition: opacity .15s;
 }
 
-.btnPrimary:hover:not(:disabled) { background: #4f46e5; }
+.btnPrimary:hover:not(:disabled) { opacity: .88; }
 .btnPrimary:disabled { opacity: .5; cursor: not-allowed; }
 
 .btnSecondary {

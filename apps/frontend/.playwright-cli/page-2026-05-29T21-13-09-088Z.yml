@@ -1,0 +1,254 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e151]:
+      - generic [ref=e156]: SENA
+      - navigation "Panel principal" [ref=e157]:
+        - link "Módulos Disponibles" [ref=e158] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e159]
+          - generic [ref=e164]: Módulos Disponibles
+        - link "Usuarios" [ref=e165] [cursor=pointer]:
+          - /url: /users
+          - img [ref=e166]
+          - generic [ref=e178]: Usuarios
+        - link "Roles" [ref=e179] [cursor=pointer]:
+          - /url: /roles
+          - img [ref=e180]
+          - generic [ref=e183]: Roles
+        - link "Reportes" [ref=e184] [cursor=pointer]:
+          - /url: /reports
+          - img [ref=e185]
+          - generic [ref=e186]: Reportes
+        - link "Papelera" [ref=e187] [cursor=pointer]:
+          - /url: /trash
+          - img [ref=e188]
+          - generic [ref=e191]: Papelera
+        - link "Configuración del Sistema" [ref=e192] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e193]
+          - generic [ref=e194]: Configuración del Sistema
+      - button "Contraer menú" [ref=e196] [cursor=pointer]:
+        - img [ref=e198]
+    - banner [ref=e202]:
+      - generic [ref=e203]:
+        - link "LOGOTIPO" [ref=e205] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [ref=e207]: LOGOTIPO
+        - generic [ref=e208]:
+          - button "29" [ref=e210] [cursor=pointer]:
+            - generic [ref=e211]: "29"
+            - img [ref=e212]
+          - button "Notificaciones" [ref=e215] [cursor=pointer]:
+            - img [ref=e216]
+          - button "jluchorubio" [ref=e220] [cursor=pointer]:
+            - generic [ref=e222]: jluchorubio
+            - img [ref=e223]
+    - main [ref=e225]:
+      - generic [ref=e227]:
+        - generic [ref=e229]:
+          - heading "Configuración del Sistema" [level=1] [ref=e230]
+          - paragraph [ref=e231]: Solo superadmin · Cambios aplicados inmediatamente
+        - generic [ref=e232]:
+          - link "Roles y Permisos Roles globales y de módulo, asignación de permisos" [ref=e233] [cursor=pointer]:
+            - /url: /roles
+            - img [ref=e235]
+            - generic [ref=e237]:
+              - generic [ref=e238]: Roles y Permisos
+              - generic [ref=e239]: Roles globales y de módulo, asignación de permisos
+            - img [ref=e240]
+          - link "Gestión de Usuarios Importación masiva, activación, asignación de roles" [ref=e244] [cursor=pointer]:
+            - /url: /users
+            - img [ref=e246]
+            - generic [ref=e251]:
+              - generic [ref=e252]: Gestión de Usuarios
+              - generic [ref=e253]: Importación masiva, activación, asignación de roles
+            - img [ref=e254]
+          - link "Config Helpdesk SLA tickets, tipos de daño, sedes y calendario del módulo" [ref=e258] [cursor=pointer]:
+            - /url: /helpdesk/config
+            - img [ref=e260]
+            - generic [ref=e262]:
+              - generic [ref=e263]: Config Helpdesk
+              - generic [ref=e264]: SLA tickets, tipos de daño, sedes y calendario del módulo
+            - img [ref=e265]
+          - link "Config Inventario Categorías de activos, sedes, SLA y calendario del módulo" [ref=e269] [cursor=pointer]:
+            - /url: /inventory/config
+            - img [ref=e271]
+            - generic [ref=e274]:
+              - generic [ref=e275]: Config Inventario
+              - generic [ref=e276]: Categorías de activos, sedes, SLA y calendario del módulo
+            - img [ref=e277]
+          - link "Config Solicitudes SLA solicitudes, tipos de solicitud, calendario del módulo" [ref=e281] [cursor=pointer]:
+            - /url: /requests/config
+            - img [ref=e283]
+            - generic [ref=e285]:
+              - generic [ref=e286]: Config Solicitudes
+              - generic [ref=e287]: SLA solicitudes, tipos de solicitud, calendario del módulo
+            - img [ref=e288]
+        - button "Sistema configurado correctamente" [ref=e293] [cursor=pointer]:
+          - img [ref=e294]
+          - generic [ref=e297]: Sistema configurado correctamente
+          - img [ref=e298]
+        - generic [ref=e300]:
+          - button "Empresa" [ref=e301] [cursor=pointer]:
+            - img [ref=e302]
+            - generic [ref=e306]: Empresa
+          - button "Organigrama" [ref=e307] [cursor=pointer]:
+            - img [ref=e308]
+            - generic [ref=e313]: Organigrama
+          - button "Motor Prioridad" [ref=e314] [cursor=pointer]:
+            - img [ref=e315]
+            - generic [ref=e316]: Motor Prioridad
+          - button "Calendario SLA" [ref=e317] [cursor=pointer]:
+            - img [ref=e318]
+            - generic [ref=e322]: Calendario SLA
+          - button "Auditoría" [ref=e323] [cursor=pointer]:
+            - img [ref=e324]
+            - generic [ref=e328]: Auditoría
+          - button "Seguridad" [ref=e329] [cursor=pointer]:
+            - img [ref=e330]
+            - generic [ref=e332]: Seguridad
+        - generic [ref=e363]:
+          - generic [ref=e364]:
+            - button "Árbol visual" [ref=e365] [cursor=pointer]:
+              - img [ref=e366]
+              - text: Árbol visual
+            - button "Tipos de estructura" [ref=e370] [cursor=pointer]
+            - button "Colapsar todo" [ref=e372] [cursor=pointer]:
+              - img [ref=e373]
+              - text: Colapsar todo
+            - button "Expandir todo" [ref=e375] [cursor=pointer]:
+              - img [ref=e376]
+              - text: Expandir todo
+            - button "Nuevo nodo" [ref=e378] [cursor=pointer]:
+              - img [ref=e379]
+              - text: Nuevo nodo
+          - application [ref=e381]:
+            - generic [ref=e383]:
+              - generic:
+                - generic:
+                  - group [ref=e390]:
+                    - generic [ref=e392] [cursor=pointer]:
+                      - generic [ref=e393]:
+                        - generic [ref=e394]: Sede
+                        - generic [ref=e395]: "5"
+                      - generic [ref=e397]: Centro de Industria y Construcción C.I.C.
+                      - button "Agregar hijo" [ref=e399]:
+                        - img [ref=e400]
+                  - group [ref=e402]:
+                    - generic [ref=e404] [cursor=pointer]:
+                      - generic [ref=e405]:
+                        - generic [ref=e406]: Departamento
+                        - generic [ref=e407]: "5"
+                      - generic [ref=e409]: Mesa de ayuda
+                      - button "Agregar hijo" [ref=e411]:
+                        - img [ref=e412]
+                  - group [ref=e414]:
+                    - generic [ref=e416] [cursor=pointer]:
+                      - generic [ref=e417]:
+                        - generic [ref=e418]: Departamento
+                        - generic [ref=e419]: "5"
+                      - generic [ref=e421]: RRHH
+                      - button "Agregar hijo" [ref=e423]:
+                        - img [ref=e424]
+                  - group [ref=e426]:
+                    - generic [ref=e428] [cursor=pointer]:
+                      - generic [ref=e429]:
+                        - generic [ref=e430]: Área
+                        - generic [ref=e431]: "5"
+                      - generic [ref=e433]: Arreglos del hadware
+                      - button "Agregar hijo" [ref=e435]:
+                        - img [ref=e436]
+                  - group [ref=e438]:
+                    - generic [ref=e440] [cursor=pointer]:
+                      - generic [ref=e441]:
+                        - generic [ref=e442]: Área
+                        - generic [ref=e443]: "5"
+                      - generic [ref=e445]: dfg
+                      - button "Agregar hijo" [ref=e447]:
+                        - img [ref=e448]
+                  - group [ref=e450]:
+                    - generic [ref=e452] [cursor=pointer]:
+                      - generic [ref=e453]:
+                        - generic [ref=e454]: Área
+                        - generic [ref=e455]: "5"
+                      - generic [ref=e457]: dfg
+                      - generic [ref=e458]:
+                        - button "Agregar hijo" [ref=e459]:
+                          - img [ref=e460]
+                        - button "2" [ref=e628]:
+                          - generic [ref=e629]:
+                            - img [ref=e630]
+                            - generic [ref=e632]: "2"
+                      - generic: "+2"
+                  - group [ref=e504]:
+                    - generic [ref=e506] [cursor=pointer]:
+                      - generic [ref=e507]:
+                        - generic [ref=e508]: Área
+                        - generic [ref=e509]: "5"
+                      - generic [ref=e511]: Redes
+                      - button "Agregar hijo" [ref=e513]:
+                        - img [ref=e514]
+                  - group [ref=e516]:
+                    - generic [ref=e518] [cursor=pointer]:
+                      - generic [ref=e519]:
+                        - generic [ref=e520]: Cargo
+                        - generic [ref=e521]: "3"
+                      - generic [ref=e523]: coordinador
+                      - button "Agregar hijo" [ref=e525]:
+                        - img [ref=e526]
+                  - group [ref=e528]:
+                    - generic [ref=e530] [cursor=pointer]:
+                      - generic [ref=e531]:
+                        - generic [ref=e532]: Cargo
+                        - generic [ref=e533]: "4"
+                      - generic [ref=e535]: decado
+                      - button "Agregar hijo" [ref=e537]:
+                        - img [ref=e538]
+                  - group [ref=e540]:
+                    - generic [ref=e542] [cursor=pointer]:
+                      - generic [ref=e543]:
+                        - generic [ref=e544]: Cargo
+                        - generic [ref=e545]: "1"
+                      - generic [ref=e547]: dsf
+                      - button "Agregar hijo" [ref=e549]:
+                        - img [ref=e550]
+                  - group [ref=e552]:
+                    - generic [ref=e554] [cursor=pointer]:
+                      - generic [ref=e555]:
+                        - generic [ref=e556]: Cargo
+                        - generic [ref=e557]: "1"
+                      - generic [ref=e559]: dx
+                      - button "Agregar hijo" [ref=e561]:
+                        - img [ref=e562]
+                  - group [ref=e564]:
+                    - generic [ref=e566] [cursor=pointer]:
+                      - generic [ref=e567]:
+                        - generic [ref=e568]: Cargo
+                        - generic [ref=e569]: "1"
+                      - generic [ref=e571]: jefe tecnico
+                      - button "Agregar hijo" [ref=e573]:
+                        - img [ref=e574]
+                  - group [ref=e576]:
+                    - generic [ref=e578] [cursor=pointer]:
+                      - generic [ref=e579]:
+                        - generic [ref=e580]: Cargo
+                        - generic [ref=e581]: "2"
+                      - generic [ref=e583]: tecnico
+                      - button "Agregar hijo" [ref=e585]:
+                        - img [ref=e586]
+            - img
+            - img "Mini Map" [ref=e589]
+            - generic [ref=e607]:
+              - button "Zoom +" [active] [ref=e608] [cursor=pointer]:
+                - img [ref=e609]
+              - button "Zoom -" [ref=e612] [cursor=pointer]:
+                - img [ref=e613]
+              - button "Ajustar" [ref=e617] [cursor=pointer]:
+                - img [ref=e618]
+            - generic [ref=e624]:
+              - text: 13 nodos · Arrastra sobre otro → reparentar
+              - generic [ref=e633]: · 2 colapsadas
+            - link "React Flow attribution" [ref=e626] [cursor=pointer]:
+              - /url: https://reactflow.dev
+              - text: React Flow
+  - alert [ref=e362]

@@ -18,20 +18,25 @@ export interface TicketEnvironment {
 }
 
 export interface TicketState {
-  id:         string;
-  name:       string;
-  label:      string;
-  is_initial: boolean;
-  is_final:   boolean;
+  id:               string;
+  name:             string;
+  label:            string;
+  is_initial:       boolean;
+  is_final:         boolean;
+  is_pause_state:   boolean;
+  is_approval_state: boolean;
 }
 
 export interface TicketTransition {
-  id:            string;
-  name:          string;
-  from_state_id: string;
-  to_state_id:   string;
-  to_label:      string;
-  to_name:       string;
+  id:               string;
+  name:             string;
+  from_state_id:    string;
+  to_state_id:      string;
+  to_label:         string;
+  to_name:          string;
+  to_is_pause_state: boolean;
+  variant:          'primary' | 'success' | 'danger' | 'warning' | 'default';
+  allowed_roles:    string[];
 }
 
 export interface TicketModuleWorkflow {
@@ -59,12 +64,15 @@ export interface TicketListItem {
   state_name:           string;
   state_label:          string;
   is_final:             boolean;
+  is_pause_state:       boolean;
+  is_approval_state:    boolean;
   created_by:           string;
   creator_name:         string;
   assignee_name:        string | null;
-  sla_status:           SlaStatus | null;
-  sla_deadline_tracked: string | null;
-  breached_at:          string | null;
+  sla_status:              SlaStatus | null;
+  sla_deadline_tracked:    string | null;
+  breached_at:             string | null;
+  last_transition_reason:  string | null;
 }
 
 export interface TicketAttachment {
@@ -75,6 +83,30 @@ export interface TicketAttachment {
   file_url:      string;
   created_at:    string;
   uploader_name: string;
+}
+
+export type TimelineEventType = 'comment' | 'status_change' | 'assignment' | 'attachment' | 'approval';
+
+export interface TicketTimelineEvent {
+  id:         string;
+  event_type: TimelineEventType;
+  subtype:    string | null;
+  user_id:    string | null;
+  user_name:  string | null;
+  avatar_url: string | null;
+  content:    string | null;
+  metadata:   Record<string, any> | null;
+  created_at: string;
+}
+
+export interface TicketComment {
+  id:           string;
+  comment_type: 'internal' | 'public';
+  content:      string;
+  created_at:   string;
+  user_id:      string;
+  author_name:  string;
+  avatar_url:   string | null;
 }
 
 export interface TicketAssignment {
@@ -98,34 +130,137 @@ export interface TicketHistoryEntry {
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 
 export interface TicketDetail extends TicketListItem {
-  description:          string | null;
-  workflow_version_id:  string;
-  reprocess_count:      number;
-  approval_status:      ApprovalStatus | null;
-  approval_expires_at:  string | null;
-  assignments:          TicketAssignment[];
-  history:              TicketHistoryEntry[];
-  transitions:          TicketTransition[];
+  description:               string | null;
+  workflow_version_id:       string;
+  reprocess_count:           number;
+  escalated:                 boolean;
+  escalation_note:           string | null;
+  approval_status:           ApprovalStatus | null;
+  approval_expires_at:       string | null;
+  damage_type_label:         string | null;
+  damage_type_slug:          string | null;
+  damage_category_label:     string | null;
+  damage_category_slug:      string | null;
+  custom_damage_description: string | null;
+  assignments:               TicketAssignment[];
+  history:                   TicketHistoryEntry[];
+  transitions:               TicketTransition[];
+}
+
+export interface TicketAsset {
+  link_id:          string;
+  link_notes:       string | null;
+  id:               string;
+  name:             string;
+  serial_number:    string | null;
+  qr_code:          string;
+  status:           string;
+  specifications:   Record<string, unknown> | null;
+  category_name:    string;
+  environment_name: string;
+  location_name:    string | null;
+  assigned_to_name: string | null;
+}
+
+export interface AssetHistoryEntry {
+  id:         string;
+  action:     string;
+  reason:     string | null;
+  created_at: string;
+  user_name:  string | null;
+  actor_name: string | null;
+}
+
+export const ASSET_STATUS_COLORS: Record<string, string> = {
+  disponible:    '#22c55e',
+  asignado:      '#3b82f6',
+  en_reparacion: '#f59e0b',
+  dado_de_baja:  '#ef4444',
+};
+
+export const ASSET_STATUS_LABELS: Record<string, string> = {
+  disponible:    'Disponible',
+  asignado:      'Asignado',
+  en_reparacion: 'En reparación',
+  dado_de_baja:  'Dado de baja',
+};
+
+export const ASSET_ACTION_LABELS: Record<string, string> = {
+  asignado:     'Asignado',
+  devuelto:     'Devuelto',
+  transferido:  'Transferido',
+  dado_de_baja: 'Dado de baja',
+  reparacion:   'Reparación',
+};
+
+export interface TicketRating {
+  id:                        string;
+  ticket_id:                 string;
+  rated_by:                  string;
+  technician_id:             string;
+  technician_name:           string;
+  score_overall:             number;
+  score_attention:           number | null;
+  score_clarity:             number | null;
+  score_response_time:       number | null;
+  score_quality:             number | null;
+  service_label:             string | null;
+  comment:                   string | null;
+  would_recommend:           boolean | null;
+  resolved_on_first_attempt: boolean | null;
+  expires_at:                string;
+  created_at:                string;
+}
+
+export interface RateTicketDto {
+  score_overall:              number;
+  score_attention?:           number;
+  score_clarity?:             number;
+  score_response_time?:       number;
+  score_quality?:             number;
+  service_label?:             'excelente' | 'bueno' | 'regular' | 'deficiente';
+  comment?:                   string;
+  would_recommend?:           boolean;
+  resolved_on_first_attempt?: boolean;
+}
+
+export interface AssetSearchResult {
+  id:               string;
+  name:             string;
+  serial_number:    string | null;
+  qr_code:          string;
+  status:           string;
+  category_name:    string | null;
+  environment_name: string | null;
+  location_name:    string | null;
+  assigned_to_name: string | null;
 }
 
 export interface CreateTicketDto {
-  module_id:      string;
-  category_id:    string;
-  environment_id: string;
-  title:          string;
-  description?:   string;
-  priority?:      TicketPriority;
-  urgency?:       TicketUrgency;
-  impact?:        TicketImpact;
+  module_id:                  string;
+  category_id:                string;
+  environment_id?:            string;
+  title:                      string;
+  description?:               string;
+  damage_type_id?:            string;
+  custom_damage_description?: string;
+  asset_id?:                  string;
+  priority?:                  TicketPriority;
+  urgency?:                   TicketUrgency;
+  impact?:                    TicketImpact;
 }
 
 export interface TicketsFilter {
-  module_id?: string;
-  state_id?:  string;
-  priority?:  TicketPriority | '';
-  mine?:      boolean;
-  page?:      number;
-  limit?:     number;
+  module_id?:   string;
+  state_id?:    string;
+  priority?:    TicketPriority | '';
+  mine?:        boolean;
+  category_id?: string;
+  assignee_id?: string;
+  sla_status?:  SlaStatus | '';
+  unassigned?:  boolean;
+  page?:        number;
+  limit?:       number;
 }
 
 export interface PaginatedTickets {
@@ -163,15 +298,46 @@ export const SLA_STATUS_LABELS: Record<SlaStatus, string> = {
   breached: 'Vencido',
 };
 
+export const TICKET_PRIORITY_ORDER: Record<TicketPriority, number> = {
+  critica: 0,
+  alta:    1,
+  media:   2,
+  baja:    3,
+};
+
+export const TICKET_PRIORITIES: TicketPriority[] = ['baja', 'media', 'alta', 'critica'];
+
+export const TECH_AVAIL_COLORS: Record<string, string> = {
+  disponible:    '#22c55e',
+  ocupado:       '#f59e0b',
+  en_reunion:    '#3b82f6',
+  fuera_horario: '#94a3b8',
+  ausente:       '#ef4444',
+  offline:       '#64748b',
+};
+
+export const TECH_AVAIL_LABELS: Record<string, string> = {
+  disponible:    'Disponible',
+  ocupado:       'Ocupado',
+  en_reunion:    'En reunión',
+  fuera_horario: 'Fuera de horario',
+  ausente:       'Ausente',
+  offline:       'Offline',
+};
+
 export const ticketsService = {
   async getAll(filter: TicketsFilter = {}): Promise<PaginatedTickets> {
     const params: Record<string, string> = {};
-    if (filter.module_id)            params.module_id  = filter.module_id;
-    if (filter.state_id)             params.state_id   = filter.state_id;
-    if (filter.priority)             params.priority   = filter.priority;
-    if (filter.mine)                 params.mine       = 'true';
-    if (filter.page  != null)        params.page       = String(filter.page);
-    if (filter.limit != null)        params.limit      = String(filter.limit);
+    if (filter.module_id)             params.module_id   = filter.module_id;
+    if (filter.state_id)              params.state_id    = filter.state_id;
+    if (filter.priority)              params.priority    = filter.priority;
+    if (filter.mine)                  params.mine        = 'true';
+    if (filter.category_id)           params.category_id = filter.category_id;
+    if (filter.assignee_id)           params.assignee_id = filter.assignee_id;
+    if (filter.sla_status)            params.sla_status  = filter.sla_status;
+    if (filter.unassigned)            params.unassigned   = 'true';
+    if (filter.page  != null)         params.page        = String(filter.page);
+    if (filter.limit != null)         params.limit       = String(filter.limit);
     const { data } = await api.get('/tickets', { params });
     return data;
   },
@@ -205,6 +371,11 @@ export const ticketsService = {
     return data;
   },
 
+  async updateTransition(id: string, dto: { allowed_roles?: string[]; variant?: string; name?: string }): Promise<{ id: string }> {
+    const { data } = await api.patch(`/tickets/transitions/${id}`, dto);
+    return data;
+  },
+
   async addCollaborator(ticketId: string, userId: string, role: string): Promise<TicketAssignment> {
     const { data } = await api.post(`/tickets/${ticketId}/assignments`, { user_id: userId, role });
     return data;
@@ -217,6 +388,26 @@ export const ticketsService = {
 
   async reject(ticketId: string, reason: string): Promise<{ ok: boolean; escalated: boolean }> {
     const { data } = await api.post(`/tickets/${ticketId}/reject`, { reason });
+    return data;
+  },
+
+  async forceReopen(ticketId: string, reason: string): Promise<{ ok: boolean; escalated: boolean }> {
+    const { data } = await api.post(`/tickets/${ticketId}/force-reopen`, { reason });
+    return data;
+  },
+
+  async getRating(ticketId: string): Promise<TicketRating | null> {
+    const { data } = await api.get(`/tickets/${ticketId}/rating`);
+    return data;
+  },
+
+  async rate(ticketId: string, dto: RateTicketDto): Promise<TicketRating> {
+    const { data } = await api.post(`/tickets/${ticketId}/rate`, dto);
+    return data;
+  },
+
+  async getTimeline(ticketId: string): Promise<TicketTimelineEvent[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/timeline`);
     return data;
   },
 
@@ -243,6 +434,134 @@ export const ticketsService = {
 
   async deleteAttachment(ticketId: string, attachmentId: string): Promise<{ ok: boolean }> {
     const { data } = await api.delete(`/tickets/${ticketId}/attachments/${attachmentId}`);
+    return data;
+  },
+
+  async getComments(ticketId: string): Promise<TicketComment[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/comments`);
+    return data;
+  },
+
+  async addComment(
+    ticketId: string,
+    content: string,
+    commentType: 'internal' | 'public' = 'public',
+  ): Promise<TicketComment> {
+    const { data } = await api.post(`/tickets/${ticketId}/comments`, {
+      content,
+      comment_type: commentType,
+    });
+    return data;
+  },
+
+  async getTicketAssets(ticketId: string): Promise<TicketAsset[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/assets`);
+    return data;
+  },
+
+  async getAssetHistory(ticketId: string, assetId: string): Promise<AssetHistoryEntry[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/assets/${assetId}/history`);
+    return data;
+  },
+
+  async linkAsset(ticketId: string, assetId: string, notes?: string): Promise<{ id: string }> {
+    const { data } = await api.post(`/tickets/${ticketId}/assets`, { asset_id: assetId, notes });
+    return data;
+  },
+
+  async unlinkAsset(ticketId: string, assetId: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/tickets/${ticketId}/assets/${assetId}`);
+    return data;
+  },
+
+  async searchAssets(q: string): Promise<AssetSearchResult[]> {
+    const { data } = await api.get('/tickets/asset-search', { params: { q } });
+    return data;
+  },
+
+  async searchTickets(q: string, excludeId: string): Promise<{
+    id: string; title: string; priority: string; state_label: string; is_final: boolean;
+  }[]> {
+    const { data } = await api.get('/tickets/search', { params: { q, exclude: excludeId } });
+    return data;
+  },
+
+  async getRelations(ticketId: string): Promise<{
+    id: string; relation_type: string; notes: string | null; created_at: string;
+    created_by_name: string;
+    related_id: string; related_title: string; related_priority: string;
+    related_created_at: string; related_state_label: string; related_state_name: string;
+    related_is_final: boolean; related_owner_name: string | null;
+    related_description: string | null;
+  }[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/relations`);
+    return data;
+  },
+
+  async addRelation(ticketId: string, dto: { target_ticket_id: string; relation_type: string; notes?: string }): Promise<{ id?: string; ok?: boolean }> {
+    const { data } = await api.post(`/tickets/${ticketId}/relations`, dto);
+    return data;
+  },
+
+  async removeRelation(ticketId: string, relationId: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/tickets/${ticketId}/relations/${relationId}`);
+    return data;
+  },
+
+  async getAssetPrevTickets(ticketId: string, assetId: string): Promise<{
+    id: string; title: string; priority: string; created_at: string; updated_at: string;
+    state_label: string; state_name: string; is_final: boolean;
+    creator_name: string; owner_name: string | null;
+  }[]> {
+    const { data } = await api.get(`/tickets/${ticketId}/assets/${assetId}/prev-tickets`);
+    return data;
+  },
+
+  async addAssignment(
+    ticketId: string,
+    userId: string,
+    role: 'owner' | 'collaborator' | 'observer',
+  ): Promise<{ id: string; role: string; assigned_at: string; is_active: boolean }> {
+    const { data } = await api.post(`/tickets/${ticketId}/assignments`, { user_id: userId, role });
+    return data;
+  },
+
+  async getAssignmentHistory(
+    userId: string,
+    moduleId?: string,
+    limit = 50,
+  ): Promise<{
+    assignment_id:  string;
+    role:           string;
+    is_active:      boolean;
+    assigned_at:    string;
+    unassigned_at:  string | null;
+    ticket_id:      string;
+    title:          string;
+    priority:       TicketPriority;
+    reprocess_count: number;
+    state_label:    string;
+    state_name:     string;
+    is_final:       boolean;
+    category_name:  string | null;
+    hours_held:     number;
+  }[]> {
+    const params: Record<string, string> = { user_id: userId, limit: String(limit) };
+    if (moduleId) params.module_id = moduleId;
+    const { data } = await api.get('/tickets/assignments/history', { params });
+    return data;
+  },
+
+  async triggerBreachCheck(): Promise<{ checked: number; breached: number }> {
+    const { data } = await api.post('/tickets/sla/breach-check');
+    return data;
+  },
+
+  async convertToArticle(
+    ticketId: string,
+    dto: { module_id: string; title: string; content: string; category?: string; tags?: string[] },
+  ): Promise<{ id: string; title: string }> {
+    const { data } = await api.post(`/tickets/${ticketId}/to-article`, dto);
     return data;
   },
 };

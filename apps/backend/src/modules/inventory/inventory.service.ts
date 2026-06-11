@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { QrService } from './qr/qr.service';
+import { FilesService } from '../files/files.service';
 
 export type AssetStatus = 'disponible' | 'asignado' | 'en_reparacion' | 'dado_de_baja';
 
@@ -27,14 +28,20 @@ export class InventoryService {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
     private readonly qr: QrService,
+    private readonly files: FilesService,
   ) {}
 
-  async findAll(moduleId?: string, status?: string) {
+  async findAll(moduleId?: string, status?: string, q?: string) {
     const conditions: string[] = ['a.deleted_at IS NULL'];
     const params: any[] = [];
     let i = 1;
     if (moduleId) { conditions.push(`a.module_id = $${i++}`); params.push(moduleId); }
     if (status)   { conditions.push(`a.status = $${i++}`);    params.push(status); }
+    if (q) {
+      conditions.push(`(a.name ILIKE $${i} OR a.serial_number ILIKE $${i} OR a.qr_code ILIKE $${i})`);
+      params.push(`%${q.trim()}%`);
+      i++;
+    }
 
     return this.db.query<any[]>(
       `SELECT a.id, a.name, a.description, a.qr_code, a.serial_number,
@@ -59,15 +66,26 @@ export class InventoryService {
     const [asset] = await this.db.query<any[]>(
       `SELECT a.id, a.name, a.description, a.qr_code, a.serial_number,
               a.status, a.version, a.specifications, a.created_at, a.updated_at,
+              a.parent_asset_id, a.module_id, a.environment_id, a.category_id,
               m.name  AS module_name,
               e.name  AS environment_name,
               c.name  AS category_name,
-              l.name  AS location_name
+              c.field_schema,
+              l.name  AS location_name,
+              pa.name   AS parent_asset_name,
+              pa.status AS parent_asset_status,
+              (SELECT COUNT(*)::int FROM inventory.assets ch
+               WHERE ch.parent_asset_id = a.id AND ch.deleted_at IS NULL)  AS children_count,
+              (SELECT COUNT(*)::int FROM inventory.ticket_assets ta
+               WHERE ta.asset_id = a.id)                                   AS tickets_count,
+              (SELECT COUNT(*)::int FROM files.files f
+               WHERE f.entity_type = 'asset' AND f.entity_id = a.id)      AS files_count
        FROM   inventory.assets a
-       JOIN   modules.modules      m ON m.id = a.module_id
-       JOIN   modules.environments e ON e.id = a.environment_id
-       JOIN   modules.categories   c ON c.id = a.category_id
-       JOIN   modules.locations    l ON l.id = e.location_id
+       JOIN   modules.modules      m  ON m.id  = a.module_id
+       JOIN   modules.environments e  ON e.id  = a.environment_id
+       JOIN   modules.categories   c  ON c.id  = a.category_id
+       JOIN   modules.locations    l  ON l.id  = e.location_id
+       LEFT JOIN inventory.assets  pa ON pa.id = a.parent_asset_id AND pa.deleted_at IS NULL
        WHERE  a.id = $1 AND a.deleted_at IS NULL`,
       [id],
     );
@@ -75,8 +93,32 @@ export class InventoryService {
     return asset;
   }
 
-  async create(dto: CreateAssetDto) {
+  async getChildAssets(id: string) {
+    return this.db.query<any[]>(
+      `SELECT a.id, a.name, a.status, a.qr_code, a.serial_number,
+              c.name AS category_name
+       FROM   inventory.assets a
+       JOIN   modules.categories c ON c.id = a.category_id
+       WHERE  a.parent_asset_id = $1 AND a.deleted_at IS NULL
+       ORDER  BY a.name`,
+      [id],
+    );
+  }
+
+  async create(dto: CreateAssetDto, actorId?: string) {
     const { module_id, environment_id, category_id, name, description, serial_number, specifications } = dto;
+
+    if (serial_number?.trim()) {
+      const [dup] = await this.db.query<any[]>(
+        `SELECT id FROM inventory.assets WHERE serial_number = $1 AND deleted_at IS NULL`,
+        [serial_number.trim()],
+      );
+      if (dup) throw new BadRequestException(`Ya existe un activo con número de serie "${serial_number}"`);
+    }
+
+    if (actorId) {
+      await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+    }
     const [asset] = await this.db.query<any[]>(
       `INSERT INTO inventory.assets
          (module_id, environment_id, category_id, name, description, serial_number, specifications)
@@ -102,28 +144,37 @@ export class InventoryService {
 
   /* ── FSM: assign to user ─────────────────────────────────────────────────── */
 
-  async assign(assetId: string, actorId: string, dto: { user_id: string; notes?: string }) {
+  async assign(
+    assetId: string,
+    actorId: string,
+    dto: { user_id: string; notes?: string; shift?: string; hours_start?: string; hours_end?: string },
+  ) {
     const [asset] = await this.db.query<{ status: AssetStatus }[]>(
       `SELECT status FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
       [assetId],
     );
     if (!asset) throw new NotFoundException(`Asset ${assetId} no encontrado`);
-    if (!FSM[asset.status].includes('asignado')) {
-      throw new BadRequestException(`No se puede asignar un activo en estado "${asset.status}"`);
-    }
-    if (asset.status === 'asignado') {
-      throw new BadRequestException('El activo ya está asignado. Devuélvelo primero.');
+    if (asset.status === 'dado_de_baja') {
+      throw new BadRequestException('No se puede asignar un activo dado de baja');
     }
 
+    /* Check if this specific user already has an active assignment */
+    const [existing] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM inventory.asset_assignments WHERE asset_id = $1 AND user_id = $2 AND status = 'activo'`,
+      [assetId, dto.user_id],
+    );
+    if (existing) throw new BadRequestException('Este usuario ya tiene custodia activa sobre este activo');
+
+    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
     await this.db.query(
-      `UPDATE inventory.assets SET status = 'asignado' WHERE id = $1`,
+      `UPDATE inventory.assets SET status = 'asignado' WHERE id = $1 AND status != 'asignado'`,
       [assetId],
     );
 
     const [assignment] = await this.db.query<{ id: string }[]>(
-      `INSERT INTO inventory.asset_assignments (asset_id, user_id, assigned_by, notes)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [assetId, dto.user_id, actorId, dto.notes ?? null],
+      `INSERT INTO inventory.asset_assignments (asset_id, user_id, assigned_by, notes, shift, hours_start, hours_end)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [assetId, dto.user_id, actorId, dto.notes ?? null, dto.shift ?? null, dto.hours_start ?? null, dto.hours_end ?? null],
     );
 
     await this.db.query(
@@ -138,7 +189,7 @@ export class InventoryService {
 
   /* ── FSM: unassign ───────────────────────────────────────────────────────── */
 
-  async unassign(assetId: string, actorId: string, reason?: string) {
+  async unassign(assetId: string, actorId: string, userId?: string, reason?: string) {
     const [asset] = await this.db.query<{ status: AssetStatus }[]>(
       `SELECT status FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
       [assetId],
@@ -148,32 +199,35 @@ export class InventoryService {
       throw new BadRequestException('El activo no está asignado actualmente.');
     }
 
+    /* Find specific user's assignment or the most recent one */
     const [activeAssignment] = await this.db.query<{ id: string; user_id: string }[]>(
-      `SELECT id, user_id FROM inventory.asset_assignments
-       WHERE asset_id = $1 AND status = 'activo'
-       ORDER BY assigned_at DESC LIMIT 1`,
-      [assetId],
-    );
-
-    await this.db.query(
-      `UPDATE inventory.assets SET status = 'disponible' WHERE id = $1`,
-      [assetId],
+      userId
+        ? `SELECT id, user_id FROM inventory.asset_assignments WHERE asset_id = $1 AND user_id = $2 AND status = 'activo' LIMIT 1`
+        : `SELECT id, user_id FROM inventory.asset_assignments WHERE asset_id = $1 AND status = 'activo' ORDER BY assigned_at DESC LIMIT 1`,
+      userId ? [assetId, userId] : [assetId],
     );
 
     if (activeAssignment) {
       await this.db.query(
-        `UPDATE inventory.asset_assignments
-         SET status = 'devuelto', unassigned_at = now()
-         WHERE id = $1`,
+        `UPDATE inventory.asset_assignments SET status = 'devuelto', unassigned_at = now() WHERE id = $1`,
         [activeAssignment.id],
       );
-
       await this.db.query(
         `INSERT INTO inventory.asset_assignment_history
            (asset_id, user_id, assigned_by, assignment_id, action, reason)
          VALUES ($1, $2, $3, $4, 'devuelto', $5)`,
         [assetId, activeAssignment.user_id, actorId, activeAssignment.id, reason ?? null],
       );
+    }
+
+    /* If no more active assignments remain, set asset back to disponible */
+    const [remaining] = await this.db.query<{ cnt: string }[]>(
+      `SELECT COUNT(*)::text AS cnt FROM inventory.asset_assignments WHERE asset_id = $1 AND status = 'activo'`,
+      [assetId],
+    );
+    if (parseInt(remaining.cnt, 10) === 0) {
+      await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+      await this.db.query(`UPDATE inventory.assets SET status = 'disponible' WHERE id = $1`, [assetId]);
     }
 
     return { ok: true };
@@ -198,45 +252,78 @@ export class InventoryService {
       throw new BadRequestException('Para asignar usa el endpoint /assign');
     }
 
-    if (asset.status === 'asignado' && dto.status !== 'disponible') {
-      const [activeAssignment] = await this.db.query<{ id: string; user_id: string }[]>(
-        `SELECT id, user_id FROM inventory.asset_assignments
-         WHERE asset_id = $1 AND status = 'activo'
-         ORDER BY assigned_at DESC LIMIT 1`,
-        [assetId],
-      );
-      if (activeAssignment) {
-        await this.db.query(
-          `UPDATE inventory.asset_assignments SET status = 'devuelto', unassigned_at = now() WHERE id = $1`,
-          [activeAssignment.id],
+    const qr = this.db.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      await qr.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+
+      if (asset.status === 'asignado' && dto.status !== 'disponible') {
+        const closedAssignments: { id: string; user_id: string }[] = await qr.query(
+          `UPDATE inventory.asset_assignments
+           SET status = 'devuelto', unassigned_at = now()
+           WHERE asset_id = $1 AND status = 'activo'
+           RETURNING id, user_id`,
+          [assetId],
         );
-        await this.db.query(
+        const histAction = dto.status === 'dado_de_baja' ? 'dado_de_baja' : 'reparacion';
+        for (const a of closedAssignments) {
+          await qr.query(
+            `INSERT INTO inventory.asset_assignment_history
+               (asset_id, user_id, assigned_by, assignment_id, action, reason)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [assetId, a.user_id, actorId, a.id, histAction, dto.reason ?? null],
+          );
+        }
+      } else {
+        const actionMap: Record<string, string> = {
+          en_reparacion: 'reparacion',
+          dado_de_baja:  'dado_de_baja',
+          disponible:    'devuelto',
+        };
+        const histAction = actionMap[dto.status] ?? dto.status;
+        await qr.query(
           `INSERT INTO inventory.asset_assignment_history
-             (asset_id, user_id, assigned_by, assignment_id, action, reason)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [assetId, activeAssignment.user_id, actorId, activeAssignment.id,
-           dto.status === 'dado_de_baja' ? 'dado_de_baja' : 'reparacion', dto.reason ?? null],
+             (asset_id, user_id, assigned_by, action, reason)
+           VALUES ($1, NULL, $2, $3, $4)`,
+          [assetId, actorId, histAction, dto.reason ?? null],
         );
       }
-    } else {
-      const actionMap: Record<string, string> = {
-        en_reparacion: 'reparacion',
-        dado_de_baja:  'dado_de_baja',
-        disponible:    'devuelto',
-      };
-      const histAction = actionMap[dto.status] ?? dto.status;
-      await this.db.query(
-        `INSERT INTO inventory.asset_assignment_history
-           (asset_id, user_id, assigned_by, action, reason)
-         VALUES ($1, $1, $2, $3, $4)`,
-        [assetId, actorId, histAction, dto.reason ?? null],
-      );
-    }
 
-    await this.db.query(
-      `UPDATE inventory.assets SET status = $1 WHERE id = $2`,
-      [dto.status, assetId],
-    );
+      await qr.query(
+        `UPDATE inventory.assets SET status = $1 WHERE id = $2`,
+        [dto.status, assetId],
+      );
+
+      /* When decommissioning: unlink parent + all children atomically */
+      if (dto.status === 'dado_de_baja') {
+        await qr.query(
+          `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now()
+           WHERE id = $1 AND parent_asset_id IS NOT NULL`,
+          [assetId],
+        );
+        const children: { id: string }[] = await qr.query(
+          `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now()
+           WHERE parent_asset_id = $1 AND deleted_at IS NULL
+           RETURNING id`,
+          [assetId],
+        );
+        for (const child of children) {
+          await qr.query(
+            `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+             VALUES ($1, $2, $2, 'desasociado', 'Padre dado de baja')`,
+            [child.id, actorId],
+          );
+        }
+      }
+
+      await qr.commitTransaction();
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.release();
+    }
 
     return { ok: true, status: dto.status };
   }
@@ -246,14 +333,15 @@ export class InventoryService {
   async getCurrentAssignment(assetId: string) {
     const [row] = await this.db.query<any[]>(
       `SELECT aa.id, aa.assigned_at, aa.notes, aa.status AS assignment_status,
-              u.id AS user_id,
-              u.first_name || ' ' || u.last_name AS user_name,
-              u.email AS user_email,
-              u.avatar_url,
+              aa.shift, aa.hours_start, aa.hours_end,
+              p.id AS user_id,
+              p.first_name || ' ' || p.last_name AS user_name,
+              p.display_email AS user_email,
+              p.avatar_url,
               ab.first_name || ' ' || ab.last_name AS assigned_by_name
        FROM   inventory.asset_assignments aa
-       JOIN   auth.users  u  ON u.id  = aa.user_id
-       JOIN   auth.users  ab ON ab.id = aa.assigned_by
+       JOIN   users.profiles p  ON p.id  = aa.user_id
+       JOIN   users.profiles ab ON ab.id = aa.assigned_by
        WHERE  aa.asset_id = $1 AND aa.status = 'activo'
        ORDER  BY aa.assigned_at DESC LIMIT 1`,
       [assetId],
@@ -261,20 +349,331 @@ export class InventoryService {
     return row ?? null;
   }
 
+  async getActiveAssignments(assetId: string) {
+    return this.db.query<any[]>(
+      `SELECT aa.id, aa.assigned_at, aa.notes, aa.status AS assignment_status,
+              aa.shift, aa.hours_start, aa.hours_end,
+              p.id AS user_id,
+              p.first_name || ' ' || p.last_name AS user_name,
+              p.display_email AS user_email,
+              p.avatar_url,
+              ab.first_name || ' ' || ab.last_name AS assigned_by_name
+       FROM   inventory.asset_assignments aa
+       JOIN   users.profiles p  ON p.id  = aa.user_id
+       JOIN   users.profiles ab ON ab.id = aa.assigned_by
+       WHERE  aa.asset_id = $1 AND aa.status = 'activo'
+       ORDER  BY aa.assigned_at ASC`,
+      [assetId],
+    );
+  }
+
   /* ── History ─────────────────────────────────────────────────────────────── */
 
   async getHistory(assetId: string) {
     return this.db.query<any[]>(
       `SELECT h.id, h.action, h.reason, h.created_at,
-              u.first_name || ' ' || u.last_name AS user_name,
-              ab.first_name || ' ' || ab.last_name AS actor_name
+              pu.first_name || ' ' || pu.last_name AS user_name,
+              pa.first_name || ' ' || pa.last_name AS actor_name
        FROM   inventory.asset_assignment_history h
-       LEFT JOIN auth.users u  ON u.id  = h.user_id
-       LEFT JOIN auth.users ab ON ab.id = h.assigned_by
+       LEFT JOIN users.profiles pu ON pu.id = h.user_id
+       LEFT JOIN users.profiles pa ON pa.id = h.assigned_by
        WHERE  h.asset_id = $1
        ORDER  BY h.created_at DESC`,
       [assetId],
     );
+  }
+
+  async updateAsset(id: string, actorId: string | null, dto: {
+    name?:             string;
+    description?:      string;
+    serial_number?:    string;
+    specifications?:   Record<string, unknown>;
+    environment_id?:   string;
+    category_id?:      string;
+    parent_asset_id?:  string | null;
+  }) {
+    if (dto.serial_number !== undefined && dto.serial_number !== null && dto.serial_number.trim() !== '') {
+      const [dup] = await this.db.query<any[]>(
+        `SELECT id FROM inventory.assets WHERE serial_number = $1 AND id <> $2 AND deleted_at IS NULL`,
+        [dto.serial_number.trim(), id],
+      );
+      if (dup) throw new BadRequestException(`Ya existe un activo con número de serie "${dto.serial_number}"`);
+    }
+
+    if (actorId) {
+      await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+    }
+
+    const fields: string[] = [];
+    const values: any[]    = [];
+    let idx = 1;
+    const scalarAllowed = ['name','description','serial_number','environment_id','category_id'] as const;
+    for (const k of scalarAllowed) {
+      if (dto[k] !== undefined) {
+        fields.push(`${k} = $${idx++}`);
+        values.push(dto[k]);
+      }
+    }
+    if (dto.specifications !== undefined) {
+      fields.push(`specifications = $${idx++}`);
+      values.push(JSON.stringify(dto.specifications));
+    }
+
+    /* parent_asset_id: explicit null clears relation, string sets it */
+    let parentChanged = false;
+    let oldParentId: string | null = null;
+    if ('parent_asset_id' in dto) {
+      if (dto.parent_asset_id === null) {
+        /* fetch old value for history */
+        const [cur] = await this.db.query<{ parent_asset_id: string | null }[]>(
+          `SELECT parent_asset_id FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`, [id],
+        );
+        oldParentId = cur?.parent_asset_id ?? null;
+        fields.push(`parent_asset_id = NULL`);
+        parentChanged = true;
+      } else if (dto.parent_asset_id) {
+        if (dto.parent_asset_id === id) throw new BadRequestException('Un activo no puede ser su propio padre');
+        const [target] = await this.db.query<{ id: string }[]>(
+          `SELECT id FROM inventory.assets WHERE (id::text = $1 OR qr_code = $1) AND deleted_at IS NULL`, [dto.parent_asset_id],
+        );
+        if (!target) throw new NotFoundException(`Activo relacionado "${dto.parent_asset_id}" no encontrado`);
+        fields.push(`parent_asset_id = $${idx++}`);
+        values.push(target.id);
+        parentChanged = true;
+      }
+    }
+
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    if (actorId) {
+      await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+    }
+    const [row] = await this.db.query<any[]>(
+      `UPDATE inventory.assets SET ${fields.join(', ')}
+       WHERE id = $${idx} AND deleted_at IS NULL RETURNING id, name, serial_number, status, parent_asset_id`,
+      values,
+    );
+    if (!row) throw new NotFoundException(`Asset ${id} no encontrado`);
+
+    /* Log parent change to history if changed */
+    if (parentChanged && actorId) {
+      const action = dto.parent_asset_id === null ? 'desasociado' : 'asociado';
+      const reason = dto.parent_asset_id === null
+        ? 'Desasociado de activo padre'
+        : `Asociado como componente de: ${dto.parent_asset_id}`;
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+         VALUES ($1, $2, $2, $3, $4)`,
+        [id, actorId, action, reason],
+      ).catch(() => { /* history is best-effort */ });
+    }
+
+    return row;
+  }
+
+  async deleteAsset(id: string, actorId: string) {
+    const [asset] = await this.db.query<{ status: AssetStatus }[]>(
+      `SELECT status FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    if (!asset) throw new NotFoundException(`Asset ${id} no encontrado`);
+    if (asset.status === 'asignado')
+      throw new BadRequestException('No se puede eliminar un activo asignado. Devuélvelo primero.');
+
+    await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+    await this.db.query(
+      `UPDATE inventory.assets SET deleted_at = now(), updated_at = now() WHERE id = $1`,
+      [id],
+    );
+    await this.db.query(
+      `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+       VALUES ($1, NULL, $2, 'dado_de_baja', 'Eliminado del sistema')`,
+      [id, actorId],
+    );
+    return { ok: true };
+  }
+
+  async bulkImport(
+    moduleId: string,
+    rows: Array<Omit<CreateAssetDto, 'module_id'>>,
+    actorId?: string,
+  ): Promise<{ created: number; errors: { row: number; message: string }[] }> {
+    if (rows.length > 100) throw new BadRequestException('Máximo 100 activos por importación');
+
+    const errors: { row: number; message: string }[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r.name?.trim())   errors.push({ row: i + 1, message: 'Nombre requerido' });
+      if (!r.environment_id) errors.push({ row: i + 1, message: 'environment_id requerido' });
+      if (!r.category_id)    errors.push({ row: i + 1, message: 'category_id requerido' });
+    }
+    if (errors.length > 0) return { created: 0, errors };
+
+    // Pre-flight: check serial_number duplicates against DB and within the batch
+    const seenSerials = new Set<string>();
+    for (let i = 0; i < rows.length; i++) {
+      const sn = rows[i].serial_number?.trim();
+      if (!sn) continue;
+      if (seenSerials.has(sn)) {
+        errors.push({ row: i + 1, message: `Número de serie duplicado en la importación: "${sn}"` });
+        continue;
+      }
+      seenSerials.add(sn);
+      const [dup] = await this.db.query<any[]>(
+        `SELECT id FROM inventory.assets WHERE serial_number = $1 AND deleted_at IS NULL`,
+        [sn],
+      );
+      if (dup) errors.push({ row: i + 1, message: `Número de serie ya registrado: "${sn}"` });
+    }
+    if (errors.length > 0) return { created: 0, errors };
+
+    const qr = this.db.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      if (actorId) {
+        await qr.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
+      }
+      for (const r of rows) {
+        await qr.query(
+          `INSERT INTO inventory.assets
+             (module_id, environment_id, category_id, name, description, serial_number, specifications)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [moduleId, r.environment_id, r.category_id, r.name.trim(),
+           r.description ?? null, r.serial_number?.trim() ?? null,
+           r.specifications ? JSON.stringify(r.specifications) : null],
+        );
+      }
+      await qr.commitTransaction();
+      return { created: rows.length, errors: [] };
+    } catch (e: any) {
+      await qr.rollbackTransaction();
+      throw new BadRequestException(e.message ?? 'Error en importación masiva');
+    } finally {
+      await qr.release();
+    }
+  }
+
+  /* ── Asset images ───────────────────────────────────────────────────────── */
+
+  async getAssetImages(assetId: string) {
+    return this.db.query<any[]>(
+      `SELECT f.id, f.file_name, f.file_size, f.mime_type, f.storage_url, f.created_at,
+              p.first_name || ' ' || p.last_name AS uploaded_by_name
+       FROM   files.files f
+       LEFT JOIN users.profiles p ON p.id = f.uploaded_by
+       WHERE  f.entity_type = 'asset' AND f.entity_id = $1
+       ORDER  BY f.created_at DESC`,
+      [assetId],
+    );
+  }
+
+  async uploadAssetImage(assetId: string, actorId: string, file: Express.Multer.File) {
+    const { url } = await this.files.save(file);
+    const [record] = await this.db.query<any[]>(
+      `INSERT INTO files.files (uploaded_by, entity_type, entity_id, file_name, file_size, mime_type, storage_url)
+       VALUES ($1, 'asset', $2, $3, $4, $5, $6)
+       RETURNING id, file_name, file_size, mime_type, storage_url, created_at`,
+      [actorId, assetId, file.originalname, file.size, file.mimetype, url],
+    );
+    await this.db.query(
+      `UPDATE inventory.assets SET updated_at = now() WHERE id = $1`,
+      [assetId],
+    );
+    return record;
+  }
+
+  async deleteAssetImage(imageId: string, assetId: string) {
+    const [file] = await this.db.query<{ storage_url: string }[]>(
+      `DELETE FROM files.files
+       WHERE id = $1 AND entity_type = 'asset' AND entity_id = $2
+       RETURNING storage_url`,
+      [imageId, assetId],
+    );
+    if (!file) throw new NotFoundException('Imagen no encontrada');
+    await this.files.delete(file.storage_url);
+    return { ok: true };
+  }
+
+  async getAssetTickets(assetId: string) {
+    return this.db.query<any[]>(
+      `SELECT t.id, t.title, t.priority, t.created_at,
+              s.label AS state_label, s.name AS state_name, s.is_final,
+              p.first_name || ' ' || p.last_name AS creator_name
+       FROM   inventory.ticket_assets ta
+       JOIN   tickets.tickets t  ON t.id  = ta.ticket_id
+       JOIN   tickets.states  s  ON s.id  = t.current_state_id
+       JOIN   users.profiles  p  ON p.id  = t.created_by
+       WHERE  ta.asset_id = $1
+       ORDER  BY t.created_at DESC
+       LIMIT  30`,
+      [assetId],
+    );
+  }
+
+  /* ── Asset relations (parent / child) ───────────────────────────────────── */
+
+  async relate(
+    assetId: string,
+    actorId: string,
+    dto: { target_id: string; relation: 'set-child' | 'set-parent' | 'remove-parent' },
+  ) {
+    if (dto.relation === 'remove-parent') {
+      const [asset] = await this.db.query<{ id: string; parent_asset_id: string | null }[]>(
+        `SELECT id, parent_asset_id FROM inventory.assets WHERE id = $1 AND deleted_at IS NULL`,
+        [assetId],
+      );
+      if (!asset) throw new NotFoundException(`Asset ${assetId} no encontrado`);
+      if (!asset.parent_asset_id) throw new BadRequestException('Este activo no tiene un padre asignado');
+
+      await this.db.query(
+        `UPDATE inventory.assets SET parent_asset_id = NULL, updated_at = now() WHERE id = $1`,
+        [assetId],
+      );
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+         VALUES ($1, $2, $2, 'desasociado', 'Desasociado de activo padre')`,
+        [assetId, actorId],
+      );
+      return { ok: true };
+    }
+
+    /* Look up target by UUID or QR code */
+    const [target] = await this.db.query<{ id: string; name: string; parent_asset_id: string | null }[]>(
+      `SELECT id, name, parent_asset_id FROM inventory.assets
+       WHERE (id::text = $1 OR qr_code = $1) AND deleted_at IS NULL`,
+      [dto.target_id],
+    );
+    if (!target) throw new NotFoundException(`Activo "${dto.target_id}" no encontrado`);
+    if (target.id === assetId) throw new BadRequestException('Un activo no puede relacionarse consigo mismo');
+
+    if (dto.relation === 'set-child') {
+      /* current asset is parent, target becomes its child */
+      if (target.parent_asset_id === assetId) throw new BadRequestException('El activo ya es componente de este equipo');
+      await this.db.query(
+        `UPDATE inventory.assets SET parent_asset_id = $1, updated_at = now() WHERE id = $2`,
+        [assetId, target.id],
+      );
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+         VALUES ($1, $2, $2, 'asociado', $3)`,
+        [target.id, actorId, `Asociado como componente de: ${assetId}`],
+      );
+    } else {
+      /* dto.relation === 'set-parent': target becomes this asset's parent */
+      await this.db.query(
+        `UPDATE inventory.assets SET parent_asset_id = $1, updated_at = now() WHERE id = $2`,
+        [target.id, assetId],
+      );
+      await this.db.query(
+        `INSERT INTO inventory.asset_assignment_history (asset_id, user_id, assigned_by, action, reason)
+         VALUES ($1, $2, $2, 'asociado', $3)`,
+        [assetId, actorId, `Asociado como componente de: ${target.id}`],
+      );
+    }
+
+    return { ok: true, target: { id: target.id, name: target.name } };
   }
 
   async getQr(id: string) {
@@ -285,5 +684,18 @@ export class InventoryService {
     if (!asset) throw new NotFoundException(`Asset ${id} no encontrado`);
     const dataUrl = await this.qr.generate(id);
     return { id, qr_code: asset.qr_code, qr_image: dataUrl };
+  }
+
+  async getAssignableUsers() {
+    return this.db.query<any[]>(
+      `SELECT p.id, p.first_name, p.last_name, p.avatar_url,
+              p.job_title, p.department,
+              c.email
+       FROM   users.profiles   p
+       JOIN   auth.credentials c ON c.user_id = p.id
+       WHERE  p.is_active  = true
+         AND  p.deleted_at IS NULL
+       ORDER  BY p.first_name, p.last_name`,
+    );
   }
 }
