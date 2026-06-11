@@ -1,25 +1,16 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { AdminService } from './admin.service';
 
-const INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 h
-
 @Injectable()
-export class CleanupService implements OnModuleInit, OnModuleDestroy {
+export class CleanupService {
   private readonly logger = new Logger(CleanupService.name);
-  private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(private readonly adminService: AdminService) {}
 
-  onModuleInit() {
-    this.runPurge();
-    this.timer = setInterval(() => this.runPurge(), INTERVAL_MS);
-  }
-
-  onModuleDestroy() {
-    if (this.timer) clearInterval(this.timer);
-  }
-
-  private async runPurge() {
+  /** Daily at 02:00 UTC — hard-delete items past their scheduled_hard_delete_at */
+  @Cron('0 0 2 * * *')
+  async runPurge() {
     try {
       const result = await this.adminService.purgeExpired();
       if (result.purged > 0) {

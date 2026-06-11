@@ -180,6 +180,14 @@ export class AdminService {
         SELECT name, 'tipo de estructura',
                FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
         FROM org.structure_types WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
+        UNION ALL
+        SELECT title, 'ticket',
+               FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
+        FROM tickets.tickets WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
+        UNION ALL
+        SELECT name, 'activo',
+               FLOOR(EXTRACT(EPOCH FROM (scheduled_hard_delete_at - now())) / 86400)::int
+        FROM inventory.assets WHERE deleted_at IS NOT NULL AND scheduled_hard_delete_at > now()
       ) t
       WHERE days = ANY($1)
     `, [WARNING_DAYS]);
