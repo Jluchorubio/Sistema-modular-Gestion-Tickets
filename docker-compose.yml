@@ -87,7 +87,7 @@ services:
       # RabbitMQ (descomentar cuando --profile rabbitmq):
       # RABBITMQ_URL: amqp://${RABBITMQ_USER:-tickets}:${RABBITMQ_PASS:-tickets_pass}@rabbitmq:5672
     volumes:
-      - uploads_data:/app/uploads
+      - ./apps/backend/uploads:/app/uploads
     ports:
       - "${BACKEND_PORT:-3001}:3001"
     depends_on:

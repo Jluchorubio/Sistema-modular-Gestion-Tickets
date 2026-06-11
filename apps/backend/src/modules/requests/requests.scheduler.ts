@@ -35,13 +35,22 @@ export class RequestsScheduler {
          WHERE id = $1`,
         [req.id],
       );
-      await this.db.query(
-        `INSERT INTO requests.request_timeline
-           (request_id, actor_id, action, old_status, new_status, notes)
-         VALUES ($1, NULL, 'system_escalated', $2, $2,
-                 'Escalado automáticamente por vencimiento de SLA')`,
-        [req.id, req.status],
-      );
+      // actor_id is NOT NULL — system actions have no human actor.
+      // Timeline insert is informational; skip gracefully if constraint blocks it.
+      try {
+        await this.db.query(
+          `INSERT INTO requests.request_timeline
+             (request_id, actor_id, action, old_status, new_status, notes)
+           SELECT $1, id, 'system_escalated', $2, $2,
+                  'Escalado automáticamente por vencimiento de SLA'
+           FROM users.profiles
+           WHERE is_superadmin = true
+           LIMIT 1`,
+          [req.id, req.status],
+        );
+      } catch (err: any) {
+        this.logger.warn(`Timeline insert skipped for ${req.id}: ${err.message}`);
+      }
     }
 
     this.logger.log(`Auto-escalated ${overdue.length} SLA-breached request(s)`);

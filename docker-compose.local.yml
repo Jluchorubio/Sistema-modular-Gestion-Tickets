@@ -20,7 +20,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-tickets_user}:${POSTGRES_PASSWORD:-tickets_pass}@postgres:5432/${POSTGRES_DB:-tickets_db}
       MIGRATIONS_DIR: /app/migrations
     volumes:
-      - uploads_data:/app/uploads
+      - ./apps/backend/uploads:/app/uploads
       - ./database/migrations:/app/migrations:ro
     depends_on:
       postgres:

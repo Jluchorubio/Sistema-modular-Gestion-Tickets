@@ -86,10 +86,9 @@ export class SlaBreachService {
     const body    = `El ticket "${ticket.title}" (${ticket.priority}) en módulo ${ticket.module_name} superó su tiempo de resolución SLA.`;
 
     const targets = new Set<string>();
-    if (ticket.assignee_id)   targets.add(ticket.assignee_id);
-    if (ticket.tech_chief_id) targets.add(ticket.tech_chief_id);
-    // Always notify creator if no assignee (unattended ticket)
-    if (!ticket.assignee_id)  targets.add(ticket.creator_id);
+    if (ticket.assignee_id)                          targets.add(ticket.assignee_id);
+    if (ticket.tech_chief_id)                        targets.add(ticket.tech_chief_id);
+    if (!ticket.assignee_id && ticket.creator_id)    targets.add(ticket.creator_id);
 
     await Promise.allSettled(
       Array.from(targets).map(userId =>
