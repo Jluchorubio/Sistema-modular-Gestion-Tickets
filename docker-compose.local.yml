@@ -1,0 +1,29 @@
+# docker-compose.local.yml — PostgreSQL local override
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+#
+# Qué hace:
+#   - Activa el contenedor postgres (quita la restricción de perfil)
+#   - Sobreescribe DATABASE_URL → apunta al postgres local
+#   - Activa MIGRATIONS_DIR → corre migraciones contra postgres local
+#   - Agrega depends_on postgres al backend
+#
+# NO usar en producción.
+
+services:
+  postgres:
+    profiles: []   # override: quita [local-db], postgres arranca normalmente
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tickets_user}:${POSTGRES_PASSWORD:-tickets_pass}@postgres:5432/${POSTGRES_DB:-tickets_db}
+      MIGRATIONS_DIR: /app/migrations
+    volumes:
+      - uploads_data:/app/uploads
+      - ./database/migrations:/app/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

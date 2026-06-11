@@ -90,8 +90,9 @@ Sistema modular Gestion Tickets/
 │   └── migrations/                Migraciones incrementales (001–037+)
 ├── nginx/
 │   └── nginx.conf                 Proxy reverso (HTTP/HTTPS)
-├── docker-compose.yml             Local: incluye PostgreSQL propio
-├── docker-compose.railway.yml     Railway: usa PostgreSQL externo
+├── docker-compose.yml             Producción: Railway DB por defecto (sin postgres local)
+├── docker-compose.local.yml       Override: activa postgres local + sobreescribe DATABASE_URL
+├── docker-compose.railway.yml     Alias legacy (equivalente al docker-compose.yml actual)
 └── start-dev.bat                  Atajo Windows — arranca backend + frontend
 ```
 
@@ -99,35 +100,40 @@ Sistema modular Gestion Tickets/
 
 ## Levantar con Docker
 
-### Opción A — Local (PostgreSQL en contenedor)
+### Prioridad de variables de entorno
 
-Incluye PostgreSQL 16 propio. Ideal para desarrollo y demos.
-
-```bash
-# 1. Configurar variables de entorno
-cp apps/backend/.env.example apps/backend/.env
-# Editar apps/backend/.env con JWT_SECRET, Google OAuth, Resend key, etc.
-
-# 2. Levantar todos los servicios
-docker compose up -d
-
-# 3. Ver estado de los contenedores
-docker compose ps
-
-# 4. Ver logs en tiempo real
-docker compose logs -f backend
-docker compose logs -f frontend
+```
+apps/backend/.env  (env_file)   ← DATABASE_URL Railway — SIEMPRE GANA
+environment block               ← NO define DATABASE_URL — no sobreescribe
 ```
 
-#### Contenedores
+El bloque `environment` de Docker Compose tiene mayor precedencia que `env_file`.
+Por eso `DATABASE_URL` fue **eliminado** del bloque `environment` en `docker-compose.yml`.
+El backend lee el valor directamente de `apps/backend/.env`, donde está la URL de Railway.
 
-| Contenedor | Imagen | Puerto externo | Descripción |
+---
+
+### Modo por defecto — Railway (producción)
+
+`apps/backend/.env` debe tener `DATABASE_URL` apuntando a Railway antes de levantar.
+
+```bash
+# Verificar que DATABASE_URL en apps/backend/.env es Railway:
+# DATABASE_URL=postgresql://postgres:<pass>@tramway.proxy.rlwy.net:16466/railway
+
+docker compose up -d
+```
+
+Contenedores que arrancan:
+
+| Contenedor | Imagen | Puerto | Descripción |
 |---|---|---|---|
-| `tickets_postgres` | postgres:16-alpine | `5432` | Base de datos PostgreSQL |
 | `tickets_redis` | redis:7-alpine | `6379` | Caché y pub/sub |
-| `tickets_backend` | build local | `3001` | API NestJS |
+| `tickets_backend` | build local | `3001` | API NestJS → Railway DB |
 | `tickets_frontend` | build local | `3000` | App Next.js |
 | `tickets_nginx` | nginx:alpine | `80` / `443` | Proxy reverso |
+
+`tickets_postgres` **no arranca** — la DB es Railway.
 
 #### URLs disponibles
 
@@ -139,20 +145,31 @@ docker compose logs -f frontend
 | **Swagger UI** | http://localhost:3001/docs |
 | **Health check** | http://localhost:3001/health |
 
----
-
-### Opción B — Railway PostgreSQL (sin contenedor de postgres)
-
-Usa la base de datos de Railway. El schema ya está aplicado allí — no corre migraciones.
+#### Verificar que el backend usa Railway
 
 ```bash
-# apps/backend/.env debe tener DATABASE_URL de Railway:
-# DATABASE_URL=postgresql://postgres:<pass>@tramway.proxy.rlwy.net:16466/railway
-
-docker compose -f docker-compose.railway.yml up -d
+docker exec tickets_backend printenv DATABASE_URL
+# Debe mostrar: postgresql://postgres:...@tramway.proxy.rlwy.net:16466/railway
 ```
 
-Levanta los mismos contenedores que la Opción A pero **sin** `tickets_postgres`.
+---
+
+### Modo desarrollo aislado — PostgreSQL local
+
+Usa `docker-compose.local.yml` como override. Este archivo:
+- Quita la restricción de perfil del servicio `postgres` → arranca el contenedor
+- Sobreescribe `DATABASE_URL` → apunta al postgres local
+- Activa `MIGRATIONS_DIR` → corre migraciones al iniciar
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+```
+
+Contenedores adicionales que arrancan:
+
+| Contenedor | Imagen | Puerto | Descripción |
+|---|---|---|---|
+| `tickets_postgres` | postgres:16-alpine | `5432` | PostgreSQL local con schema aplicado |
 
 ---
 
@@ -162,19 +179,22 @@ Levanta los mismos contenedores que la Opción A pero **sin** `tickets_postgres`
 # Detener todo
 docker compose down
 
-# Detener y borrar volúmenes (reset completo de DB)
+# Detener y borrar volúmenes (reset completo de DB local)
 docker compose down -v
 
-# Reconstruir imagen de backend (después de cambios de código)
+# Reconstruir backend (después de cambios de código)
 docker compose build backend && docker compose up -d backend
 
-# Reconstruir imagen de frontend
+# Reconstruir frontend
 docker compose build frontend && docker compose up -d frontend
+
+# Ver variable DATABASE_URL en runtime (confirmar Railway)
+docker exec tickets_backend printenv DATABASE_URL
 
 # Acceder al shell del backend
 docker exec -it tickets_backend sh
 
-# Acceder a PostgreSQL
+# Acceder a PostgreSQL local (solo en modo local)
 docker exec -it tickets_postgres psql -U tickets_user -d tickets_db
 
 # Ver logs del scheduler SLA
