@@ -14,6 +14,22 @@
   .header { flex-direction: row; align-items: center; gap: 0; }
 }
 
+@media (max-width: 640px) {
+  .card      { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
+  .cardInfo  { order: 1; min-width: 0; flex: 1; }
+  .cbWrap    { order: 0; align-self: flex-start; margin-top: 2px; }
+  .cardRight { order: 2; flex-shrink: 1; width: 100%; justify-content: flex-end; gap: 8px; }
+  .title     { font-size: 20px; }
+}
+
+@media (max-width: 480px) {
+  .btnSecondary,
+  .btnDanger  { font-size: 10px; padding: 5px 8px; }
+  .typeBadge  { font-size: 9px; padding: 2px 5px; }
+  .daysPill   { font-size: 9px; padding: 2px 6px; }
+  .selectAllBar { font-size: 11px; }
+}
+
 .title {
   font-size: 24px;
   font-weight: 800;

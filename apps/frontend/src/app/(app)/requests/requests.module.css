@@ -367,4 +367,22 @@
   .tabBar::-webkit-scrollbar { display: none; }
   .tab         { padding: 8px 12px; font-size: 12px; flex-shrink: 0; }
   .card        { padding: 14px 16px; }
+  .filterBar   { gap: 6px; }
+  .filterSelect { width: 100%; font-size: 12px; }
+  .oversightTabBar { flex-wrap: wrap; gap: 0; }
+  .oversightTab    { flex: 1; min-width: 140px; padding: 8px 12px; border-radius: 6px 6px 0 0; }
+  .oversightTabDesc { display: none; }
+  .cardHeader  { flex-wrap: wrap; }
+  .reviewActions { flex-wrap: wrap; }
+  .reviewBtn   { flex: 0 0 calc(50% - 4px); }
+  .supervisionBanner { padding: 10px 14px; font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  .oversightTab  { flex: 1 1 100%; border-radius: 6px; margin-bottom: 2px; }
+  .reviewBtn     { flex: 1 1 100%; }
+  .timelineEntry { gap: 8px; }
+  .cardMeta      { font-size: 11px; gap: 4px; }
+  .tabBar        { gap: 0; }
+  .tab           { padding: 7px 10px; font-size: 11px; }
 }

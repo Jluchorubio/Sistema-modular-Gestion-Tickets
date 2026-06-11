@@ -1212,6 +1212,10 @@
   .subHeader    { padding: 6px 16px; gap: 6px; }
   .dotLegend    { display: none; }
   .right        { max-height: 300px; }
+  .yearGrid     { grid-template-columns: repeat(2, 1fr); }
+  .legendBar    { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px;
+                  scrollbar-width: none; -ms-overflow-style: none; }
+  .legendBar::-webkit-scrollbar { display: none; }
 }
 
 @media (max-width: 480px) {
@@ -1221,4 +1225,9 @@
   .calWrap    { margin: 8px 12px 0; }
   .subHeader  { flex-direction: column; align-items: flex-start; }
   .viewSwitcher .viewBtn { padding: 4px 10px; font-size: 10px; }
+  .yearGrid   { grid-template-columns: 1fr; }
+  .yearNav    { padding: 10px 14px 6px; }
+  .ctxSwitcher { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .ctxSwitcher::-webkit-scrollbar { display: none; }
+  .urgencyBar  { padding: 5px 12px; gap: 6px; }
 }
