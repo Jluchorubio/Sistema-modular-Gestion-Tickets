@@ -1,0 +1,599 @@
+
+# NEXO ITSM — DOCUMENTO DE SUSTENTACIÓN
+# Respuestas a las interrogantes del proyecto
+
+---
+
+## 1. ¿DE QUÉ TRATA EL PROYECTO?
+
+NEXO ITSM es una plataforma modular de gestión de servicios de TI (Information Technology
+Service Management) desarrollada para centralizar y automatizar los procesos de soporte
+técnico, inventario de activos tecnológicos y gestión administrativa interna de una organización.
+
+El sistema permite a organizaciones de distintos tamaños operar desde un único punto:
+
+- Un técnico puede recibir, trabajar y cerrar incidentes técnicos con SLA automático.
+- Un administrador puede ver en tiempo real la carga de trabajo, el estado de activos
+  tecnológicos y las métricas de cumplimiento de acuerdos de nivel de servicio.
+- Un usuario final puede reportar un problema, hacer seguimiento a su solicitud y
+  calificar la atención recibida, todo desde el navegador o la app instalada en su
+  dispositivo (PWA — Progressive Web App).
+
+El nombre NEXO refleja la idea central del sistema: ser el punto de conexión entre
+usuarios, técnicos y administradores de TI dentro de una organización.
+
+---
+
+## 2. PROBLEMÁTICA QUE RESUELVE
+
+Las organizaciones medianas y pequeñas enfrentan problemas recurrentes en la gestión de TI:
+
+PROBLEMA 1 — Gestión informal de incidentes:
+Los reportes de fallas técnicas llegan por WhatsApp, correo, llamadas o mensajes verbales.
+No hay trazabilidad. No se sabe quién atendió qué, cuánto tardó ni si el usuario quedó
+satisfecho. Los tickets se pierden, se duplican o simplemente no se atienden.
+
+PROBLEMA 2 — Sin control de activos:
+Los inventarios se llevan en hojas de cálculo desactualizadas. No se sabe a quién
+está asignado un equipo, cuántos daños ha tenido, si tiene garantía vigente o qué
+componentes lo integran. Cuando un técnico sale de la empresa, ese conocimiento se va
+con él.
+
+PROBLEMA 3 — Procesos administrativos manuales:
+Las solicitudes de cambio de rol, acceso a módulos, correcciones de datos o
+reactivación de cuentas se gestionan informalmente. No hay registro de quién aprobó,
+cuándo, por qué, ni quién fue el responsable.
+
+PROBLEMA 4 — Sin métricas de desempeño:
+Los jefes de TI no tienen visibilidad real del trabajo del equipo. No pueden saber
+cuántos incidentes se resolvieron esta semana, qué técnico tiene más carga, cuántos
+SLAs se incumplieron, o cuál es la categoría de falla más frecuente.
+
+PROBLEMA 5 — Herramientas dispersas:
+Los equipos usan combinaciones de herramientas no integradas: un Excel para inventario,
+un formulario de Google Forms para tickets, el correo para solicitudes, y ningún sistema
+de notificación centralizado.
+
+---
+
+## 3. JUSTIFICACIÓN — ¿POR QUÉ CONSTRUIRLO?
+
+Las alternativas comerciales existentes (ServiceNow, Jira Service Management, Freshservice,
+Zendesk) son potentes pero presentan barreras para organizaciones educativas y medianas:
+
+- COSTO: Licencias desde $20–$100 USD por usuario/mes. Inaccesible para instituciones
+  educativas o empresas pequeñas.
+- COMPLEJIDAD: Requieren configuración extensa, personal especializado y meses de
+  implementación.
+- IDIOMA Y CONTEXTO: Diseñados para el mercado anglosajón. Interfaces, documentación
+  y flujos de trabajo en inglés.
+- DEPENDENCIA: Las organizaciones quedan atadas a un proveedor externo sin posibilidad
+  de personalización real.
+
+NEXO ITSM se justifica porque:
+
+1. Es de código propio, sin costo de licencias.
+2. Implementa los mismos conceptos ITSM que las herramientas enterprise (SLA, FSM,
+   RBAC, CMDB, Helpdesk) pero adaptado al contexto local.
+3. Es completamente personalizable: cada módulo, flujo y categoría se configura
+   desde la propia plataforma.
+4. Demuestra cómo buenas prácticas de ingeniería de software (Clean Architecture,
+   RBAC, API REST documentada, CI/CD, contenedores) se aplican a un problema real.
+5. Escala: la arquitectura modular permite agregar nuevos módulos sin reescribir el
+   sistema base.
+
+---
+
+## 4. SOLUCIÓN — ¿CÓMO SE RESUELVE LA PROBLEMÁTICA?
+
+NEXO ITSM resuelve cada problema con un módulo o funcionalidad específica:
+
+SOLUCIÓN A — Mesa de Ayuda (Helpdesk):
+Cada incidente se convierte en un ticket con número único, prioridad, categoría,
+técnico asignado y SLA. El sistema rastrea todo el ciclo de vida del ticket mediante
+una máquina de estados (FSM) con transiciones controladas por rol. Al terminar,
+el usuario valida la solución y califica al técnico. Ningún ticket se pierde.
+
+SOLUCIÓN B — Inventario CMDB:
+Cada activo tecnológico tiene una ficha digital con número de serie, marca, modelo,
+componentes, imágenes, historial de daños, historial de custodia y código QR único.
+La base de datos de configuración (CMDB) sabe en todo momento quién tiene asignado
+cada activo y cuántos tickets ha generado.
+
+SOLUCIÓN C — Gestión Administrativa:
+Las solicitudes internas se crean, enrutan y aprueban dentro del sistema con flujo
+de 5 etapas, registro del responsable en cada paso y notificación automática al
+solicitante. Queda auditoría completa de cada acción.
+
+SOLUCIÓN D — Reportes y KPIs:
+El módulo de reportes agrega métricas en tiempo real: tickets por estado, prioridad,
+técnico y categoría; cumplimiento de SLA; productividad del equipo; inventario por
+estado. Los datos se visualizan en gráficas y se exportan a CSV.
+
+SOLUCIÓN E — Notificaciones en tiempo real:
+El sistema notifica automáticamente por in-app y correo electrónico cuando se crea,
+asigna, comenta, escala o cierra un ticket. La campana del header muestra el conteo
+en tiempo real via WebSocket — sin necesidad de recargar la página.
+
+SOLUCIÓN F — RBAC granular:
+60 permisos organizados por recurso y acción. Cada usuario tiene exactamente los
+accesos que necesita según su rol en cada módulo. Un técnico no puede ver la
+configuración del sistema. Un usuario no puede cerrar tickets ajenos. El superadmin
+tiene acceso total.
+
+---
+
+## 5. ¿CÓMO SE HIZO? — ARQUITECTURA GENERAL
+
+El proyecto se construyó como un monorepo con dos aplicaciones independientes que
+se comunican por API REST y WebSocket.
+
+ARQUITECTURA EN CAPAS (backend):
+
+  [Cliente Web / PWA]
+       ↓ HTTPS
+  [Nginx — Proxy reverso]
+       ↓
+  [Next.js 14 — Frontend]
+       ↓ Axios / TanStack Query
+  [NestJS 11 — API REST + WebSocket]
+       ↓ SQL raw (pg driver)
+  [PostgreSQL 16 en Railway]
+
+ESTRUCTURA INTERNA DEL BACKEND (NestJS):
+
+Cada funcionalidad del sistema es un Módulo NestJS independiente:
+
+  src/modules/
+  ├── auth/          → login, tokens, OAuth, 2FA, OTP
+  ├── users/         → CRUD, roles, skills, disponibilidad
+  ├── tickets/       → Helpdesk, FSM, SLA, asignación
+  ├── inventory/     → CMDB, assets, specs, QR, custodia
+  ├── requests/      → solicitudes administrativas 5 etapas
+  ├── notifications/ → bell, email, Socket.IO, eventos
+  ├── calendar/      → grid mensual, reuniones
+  ├── reporting/     → KPIs, SLA, técnicos, CSV
+  ├── audit/         → log por entidad, filtros, export
+  ├── config/        → SLA, horarios, organigrama, prioridad
+  └── trash/         → soft-delete 90 días, bulk, re-auth
+
+Cada módulo tiene: Controller (endpoints) → Service (lógica) → DataSource (queries SQL).
+No hay repositorios abstractos: queries SQL raw directamente con el driver `pg`.
+
+ESTRUCTURA INTERNA DEL FRONTEND (Next.js App Router):
+
+  src/
+  ├── app/(app)/     → rutas autenticadas (dashboard, tickets, inventory, etc.)
+  ├── app/(auth)/    → rutas públicas (login, complete-profile)
+  ├── components/    → componentes reutilizables (AppHeader, Sidebar, etc.)
+  ├── hooks/         → usePWAInstall, useRealtimeNotifications, etc.
+  ├── services/      → clientes HTTP para cada módulo
+  ├── stores/        → estado global con Zustand (auth, UI, permisos)
+  └── providers/     → AuthProvider, QueryProvider, ThemeProvider, ServiceWorkerProvider
+
+BASE DE DATOS — PostgreSQL con 15 schemas separados:
+
+  app, auth, users, config, modules, tickets, inventory,
+  files, notifications, audit, events, reports, maintenance,
+  calendar, requests
+
+Cada schema agrupa tablas del mismo dominio. Esto permite permisos de BD por schema,
+mejora la organización y facilita migraciones aisladas.
+
+SISTEMA DE EVENTOS (notificaciones internas):
+
+Los módulos no se llaman entre sí directamente. Se comunican vía eventos:
+
+  tickets.service → messaging.emit('ticket.assigned', {...})
+                          ↓
+  notifications.service → @OnEvent('ticket.assigned') → notifyUser() + email
+  notifications.gateway → Socket.IO → cliente web recibe en tiempo real
+
+Esto desacopla completamente el Helpdesk del módulo de notificaciones.
+
+SLA AUTOMÁTICO:
+
+Un scheduler corre cada 30 minutos y evalúa todos los tickets activos:
+- Si el SLA venció: escala el ticket y notifica al jefe técnico
+- El reloj SLA se pausa automáticamente cuando el ticket está "En espera"
+- Se extiende el deadline al reanudar
+- Respeta horarios laborales y días feriados configurados en Config Global
+
+FLUJO CI/CD:
+
+  1. Developer hace push a `main` en GitHub
+  2. GitHub Actions detecta el push
+  3. Conecta al servidor vía SSH
+  4. `git pull origin main` en el servidor
+  5. `docker compose up -d --build --force-recreate backend frontend`
+  6. Deploy automático sin downtime manual
+
+---
+
+## 6. TECNOLOGÍAS USADAS
+
+### BACKEND
+
+Framework y core:
+- NestJS 11                  → Framework Node.js modular con decoradores
+- TypeScript 5               → Tipado estático
+- Node.js 20                 → Runtime
+
+Base de datos:
+- PostgreSQL 16 (Railway)    → Base de datos relacional principal
+- TypeORM 0.3                → Solo como DataSource/conector (queries son SQL raw)
+- pg 8                       → Driver PostgreSQL nativo
+
+Autenticación y seguridad:
+- passport                   → Middleware de autenticación
+- passport-jwt               → Estrategia JWT
+- passport-google-oauth20    → Estrategia OAuth Google
+- @nestjs/jwt                → Generación y verificación de tokens JWT
+- bcrypt                     → Hash de contraseñas (12 rounds)
+- speakeasy                  → Generación y verificación TOTP (2FA)
+- qrcode                     → Generación de QR para Google Authenticator
+- helmet                     → Cabeceras HTTP de seguridad
+- @nestjs/throttler          → Rate limiting por IP
+
+Comunicación y mensajería:
+- socket.io 4                → WebSocket para notificaciones en tiempo real
+- @nestjs/websockets         → Integración WebSocket con NestJS
+- @nestjs/platform-socket.io → Adaptador Socket.IO
+- @nestjs/event-emitter      → Bus de eventos interno (EventEmitter2)
+- @nestjs/microservices      → Soporte RabbitMQ (opcional en producción)
+- amqplib                    → Cliente AMQP/RabbitMQ
+- ioredis                    → Cliente Redis (preparado para escala)
+- @socket.io/redis-adapter   → Adaptador Redis para Socket.IO multi-instancia
+
+Email y storage:
+- resend 6                   → Envío de emails transaccionales (OTP, recovery)
+- nodemailer                 → Email alternativo
+- @aws-sdk/client-s3         → Storage S3 (configurado, activable)
+- @aws-sdk/lib-storage       → Upload multipart a S3
+
+API y validación:
+- @nestjs/swagger            → Documentación OpenAPI automática
+- class-validator            → Validación de DTOs con decoradores
+- class-transformer          → Serialización/deserialización de objetos
+- compression                → Gzip de respuestas HTTP
+
+Utilidades:
+- @nestjs/schedule           → Cron jobs (SLA scheduler cada 30 min)
+- @nestjs/terminus           → Health check endpoint
+- rxjs 7                     → Programación reactiva (internamente en NestJS)
+
+Testing:
+- jest 29                    → Framework de testing
+- ts-jest                    → TypeScript para Jest
+- @nestjs/testing            → Módulo de testing de NestJS
+- @playwright/test           → Tests E2E
+
+---
+
+### FRONTEND
+
+Framework y base:
+- Next.js 14 (App Router)    → Framework React con SSR, rutas y optimizaciones
+- React 18                   → Librería UI
+- react-dom 18               → Renderizado DOM
+- TypeScript 5               → Tipado estático
+
+Estado y datos:
+- zustand 4                  → Estado global liviano (auth, UI, permisos)
+- @tanstack/react-query 5    → Fetching, caché, invalidación y sincronización de datos
+- axios 1                    → Cliente HTTP con interceptores (token refresh automático)
+- socket.io-client 4         → WebSocket para notificaciones en tiempo real
+
+Formularios y validación:
+- react-hook-form 7          → Gestión de formularios performante
+- @hookform/resolvers 5      → Integración react-hook-form + Zod
+- zod 4                      → Validación de schemas y tipado en runtime
+
+Visualización y gráficos:
+- recharts 3                 → Gráficos de barras, líneas, rings (reportes)
+- @xyflow/react 12           → React Flow — organigrama visual interactivo
+- @dagrejs/dagre 3           → Layout automático de grafos (Dagre algorithm)
+
+Calendario:
+- @fullcalendar/react 6      → Instalado como dependencia
+- @fullcalendar/daygrid      → Vista mes
+- @fullcalendar/interaction  → Interactividad
+- @fullcalendar/list         → Vista lista
+- @fullcalendar/core         → Core FullCalendar
+(Nota: el calendario principal usa un grid custom propio para mayor control visual)
+
+Exportación:
+- exceljs 4                  → Generación de archivos Excel (.xlsx)
+- xlsx 0.18                  → Lectura/escritura Excel alternativa
+- jspdf 4                    → Generación de PDFs en el cliente
+- jspdf-autotable 5          → Tablas automáticas en PDF
+
+Estilos y UI:
+- CSS Modules                → Estilos por componente (sin framework CSS global)
+- framer-motion 12           → Animaciones de UI (transiciones, modales)
+- animejs 3                  → Animaciones declarativas
+- lucide-react 1             → Iconografía SVG (400+ iconos)
+- clsx 2                     → Utilidad para clases CSS condicionales
+- tailwind-merge 2           → Merge inteligente de clases Tailwind
+
+Herramientas de desarrollo:
+- tailwindcss 3              → Solo como utilidad en algunos componentes
+- autoprefixer               → PostCSS autoprefixer
+- postcss                    → Procesador CSS
+- eslint + eslint-config-next → Linting
+- @playwright/test           → Tests E2E del frontend
+
+---
+
+### INFRAESTRUCTURA
+
+- Docker                     → Contenedores para backend, frontend y nginx
+- Docker Compose             → Orquestación de servicios
+- Nginx (alpine)             → Proxy reverso, SSL termination, rutas /api → backend
+- GitHub Actions             → CI/CD automático en cada push a main
+- Railway                    → PostgreSQL 16 gestionado en producción
+- Ubuntu Server              → Servidor de producción vía SSH
+- Git                        → Control de versiones
+
+---
+
+## 7. SEGURIDAD Y AUTENTICACIÓN
+
+### Autenticación — JWT dual token
+
+El sistema usa dos tokens separados:
+
+ACCESS TOKEN:
+- Vida útil: 15 minutos
+- Firmado con JWT_SECRET
+- Se envía en cada petición como Bearer token
+- Contiene: userId, email, isAdmin en payload
+
+REFRESH TOKEN:
+- Vida útil: 7 días
+- Firmado con JWT_REFRESH_SECRET diferente al access
+- Se almacena en la DB (tabla auth.sessions) y se valida contra ella
+- Permite obtener nuevo access_token sin pedir contraseña nuevamente
+- Se revoca al cerrar sesión o al detectar uso inválido
+
+Flujo de refresco automático:
+Si el backend retorna 401, el interceptor de Axios intenta automáticamente
+renovar el access_token con el refresh_token. Si también falla → logout forzoso.
+
+---
+
+### Google OAuth 2.0
+
+Flujo:
+1. Frontend redirige a /api/v1/auth/google (backend)
+2. Backend redirige a cuentas.google.com con client_id y redirect_uri
+3. El usuario autoriza en Google
+4. Google redirige de vuelta al callback del backend
+5. Backend valida el código, obtiene email y nombre de perfil de Google
+6. Si el email existe en la DB → emite tokens propios del sistema
+7. Frontend recibe tokens en la URL → los guarda y redirige al dashboard
+
+El sistema NUNCA usa tokens de Google después del login. Solo extrae los datos
+del perfil (email, nombre) y genera sus propios JWT.
+
+---
+
+### 2FA TOTP (Google Authenticator)
+
+El usuario puede habilitar autenticación de dos factores:
+
+1. Va a Configuración → Seguridad → Activar 2FA
+2. El backend genera un secret con speakeasy y retorna un QR
+3. El usuario escanea el QR con Google Authenticator, Authy u otro
+4. Ingresa el código de 6 dígitos para confirmar el enrolamiento
+5. Desde ese momento, en cada login debe ingresar el código TOTP además de la contraseña
+
+El código TOTP cambia cada 30 segundos y es válido durante una ventana de ±1 período
+para tolerar desfase de reloj.
+
+---
+
+### Control de acceso RBAC
+
+60 permisos en base de datos. Cada permiso sigue el patrón: recurso:acción
+
+Ejemplos:
+- tickets:create        → puede crear tickets
+- tickets:view_all      → puede ver todos los tickets del módulo (no solo los suyos)
+- inventory:edit        → puede editar activos
+- users:manage          → puede gestionar usuarios
+- config:manage         → puede acceder a la configuración
+
+Validación en dos capas:
+
+BACKEND:
+Cada controller usa decoradores:
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission('tickets:view_all')
+
+PermissionGuard consulta la DB (caché 60s en memoria) y verifica que el usuario
+tenga ese permiso. Si no → 403 Forbidden.
+
+FRONTEND:
+El componente <PermissionGate permission="tickets:view_all"> envuelve elementos UI.
+Si el usuario no tiene el permiso → el elemento no se renderiza.
+Los permisos se cargan al login y se invalidan si un admin los cambia.
+
+---
+
+### Otras medidas de seguridad
+
+Rate limiting:
+- 100 peticiones por IP por 60 segundos
+- Si se supera → 429 Too Many Requests
+- Aplicado globalmente con @nestjs/throttler
+
+Protección login:
+- Máximo 3 intentos fallidos → bloqueo temporal progresivo
+- Mensajes genéricos: "Usuario o contraseña incorrectos" (nunca indica qué campo)
+
+Contraseña:
+- Mínimo 8 caracteres, 1 mayúscula, 1 minúscula, 1 número
+- Hash bcrypt con 12 rounds (no es reversible)
+- Las contraseñas OAuth se marcan como '!oauth' en DB para evitar login por password
+
+Headers HTTP seguros:
+- helmet establece: X-XSS-Protection, X-Frame-Options, X-Content-Type-Options,
+  Strict-Transport-Security, Content-Security-Policy
+
+CORS:
+- Solo orígenes configurados en ALLOWED_ORIGINS pueden hacer peticiones al backend
+
+Auditoría:
+- Toda acción crítica queda registrada: actor, acción, entidad, timestamp, IP
+
+---
+
+## 8. ¿CÓMO SE DESPLEGÓ?
+
+### Arquitectura de producción
+
+  Internet
+    ↓ HTTPS (puerto 443)
+  Servidor Ubuntu en VPS
+    ↓
+  Nginx (docker container — nginx:alpine)
+    ├── / → Frontend (Next.js — puerto 3000)
+    └── /api → Backend (NestJS — puerto 3001)
+
+  NestJS → PostgreSQL 16 en Railway (externo, gestionado)
+
+URL de producción: https://nexo.proyectoscampus.top
+
+---
+
+### CI/CD con GitHub Actions
+
+Se configuró un pipeline automático en `.github/workflows/ci-deploy.yml`:
+
+```yaml
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - Checkout del repositorio
+      - Conexión SSH al servidor (con clave privada en GitHub Secrets)
+      - git pull origin main    ← trae el código nuevo
+      - docker compose up -d --build --force-recreate backend frontend
+      - docker image prune -f   ← limpia imágenes antiguas
+```
+
+Resultado: cada vez que se hace `git push` a la rama `main`, el servidor se
+actualiza automáticamente en ~3 minutos sin intervención manual.
+
+GitHub Secrets configurados:
+- DEPLOY_HOST     → IP del servidor
+- DEPLOY_USER     → usuario SSH
+- DEPLOY_SSH_KEY  → clave privada SSH (RSA)
+- DEPLOY_PATH     → ruta del proyecto en el servidor
+
+---
+
+### Docker Compose — servicios en producción
+
+```
+tickets_nginx     nginx:alpine      80/443  → Proxy reverso
+tickets_backend   build local       3001    → API NestJS
+tickets_frontend  build local       3000    → App Next.js
+```
+
+La base de datos NO está en Docker local — es Railway PostgreSQL externo.
+Esto simplifica el despliegue y elimina la gestión de backups y volúmenes de DB.
+
+---
+
+### Nginx — configuración de proxy
+
+Nginx actúa como punto de entrada único:
+- Todo el tráfico HTTPS entra por el puerto 443
+- Las rutas que empiezan con /api/* se enrutan al backend (puerto 3001)
+- Todo lo demás va al frontend (puerto 3000)
+- Gestiona cabeceras de Cache-Control y Content-Type para assets estáticos
+- Habilita compresión gzip
+
+---
+
+### PWA — Instalación como app
+
+El sistema es instalable como aplicación nativa en escritorio y móvil:
+
+- manifest.json declara nombre, iconos (192px y 512px), color de tema y start_url
+- sw.js (service worker) maneja cache de assets y fallback offline
+- El hook usePWAInstall captura el evento beforeinstallprompt de Chrome
+- Cuando Chrome valida todos los criterios PWA, el botón "Instalar NEXO" se activa
+- La captura del evento se hace temprano (antes de React) via script en <head>
+  para no perder el evento si el navegador lo dispara durante la carga
+
+---
+
+## 9. CONCLUSIONES
+
+### Lo que se logró
+
+Se construyó desde cero una plataforma ITSM funcional y desplegada en producción
+que implementa los mismos conceptos que herramientas enterprise de referencia
+(ServiceNow, Jira Service Management, Freshservice) pero con tecnologías modernas,
+código propio y sin costo de licencias.
+
+El sistema está en producción real en https://nexo.proyectoscampus.top con:
+- Deploy automático vía GitHub Actions
+- Base de datos gestionada en Railway
+- SSL/HTTPS con Nginx
+- Instalable como PWA
+- Soporte de dark mode y diseño responsive
+
+### Aprendizajes técnicos clave
+
+1. Arquitectura modular real: cada módulo NestJS es autónomo, tiene sus propios
+   endpoints, validaciones, guardas y lógica. Agregar un módulo nuevo no requiere
+   modificar el resto del sistema.
+
+2. RBAC implementado de verdad: no es un simple "isAdmin" booleano. Son 60 permisos
+   en base de datos, validados en backend Y en frontend, con caché y propagación en
+   tiempo real.
+
+3. Desacoplamiento por eventos: los módulos se comunican mediante eventos internos
+   (EventEmitter2), no llamadas directas. Esto permite cambiar el canal de mensajería
+   (de EventEmitter2 a RabbitMQ) sin modificar los módulos que emiten o consumen eventos.
+
+4. Máquina de estados para tickets: el FSM garantiza que los tickets solo puedan
+   pasar por transiciones válidas según el rol del actor. Imposible cerrar un ticket
+   desde un estado incorrecto o sin el permiso adecuado.
+
+5. CI/CD desde el primer día: automatizar el deploy evitó errores manuales y permitió
+   iterar rápido. Cada push a main está en producción en minutos.
+
+6. SLA automático: implementar horarios laborales, pausas y escalamiento automático
+   demuestra cómo los schedulers del backend pueden gestionar lógica de negocio
+   compleja sin intervención humana.
+
+### Escalabilidad futura
+
+La arquitectura está preparada para crecer:
+
+- RabbitMQ: MessagingService ya tiene modo dual (EventEmitter2 / RabbitMQ). Activar
+  RabbitMQ solo requiere configurar la variable de entorno RABBITMQ_URL.
+- Redis: el cliente ioredis está instalado. Cuando el sistema tenga más instancias,
+  el Socket.IO Redis Adapter permite sincronizar WebSockets entre servidores.
+- Multi-tenant: la arquitectura de schemas de PostgreSQL facilita agregar soporte
+  para múltiples organizaciones en el futuro.
+- Nuevos módulos: cualquier nuevo módulo hereda la plantilla del Helpdesk (rutas,
+  vistas por rol, reportes, configuración) y queda completamente desacoplado.
+
+### Reflexión final
+
+NEXO ITSM demuestra que con tecnologías modernas, buenas prácticas de ingeniería
+y decisiones arquitectónicas sólidas, es posible construir herramientas enterprise
+de calidad real sin depender de costosos productos comerciales. El proyecto va más
+allá de un CRUD: implementa seguridad multicapa, flujos de negocio complejos,
+automatizaciones, tiempo real y un despliegue profesional con CI/CD — todo el stack
+completo de una aplicación web moderna en producción.
