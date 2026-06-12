@@ -128,6 +128,7 @@ export function AppHeader({ noSidebar = false }: Props) {
   const notifications = notifData?.notifications ?? [];
 
   const { canInstall, install, installed } = usePWAInstall();
+  const [showPwaGuide, setShowPwaGuide] = useState(false);
 
   return (
     <header className={`${styles.header}${noSidebar ? ` ${styles.headerFull}` : ''}`}>
@@ -440,10 +441,27 @@ export function AppHeader({ noSidebar = false }: Props) {
                     <span className={styles.ddInstalledDot} />
                   </div>
                 ) : (
-                  <div className={`${styles.ddItem} ${styles.ddItemDisabled}`}>
-                    <span className={styles.ddItemIcon}><Download size={14} /></span>
-                    Descargar aplicación
-                    <span className={styles.ddProxBadge}>No disponible</span>
+                  <div className={styles.pwaGuideWrap}>
+                    <button
+                      type="button"
+                      className={styles.ddItem}
+                      onClick={() => setShowPwaGuide(v => !v)}
+                    >
+                      <span className={styles.ddItemIcon}><Download size={14} /></span>
+                      Instalar NEXO
+                      <span className={styles.ddProxBadge} style={{ background: '#0e2235', color: '#fff' }}>Cómo instalar</span>
+                    </button>
+                    {showPwaGuide && (
+                      <div className={styles.pwaGuide}>
+                        <p className={styles.pwaGuideTitle}>Instalar en Chrome</p>
+                        <ol className={styles.pwaGuideSteps}>
+                          <li>Abre el menú <strong>⋮</strong> (arriba a la derecha)</li>
+                          <li>Selecciona <strong>Guardar e instalar</strong></li>
+                          <li>Haz clic en <strong>Instalar</strong></li>
+                        </ol>
+                        <p className={styles.pwaGuideTip}>O busca el ícono <strong>⊕</strong> en la barra de direcciones</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
