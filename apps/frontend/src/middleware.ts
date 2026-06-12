@@ -16,6 +16,8 @@ const PROTECTED = [
   '/reports',
   '/config',
   '/change-password',
+  '/notifications',
+  '/helpdesk',
 ];
 
 export function middleware(request: NextRequest) {

@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
@@ -30,8 +30,8 @@ export class PermissionGuard implements CanActivate {
     const userId: string | undefined =
       request.user?.sub ?? this.extractUserIdFromToken(request);
 
-    // No valid identity — deny; JwtAuthGuard will emit the proper 401
-    if (!userId) return false;
+    // No valid identity — throw 401 so frontend refresh interceptor can retry
+    if (!userId) throw new UnauthorizedException();
 
     const has = await this.permissionsService.hasPermission(userId, required);
     if (has === null || !has) throw new ForbiddenException(`Permiso requerido: ${required}`);
