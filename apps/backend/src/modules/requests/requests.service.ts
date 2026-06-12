@@ -256,9 +256,9 @@ export class RequestsService {
 
   async review(reviewerId: string, requestId: string, dto: ReviewRequestDto) {
     const [req] = await this.db.query<{
-      id: string; status: string; requester_id: string; module_id: string | null;
+      id: string; status: string; requester_id: string;
     }[]>(
-      `SELECT id, status, requester_id, metadata->>'module_id' AS module_id
+      `SELECT id, status, requester_id
        FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
       [requestId],
     );
@@ -266,19 +266,6 @@ export class RequestsService {
 
     if (req.requester_id === reviewerId)
       throw new ForbiddenException('No puedes revisar tu propia solicitud');
-
-    if (req.module_id) {
-      const [actor] = await this.db.query<{ is_superadmin: boolean; role_name: string | null }[]>(
-        `SELECT u.is_superadmin, mr.name AS role_name
-         FROM   users.profiles u
-         LEFT JOIN modules.user_module_roles umr ON umr.user_id = u.id AND umr.module_id = $2 AND umr.is_active = true
-         LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
-         WHERE  u.id = $1 LIMIT 1`,
-        [reviewerId, req.module_id],
-      );
-      if (!actor?.is_superadmin && !actor?.role_name)
-        throw new ForbiddenException('No tienes rol en el módulo de esta solicitud');
-    }
 
     const VALID_TRANSITIONS: Record<string, string[]> = {
       pending:      ['approved', 'rejected', 'under_review'],
@@ -323,31 +310,14 @@ export class RequestsService {
   async take(userId: string, requestId: string) {
     const [req] = await this.db.query<{
       id: string; status: string; type: string; priority: string;
-      sla_due_at: string | null; module_id: string | null;
+      sla_due_at: string | null;
     }[]>(
-      `SELECT id, status, type, priority, sla_due_at,
-              metadata->>'module_id' AS module_id
+      `SELECT id, status, type, priority, sla_due_at
        FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
       [requestId],
     );
     if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
     if (req.status !== 'pending') throw new BadRequestException('Solo se pueden tomar solicitudes pendientes');
-
-    if (req.module_id) {
-      const [actor] = await this.db.query<{ is_superadmin: boolean; role_name: string | null }[]>(
-        `SELECT u.is_superadmin, mr.name AS role_name
-         FROM   users.profiles u
-         LEFT JOIN modules.user_module_roles umr
-               ON umr.user_id   = u.id
-              AND umr.module_id = $2
-              AND umr.is_active = true
-         LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
-         WHERE  u.id = $1 LIMIT 1`,
-        [userId, req.module_id],
-      );
-      if (!actor?.is_superadmin && !actor?.role_name)
-        throw new ForbiddenException('No tienes rol en el módulo de esta solicitud');
-    }
 
     // Only recalculate SLA if not already set at creation
     let slaDeadline: Date | string = req.sla_due_at ?? '';
@@ -389,17 +359,26 @@ export class RequestsService {
     );
     if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
 
+    // Taker, superadmin, or any active gestion module role can advance progress
     if (req.taken_by !== userId) {
-      const [actor] = await this.db.query<{ is_superadmin: boolean }[]>(
-        `SELECT is_superadmin FROM users.profiles WHERE id = $1`,
+      const [actor] = await this.db.query<{ is_superadmin: boolean; has_gestion_role: boolean }[]>(
+        `SELECT u.is_superadmin,
+                EXISTS (
+                  SELECT 1 FROM modules.user_module_roles umr
+                  JOIN modules.modules m ON m.id = umr.module_id
+                  WHERE umr.user_id = u.id AND umr.is_active = true
+                    AND m.permission_scope = 'gestion' AND m.deleted_at IS NULL
+                ) AS has_gestion_role
+         FROM users.profiles u WHERE u.id = $1`,
         [userId],
       );
-      if (!actor?.is_superadmin) throw new ForbiddenException('Solo quien tomó la solicitud puede avanzar su estado');
+      if (!actor?.is_superadmin && !actor?.has_gestion_role)
+        throw new ForbiddenException('Solo quien tomó la solicitud o un gestor puede avanzar su estado');
     }
 
     const validFrom: Record<string, string[]> = {
       in_progress: ['taken'],
-      completed:   ['taken', 'in_progress'],
+      completed:   ['taken', 'in_progress', 'under_review'],
     };
     if (!validFrom[status]?.includes(req.status)) {
       throw new BadRequestException(`No se puede mover de "${req.status}" a "${status}"`);
