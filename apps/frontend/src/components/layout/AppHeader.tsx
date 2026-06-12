@@ -127,7 +127,7 @@ export function AppHeader({ noSidebar = false }: Props) {
   const unread = notifData?.unread_count ?? 0;
   const notifications = notifData?.notifications ?? [];
 
-  const { canInstall, install } = usePWAInstall();
+  const { canInstall, install, installed } = usePWAInstall();
 
   return (
     <header className={`${styles.header}${noSidebar ? ` ${styles.headerFull}` : ''}`}>

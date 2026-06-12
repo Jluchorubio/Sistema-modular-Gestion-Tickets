@@ -364,8 +364,8 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
                   </td>
                   {COLUMNS.map(c => (
                     <td key={c.key}>
-                      {(row as Record<string, unknown>)[c.key]
-                        ? String((row as Record<string, unknown>)[c.key])
+                      {(row as unknown as Record<string, unknown>)[c.key]
+                        ? String((row as unknown as Record<string, unknown>)[c.key])
                         : <span className={styles.emptyCell}>—</span>}
                     </td>
                   ))}
