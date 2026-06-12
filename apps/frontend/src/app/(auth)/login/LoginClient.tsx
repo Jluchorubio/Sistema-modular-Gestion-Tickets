@@ -90,7 +90,6 @@ export function LoginClient() {
     staleTime: 600_000,
   });
   const companyName = company?.name ?? '';
-  const logoUrl     = company?.logo_url ?? '';
 
   const [view,       setView]       = useState<AuthView>('login');
   const [otpToken,   setOtpToken]   = useState('');
@@ -234,16 +233,11 @@ export function LoginClient() {
       <section className={styles.formCol}>
         <header className={styles.formHeader}>
           <div className={styles.brand}>
-            {logoUrl
-              ? <img src={logoUrl} alt={companyName} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} />
-              : (
-                <span className={styles.brandMark} aria-hidden="true">
-                  <span />
-                  <span />
-                </span>
-              )
-            }
-            <span className={styles.brandName}>{companyName || 'Sistema'}</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/nexo-logo.png" alt="Nexo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+            <span className={styles.brandName} style={{ color: '#FF6B00', letterSpacing: '0.18em' }}>
+              {companyName || 'NEXO'}
+            </span>
           </div>
           <button type="button" className={styles.langBtn} aria-label="Idioma actual: español">
             <Globe2 size={12} />

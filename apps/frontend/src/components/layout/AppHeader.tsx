@@ -145,8 +145,9 @@ export function AppHeader({ noSidebar = false }: Props) {
             </button>
           )}
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
-            <div className={styles.brandIcon} />
-            <span className={styles.brandName}>Nexo</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/nexo-logo.png" alt="Nexo" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
+            <span className={styles.brandName} style={{ color: '#FF6B00' }}>Nexo</span>
           </Link>
         </div>
 
