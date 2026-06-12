@@ -4,7 +4,7 @@ import { SkeletonUsersList } from '@/components/ui/Skeleton';
 import { UsersClient } from './_components/UsersClient';
 
 export const metadata: Metadata = {
-  title: 'Usuarios — Tickets System',
+  title: 'Usuarios — NEXO',
 };
 
 export default function UsersPage() {

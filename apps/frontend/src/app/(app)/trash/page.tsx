@@ -4,7 +4,7 @@ import { SkeletonTrashList } from '@/components/ui/Skeleton';
 import { TrashClient } from './_components/TrashClient';
 
 export const metadata: Metadata = {
-  title: 'Papelera — Tickets System',
+  title: 'Papelera — NEXO',
 };
 
 export default function TrashPage() {

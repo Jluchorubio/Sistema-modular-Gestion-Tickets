@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'tickets-v1';
+const CACHE_VERSION = 'nexo-v2';
 const OFFLINE_URL   = '/offline';
 const STATIC_EXTS   = ['.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2'];
 
@@ -6,7 +6,7 @@ const STATIC_EXTS   = ['.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll([OFFLINE_URL, '/logo.png']).catch(() => cache.add('/logo.png')))
+      .then((cache) => cache.addAll([OFFLINE_URL, '/nexo-logo.png', '/logo.png']).catch(() => {}))
       .then(() => self.skipWaiting()),
   );
 });

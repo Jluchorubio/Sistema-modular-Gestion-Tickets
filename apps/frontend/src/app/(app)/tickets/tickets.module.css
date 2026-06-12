@@ -854,11 +854,11 @@
   flex: 1;
   min-width: 110px;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1.5px solid #e2e8f0;
   padding: 14px 16px 12px;
   cursor: pointer;
-  transition: box-shadow .15s, transform .12s;
+  transition: box-shadow .15s, border-color .15s;
   position: relative;
   overflow: hidden;
   user-select: none;
@@ -871,7 +871,7 @@
   right: 0;
   height: 3px;
   background: var(--accent);
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 6px 6px;
 }
 .statCard:hover {
   box-shadow: 0 4px 18px rgba(0,0,0,0.08);

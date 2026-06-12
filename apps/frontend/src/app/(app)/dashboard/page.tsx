@@ -4,7 +4,7 @@ import { SkeletonDashboard } from '@/components/ui/Skeleton';
 import { DashboardClient } from './_components/DashboardClient';
 
 export const metadata: Metadata = {
-  title: 'Dashboard — Tickets System',
+  title: 'Dashboard — NEXO',
 };
 
 export default function DashboardPage() {

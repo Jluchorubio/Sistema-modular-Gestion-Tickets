@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { CompleteProfileClient } from './_components/CompleteProfileClient';
 
 export const metadata: Metadata = {
-  title: 'Completar Perfil — Tickets System',
+  title: 'Completar Perfil — NEXO',
 };
 
 export default function CompleteProfilePage() {

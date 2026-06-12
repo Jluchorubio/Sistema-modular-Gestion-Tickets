@@ -77,6 +77,9 @@ services:
       # Para postgres local ver docker-compose.local.yml.
       MIGRATIONS_DIR: /app/migrations-disabled
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://nexo.proyectoscampus.top,http://localhost:3000}
+      APP_URL: ${APP_URL:-https://nexo.proyectoscampus.top}
+      BACKEND_URL: ${BACKEND_URL:-https://nexo.proyectoscampus.top/api/v1}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-https://nexo.proyectoscampus.top/api/v1/auth/google/callback}
       STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       # S3 / R2 (descomentar cuando STORAGE_DRIVER=s3):
       # R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}

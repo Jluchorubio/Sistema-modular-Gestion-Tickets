@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { LoginClient } from './LoginClient';
 
 export const metadata = {
-  title: 'Acceso — Tickets System',
+  title: 'Acceso — NEXO',
 };
 
 function LoginSkeleton() {

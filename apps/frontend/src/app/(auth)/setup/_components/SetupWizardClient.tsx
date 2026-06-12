@@ -104,7 +104,7 @@ export function SetupWizardClient() {
           <div className={styles.brandIcon}>
             <Ticket size={17} color="rgba(255,255,255,0.85)" />
           </div>
-          <span className={styles.brandName}>Tickets System</span>
+          <span className={styles.brandName}>NEXO</span>
         </div>
 
         <div className={styles.leftHeadline}>

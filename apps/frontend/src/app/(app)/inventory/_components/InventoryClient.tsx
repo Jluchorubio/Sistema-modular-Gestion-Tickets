@@ -678,7 +678,7 @@ function MetricsRow({ assets }: { assets: AssetListItem[] }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 16 }}>
       {cards.map(([label, value, color, icon]) => (
-        <div key={label} style={{ background: '#fff', borderRadius: 9, border: `1px solid ${C.border}`, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div key={label} style={{ background: '#fff', borderRadius: 6, border: `1.5px solid ${C.border}`, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, transition: 'border-color .18s, box-shadow .18s' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: C.muted, margin: 0 }}>{label}</p>
             <span style={{ color, opacity: .7 }}>{icon}</span>

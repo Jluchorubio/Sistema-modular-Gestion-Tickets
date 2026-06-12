@@ -4,7 +4,7 @@ import { SkeletonRolesList } from '@/components/ui/Skeleton';
 import { RolesClient } from './_components/RolesClient';
 
 export const metadata: Metadata = {
-  title: 'Roles Globales — Tickets System',
+  title: 'Roles Globales — NEXO',
 };
 
 export default function RolesPage() {

@@ -4,7 +4,7 @@ import { SkeletonProfileLeft, SkeletonProfileRight } from '@/components/ui/Skele
 import { ProfileClient } from './_components/ProfileClient';
 
 export const metadata: Metadata = {
-  title: 'Mi Perfil — Tickets System',
+  title: 'Mi Perfil — NEXO',
 };
 
 function ProfileSkeleton() {
