@@ -79,6 +79,7 @@ export function AppSidebar() {
   const hasModuleCtx = moduleNav !== null || isModulePath;
 
   const companyName = company?.name ?? '';
+  const logoUrl     = company?.logo_url ?? '';
 
   // "Inicio" item active only on exact base path; all others active on prefix match
   function isActive(href: string, key?: string) {
@@ -150,23 +151,34 @@ export function AppSidebar() {
       <aside className={`${styles.sidebar}${expanded ? ` ${styles.expanded}` : ''}${mobileSidebarOpen ? ` ${styles.mobileOpen}` : ''}`}>
       {/* ── Brand ── */}
       <div className={styles.brand}>
-        <div className={styles.logoWrap} aria-label="Nexo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/nexo-logo.png"
-            alt="Nexo"
-            style={{ width: 40, height: 40, objectFit: 'contain', display: 'block' }}
-          />
-        </div>
+        {logoUrl ? (
+          <div className={styles.logoWrap} aria-label={companyName}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoUrl}
+              alt={companyName}
+              style={{ width: 48, height: 48, objectFit: 'contain', display: 'block' }}
+            />
+          </div>
+        ) : (
+          <div className={styles.brandMark} aria-hidden="true">
+            <span
+              className={styles.brandDot}
+              style={{
+                background:  'var(--brand-primary)',
+                boxShadow:   '0 0 0 3px var(--brand-primary-20)',
+              }}
+            />
+          </div>
+        )}
 
         {(expanded || mobileSidebarOpen) && (
           <div className={styles.brandInfo}>
-            <span
-              className={`${styles.brandName}${hasModuleCtx ? ` ${styles.brandNameCoral}` : ''}`}
-              style={hasModuleCtx ? undefined : { color: '#FF6B00' }}
-            >
-              {companyName || 'Nexo'}
-            </span>
+            {companyName && (
+              <span className={`${styles.brandName}${hasModuleCtx ? ` ${styles.brandNameCoral}` : ''}`}>
+                {companyName}
+              </span>
+            )}
             {hasModuleCtx && moduleName && (
               <span className={styles.brandModuleName}>{moduleName}</span>
             )}

@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, Globe2, X } from 'lucide-react';
-import { systemConfigService } from '@/services/system-config.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/tokens';
 import { ROUTES } from '@/constants/routes';
@@ -83,13 +81,6 @@ function handleAuthRedirect(data: LoginResponse, push: (href: string) => void) {
 export function LoginClient() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-
-  const { data: company } = useQuery({
-    queryKey: ['company-public'],
-    queryFn:  systemConfigService.getPublicCompanyInfo,
-    staleTime: 600_000,
-  });
-  const companyName = company?.name ?? '';
 
   const [view,       setView]       = useState<AuthView>('login');
   const [otpToken,   setOtpToken]   = useState('');
@@ -235,9 +226,7 @@ export function LoginClient() {
           <div className={styles.brand}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/nexo-logo.png" alt="Nexo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
-            <span className={styles.brandName} style={{ color: '#FF6B00', letterSpacing: '0.18em' }}>
-              {companyName || 'NEXO'}
-            </span>
+            <span className={styles.brandName} style={{ color: '#FF6B00', letterSpacing: '0.18em' }}>NEXO</span>
           </div>
           <button type="button" className={styles.langBtn} aria-label="Idioma actual: español">
             <Globe2 size={12} />
