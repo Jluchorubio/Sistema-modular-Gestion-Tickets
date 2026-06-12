@@ -156,7 +156,8 @@ export function RequestCard({
           )}
           {req.status === 'taken' && (
             <>
-              {permProgress && (
+              {/* For executable types: skip Iniciar/Finalizar — Ejecutar is the only path */}
+              {permProgress && !canExecute && (
                 <button
                   className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
                   onClick={() => onProgress('in_progress')}
@@ -165,7 +166,7 @@ export function RequestCard({
                   <Loader2 size={12} /> Iniciar ticket
                 </button>
               )}
-              {permProgress && (
+              {permProgress && !canExecute && (
                 <button
                   className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
                   onClick={() => onProgress('completed')}
@@ -187,7 +188,7 @@ export function RequestCard({
           )}
           {req.status === 'in_progress' && (
             <>
-              {permProgress && (
+              {permProgress && !canExecute && (
                 <button
                   className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
                   onClick={() => onProgress('completed')}
@@ -210,10 +211,14 @@ export function RequestCard({
           {canExecute && permProgress && (
             <button
               className={styles.reviewBtn}
-              style={{ background: '#064e3b', color: '#34D399', border: '1px solid #065f46' }}
+              style={{
+                background: '#064e3b', color: '#34D399', border: '1px solid #065f46',
+                fontWeight: 700, letterSpacing: '.01em', padding: '6px 14px',
+              }}
+              title="Aplica el cambio solicitado (asigna rol / acceso) y cierra la solicitud"
               onClick={onExecute}
             >
-              <Zap size={12} /> Ejecutar cambio
+              <Zap size={13} /> Ejecutar y cerrar
             </button>
           )}
           {canEscalate && permEscalate && (

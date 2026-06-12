@@ -1231,3 +1231,32 @@
   .ctxSwitcher::-webkit-scrollbar { display: none; }
   .urgencyBar  { padding: 5px 12px; gap: 6px; }
 }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .calPage     { background: #0d1b2a; }
+:global([data-theme="dark"]) .left        { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .right       { background: #0d1b2a; }
+:global([data-theme="dark"]) .rightInner  { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .heading     { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .subSep      { color: #1e3448; }
+:global([data-theme="dark"]) .viewBtn     { background: #132030; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .viewBtnActive { background: #0d1b2a; color: #e2e8f0; }
+:global([data-theme="dark"]) .statsStrip  { background: #0f1c2e; border-color: #1e3448; }
+:global([data-theme="dark"]) .statChip    { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .statLabel   { color: #64748b; }
+:global([data-theme="dark"]) .urgencyBar  { background: #0f1c2e; border-color: #1e3448; }
+:global([data-theme="dark"]) .urgencyLabel { color: #64748b; }
+:global([data-theme="dark"]) .legendBar   { border-color: #1e3448; }
+:global([data-theme="dark"]) .filterCard  { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .filterLabel { color: #94a3b8; }
+:global([data-theme="dark"]) .monthGrid   { background: #132030; }
+:global([data-theme="dark"]) .dayHeader   { background: #0f1c2e; border-color: #1e3448; color: #64748b; }
+:global([data-theme="dark"]) .dayCell     { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .dayNum      { color: #94a3b8; }
+:global([data-theme="dark"]) .dayCellOther { background: #0f1c2e; }
+:global([data-theme="dark"]) .dayCellOther .dayNum { color: #2a4060; }
+:global([data-theme="dark"]) .dayCell:hover:not(.dayCellOther) { background: #1a2d40; }
+:global([data-theme="dark"]) .auditSection { border-color: #1e3448; }
+:global([data-theme="dark"]) .subHeader   { color: #94a3b8; border-color: #1e3448; }
+:global([data-theme="dark"]) .auditEntry  { border-color: #1e3448; }
+:global([data-theme="dark"]) .dayEmpty    { color: #64748b; }

@@ -96,3 +96,11 @@
   .cardGrid   { grid-template-columns: 1fr; }
   .toolbar    { flex-direction: column; align-items: stretch; }
 }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .twoPanel    { background: #0d1b2a; }
+:global([data-theme="dark"]) .invSidebar  { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .metricsRow  { background: #0d1b2a; }
+:global([data-theme="dark"]) .pageHeader  { border-color: #1e3448; }
+:global([data-theme="dark"]) .toolbar input,
+:global([data-theme="dark"]) .toolbar select { background: #132030; border-color: #1e3448; color: #e2e8f0; }

@@ -240,3 +240,21 @@ input[type="range"] {
   --status-neutral-bg:     #0f1c2a;
   --status-neutral-border: #1e3448;
 }
+
+/* ── Inventory inline-style dark override (uses inline background: #fff) ──── */
+[data-theme="dark"] [style*="background: #fff"],
+[data-theme="dark"] [style*="background:#fff"],
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background: rgb(255, 255, 255)"] {
+  background: #132030 !important;
+  color: #e2e8f0 !important;
+}
+[data-theme="dark"] [style*="border: 1px solid #e2e8f0"],
+[data-theme="dark"] [style*="border: 1.5px solid #e2e8f0"] {
+  border-color: #1e3448 !important;
+}
+[data-theme="dark"] [style*="background: #f8fafc"],
+[data-theme="dark"] [style*="background: #F8FAFC"],
+[data-theme="dark"] [style*="background: #f1f5f9"] {
+  background: #0f1c2e !important;
+}
