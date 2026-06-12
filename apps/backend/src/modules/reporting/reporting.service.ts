@@ -273,9 +273,9 @@ export class ReportingService {
     ]);
 
     const enrichedKpis = {
-      ...kpis[0],
+      ...(kpis[0] ?? {}),
       avg_first_response_hours: firstResponse[0]?.avg_first_response_hours ?? null,
-      reopen_count: reopenCount[0]?.cnt ?? '0',
+      reopen_count: parseInt(reopenCount[0]?.cnt ?? '0', 10),
     };
 
     const byCategory = await this.db.query<any[]>(

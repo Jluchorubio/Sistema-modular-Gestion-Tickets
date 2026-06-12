@@ -184,7 +184,6 @@ interface Props {
 
 export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, onSubmit }: Props) {
   const { register, control, formState: { errors }, watch, setValue } = form;
-  const sede           = watch('primary_sede', '');
   const watchedCountry = watch('country', '');
   const watchedState   = watch('state_province', '');
 
@@ -249,12 +248,6 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
     queryKey: ['locations'],
     queryFn: modulesService.getLocations,
     staleTime: Infinity,
-  });
-
-  const { data: environments = [] } = useQuery({
-    queryKey: ['environments', sede],
-    queryFn: () => modulesService.getEnvironments(sede),
-    enabled: !!sede,
   });
 
   const locationGroups = useMemo(() => {
@@ -521,23 +514,6 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
             {errors.primary_sede && <span className={styles.fieldError}>{errors.primary_sede.message}</span>}
           </div>
 
-          {/* Ambiente */}
-          {environments.length > 0 && (
-            <div className={styles.field} style={{ marginBottom: 0 }}>
-              <label className={styles.fieldLabel} htmlFor="ambiente">
-                Ambiente <span className={styles.opt}>opcional</span>
-              </label>
-              <div className={styles.inputWrap}>
-                <select id="ambiente" className={`${styles.fieldInput} ${styles.fieldSelect}`}>
-                  <option value="">Seleccionar ambiente...</option>
-                  {environments.map(env => <option key={env.id} value={env.id}>{env.name}</option>)}
-                </select>
-                <span className={styles.fieldIcon}><Building2 size={15} /></span>
-                <span className={styles.selectArrow}><ChevronDown size={14} /></span>
-              </div>
-              <span className={styles.fieldHint}>Espacio físico o lógico dentro de la sede</span>
-            </div>
-          )}
         </div>
 
         <div className={styles.sectionDivider} />
