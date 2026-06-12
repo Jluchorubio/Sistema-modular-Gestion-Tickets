@@ -2,13 +2,13 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   Search, SlidersHorizontal, ChevronDown,
-  FileSpreadsheet, Plus, Eye, ShieldCheck, Lock, Trash2, UserPlus, X,
+  FileSpreadsheet, Plus, Eye, ShieldCheck, Lock, Trash2, UserPlus, X, Pencil,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePermission } from '@/hooks/usePermission';
@@ -37,15 +37,16 @@ const createSchema = z.object({
 });
 
 const editSchema = z.object({
-  first_name:    z.string().min(1, 'Requerido'),
-  last_name:     z.string().min(1, 'Requerido'),
-  phone:         z.string().optional(),
-  username:      z.string().optional(),
-  job_title:     z.string().optional(),
-  department:    z.string().optional(),
-  primary_sede:  z.string().optional(),
-  address:       z.string().optional(),
-  is_superadmin: z.boolean(),
+  first_name:     z.string().min(1, 'Requerido'),
+  last_name:      z.string().min(1, 'Requerido'),
+  phone:          z.string().optional(),
+  username:       z.string().optional(),
+  job_title:      z.string().optional(),
+  department:     z.string().optional(),
+  primary_sede:   z.string().optional(),
+  address:        z.string().optional(),
+  global_role_id: z.string().optional(),
+  is_superadmin:  z.boolean(),
 });
 
 type CreateForm = z.infer<typeof createSchema>;
@@ -139,6 +140,12 @@ export function UsersClient() {
 
   const { users, meta, isLoading, isError } = useUsers({ page, limit, search, statusFilter, superFilter });
 
+  const { data: globalRoles = [] } = useQuery({
+    queryKey: ['global-roles'],
+    queryFn:  () => usersService.getGlobalRoles(),
+    staleTime: 5 * 60_000,
+  });
+
   const visibleIds = users.map((u) => u.id);
   const { selected, selectedIds, allChecked, someChecked, toggleAll, toggleRow, clear: clearSelection } =
     useSelection(visibleIds);
@@ -160,25 +167,31 @@ export function UsersClient() {
   const createMut = useMutation({
     mutationFn: (vals: CreateForm) => usersService.createUser(vals),
     onSuccess: () => {
-      setModalMsg({ type: 'ok', text: 'Usuario creado exitosamente' });
-      setTimeout(() => { setCreateOpen(false); setModalMsg(null); invalidate(); }, 800);
+      setModalMsg({ type: 'ok', text: 'Usuario creado exitosamente. Se ha enviado el email de acceso.' });
+      setTimeout(() => { setCreateOpen(false); setModalMsg(null); invalidate(); }, 1200);
     },
-    onError: (e: unknown) => setModalMsg({
-      type: 'err',
-      text: (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al crear',
-    }),
+    onError: (e: unknown) => {
+      const serverMsg = (e as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message;
+      const text = Array.isArray(serverMsg)
+        ? serverMsg.join('. ')
+        : serverMsg ?? 'Error al crear el usuario. Verifica que el email no esté en uso.';
+      setModalMsg({ type: 'err', text });
+    },
   });
 
   const updateMut = useMutation({
     mutationFn: ({ id, vals }: { id: string; vals: EditForm }) => usersService.updateUser(id, vals),
     onSuccess: () => {
-      setModalMsg({ type: 'ok', text: 'Guardado correctamente' });
+      setModalMsg({ type: 'ok', text: 'Cambios guardados correctamente.' });
       setTimeout(() => { setEditUser(null); setModalMsg(null); invalidate(); }, 800);
     },
-    onError: (e: unknown) => setModalMsg({
-      type: 'err',
-      text: (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al guardar',
-    }),
+    onError: (e: unknown) => {
+      const serverMsg = (e as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message;
+      const text = Array.isArray(serverMsg)
+        ? serverMsg.join('. ')
+        : serverMsg ?? 'No se pudieron guardar los cambios. Intenta de nuevo.';
+      setModalMsg({ type: 'err', text });
+    },
   });
 
   const bulkActivateMut = useMutation({
@@ -206,7 +219,7 @@ export function UsersClient() {
 
   const editForm = useForm<EditForm>({
     resolver: zodResolver(editSchema),
-    defaultValues: { first_name: '', last_name: '', phone: '', username: '', job_title: '', department: '', primary_sede: '', address: '', is_superadmin: false },
+    defaultValues: { first_name: '', last_name: '', phone: '', username: '', job_title: '', department: '', primary_sede: '', address: '', global_role_id: '', is_superadmin: false },
   });
 
   function onSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -219,15 +232,16 @@ export function UsersClient() {
     setEditUser(u);
     setModalMsg(null);
     editForm.reset({
-      first_name:   u.first_name,
-      last_name:    u.last_name,
-      phone:        u.phone        ?? '',
-      username:     u.username     ?? '',
-      job_title:    u.job_title    ?? '',
-      department:   u.department   ?? '',
-      primary_sede: u.primary_sede ?? '',
-      address:      u.address      ?? '',
-      is_superadmin: u.is_superadmin,
+      first_name:     u.first_name,
+      last_name:      u.last_name,
+      phone:          u.phone          ?? '',
+      username:       u.username       ?? '',
+      job_title:      u.job_title      ?? '',
+      department:     u.department     ?? '',
+      primary_sede:   u.primary_sede   ?? '',
+      address:        u.address        ?? '',
+      global_role_id: u.global_role_id ?? '',
+      is_superadmin:  u.is_superadmin,
     });
   }
 
@@ -524,6 +538,17 @@ export function UsersClient() {
                               >
                                 <Eye size={16} />
                               </button>
+                              {(isSA || canEdit) && (
+                                <button
+                                  type="button"
+                                  className={`${styles.actionBtn}`}
+                                  style={{ color: '#3b82f6' }}
+                                  title="Editar usuario"
+                                  onClick={() => openEdit(u)}
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                              )}
                               {canEdit && (
                                 <button
                                   type="button"
@@ -761,12 +786,18 @@ export function UsersClient() {
         <form onSubmit={editForm.handleSubmit((v) => editUser && updateMut.mutate({ id: editUser.id, vals: v }))}>
           <div className={mstyles.formRow}>
             <div>
-              <label className={mstyles.fieldLabel}>Nombre</label>
+              <label className={mstyles.fieldLabel}>Nombre *</label>
               <input className={mstyles.fieldInput} {...editForm.register('first_name')} />
+              {editForm.formState.errors.first_name && (
+                <p style={{ fontSize: 11, color: '#ef4444', margin: '3px 0 0' }}>{editForm.formState.errors.first_name.message}</p>
+              )}
             </div>
             <div>
-              <label className={mstyles.fieldLabel}>Apellido</label>
+              <label className={mstyles.fieldLabel}>Apellido *</label>
               <input className={mstyles.fieldInput} {...editForm.register('last_name')} />
+              {editForm.formState.errors.last_name && (
+                <p style={{ fontSize: 11, color: '#ef4444', margin: '3px 0 0' }}>{editForm.formState.errors.last_name.message}</p>
+              )}
             </div>
           </div>
           <div className={mstyles.formRow}>
@@ -799,6 +830,17 @@ export function UsersClient() {
               <input className={mstyles.fieldInput} placeholder="Calle 123…" {...editForm.register('address')} />
             </div>
           </div>
+          {globalRoles.length > 0 && (
+            <div>
+              <label className={mstyles.fieldLabel}>Rol Global</label>
+              <select className={mstyles.fieldInput} style={{ appearance: 'auto' }} {...editForm.register('global_role_id')}>
+                <option value="">Sin rol global asignado</option>
+                {globalRoles.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}{r.description ? ` — ${r.description}` : ''}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className={mstyles.toggleWrap}>
             <button type="button"
               className={`${mstyles.toggle}${editForm.watch('is_superadmin') ? ` ${mstyles.toggleOn}` : ''}`}

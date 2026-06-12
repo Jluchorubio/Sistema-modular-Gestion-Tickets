@@ -165,6 +165,26 @@ export class InventoryService {
     );
     if (existing) throw new BadRequestException('Este usuario ya tiene custodia activa sobre este activo');
 
+    /* Check schedule overlap with other active assignments (if hours provided) */
+    if (dto.hours_start && dto.hours_end) {
+      const [conflict] = await this.db.query<{ id: string; user_id: string }[]>(
+        `SELECT aa.id, aa.user_id
+         FROM inventory.asset_assignments aa
+         WHERE aa.asset_id = $1
+           AND aa.status   = 'activo'
+           AND aa.hours_start IS NOT NULL
+           AND aa.hours_end   IS NOT NULL
+           AND $2::time < aa.hours_end
+           AND aa.hours_start < $3::time`,
+        [assetId, dto.hours_start, dto.hours_end],
+      );
+      if (conflict) {
+        throw new BadRequestException(
+          `Conflicto de horario: otro usuario ya tiene asignado este activo en ese rango de horas (${dto.hours_start}–${dto.hours_end})`,
+        );
+      }
+    }
+
     await this.db.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
     await this.db.query(
       `UPDATE inventory.assets SET status = 'asignado' WHERE id = $1 AND status != 'asignado'`,

@@ -1,6 +1,6 @@
 import {
   ChevronDown, ChevronUp, X, Play,
-  Loader2, CheckCircle2, TrendingUp, TrendingDown, Zap, ExternalLink,
+  Loader2, CheckCircle2, TrendingUp, TrendingDown, Zap, ExternalLink, Eye,
 } from 'lucide-react';
 import { type AdmRequest } from '@/services/requests.service';
 import { REQUEST_TYPE_LABELS } from '@/constants/requests';
@@ -13,7 +13,8 @@ import styles from '../requests.module.css';
 
 
 const EXECUTABLE_TYPES = new Set([
-  'role_change', 'module_access', 'sede_change', 'info_correction', 'permission_adjustment', 'reactivation',
+  'role_change', 'module_access', 'permission_adjustment',
+  'reactivation', 'access_revocation', 'user_transfer',
 ]);
 
 interface Props {
@@ -29,6 +30,7 @@ interface Props {
   onReject:            () => void;
   onEscalate:          () => void;
   onDeescalate:        () => void;
+  onUnderReview?:      () => void;
   onExecute?:          () => void;
   onDetail?:           () => void;
   isTakePending:       boolean;
@@ -44,7 +46,7 @@ interface Props {
 
 export function RequestCard({
   req, isExpanded, showAdminActions, isSuperadmin, activeTab,
-  onToggleExpand, onCancel, onTake, onProgress, onReject, onEscalate, onDeescalate, onExecute, onDetail,
+  onToggleExpand, onCancel, onTake, onProgress, onReject, onEscalate, onDeescalate, onUnderReview, onExecute, onDetail,
   isTakePending, isProgressPending, isReviewPending, isDeescalatePending,
   permTake = true, permProgress = true, permApprove = true, permEscalate = true,
 }: Props) {
@@ -140,7 +142,17 @@ export function RequestCard({
                   onClick={onTake}
                   disabled={isTakePending}
                 >
-                  <Play size={12} /> Tomar solicitud
+                  <Play size={12} /> Tomar
+                </button>
+              )}
+              {permApprove && onUnderReview && (
+                <button
+                  className={styles.reviewBtn}
+                  style={{ background: '#0c4a6e', color: '#7dd3fc', border: '1px solid #0369a1' }}
+                  onClick={onUnderReview}
+                  disabled={isReviewPending}
+                >
+                  <Eye size={12} /> En revisión
                 </button>
               )}
               {permApprove && (
@@ -156,14 +168,13 @@ export function RequestCard({
           )}
           {req.status === 'taken' && (
             <>
-              {/* For executable types: skip Iniciar/Finalizar — Ejecutar is the only path */}
               {permProgress && !canExecute && (
                 <button
                   className={`${styles.reviewBtn} ${styles.reviewBtnPending}`}
                   onClick={() => onProgress('in_progress')}
                   disabled={isProgressPending}
                 >
-                  <Loader2 size={12} /> Iniciar ticket
+                  <Loader2 size={12} /> Iniciar
                 </button>
               )}
               {permProgress && !canExecute && (
@@ -172,7 +183,39 @@ export function RequestCard({
                   onClick={() => onProgress('completed')}
                   disabled={isProgressPending}
                 >
-                  <CheckCircle2 size={12} /> Finalizar
+                  <CheckCircle2 size={12} /> Resolver
+                </button>
+              )}
+              {permApprove && onUnderReview && (
+                <button
+                  className={styles.reviewBtn}
+                  style={{ background: '#0c4a6e', color: '#7dd3fc', border: '1px solid #0369a1' }}
+                  onClick={onUnderReview}
+                  disabled={isReviewPending}
+                >
+                  <Eye size={12} /> En revisión
+                </button>
+              )}
+              {permApprove && (
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
+                  onClick={onReject}
+                  disabled={isReviewPending}
+                >
+                  <X size={12} /> Rechazar
+                </button>
+              )}
+            </>
+          )}
+          {req.status === 'under_review' && (
+            <>
+              {permProgress && (
+                <button
+                  className={`${styles.reviewBtn} ${styles.reviewBtnApprove}`}
+                  onClick={() => onProgress('completed')}
+                  disabled={isProgressPending}
+                >
+                  <CheckCircle2 size={12} /> Resolver
                 </button>
               )}
               {permApprove && (

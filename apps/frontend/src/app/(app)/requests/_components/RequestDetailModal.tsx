@@ -5,7 +5,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   X, Play, Loader2, CheckCircle2, TrendingUp, TrendingDown,
   AlertCircle, ShieldCheck, Globe, MapPin, User, Zap, Clock,
-  ChevronDown, ChevronUp, ExternalLink, Info,
+  ChevronDown, ChevronUp, ExternalLink, Info, Eye,
 } from 'lucide-react';
 import { requestsService, type AdmRequest, type RequestStatus } from '@/services/requests.service';
 import { usersService } from '@/services/users.service';
@@ -300,6 +300,11 @@ export function RequestDetailModal({
     onSuccess:  invalidate,
   });
 
+  const underReviewMut = useMutation({
+    mutationFn: () => requestsService.review(request.id, 'under_review'),
+    onSuccess:  invalidate,
+  });
+
   const executeMut = useMutation({
     mutationFn: async () => {
       if (!requesterId) throw new Error('Sin usuario vinculado.');
@@ -567,7 +572,21 @@ export function RequestDetailModal({
                     onClick={() => takeMut.mutate()}
                   >
                     <Play size={11} />
-                    {takeMut.isPending ? 'Tomando…' : 'Tomar solicitud'}
+                    {takeMut.isPending ? 'Tomando…' : 'Tomar'}
+                  </button>
+                )}
+
+                {/* En revisión — pending */}
+                {request.status === 'pending' && permApprove && (
+                  <button
+                    type="button"
+                    style={{ background: '#0c4a6e', color: '#7dd3fc', border: '1px solid #0369a1' }}
+                    className={styles.btnSecondary}
+                    disabled={underReviewMut.isPending}
+                    onClick={() => underReviewMut.mutate()}
+                  >
+                    <Eye size={11} />
+                    {underReviewMut.isPending ? '…' : 'En revisión'}
                   </button>
                 )}
 
@@ -580,7 +599,21 @@ export function RequestDetailModal({
                     onClick={() => progressMut.mutate('in_progress')}
                   >
                     <Loader2 size={11} />
-                    {progressMut.isPending ? '…' : 'Iniciar ticket'}
+                    {progressMut.isPending ? '…' : 'Iniciar'}
+                  </button>
+                )}
+
+                {/* En revisión — taken */}
+                {request.status === 'taken' && permApprove && (
+                  <button
+                    type="button"
+                    style={{ background: '#0c4a6e', color: '#7dd3fc', border: '1px solid #0369a1' }}
+                    className={styles.btnSecondary}
+                    disabled={underReviewMut.isPending}
+                    onClick={() => underReviewMut.mutate()}
+                  >
+                    <Eye size={11} />
+                    {underReviewMut.isPending ? '…' : 'En revisión'}
                   </button>
                 )}
 
@@ -593,12 +626,12 @@ export function RequestDetailModal({
                     onClick={() => { setExecError(''); executeMut.mutate(); }}
                   >
                     <Zap size={11} />
-                    {executeMut.isPending ? 'Aplicando…' : 'Ejecutar y completar'}
+                    {executeMut.isPending ? 'Aplicando…' : 'Ejecutar y resolver'}
                   </button>
                 )}
 
                 {/* Complete without auto-exec */}
-                {isActionable && permProgress && (
+                {(isActionable || request.status === 'under_review') && permProgress && (
                   <button
                     type="button"
                     className={canExecute ? styles.btnGhost : styles.btnSuccess}
@@ -607,12 +640,12 @@ export function RequestDetailModal({
                     title={canExecute ? 'Finalizar sin aplicar cambio automático' : undefined}
                   >
                     <CheckCircle2 size={11} />
-                    {progressMut.isPending ? '…' : canExecute ? 'Solo finalizar' : 'Finalizar'}
+                    {progressMut.isPending ? '…' : canExecute ? 'Solo resolver' : 'Resolver'}
                   </button>
                 )}
 
                 {/* Reject */}
-                {['pending', 'taken', 'in_progress'].includes(request.status) && permApprove && (
+                {['pending', 'taken', 'in_progress', 'under_review'].includes(request.status) && permApprove && (
                   <button
                     type="button"
                     className={styles.btnDangerOutline}

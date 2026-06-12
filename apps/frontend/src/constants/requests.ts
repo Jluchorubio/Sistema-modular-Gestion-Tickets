@@ -16,11 +16,11 @@ export const REQUEST_TYPE_LABELS: Record<string, string> = {
 
 export const REQUEST_STATUS_LABELS: Record<string, string> = {
   pending:      'Pendiente',
-  taken:        'Tomado',
+  taken:        'En atención',
   in_progress:  'En proceso',
-  completed:    'Finalizado',
+  completed:    'Resuelto',
   under_review: 'En revisión',
-  approved:     'Aprobada',
+  approved:     'Completado',
   rejected:     'Rechazada',
   cancelled:    'Cancelada',
   escalated:    'Escalada',

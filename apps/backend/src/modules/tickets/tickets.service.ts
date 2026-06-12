@@ -649,6 +649,53 @@ export class TicketsService {
     return { ok: true };
   }
 
+  /* ── Bulk close ─────────────────────────────────────────────────────────── */
+
+  async bulkClose(userId: string, ticketIds: string[], reason?: string): Promise<{ closed: number; skipped: string[] }> {
+    if (!Array.isArray(ticketIds) || ticketIds.length === 0)
+      throw new BadRequestException('Se requiere al menos un ticket.');
+    if (ticketIds.length > 100)
+      throw new BadRequestException('Máximo 100 tickets por operación.');
+
+    let closed = 0;
+    const skipped: string[] = [];
+
+    for (const ticketId of ticketIds) {
+      try {
+        const [ticket] = await this.db.query<any[]>(
+          `SELECT id, workflow_version_id, current_state_id
+           FROM   tickets.tickets
+           WHERE  id = $1 AND deleted_at IS NULL`,
+          [ticketId],
+        );
+        if (!ticket) { skipped.push(ticketId); continue; }
+
+        const [trans] = await this.db.query<any[]>(
+          `SELECT tr.id
+           FROM   tickets.transitions tr
+           JOIN   tickets.states      s  ON s.id = tr.to_state_id
+           WHERE  tr.workflow_version_id = $1
+             AND  tr.from_state_id       = $2
+             AND  s.is_final             = true
+             AND  tr.is_active           = true
+           LIMIT  1`,
+          [ticket.workflow_version_id, ticket.current_state_id],
+        );
+        if (!trans) { skipped.push(ticketId); continue; }
+
+        await this.transition(userId, ticketId, {
+          transition_id: trans.id,
+          reason: reason ?? 'Cierre masivo',
+        });
+        closed++;
+      } catch {
+        skipped.push(ticketId);
+      }
+    }
+
+    return { closed, skipped };
+  }
+
   /* ── Approve ticket (digital signature) ────────────────────────────────── */
 
   async approveTicket(userId: string, ticketId: string, dto: { signature?: string }) {

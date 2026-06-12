@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Search, Filter, ChevronDown, Ticket, Users,
   Home, ArrowLeftRight, Layers, Settings, ShieldCheck, AlertTriangle,
-  ChevronRight, Clock,
+  ChevronRight, Clock, CheckSquare2, Square, X as XIcon,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import {
@@ -40,6 +40,7 @@ export interface AdminViewProps {
 export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'default' }: AdminViewProps) {
   const user         = useAuthStore((s) => s.user);
   const router       = useRouter();
+  const qc           = useQueryClient();
   const [stateFilter,     setStateFilter]    = useState('');
   const [priorityFilter,  setPriorityFilter] = useState<TicketPriority | ''>('');
   const [categoryFilter,  setCategoryFilter] = useState('');
@@ -52,6 +53,10 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
   const [quickFilter,     setQuickFilter]    = useState<QuickFilter | null>(null);
   const [techSearch,      setTechSearch]     = useState('');
   const [showFilters,     setShowFilters]    = useState(false);
+  const [selectMode,      setSelectMode]     = useState(false);
+  const [selectedIds,     setSelectedIds]    = useState<Set<string>>(new Set());
+  const [bulkCloseModal,  setBulkCloseModal] = useState(false);
+  const [bulkCloseReason, setBulkCloseReason] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['tickets', moduleId, stateFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, page],
@@ -96,6 +101,45 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
     enabled:  !!user?.id,
   });
 
+
+  const bulkCloseMut = useMutation({
+    mutationFn: () => ticketsService.bulkClose(Array.from(selectedIds), bulkCloseReason || undefined),
+    onSuccess: () => {
+      setBulkCloseModal(false);
+      setBulkCloseReason('');
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+    },
+  });
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function renderCard(t: TicketListItem) {
+    return (
+      <div key={t.id} style={{ position: 'relative' }}>
+        {selectMode && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); toggleSelect(t.id); }}
+            style={{ position: 'absolute', top: 8, left: 8, zIndex: 10, background: selectedIds.has(t.id) ? '#0e2235' : '#fff', border: `1.5px solid ${selectedIds.has(t.id) ? '#0e2235' : '#cbd5e1'}`, borderRadius: 6, width: 22, height: 22, display: 'grid', placeItems: 'center', cursor: 'pointer', color: selectedIds.has(t.id) ? '#fff' : '#94a3b8' }}
+          >
+            {selectedIds.has(t.id) ? <CheckSquare2 size={12} /> : <Square size={12} />}
+          </button>
+        )}
+        <TicketCard
+          ticket={t}
+          onClick={selectMode ? () => toggleSelect(t.id) : () => router.push(`${basePath}/ticket/${t.id}`)}
+        />
+      </div>
+    );
+  }
 
   const allTickets = data?.data  ?? [];
   const total      = data?.total ?? 0;
@@ -439,9 +483,23 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               {/* Header row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em' }}>Bandeja activa</span>
-                <span style={{ fontSize: 10, background: '#f1f5f9', color: '#475569', fontWeight: 800, padding: '2px 8px', borderRadius: 6 }}>
-                  {total} tickets
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {selectMode && selectedIds.size > 0 && (
+                    <button type="button"
+                      onClick={() => setBulkCloseModal(true)}
+                      style={{ fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 6, border: '1.5px solid #ff5e3a', background: '#fff5f2', color: '#ff5e3a', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Cerrar {selectedIds.size} seleccionado{selectedIds.size !== 1 ? 's' : ''}
+                    </button>
+                  )}
+                  <button type="button"
+                    onClick={() => { setSelectMode((m) => !m); setSelectedIds(new Set()); }}
+                    style={{ fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 6, border: `1.5px solid ${selectMode ? '#0e2235' : '#e2e8f0'}`, background: selectMode ? '#0e2235' : '#f8fafc', color: selectMode ? '#fff' : '#475569', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <CheckSquare2 size={10} /> {selectMode ? 'Cancelar selección' : 'Selección masiva'}
+                  </button>
+                  <span style={{ fontSize: 10, background: '#f1f5f9', color: '#475569', fontWeight: 800, padding: '2px 8px', borderRadius: 6 }}>
+                    {total} tickets
+                  </span>
+                </div>
               </div>
 
               {isLoading ? (
@@ -488,7 +546,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
           </div>
 
           {/* RIGHT METRICS PANEL */}
-          <div style={{ width: 252, flexShrink: 0, padding: '24px 16px 40px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', borderLeft: '1px solid #e2e8f0', background: '#fff' }}>
+          <div style={{ width: 252, flexShrink: 0, padding: '24px 16px 40px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', borderLeft: '1px solid var(--app-border)', background: 'var(--app-card)' }}>
 
             {/* Global pulse — Fase 3B */}
             {(() => {
@@ -503,13 +561,13 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               return (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
                   {[
-                    { val: unassignedCount, label: 'Sin asignar', color: unassignedCount > 0 ? '#7e22ce' : '#22c55e', bg: unassignedCount > 0 ? '#fdf4ff' : '#f0fdf4' },
-                    { val: atRiskCount,     label: 'SLA en riesgo', color: atRiskCount > 0 ? '#f97316' : '#22c55e', bg: atRiskCount > 0 ? '#fff7ed' : '#f0fdf4' },
-                    { val: availableTechs, label: 'Disponibles', color: availableTechs > 0 ? '#16a34a' : '#dc2626', bg: availableTechs > 0 ? '#f0fdf4' : '#fef2f2' },
+                    { val: unassignedCount, label: 'Sin asignar', color: unassignedCount > 0 ? '#7e22ce' : '#22c55e', bg: unassignedCount > 0 ? 'var(--status-paused-bg)' : 'var(--status-success-bg)' },
+                    { val: atRiskCount,     label: 'SLA en riesgo', color: atRiskCount > 0 ? '#f97316' : '#22c55e', bg: atRiskCount > 0 ? 'var(--status-escalated-bg)' : 'var(--status-success-bg)' },
+                    { val: availableTechs, label: 'Disponibles', color: availableTechs > 0 ? '#16a34a' : '#dc2626', bg: availableTechs > 0 ? 'var(--status-success-bg)' : 'var(--status-danger-bg)' },
                   ].map(({ val, label, color, bg }) => (
                     <div key={label} style={{ background: bg, border: `1px solid ${color}25`, borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
                       <p style={{ margin: '0 0 1px', fontSize: 18, fontWeight: 900, color }}>{val}</p>
-                      <p style={{ margin: 0, fontSize: 8, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.04em' }}>{label}</p>
+                      <p style={{ margin: 0, fontSize: 8, fontWeight: 700, color: 'var(--app-text-sub)', textTransform: 'uppercase', letterSpacing: '.04em' }}>{label}</p>
                     </div>
                   ))}
                 </div>
@@ -518,14 +576,14 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
 
             {/* SLA compliance */}
             <div>
-              <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>SLA Compliance</p>
-              <div style={{ position: 'relative', height: 6, borderRadius: 3, background: '#f1f5f9', overflow: 'hidden', marginBottom: 6 }}>
+              <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>SLA Compliance</p>
+              <div style={{ position: 'relative', height: 6, borderRadius: 3, background: 'var(--app-border)', overflow: 'hidden', marginBottom: 6 }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${compliancePct}%`, borderRadius: 3, background: compliancePct >= 80 ? '#22c55e' : compliancePct >= 60 ? '#f59e0b' : '#ef4444' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{ fontSize: 22, fontWeight: 900, color: compliancePct >= 80 ? '#16a34a' : compliancePct >= 60 ? '#d97706' : '#dc2626' }}>{compliancePct}%</span>
                 {breachedCount > 0 && (
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', background: '#fee2e2', padding: '1px 7px', borderRadius: 99 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', background: 'var(--status-danger-bg)', padding: '1px 7px', borderRadius: 99 }}>
                     {breachedCount} vencidos
                   </span>
                 )}
@@ -534,16 +592,16 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
 
             {/* By priority */}
             <div>
-              <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Por prioridad (activos)</p>
+              <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Por prioridad (activos)</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {byPriorityStats.map(({ p, count, color }) => (
                   <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 11, color: '#334155', fontWeight: 600, flex: 1 }}>{getPriorityConfig(p).label}</span>
-                    <div style={{ position: 'relative', height: 4, width: 60, borderRadius: 2, background: '#f1f5f9', overflow: 'hidden', flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, color: 'var(--app-text)', fontWeight: 600, flex: 1 }}>{getPriorityConfig(p).label}</span>
+                    <div style={{ position: 'relative', height: 4, width: 60, borderRadius: 2, background: 'var(--app-border)', overflow: 'hidden', flexShrink: 0 }}>
                       <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${activeCount > 0 ? Math.round((count / activeCount) * 100) : 0}%`, borderRadius: 2, background: color }} />
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#0e2235', minWidth: 18, textAlign: 'right' }}>{count}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--app-text-main)', minWidth: 18, textAlign: 'right' }}>{count}</span>
                   </div>
                 ))}
               </div>
@@ -564,26 +622,26 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               if (urgent.length === 0) return null;
               return (
                 <div>
-                  <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Atención urgente</p>
+                  <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Atención urgente</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                     {urgent.map(t => {
                       const tag = t.sla_status === 'breached'
-                        ? { label: 'VENCIDO', color: '#ef4444', bg: '#fef2f2' }
+                        ? { label: 'VENCIDO', color: '#ef4444', bg: 'var(--status-danger-bg)' }
                         : t.is_approval_state
-                        ? { label: 'APROBAR', color: '#92400e', bg: '#fef3c7' }
+                        ? { label: 'APROBAR', color: '#92400e', bg: 'var(--status-warning-bg)' }
                         : { label: 'SIN ASIGNAR', color: 'var(--status-info-text)', bg: 'var(--status-info-bg)' };
                       return (
                         <button key={t.id} type="button"
                           onClick={() => router.push(`${basePath}/ticket/${t.id}`)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 8px', borderRadius: 7, border: '1px solid #f1f5f9', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 8px', borderRadius: 7, border: '1px solid var(--app-border)', background: 'var(--app-card)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--app-page)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--app-card)'; }}>
                           <div style={{ width: 4, height: 28, borderRadius: 2, background: getPriorityConfig(t.priority).color, flexShrink: 0 }} />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: '#0e2235', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</p>
+                            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: 'var(--app-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</p>
                             <span style={{ fontSize: 8, fontWeight: 800, padding: '1px 5px', borderRadius: 4, background: tag.bg, color: tag.color }}>{tag.label}</span>
                           </div>
-                          <ChevronRight size={10} style={{ color: '#cbd5e1', flexShrink: 0 }} />
+                          <ChevronRight size={10} style={{ color: 'var(--app-text-muted)', flexShrink: 0 }} />
                         </button>
                       );
                     })}
@@ -595,20 +653,20 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
             {/* Top technicians */}
             {topTechs.length > 0 && (
               <div>
-                <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Carga de técnicos</p>
+                <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 10px' }}>Carga de técnicos</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {topTechs.map(t => {
                     const availColor = t.avail_status === 'disponible' ? '#22c55e' : t.avail_status === 'ocupado' ? '#f59e0b' : '#94a3b8';
                     return (
                     <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--app-navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>{t.first_name?.[0]}{t.last_name?.[0]}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.first_name} {t.last_name}</p>
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--app-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.first_name} {t.last_name}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                           <div style={{ width: 6, height: 6, borderRadius: '50%', background: availColor, flexShrink: 0 }} />
-                          <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{t.cnt} ticket{t.cnt !== 1 ? 's' : ''}</span>
+                          <span style={{ fontSize: 10, color: 'var(--app-text-muted)', fontWeight: 600 }}>{t.cnt} ticket{t.cnt !== 1 ? 's' : ''}</span>
                         </div>
                       </div>
                     </div>
@@ -619,19 +677,19 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
             )}
 
             {/* Quick actions */}
-            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 6px' }}>Acciones</p>
+            <div style={{ borderTop: '1px solid var(--app-border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 6px' }}>Acciones</p>
               <button type="button" onClick={() => router.push(`${basePath}/queue`)}
-                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--app-border)', background: 'var(--app-page)', color: 'var(--app-text)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                 <Ticket size={11} style={{ color: '#ff5e3a', flexShrink: 0 }} /> Cola sin asignar
               </button>
               <button type="button" onClick={() => router.push(`${basePath}/sla`)}
-                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--app-border)', background: 'var(--app-page)', color: 'var(--app-text)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                 <Clock size={11} style={{ color: '#1d4ed8', flexShrink: 0 }} /> Monitor SLA
               </button>
               <button type="button" onClick={() => router.push(`${basePath}/technicians`)}
-                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                <Users size={11} style={{ color: '#0e2235', flexShrink: 0 }} /> Técnicos
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--app-border)', background: 'var(--app-page)', color: 'var(--app-text)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                <Users size={11} style={{ color: 'var(--app-navy)', flexShrink: 0 }} /> Técnicos
               </button>
             </div>
           </div>
@@ -643,9 +701,9 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
   }
 
   const iconBtn: React.CSSProperties = {
-    width: 38, height: 38, borderRadius: 9, border: '1.5px solid #e2e8f0',
-    background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', color: '#64748b', transition: 'background .15s, color .15s, border-color .15s',
+    width: 38, height: 38, borderRadius: 9, border: '1.5px solid var(--app-border)',
+    background: 'var(--app-card)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', color: 'var(--app-text-sub)', transition: 'background .15s, color .15s, border-color .15s',
     flexShrink: 0,
   };
 
@@ -864,18 +922,14 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                     <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{stTickets.length}</span>
                   </div>
                   <div className={styles.cardGrid}>
-                    {stTickets.map((t: TicketListItem) => (
-                      <TicketCard key={t.id} ticket={t} onClick={() => router.push(`${basePath}/ticket/${t.id}`)} />
-                    ))}
+                    {stTickets.map((t: TicketListItem) => renderCard(t))}
                   </div>
                 </div>
               ))}
             </div>
           ) : sortBy !== 'auto' ? (
             <div className={styles.cardGrid}>
-              {ticketsOld.map((t) => (
-                <TicketCard key={t.id} ticket={t} onClick={() => router.push(`${basePath}/ticket/${t.id}`)} />
-              ))}
+              {ticketsOld.map((t) => renderCard(t))}
             </div>
           ) : (
             <>
@@ -889,9 +943,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                     <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>{ticketsOld.length} ticket{ticketsOld.length !== 1 ? 's' : ''}</span>
                   </div>
                   <div className={styles.cardGrid}>
-                    {ticketsOld.map((t) => (
-                      <TicketCard key={t.id} ticket={t} onClick={() => router.push(`${basePath}/ticket/${t.id}`)} />
-                    ))}
+                    {ticketsOld.map((t) => renderCard(t))}
                   </div>
                 </div>
               )}
@@ -913,9 +965,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                   )
                 ) : (
                   <div className={styles.cardGrid}>
-                    {ticketsToday.map((t) => (
-                      <TicketCard key={t.id} ticket={t} onClick={() => router.push(`${basePath}/ticket/${t.id}`)} />
-                    ))}
+                    {ticketsToday.map((t) => renderCard(t))}
                   </div>
                 )}
               </div>
@@ -1003,6 +1053,51 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
       </div>
 
       {showCreate && moduleId && <CreateDrawer moduleId={moduleId} onClose={() => setShowCreate(false)} />}
+
+      {/* ── Bulk close confirmation modal ── */}
+      {bulkCloseModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 14, maxWidth: 420, width: '100%', boxShadow: '0 24px 60px rgba(14,34,53,.2)', padding: '28px 28px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 800, color: '#ff5e3a', textTransform: 'uppercase', letterSpacing: '.12em', margin: '0 0 3px' }}>Operación masiva</p>
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0e2235', margin: 0 }}>Cerrar {selectedIds.size} ticket{selectedIds.size !== 1 ? 's' : ''}</h3>
+              </div>
+              <button type="button" onClick={() => setBulkCloseModal(false)}
+                style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#94a3b8' }}>
+                <XIcon size={14} />
+              </button>
+            </div>
+            <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 16px', lineHeight: 1.5 }}>
+              Esta acción cerrará los tickets seleccionados siguiendo el flujo de trabajo configurado. Los tickets que no tengan una transición de cierre disponible serán omitidos.
+            </p>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#334155', marginBottom: 5 }}>Motivo de cierre (opcional)</label>
+              <input
+                type="text"
+                value={bulkCloseReason}
+                onChange={(e) => setBulkCloseReason(e.target.value)}
+                placeholder="Ej: Resuelto en mantenimiento programado…"
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const, color: '#0f172a' }}
+              />
+            </div>
+            {bulkCloseMut.isError && (
+              <p style={{ fontSize: 12, color: '#ef4444', margin: '0 0 12px' }}>Error al cerrar tickets. Intenta de nuevo.</p>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setBulkCloseModal(false)}
+                style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b', fontWeight: 600 }}>
+                Cancelar
+              </button>
+              <button type="button" disabled={bulkCloseMut.isPending}
+                onClick={() => bulkCloseMut.mutate()}
+                style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: bulkCloseMut.isPending ? '#94a3b8' : '#ff5e3a', color: '#fff', fontSize: 12, fontWeight: 800, cursor: bulkCloseMut.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                {bulkCloseMut.isPending ? 'Cerrando…' : `Confirmar cierre`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

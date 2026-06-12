@@ -356,6 +356,11 @@ export const ticketsService = {
     await api.patch(`/tickets/${ticketId}/transition`, { transition_id: transitionId, reason });
   },
 
+  async bulkClose(ticketIds: string[], reason?: string): Promise<{ closed: number; skipped: string[] }> {
+    const { data } = await api.post('/tickets/bulk-close', { ticket_ids: ticketIds, reason });
+    return data;
+  },
+
   async getCategories(moduleId: string): Promise<TicketCategory[]> {
     const { data } = await api.get('/tickets/categories', { params: { module_id: moduleId } });
     return data;

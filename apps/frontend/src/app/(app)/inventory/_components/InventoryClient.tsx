@@ -6,7 +6,7 @@ import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/rea
 import {
   Check, ChevronDown, Plus, X, QrCode, Package, User, Clock, Pencil,
   Trash2, Search, AlertTriangle, Upload, Printer,
-  Boxes, CheckCircle2, Wrench, Ban, LayoutGrid, List, AlignJustify,
+  Boxes, CheckCircle2, Wrench, Ban, LayoutGrid, List, AlignJustify, ScanLine,
 } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
@@ -238,17 +238,62 @@ function BulkQrPrintModal({
 
 /* ── ScanModal ───────────────────────────────────────────────────────────── */
 function ScanModal({ onClose, onOpen }: { onClose: () => void; onOpen: (id: string) => void }) {
-  const [query, setQuery]     = useState('');
-  const [error, setError]     = useState('');
-  const [loading, setLoading] = useState(false);
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => { setTimeout(() => ref.current?.focus(), 80); }, []);
+  const [query,    setQuery]    = useState('');
+  const [error,    setError]    = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const inputRef  = useRef<HTMLInputElement>(null);
+  const videoRef  = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef    = useRef<number | null>(null);
+
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 80); }, []);
+  useEffect(() => () => stopCamera(), []);
+
+  function stopCamera() {
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    setScanning(false);
+  }
+
+  function handleFound(rawCode: string) {
+    stopCamera();
+    const assetId = rawCode.startsWith('asset:') ? rawCode.slice(6) : rawCode;
+    onClose(); onOpen(assetId);
+  }
+
+  async function startCamera() {
+    setError('');
+    if (!('BarcodeDetector' in window)) {
+      setError('Tu navegador no soporta escáner QR. Usa Chrome/Edge o escribe el código manualmente.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+      setScanning(true);
+      const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      const tick = async () => {
+        if (!videoRef.current || !streamRef.current) return;
+        try {
+          const codes = await detector.detect(videoRef.current);
+          if (codes.length > 0) { handleFound(codes[0].rawValue as string); return; }
+        } catch { /* ignore frame errors */ }
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    } catch { setError('No se pudo acceder a la cámara. Verifica los permisos del navegador.'); }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const q = query.trim(); if (!q) return;
     setLoading(true); setError('');
     try {
+      // If text looks like a scanned QR content (asset:UUID), extract UUID directly
+      if (q.startsWith('asset:')) { onClose(); onOpen(q.slice(6)); return; }
       const results = await inventoryService.getAll(undefined, undefined, q);
       if (!results.length) { setError('No se encontró ningún activo con ese código o serial.'); return; }
       onClose(); onOpen(results[0].id);
@@ -262,13 +307,35 @@ function ScanModal({ onClose, onOpen }: { onClose: () => void; onOpen: (id: stri
         <button type="button" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.muted }}><X size={13} /></button>
         <p style={SECTION_HEAD}>QR / Serial</p>
         <h2 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: '0 0 6px' }}>Buscar activo físico</h2>
-        <p style={{ fontSize: 12, color: C.sub, margin: '0 0 18px', lineHeight: 1.55 }}>Ingresa el QR, número de serie o nombre del activo.</p>
-        <form onSubmit={handleSubmit}>
-          <div style={{ background: C.surface, border: `2px dashed ${C.coral}40`, borderRadius: 10, padding: '18px', textAlign: 'center', marginBottom: 12 }}>
-            <QrCode size={36} style={{ color: C.navy, opacity: .3, display: 'block', margin: '0 auto 6px' }} />
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.muted, margin: 0 }}>Área de escaneo</p>
+        <p style={{ fontSize: 12, color: C.sub, margin: '0 0 14px', lineHeight: 1.55 }}>Escanea el QR con la cámara o escribe el código/serial/nombre.</p>
+
+        {/* Camera viewfinder */}
+        <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: '#111', aspectRatio: '4/3', marginBottom: 12, display: scanning ? 'block' : 'none' }}>
+          <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <div style={{ width: 150, height: 150, border: `2px solid ${C.coral}`, borderRadius: 12, boxShadow: '0 0 0 9999px rgba(0,0,0,.4)' }} />
           </div>
-          <input ref={ref} value={query} onChange={e => setQuery(e.target.value)} placeholder="Código QR, serial o nombre…"
+        </div>
+
+        {/* Camera placeholder when not scanning */}
+        {!scanning && (
+          <div style={{ background: C.surface, border: `2px dashed ${C.coral}40`, borderRadius: 10, padding: '18px', textAlign: 'center', marginBottom: 12 }}>
+            <QrCode size={36} style={{ color: C.navy, opacity: .3, display: 'block', margin: '0 auto 8px' }} />
+            <button type="button" onClick={startCamera}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, border: `1px solid ${C.coral}`, background: 'transparent', color: C.coral, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <ScanLine size={13} /> Usar cámara
+            </button>
+          </div>
+        )}
+        {scanning && (
+          <button type="button" onClick={stopCamera}
+            style={{ width: '100%', padding: '7px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: C.sub, marginBottom: 10 }}>
+            Cancelar cámara
+          </button>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Código QR, serial o nombre…"
             style={{ ...INPUT, textAlign: 'center', fontSize: 13, marginBottom: 10 }} />
           {error && <p style={{ fontSize: 11, color: '#EF4444', marginBottom: 10, textAlign: 'center' }}>{error}</p>}
           <button type="submit" disabled={!query.trim() || loading}

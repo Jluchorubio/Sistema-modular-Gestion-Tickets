@@ -179,9 +179,10 @@ export function AdminView({ isSuperadmin, moduleId, escalatedOnly = false }: Adm
         >
           <option value="">Estado: Todos</option>
           <option value="pending">Pendiente</option>
-          <option value="taken">Tomado</option>
+          <option value="taken">En atención</option>
           <option value="in_progress">En proceso</option>
-          <option value="completed">Finalizado</option>
+          <option value="under_review">En revisión</option>
+          <option value="completed">Resuelto</option>
           <option value="rejected">Rechazado</option>
           <option value="cancelled">Cancelado</option>
         </select>
@@ -266,6 +267,7 @@ export function AdminView({ isSuperadmin, moduleId, escalatedOnly = false }: Adm
             onTake={() => takeMut.mutate(req.id)}
             onProgress={status => progressMut.mutate({ id: req.id, status })}
             onReject={() => handleReject(req)}
+            onUnderReview={() => reviewMut.mutate({ id: req.id, status: 'under_review' })}
             onEscalate={() => { setEscalateTarget(req.id); setEscalateNote(''); setEscalateOpen(true); }}
             onDeescalate={() => deescalateMut.mutate(req.id)}
             onExecute={() => setExecuteTarget(req)}

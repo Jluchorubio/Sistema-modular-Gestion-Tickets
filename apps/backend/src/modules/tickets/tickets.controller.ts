@@ -156,6 +156,16 @@ export class TicketsController {
     return this.svc.transition(req.user.sub, id, body);
   }
 
+  @Post('bulk-close')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:edit')
+  bulkClose(
+    @Req() req: RequestWithUser,
+    @Body() body: { ticket_ids: string[]; reason?: string },
+  ) {
+    return this.svc.bulkClose(req.user.sub, body.ticket_ids, body.reason);
+  }
+
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:edit')

@@ -563,7 +563,17 @@ export class RequestsService {
       `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
       [userId],
     );
-    const canView = req.requester_id === userId || profile?.is_superadmin;
+    // Allow: requester, superadmin, or any user with an active module role (admin/staff)
+    const [hasModuleRole] = await this.db.query<{ exists: boolean }[]>(
+      `SELECT EXISTS (
+         SELECT 1 FROM modules.user_module_roles
+         WHERE user_id = $1 AND is_active = true
+       ) AS exists`,
+      [userId],
+    );
+    const canView = req.requester_id === userId
+      || profile?.is_superadmin
+      || hasModuleRole?.exists === true;
     if (!canView) throw new ForbiddenException('Sin acceso al timeline de esta solicitud');
 
     return this.db.query<any[]>(

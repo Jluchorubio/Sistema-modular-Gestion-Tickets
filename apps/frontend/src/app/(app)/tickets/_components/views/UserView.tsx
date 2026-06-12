@@ -18,12 +18,12 @@ import { CreateDrawer } from './CreateDrawer';
 type TabKey = 'activas' | 'por-accion' | 'cerradas';
 
 const C = {
-  navy:   '#0e2235',
+  navy:   'var(--app-text-main)',
   coral:  '#ff5e3a',
-  border: '#e2e8f0',
-  muted:  '#94a3b8',
-  sub:    '#64748b',
-  bg:     '#f8fafc',
+  border: 'var(--app-border)',
+  muted:  'var(--app-text-muted)',
+  sub:    'var(--app-text-sub)',
+  bg:     'var(--app-page)',
 };
 
 function hoursLeft(deadline: string | null): number | null {
@@ -59,7 +59,7 @@ function ActiveCard({ ticket, basePath }: { ticket: TicketListItem; basePath: st
     <div
       onClick={() => router.push(`${basePath}/ticket/${ticket.id}`)}
       style={{
-        background: '#fff',
+        background: 'var(--app-card)',
         border: `1px solid ${C.border}`,
         borderLeft: `3px solid ${pColor}`,
         borderRadius: 10,
@@ -67,8 +67,8 @@ function ActiveCard({ ticket, basePath }: { ticket: TicketListItem; basePath: st
         cursor: 'pointer',
         transition: 'background .1s',
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = C.bg; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = '#fff'; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--app-page)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--app-card)'; }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -121,7 +121,7 @@ function ApprovalCard({
 
   return (
     <div style={{
-      background: '#fff',
+      background: 'var(--app-card)',
       border: `1.5px solid #fed7aa`,
       borderLeft: `3px solid ${C.coral}`,
       borderRadius: 10,
@@ -184,14 +184,14 @@ function ApprovalCard({
             type="button"
             disabled={busy}
             onClick={() => setShowReject(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, border: `1px solid #fca5a5`, background: '#fff', color: '#b91c1c', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, border: `1px solid #fca5a5`, background: 'var(--app-card)', color: '#b91c1c', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             No fue resuelto
           </button>
           <button
             type="button"
             onClick={() => router.push(`${basePath}/ticket/${ticket.id}`)}
-            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '7px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '7px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             Ver detalle <ChevronRight size={11} />
           </button>
@@ -217,7 +217,7 @@ function ApprovalCard({
             <button
               type="button"
               onClick={() => { setShowReject(false); setReason(''); }}
-              style={{ padding: '7px 14px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ padding: '7px 14px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Cancelar
             </button>
@@ -235,7 +235,7 @@ function ClosedCard({ ticket, basePath }: { ticket: TicketListItem; basePath: st
     <div
       onClick={() => router.push(`${basePath}/ticket/${ticket.id}`)}
       style={{
-        background: '#fff',
+        background: 'var(--app-card)',
         border: `1px solid ${C.border}`,
         borderLeft: `3px solid ${C.border}`,
         borderRadius: 10,
@@ -455,7 +455,7 @@ export function UserView({
           )}
 
           {/* ── Ticket section ── */}
-          <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
 
             {/* Tabs + search bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px', borderBottom: `1px solid ${C.border}`, gap: 12, flexWrap: 'wrap' }}>
@@ -576,11 +576,11 @@ export function UserView({
 
   return (
     <>
-      <div style={{ flex: 1, padding: '32px', overflowY: 'auto', background: '#f8fafc' }}>
+      <div style={{ flex: 1, padding: '32px', overflowY: 'auto', background: 'var(--app-page)' }}>
         <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div style={{ background: '#fff', borderRadius: 24, padding: '28px', border: '1px solid #e8edf3', boxShadow: '0 1px 6px rgba(0,0,0,.05)' }}>
-            <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: '#0e2235' }}>Portal de Soporte</h2>
-            <p style={{ margin: '0 0 20px', fontSize: 12.5, color: '#64748b', lineHeight: 1.6 }}>
+          <div style={{ background: 'var(--app-card)', borderRadius: 24, padding: '28px', border: '1px solid var(--app-border)', boxShadow: '0 1px 6px rgba(0,0,0,.05)' }}>
+            <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: 'var(--app-text-main)' }}>Portal de Soporte</h2>
+            <p style={{ margin: '0 0 20px', fontSize: 12.5, color: 'var(--app-text-sub)', lineHeight: 1.6 }}>
               Reporta incidentes o solicita asistencia técnica. Podrás hacer seguimiento de tus reportes activos y aprobar su resolución.
             </p>
             {canCreate && moduleId && (
@@ -595,11 +595,11 @@ export function UserView({
           </div>
 
           <div>
-            <p style={{ margin: '0 0 14px', fontSize: 10.5, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em' }}>Mis Reportes Recientes</p>
+            <p style={{ margin: '0 0 14px', fontSize: 10.5, fontWeight: 800, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Mis Reportes Recientes</p>
             {isLoading ? (
               <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>Cargando tickets…</div>
             ) : tickets.length === 0 ? (
-              <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #e8edf3', padding: '48px 0', textAlign: 'center' }}>
+              <div style={{ background: 'var(--app-card)', borderRadius: 16, border: '1.5px solid var(--app-border)', padding: '48px 0', textAlign: 'center' }}>
                 <Ticket size={28} style={{ color: '#e2e8f0' }} />
                 <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 10 }}>No has creado tickets aún</p>
                 {canCreate && moduleId && (

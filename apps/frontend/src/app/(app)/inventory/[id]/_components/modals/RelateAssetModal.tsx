@@ -69,11 +69,13 @@ export function RelateAssetModal({
         try {
           const barcodes = await detector.detect(videoRef.current);
           if (barcodes.length > 0) {
-            const code = barcodes[0].rawValue as string;
+            const raw   = barcodes[0].rawValue as string;
+            // QR images encode "asset:{UUID}" — strip prefix to get bare UUID
+            const code  = raw.startsWith('asset:') ? raw.slice(6) : raw;
             stopScan();
-            const match = allAssets.find(a => a.qr_code === code || a.id === code);
+            const match = allAssets.find(a => a.id === code || a.qr_code === raw || a.qr_code === code);
             if (match) { setSelected({ id: match.id, name: match.name }); setTab("browse"); }
-            else { setScanError(`QR detectado (${code}) no corresponde a ningún activo en este módulo.`); setTab("browse"); }
+            else { setScanError(`QR detectado no corresponde a ningún activo en este módulo (${code}).`); setTab("browse"); }
             return;
           }
         } catch { /* ignore frame errors */ }

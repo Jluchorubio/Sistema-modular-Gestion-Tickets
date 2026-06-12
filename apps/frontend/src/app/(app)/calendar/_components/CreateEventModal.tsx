@@ -18,7 +18,8 @@ interface CreateModalProps {
 
 export function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, onAudit }: CreateModalProps) {
   const qc = useQueryClient();
-  const today = new Date().toISOString().split('T')[0];
+  const today   = new Date().toISOString().split('T')[0];
+  const nowHHMM = `${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}`;
   const [title,     setTitle]     = useState('');
   const [desc,      setDesc]      = useState('');
   const [priority,  setPriority]  = useState<RequestPriority>('media');
@@ -56,11 +57,24 @@ export function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, o
     onError: () => setError('Error al crear. Intenta de nuevo.'),
   });
 
+  const ALL_TIMES = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
+  const ALL_END_TIMES = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
+  const startTimes = startDate === today
+    ? ALL_TIMES.filter((t) => t > nowHHMM)
+    : ALL_TIMES;
+  const endTimes = startDate === today && endDate === today
+    ? ALL_END_TIMES.filter((t) => t > nowHHMM)
+    : ALL_END_TIMES;
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (title.trim().length < 3) { setError('Título mínimo 3 caracteres.'); return; }
     if (!startDate)               { setError('Fecha de inicio requerida.'); return; }
     if (startDate < today)        { setError('No se pueden crear eventos en fechas pasadas.'); return; }
+    if (!allDay && startDate === today && startTime <= nowHHMM) {
+      setError('La hora de inicio ya pasó. Elige una hora futura.');
+      return;
+    }
     if (endDate && endDate < startDate) { setError('La fecha de fin no puede ser anterior al inicio.'); return; }
     setError('');
     mut.mutate();
@@ -103,10 +117,16 @@ export function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, o
           <div className={styles.fRow2}>
             <div>
               <label className={styles.fLabel}>Inicio *</label>
-              <input type="date" value={startDate} min={today} onChange={(e) => setStartDate(e.target.value)} className={styles.fInput} />
+              <input type="date" value={startDate} min={today} onChange={(e) => {
+                setStartDate(e.target.value);
+                if (e.target.value === today && startTime <= nowHHMM) {
+                  const first = ALL_TIMES.find((t) => t > nowHHMM);
+                  if (first) setStartTime(first);
+                }
+              }} className={styles.fInput} />
               {!allDay && (
                 <select value={startTime} onChange={(e) => setStartTime(e.target.value)} className={styles.fSelect} style={{ marginTop: 4 }}>
-                  {['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'].map((t) => <option key={t} value={t}>{t}</option>)}
+                  {startTimes.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               )}
             </div>
@@ -115,7 +135,7 @@ export function CreateEventModal({ onClose, onCreated, isSuperadmin, moduleId, o
               <input type="date" value={endDate} min={startDate || today} onChange={(e) => setEndDate(e.target.value)} className={styles.fInput} />
               {!allDay && (
                 <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className={styles.fSelect} style={{ marginTop: 4 }}>
-                  {['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'].map((t) => <option key={t} value={t}>{t}</option>)}
+                  {endTimes.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               )}
             </div>
