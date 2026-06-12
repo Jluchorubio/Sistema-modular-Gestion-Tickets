@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'nexo-v2';
+const CACHE_VERSION = 'nexo-v3';
 const OFFLINE_URL   = '/offline';
 const STATIC_EXTS   = ['.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2'];
 
@@ -6,7 +6,14 @@ const STATIC_EXTS   = ['.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll([OFFLINE_URL, '/nexo-logo.png', '/logo.png']).catch(() => {}))
+      .then((cache) => cache.addAll([
+        OFFLINE_URL,
+        '/nexo-logo.png',
+        '/logo.png',
+        '/nexo-icon-192.png',
+        '/nexo-icon-512.png',
+        '/favicon-16x16.png',
+      ]).catch(() => {}))
       .then(() => self.skipWaiting()),
   );
 });
