@@ -2,7 +2,12 @@ import { io, type Socket } from 'socket.io-client';
 
 let _socket: Socket | null = null;
 
-const WS_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001') + '/ws';
+const _apiBase = process.env.NEXT_PUBLIC_API_URL ?? '';
+// In prod (no env var) use '' so socket.io resolves to current origin (nginx proxies /socket.io/).
+// In dev (http://localhost:3001) convert http→ws to avoid Mixed Content warnings.
+const WS_URL = _apiBase
+  ? _apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws'
+  : '';
 
 export const socketService = {
   connect(token: string): Socket {

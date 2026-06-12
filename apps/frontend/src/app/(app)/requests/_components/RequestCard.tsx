@@ -38,10 +38,11 @@ interface Props {
   isReviewPending:     boolean;
   isDeescalatePending: boolean;
   // permission flags — default true when not provided
-  permTake?:     boolean;
-  permProgress?: boolean;
-  permApprove?:  boolean;
-  permEscalate?: boolean;
+  permTake?:      boolean;
+  permProgress?:  boolean;
+  permApprove?:   boolean;
+  permEscalate?:  boolean;
+  currentUserId?: string;
 }
 
 export function RequestCard({
@@ -49,7 +50,9 @@ export function RequestCard({
   onToggleExpand, onCancel, onTake, onProgress, onReject, onEscalate, onDeescalate, onUnderReview, onExecute, onDetail,
   isTakePending, isProgressPending, isReviewPending, isDeescalatePending,
   permTake = true, permProgress = true, permApprove = true, permEscalate = true,
+  currentUserId,
 }: Props) {
+  const isOwnRequest = !!currentUserId && currentUserId === req.requester_id;
   const statusCfg     = getRequestStatusConfig(req.status);
   const priorityCfg   = getPriorityConfig(req.priority);
   const hasSla        = (req.status === 'taken' || req.status === 'in_progress') && req.sla_due_at;
@@ -145,7 +148,7 @@ export function RequestCard({
                   <Play size={12} /> Tomar
                 </button>
               )}
-              {permApprove && onUnderReview && (
+              {permApprove && !isOwnRequest && onUnderReview && (
                 <button
                   className={styles.reviewBtn}
                   style={{ background: '#0c4a6e', color: '#7dd3fc', border: '1px solid #0369a1' }}
@@ -155,7 +158,7 @@ export function RequestCard({
                   <Eye size={12} /> En revisión
                 </button>
               )}
-              {permApprove && (
+              {permApprove && !isOwnRequest && (
                 <button
                   className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
                   onClick={onReject}
@@ -186,7 +189,7 @@ export function RequestCard({
                   <CheckCircle2 size={12} /> Resolver
                 </button>
               )}
-              {permApprove && onUnderReview && (
+              {permApprove && !isOwnRequest && onUnderReview && (
                 <button
                   className={styles.reviewBtn}
                   style={{ background: '#0c4a6e', color: '#7dd3fc', border: '1px solid #0369a1' }}
@@ -196,7 +199,7 @@ export function RequestCard({
                   <Eye size={12} /> En revisión
                 </button>
               )}
-              {permApprove && (
+              {permApprove && !isOwnRequest && (
                 <button
                   className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
                   onClick={onReject}
@@ -218,7 +221,7 @@ export function RequestCard({
                   <CheckCircle2 size={12} /> Resolver
                 </button>
               )}
-              {permApprove && (
+              {permApprove && !isOwnRequest && (
                 <button
                   className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
                   onClick={onReject}
@@ -240,7 +243,7 @@ export function RequestCard({
                   <CheckCircle2 size={12} /> Finalizar
                 </button>
               )}
-              {permApprove && (
+              {permApprove && !isOwnRequest && (
                 <button
                   className={`${styles.reviewBtn} ${styles.reviewBtnReject}`}
                   onClick={onReject}

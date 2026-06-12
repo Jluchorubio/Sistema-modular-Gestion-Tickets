@@ -11,6 +11,7 @@ import { requestsService, type AdmRequest, type RequestStatus } from '@/services
 import { usersService } from '@/services/users.service';
 import { modulesService } from '@/services/modules.service';
 import { usePermission } from '@/hooks/usePermission';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS,
   REQUEST_PRIORITY_LABELS, REQUEST_PRIORITY_COLORS,
@@ -244,7 +245,9 @@ export function RequestDetailModal({
   const permApprove  = usePermission('gestion:requests:approve');
   const permEscalate = usePermission('gestion:requests:escalate');
 
+  const currentUser  = useAuthStore((s) => s.user);
   const requesterId  = (request as any).requester_id as string | null;
+  const isOwnRequest = !!currentUser?.id && currentUser.id === requesterId;
   const meta         = request.metadata ?? {};
   const metaModuleId = (meta.module_id ?? '') as string;
   const metaRoleId   = (meta.role_id   ?? '') as string;
@@ -645,7 +648,7 @@ export function RequestDetailModal({
                 )}
 
                 {/* Reject */}
-                {['pending', 'taken', 'in_progress', 'under_review'].includes(request.status) && permApprove && (
+                {['pending', 'taken', 'in_progress', 'under_review'].includes(request.status) && permApprove && !isOwnRequest && (
                   <button
                     type="button"
                     className={styles.btnDangerOutline}

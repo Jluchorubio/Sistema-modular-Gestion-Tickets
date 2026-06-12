@@ -9,6 +9,7 @@ import {
 } from '@/services/requests.service';
 import { REQUEST_TYPE_LABELS, REQUEST_TYPES } from '@/constants/requests';
 import { usePermission } from '@/hooks/usePermission';
+import { useAuthStore } from '@/stores/auth.store';
 import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { EmptyState } from '@/components/ui';
@@ -29,7 +30,8 @@ interface AdminViewProps {
 }
 
 export function AdminView({ isSuperadmin, moduleId, escalatedOnly = false }: AdminViewProps) {
-  const qc = useQueryClient();
+  const qc          = useQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
 
   const canCreate       = usePermission('gestion:requests:create');
   const canViewAll      = usePermission('gestion:requests:view_all');
@@ -280,6 +282,7 @@ export function AdminView({ isSuperadmin, moduleId, escalatedOnly = false }: Adm
             permProgress={canProgress}
             permApprove={canApprove}
             permEscalate={canEscalatePerm}
+            currentUserId={currentUser?.id}
           />
         ))}
       </div>

@@ -62,10 +62,9 @@ export function LoginForm({ onOtp, onForgot, onRedirect }: Props) {
     }
   }
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-
   function doGoogle() {
-    window.location.href = `${API_URL}/api/v1/auth/google`;
+    const base = process.env.NEXT_PUBLIC_API_URL ?? '';
+    window.location.href = `${base}/api/v1/auth/google`;
   }
 
   return (
