@@ -910,3 +910,21 @@
   /* Incomplete banner wrap */
   .incompleteBanner { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .wrap        { background: #0d1b2a; }
+:global([data-theme="dark"]) .sidebar     { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .content     { background: #0d1b2a; }
+:global([data-theme="dark"]) .card        { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .cardHeader  { border-color: #1e3448; }
+:global([data-theme="dark"]) .cardTitle   { color: #e2e8f0; }
+:global([data-theme="dark"]) .fieldLabel  { color: #94a3b8; }
+:global([data-theme="dark"]) .fieldValue  { color: #e2e8f0; }
+:global([data-theme="dark"]) .tab         { color: #94a3b8; }
+:global([data-theme="dark"]) .tabActive   { color: #e2e8f0; border-bottom-color: #ff5e3a; }
+:global([data-theme="dark"]) .tabBar      { border-color: #1e3448; }
+:global([data-theme="dark"]) .btnSecondary { background: #132030; border-color: #1e3448; color: #cbd5e1; }
+:global([data-theme="dark"]) .btnSecondary:hover { background: #1a2d40; border-color: #2a4060; }
+:global([data-theme="dark"]) .avatarCtxItem { color: #cbd5e1; }
+:global([data-theme="dark"]) .avatarCtxItem:hover { background: #1a2d40; }
+:global([data-theme="dark"]) .avatarCtxSep { background: #1e3448; }

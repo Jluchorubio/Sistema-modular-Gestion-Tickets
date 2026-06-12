@@ -2293,3 +2293,29 @@
   /* Drawer-safe: sub-bar */
   .helpdeskSubBar   { padding: 6px 14px; flex-direction: column; align-items: flex-start; gap: 4px; }
 }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .wMain       { background: #132030; }
+:global([data-theme="dark"]) .backBtn     { background: #132030; border-color: #1e3448; color: #cbd5e1; }
+:global([data-theme="dark"]) .backBtn:hover { background: #1a2d40; border-color: #2a4060; }
+:global([data-theme="dark"]) .breadcrumb  { color: #64748b; }
+:global([data-theme="dark"]) .breadcrumb a { color: #64748b; }
+:global([data-theme="dark"]) .statCard    { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .statCount   { color: #e2e8f0; }
+:global([data-theme="dark"]) .statLabel   { color: #94a3b8; }
+:global([data-theme="dark"]) .statDesc    { color: #64748b; }
+:global([data-theme="dark"]) .replyBox    { background: #0f1c2e; border-color: #1e3448; }
+:global([data-theme="dark"]) .replyTextarea { color: #e2e8f0; }
+:global([data-theme="dark"]) .replyTextarea::placeholder { color: #64748b; }
+:global([data-theme="dark"]) .replyIconBtn { color: #64748b; }
+:global([data-theme="dark"]) .replyIconBtn:hover { color: #e2e8f0; background: #1a2d40; }
+:global([data-theme="dark"]) .descBlock   { background: #0f1c2e; border-color: #1e3448; color: #cbd5e1; }
+:global([data-theme="dark"]) .metaGrid    { background: #0f1c2e; border-color: #1e3448; }
+:global([data-theme="dark"]) .metaValue   { color: #e2e8f0; }
+:global([data-theme="dark"]) .wTitle      { color: #e2e8f0; }
+:global([data-theme="dark"]) .sectionHeader { color: #94a3b8; }
+:global([data-theme="dark"]) .historyItem { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .historyList { border-color: #1e3448; }
+:global([data-theme="dark"]) .workspace   { border-color: #1e3448; }
+:global([data-theme="dark"]) .signatureInput { background: #132030; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .rejectTextarea { background: #132030; border-color: #1e3448; color: #e2e8f0; }

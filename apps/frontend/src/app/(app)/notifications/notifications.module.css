@@ -421,3 +421,21 @@
   .iconWrap           { display: none; }
   .item               { padding: 11px 12px; gap: 8px; }
 }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .wrap        { background: #0d1b2a; }
+:global([data-theme="dark"]) .header      { background: #0d1b2a; border-color: #1e3448; }
+:global([data-theme="dark"]) .headerTitle { color: #e2e8f0; }
+:global([data-theme="dark"]) .headerSub   { color: #94a3b8; }
+:global([data-theme="dark"]) .filterBar   { background: #0d1b2a; border-color: #1e3448; }
+:global([data-theme="dark"]) .filterTab   { color: #94a3b8; }
+:global([data-theme="dark"]) .filterTabActive { color: #e2e8f0; }
+:global([data-theme="dark"]) .item        { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .item:hover  { background: #1a2d40; }
+:global([data-theme="dark"]) .itemUnread  { background: #0f1c2e; }
+:global([data-theme="dark"]) .labelUnread { color: #e2e8f0; }
+:global([data-theme="dark"]) .labelRead   { color: #94a3b8; }
+:global([data-theme="dark"]) .timeText    { color: #64748b; }
+:global([data-theme="dark"]) .iconDefault { background: #1e3448; }
+:global([data-theme="dark"]) .typePillDefault { background: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .emptyState  { color: #64748b; }

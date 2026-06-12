@@ -208,4 +208,35 @@ input[type="range"] {
 
 [data-theme="dark"] {
   color-scheme: dark;
+  /* ── Dark mode token overrides ── */
+  --app-page:        #0d1b2a;
+  --app-card:        #132030;
+  --app-border:      #1e3448;
+  --app-border-soft: #172234;
+  --app-text:        #cbd5e1;
+  --app-text-main:   #e2e8f0;
+  --app-text-sub:    #94a3b8;
+  --app-text-muted:  #64748b;
+
+  /* Status tokens — soften for dark */
+  --status-success-bg:     #052e16;
+  --status-success-border: #166534;
+  --status-warning-bg:     #1c1200;
+  --status-warning-border: #854d0e;
+  --status-danger-bg:      #1c0505;
+  --status-danger-border:  #991b1b;
+  --status-info-bg:        #0c1a35;
+  --status-info-border:    #1d4ed8;
+  --status-paused-bg:      #180d35;
+  --status-paused-border:  #6d28d9;
+  --status-approval-bg:    #1c0d00;
+  --status-approval-border:#92400e;
+  --status-escalated-bg:   #1c0d00;
+  --status-escalated-border:#c2410c;
+  --status-breached-bg:    #1c0505;
+  --status-breached-border:#dc2626;
+  --status-closed-bg:      #0f1c2a;
+  --status-closed-border:  #1e3448;
+  --status-neutral-bg:     #0f1c2a;
+  --status-neutral-border: #1e3448;
 }

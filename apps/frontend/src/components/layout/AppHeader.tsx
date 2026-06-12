@@ -161,24 +161,6 @@ export function AppHeader({ noSidebar = false }: Props) {
         </div>
 
         <div className={styles.right}>
-          {/* ── PWA install button ── */}
-          {canInstall && (
-            <button
-              type="button"
-              className={styles.installBtnActive}
-              onClick={install}
-              title="Instalar NEXO como aplicación"
-            >
-              <Download size={14} />
-              <span className={styles.installBtnLabel}>Instalar NEXO</span>
-            </button>
-          )}
-          {!canInstall && installed && (
-            <span className={styles.installedBadge} title="NEXO instalada como aplicación">
-              <Download size={12} />
-              <span className={styles.installBtnLabel}>Instalada</span>
-            </span>
-          )}
 
           {/* ── Calendar mini-popover ── */}
           <div className={styles.calWrap} ref={calRef}>

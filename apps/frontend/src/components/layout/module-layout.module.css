@@ -145,3 +145,16 @@
   .adminAvatar { width: 72px; height: 72px; bottom: -36px; }
   .avatarSpacer { height: 32px; }
 }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .card        { background: #0d1b2a; }
+:global([data-theme="dark"]) .info        { background: #0d1b2a; }
+:global([data-theme="dark"]) .titleRow    { border-color: #1e3448; }
+:global([data-theme="dark"]) .title       { color: #e2e8f0; }
+:global([data-theme="dark"]) .adminLine   { color: #64748b; }
+:global([data-theme="dark"]) .adminLine strong { color: #94a3b8; }
+:global([data-theme="dark"]) .desc        { color: #94a3b8; }
+:global([data-theme="dark"]) .memberChip  { background: #132030; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .lockCard    { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .lockTitle   { color: #e2e8f0; }
+:global([data-theme="dark"]) .lockSub     { color: #94a3b8; }

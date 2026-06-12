@@ -215,3 +215,23 @@
 
 .pageBtn:hover    { border-color: #0e2235; color: #0e2235; }
 .pageBtn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .pageWrap    { background: #0d1b2a; }
+:global([data-theme="dark"]) .pageContent { background: #0d1b2a; }
+:global([data-theme="dark"]) .pageHeader  { border-color: #1e3448; }
+:global([data-theme="dark"]) .pageTitle   { color: #e2e8f0; }
+:global([data-theme="dark"]) .pageSub     { color: #94a3b8; }
+:global([data-theme="dark"]) .surface     { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .surfaceHeader { background: #0f1c2e; border-color: #1e3448; }
+:global([data-theme="dark"]) .th          { background: #0f1c2e; color: #94a3b8; border-color: #1e3448; }
+:global([data-theme="dark"]) .td          { border-color: #1e3448; color: #cbd5e1; }
+:global([data-theme="dark"]) .tr:hover .td { background: #1a2d40; }
+:global([data-theme="dark"]) .searchWrap  { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .searchInput { color: #e2e8f0; }
+:global([data-theme="dark"]) .searchInput::placeholder { color: #64748b; }
+:global([data-theme="dark"]) .filterSelect { background: #132030; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .pageBtn     { background: #132030; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .pageBtn:hover { border-color: #94a3b8; color: #e2e8f0; }
+:global([data-theme="dark"]) .countText   { color: #64748b; }
+:global([data-theme="dark"]) .surfaceEmpty { color: #64748b; }

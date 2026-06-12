@@ -190,3 +190,14 @@
   /* 3 cols for 6 stat cards at very small screens */
   .statsBar         { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
 }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+:global([data-theme="dark"]) .searchWrap  { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .searchInput { color: #e2e8f0; }
+:global([data-theme="dark"]) .searchInput::placeholder { color: #64748b; }
+:global([data-theme="dark"]) .filterSelect { background: #132030; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .clearFilters { border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .clearFilters:hover { border-color: #64748b; color: #e2e8f0; }
+:global([data-theme="dark"]) .countText   { color: #64748b; }
+:global([data-theme="dark"]) .emptyTitle  { color: #cbd5e1; }
+:global([data-theme="dark"]) .emptyDesc   { color: #64748b; }
