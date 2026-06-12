@@ -76,7 +76,7 @@ services:
       # Railway tiene el schema aplicado — no correr migraciones por defecto.
       # Para postgres local ver docker-compose.local.yml.
       MIGRATIONS_DIR: /app/migrations-disabled
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://nexo.proyectoscampus.top,http://localhost:3000}
       STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       # S3 / R2 (descomentar cuando STORAGE_DRIVER=s3):
       # R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
@@ -106,7 +106,7 @@ services:
       context: ./apps/frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://nexo.proyectoscampus.top}
         BACKEND_INTERNAL_URL: http://backend:3001
     container_name: tickets_frontend
     restart: unless-stopped
@@ -121,17 +121,18 @@ services:
       backend:
         condition: service_healthy
 
-  # ── Nginx ─────────────────────────────────────────────────────────────────────
+  # ── Nginx Docker (deshabilitado — host nginx maneja 80/443 en el servidor) ────
+  # Para usar: docker compose --profile nginx up -d
   nginx:
     image: nginx:alpine
     container_name: tickets_nginx
     restart: unless-stopped
+    profiles: [nginx]
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      # - ./nginx/certs:/etc/nginx/certs:ro  # descomentar con Let's Encrypt
     depends_on:
       - frontend
       - backend
