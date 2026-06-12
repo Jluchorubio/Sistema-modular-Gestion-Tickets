@@ -13,7 +13,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh \
+RUN sed -i 's/\r$//' ./docker-entrypoint.sh && chmod +x ./docker-entrypoint.sh \
  && mkdir -p /app/uploads \
  && chown -R node:node /app
 USER node
