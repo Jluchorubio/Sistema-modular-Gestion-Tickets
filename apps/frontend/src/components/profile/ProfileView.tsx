@@ -1,6 +1,6 @@
 'use client';
 import { useState, useCallback } from 'react';
-import { LayoutGrid, ShieldCheck, Settings, ChevronLeft, Wrench } from 'lucide-react';
+import { LayoutGrid, ShieldCheck, SlidersHorizontal, ChevronLeft, Wrench } from 'lucide-react';
 import type { CurrentUser } from '@/types/user.types';
 import { ProfileSidebar } from './ProfileSidebar';
 import { ProfileOverviewTab } from './ProfileOverviewTab';
@@ -83,7 +83,7 @@ export function ProfileView({ user: initialUser, isOwnProfile, viewerIsSuperadmi
                   className={`${styles.navTab}${activeTab === 'settings' ? ` ${styles.navTabActive}` : ''}`}
                   onClick={() => setActiveTab('settings')}
                 >
-                  <Settings size={13} />Configuración
+                  <SlidersHorizontal size={13} />Preferencias
                 </button>
               </>
             )}

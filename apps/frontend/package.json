@@ -26,6 +26,7 @@
     "axios": "^1.16.0",
     "clsx": "^2.1.0",
     "exceljs": "^4.4.0",
+    "xlsx": "^0.18.5",
     "framer-motion": "^12.38.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",

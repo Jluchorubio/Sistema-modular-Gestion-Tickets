@@ -146,8 +146,17 @@ export function AppHeader({ noSidebar = false }: Props) {
           )}
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/nexo-logo.png" alt="Nexo" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
-            <span className={styles.brandName} style={{ color: '#FF6B00' }}>Nexo</span>
+            <img
+              src="/nexo-logo.png"
+              alt="Nexo"
+              style={{
+                width:      'clamp(28px, 3vw, 36px)',
+                height:     'clamp(28px, 3vw, 36px)',
+                objectFit:  'contain',
+                flexShrink: 0,
+              }}
+            />
+            <span className={styles.brandName} style={{ color: '#FF6B00', fontSize: 'clamp(11px, 1.2vw, 14px)' }}>NEXO</span>
           </Link>
         </div>
 
@@ -156,13 +165,19 @@ export function AppHeader({ noSidebar = false }: Props) {
           {canInstall && (
             <button
               type="button"
-              className={styles.installBtn}
+              className={styles.installBtnActive}
               onClick={install}
-              title="Instalar aplicación"
+              title="Instalar NEXO como aplicación"
             >
               <Download size={14} />
-              <span className={styles.installBtnLabel}>Instalar</span>
+              <span className={styles.installBtnLabel}>Instalar NEXO</span>
             </button>
+          )}
+          {!canInstall && installed && (
+            <span className={styles.installedBadge} title="NEXO instalada como aplicación">
+              <Download size={12} />
+              <span className={styles.installBtnLabel}>Instalada</span>
+            </span>
           )}
 
           {/* ── Calendar mini-popover ── */}

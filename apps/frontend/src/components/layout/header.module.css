@@ -653,6 +653,44 @@
 }
 .installBtn:hover { background: #f1f5f9; border-color: #cbd5e1; }
 
+.installBtnActive {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: none;
+  background: #FF6B00;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  transition: background .15s, transform .1s;
+  animation: pwaGlow 2.5s ease-in-out infinite;
+}
+.installBtnActive:hover { background: #e05c00; transform: translateY(-1px); }
+
+@keyframes pwaGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0); }
+  50%       { box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.18); }
+}
+
+.installedBadge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .installBtnLabel { display: none; }
 @media (min-width: 600px) { .installBtnLabel { display: inline; } }
 

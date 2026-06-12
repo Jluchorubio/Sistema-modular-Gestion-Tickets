@@ -223,10 +223,28 @@ export function LoginClient() {
 
       <section className={styles.formCol}>
         <header className={styles.formHeader}>
-          <div className={styles.brand}>
+          <div className={styles.brand} style={{ gap: 14 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/nexo-logo.png" alt="Nexo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
-            <span className={styles.brandName} style={{ color: '#FF6B00', letterSpacing: '0.18em' }}>NEXO</span>
+            <img
+              src="/nexo-logo.png"
+              alt="Nexo"
+              style={{
+                width:      'clamp(64px, 9vw, 96px)',
+                height:     'clamp(64px, 9vw, 96px)',
+                objectFit:  'contain',
+                flexShrink: 0,
+              }}
+            />
+            <span
+              className={styles.brandName}
+              style={{
+                color:        '#FF6B00',
+                fontSize:     'clamp(18px, 2.2vw, 24px)',
+                letterSpacing:'0.2em',
+              }}
+            >
+              NEXO
+            </span>
           </div>
           <button type="button" className={styles.langBtn} aria-label="Idioma actual: español">
             <Globe2 size={12} />

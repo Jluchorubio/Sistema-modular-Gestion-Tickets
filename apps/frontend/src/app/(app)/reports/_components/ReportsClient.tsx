@@ -8,7 +8,8 @@ import {
 } from 'recharts';
 import {
   TrendingUp, Shield, BarChart2, Activity, ChevronDown, Download,
-  RefreshCw, AlertTriangle, Info, CheckCircle2, Zap, User,
+  RefreshCw, AlertTriangle, Info, CheckCircle2, Zap, User, Calendar, Inbox,
+  type LucideIcon,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUIStore } from '@/stores/ui.store';
@@ -147,22 +148,30 @@ function computeRiskSignals(events: AuditEntry[]): string[] {
 
 /* ─────────────────── sub-components ─────────────────── */
 
-function KpiCard({ label, value, sub, color = '#0e2235', delta }: {
+function KpiCard({ label, value, sub, color = '#0e2235', delta, Icon }: {
   label: string; value: string | number; sub?: string; color?: string; delta?: number | null;
+  Icon?: LucideIcon;
 }) {
   return (
-    <div className={styles.kpiCard}>
-      <span className={styles.kpiLabel}>{label}</span>
-      <span className={styles.kpiValue} style={{ color }}>{value}</span>
-      {delta != null && (
-        <span
-          className={delta > 0 ? styles.kpiDeltaUp : delta < 0 ? styles.kpiDeltaDown : styles.kpiDeltaNeutral}
-          style={{ fontSize: 11, display: 'block', marginBottom: 2 }}
-        >
-          {delta > 0 ? '↑' : delta < 0 ? '↓' : '→'} {Math.abs(delta)}% vs período anterior
-        </span>
+    <div className={styles.kpiCardFlex}>
+      {Icon && (
+        <div className={styles.kpiIconWrap} style={{ background: `${color}18` }}>
+          <Icon size={17} style={{ color }} />
+        </div>
       )}
-      {sub && <span className={styles.kpiSub}>{sub}</span>}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p className={styles.kpiCardVal} style={{ color }}>{value}</p>
+        {delta != null && (
+          <span
+            className={delta > 0 ? styles.kpiDeltaUp : delta < 0 ? styles.kpiDeltaDown : styles.kpiDeltaNeutral}
+            style={{ fontSize: 10, display: 'block', marginBottom: 1 }}
+          >
+            {delta > 0 ? '↑' : delta < 0 ? '↓' : '→'} {Math.abs(delta)}% vs período anterior
+          </span>
+        )}
+        <p className={styles.kpiCardName}>{label}</p>
+        {sub && <p className={styles.kpiCardSub}>{sub}</p>}
+      </div>
     </div>
   );
 }
@@ -774,10 +783,10 @@ export function ReportsClient() {
                 <InsightsBox insights={insights} />
 
                 <div className={styles.kpiGrid}>
-                  <KpiCard label="Total Tickets"    value={n(totals?.total)}         delta={trendDelta} sub={`Abiertos: ${n(totals?.open)} · Cerrados: ${n(totals?.closed)}`} color="#0e2235" />
-                  <KpiCard label="SLA Cumplimiento" value={`${compliance}%`}          sub="De tickets con SLA activo" color={compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444'} />
-                  <KpiCard label="SLA Vencidos"     value={n(sla?.summary.breached)}  sub={`Sin SLA: ${n(sla?.summary.without_sla)}`} color="#ef4444" />
-                  <KpiCard label="Últimos 7 Días"   value={n(totals?.last_7_days)}    sub="Tickets nuevos" color="#3b82f6" />
+                  <KpiCard label="Total Tickets"    value={n(totals?.total)}         delta={trendDelta} sub={`Abiertos: ${n(totals?.open)} · Cerrados: ${n(totals?.closed)}`} color="#0e2235"  Icon={BarChart2} />
+                  <KpiCard label="SLA Cumplimiento" value={`${compliance}%`}          sub="De tickets con SLA activo" color={compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444'} Icon={CheckCircle2} />
+                  <KpiCard label="SLA Vencidos"     value={n(sla?.summary.breached)}  sub={`Sin SLA: ${n(sla?.summary.without_sla)}`} color="#ef4444" Icon={AlertTriangle} />
+                  <KpiCard label="Últimos 7 Días"   value={n(totals?.last_7_days)}    sub="Tickets nuevos" color="#3b82f6" Icon={Calendar} />
                 </div>
 
                 {hasData && (
@@ -924,10 +933,10 @@ export function ReportsClient() {
             {tab === 'operacion' && (
               <>
                 <div className={styles.kpiGrid}>
-                  <KpiCard label="Total Tickets"  value={n(totals?.total)}         color="#0e2235" />
-                  <KpiCard label="Abiertos"        value={n(totals?.open)}          color="#ff5e3a" sub="En este momento" />
-                  <KpiCard label="Cerrados"        value={n(totals?.closed)}        color="#22c55e" />
-                  <KpiCard label="Últimos 7 días"  value={n(totals?.last_7_days)}   color="#3b82f6" />
+                  <KpiCard label="Total Tickets"  value={n(totals?.total)}         color="#0e2235"  Icon={BarChart2} />
+                  <KpiCard label="Abiertos"        value={n(totals?.open)}          color="#ff5e3a" sub="En este momento" Icon={Inbox} />
+                  <KpiCard label="Cerrados"        value={n(totals?.closed)}        color="#22c55e" Icon={CheckCircle2} />
+                  <KpiCard label="Últimos 7 días"  value={n(totals?.last_7_days)}   color="#3b82f6" Icon={Calendar} />
                 </div>
 
                 {hasData && (
@@ -998,10 +1007,10 @@ export function ReportsClient() {
             {tab === 'sla' && (
               <>
                 <div className={styles.kpiGrid}>
-                  <KpiCard label="Total con SLA"  value={n(sla?.summary.total)}         color="#0e2235" />
-                  <KpiCard label="Cumplimiento"   value={`${compliance}%`}              color={compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444'} />
-                  <KpiCard label="Vencidos"       value={n(sla?.summary.breached)}      color="#ef4444" sub="Breach activo" />
-                  <KpiCard label="Sin SLA"        value={n(sla?.summary.without_sla)}   color="#94a3b8" sub="Sin definir" />
+                  <KpiCard label="Total con SLA"  value={n(sla?.summary.total)}         color="#0e2235" Icon={BarChart2} />
+                  <KpiCard label="Cumplimiento"   value={`${compliance}%`}              color={compliance >= 90 ? '#22c55e' : compliance >= 70 ? '#f59e0b' : '#ef4444'} Icon={CheckCircle2} />
+                  <KpiCard label="Vencidos"       value={n(sla?.summary.breached)}      color="#ef4444" sub="Breach activo" Icon={AlertTriangle} />
+                  <KpiCard label="Sin SLA"        value={n(sla?.summary.without_sla)}   color="#94a3b8" sub="Sin definir" Icon={Shield} />
                 </div>
 
                 <div className={styles.chartsGrid}>

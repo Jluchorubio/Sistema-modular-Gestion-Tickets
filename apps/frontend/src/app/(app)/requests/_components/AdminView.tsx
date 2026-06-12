@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, TrendingUp, Clock, CheckCircle2, Inbox } from 'lucide-react';
+import { Plus, Search, TrendingUp, Clock, CheckCircle2, Inbox, Layers, UserCheck, Zap, AlertTriangle } from 'lucide-react';
 import {
   requestsService,
   type AdmRequest, type RequestStatus, type RequestType,
@@ -126,12 +126,12 @@ export function AdminView({ isSuperadmin, moduleId, escalatedOnly = false }: Adm
       {/* Stats bar */}
       {stats && (
         <div className={styles.statsBar}>
-          <MetricCard size="sm" label="Total"      value={stats.total}         color="var(--app-navy, #0e2235)" />
-          <MetricCard size="sm" label="Pendientes" value={stats.pending}       color="#b45309"   />
-          <MetricCard size="sm" label="Tomadas"    value={stats.taken}         color="#1d4ed8"   />
-          <MetricCard size="sm" label="En proceso" value={stats.in_progress}   color="#7c3aed"   />
-          <MetricCard size="sm" label="Escaladas"  value={stats.escalated}     color="#ea580c"   />
-          <MetricCard size="sm" label="SLA vencido" value={stats.sla_breached} color="#dc2626"   />
+          <MetricCard size="sm" label="Total"       value={stats.total}         color="var(--app-navy, #0e2235)" icon={<Layers size={15}/>}        active={!statusFilter && !onlyEscalated} onClick={() => { setStatusFilter(''); setOnlyEscalated(escalatedOnly); }} />
+          <MetricCard size="sm" label="Pendientes"  value={stats.pending}       color="#b45309"                  icon={<Clock size={15}/>}          active={statusFilter === 'pending'}      onClick={() => setStatusFilter(statusFilter === 'pending' ? '' : 'pending')} />
+          <MetricCard size="sm" label="Tomadas"     value={stats.taken}         color="#1d4ed8"                  icon={<UserCheck size={15}/>}      active={statusFilter === 'taken'}        onClick={() => setStatusFilter(statusFilter === 'taken' ? '' : 'taken')} />
+          <MetricCard size="sm" label="En proceso"  value={stats.in_progress}   color="#7c3aed"                  icon={<Zap size={15}/>}            active={statusFilter === 'in_progress'}  onClick={() => setStatusFilter(statusFilter === 'in_progress' ? '' : 'in_progress')} />
+          <MetricCard size="sm" label="Escaladas"   value={stats.escalated}     color="#ea580c"                  icon={<TrendingUp size={15}/>}     active={onlyEscalated}                   onClick={() => setOnlyEscalated(!onlyEscalated)} />
+          <MetricCard size="sm" label="SLA vencido" value={stats.sla_breached}  color="#dc2626"                  icon={<AlertTriangle size={15}/>} />
         </div>
       )}
 
