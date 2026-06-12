@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { MessagingService } from '../../shared/messaging/messaging.service';
 import { CacheService } from '../../shared/redis/cache.service';
 import {
@@ -200,6 +201,9 @@ export class SystemConfigService {
           globalRoleId = gr?.id ?? null;
         }
 
+        const DEFAULT_PASSWORD = 'Ticket2026!';
+        const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 12);
+
         const qr = this.db.createQueryRunner();
         await qr.connect();
         await qr.startTransaction();
@@ -220,8 +224,9 @@ export class SystemConfigService {
           )) as { id: string }[])[0].id;
 
           await qr.query(
-            `INSERT INTO auth.credentials (user_id, email) VALUES ($1, $2)`,
-            [userId, row.email.toLowerCase()],
+            `INSERT INTO auth.credentials (user_id, email, password_hash, force_password_change)
+             VALUES ($1, $2, $3, TRUE)`,
+            [userId, row.email.toLowerCase(), passwordHash],
           );
 
           await qr.commitTransaction();

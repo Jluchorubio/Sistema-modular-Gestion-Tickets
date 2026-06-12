@@ -442,11 +442,28 @@ export function AppHeader({ noSidebar = false }: Props) {
                     ))}
                   </div>
                 </div>
-                <div className={`${styles.ddItem} ${styles.ddItemDisabled}`}>
-                  <span className={styles.ddItemIcon}><Download size={14} /></span>
-                  Descargar aplicación
-                  <span className={styles.ddProxBadge}>Próximamente</span>
-                </div>
+                {canInstall ? (
+                  <button
+                    type="button"
+                    className={styles.ddItem}
+                    onClick={() => { install(); }}
+                  >
+                    <span className={styles.ddItemIcon}><Download size={14} /></span>
+                    Instalar NEXO
+                  </button>
+                ) : installed ? (
+                  <div className={`${styles.ddItem} ${styles.ddItemDisabled}`}>
+                    <span className={styles.ddItemIcon}><Download size={14} /></span>
+                    Aplicación instalada
+                    <span className={styles.ddInstalledDot} />
+                  </div>
+                ) : (
+                  <div className={`${styles.ddItem} ${styles.ddItemDisabled}`}>
+                    <span className={styles.ddItemIcon}><Download size={14} /></span>
+                    Descargar aplicación
+                    <span className={styles.ddProxBadge}>No disponible</span>
+                  </div>
+                )}
               </div>
 
               <div className={styles.ddSep} />
