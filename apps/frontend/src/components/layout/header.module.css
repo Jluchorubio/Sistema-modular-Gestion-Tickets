@@ -749,6 +749,15 @@
 .hamburger:hover { background: #f8fafc; }
 
 /* ── Responsive ── */
+@media (max-width: 420px) {
+  /* hide install button on very small screens — accessible via user dropdown */
+  .installBtnActive, .installedBadge { display: none; }
+  /* hide calendar button — tight header */
+  .calWrap { display: none; }
+  .inner { padding: 0 10px; }
+  .right { gap: 8px; }
+}
+
 @media (max-width: 767px) {
   .hamburger   { display: flex; }
   .inner       { padding: 0 12px; }

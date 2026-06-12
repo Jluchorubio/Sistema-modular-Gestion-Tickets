@@ -895,4 +895,15 @@
   .section:has(.prioTable) { overflow-x: auto; }
   .prioTable { min-width: 360px; }
 }
+
+/* ── Very small mobile (390px) ── */
+@media (max-width: 420px) {
+  .kpiGrid     { grid-template-columns: 1fr !important; }
+  .kpiCardFlex { padding: 12px 14px; }
+  .kpiCardVal  { font-size: 20px; }
+  .chartArea   { min-height: 160px !important; }
+  .tab         { padding: 7px 10px; font-size: 11px; }
+  .pageWrap    { padding: 14px 12px 32px; }
+}
+
 .riskOk   { font-size: 12px; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 6px; }

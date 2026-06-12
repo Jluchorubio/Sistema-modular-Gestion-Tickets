@@ -187,4 +187,6 @@
 @media (max-width: 480px) {
   .filterSelect     { font-size: 11px; padding: 6px 8px; }
   .clearFilters     { font-size: 10px; }
+  /* 3 cols for 6 stat cards at very small screens */
+  .statsBar         { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
 }

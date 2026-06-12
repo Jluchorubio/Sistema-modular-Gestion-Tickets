@@ -11,13 +11,13 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Tickets System',
-  description: 'Sistema modular de gestión de tickets empresariales',
+  title: 'NEXO ITSM',
+  description: 'Plataforma modular de gestión ITSM empresarial',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Tickets',
+    title: 'NEXO',
   },
   other: {
     'mobile-web-app-capable': 'yes',
