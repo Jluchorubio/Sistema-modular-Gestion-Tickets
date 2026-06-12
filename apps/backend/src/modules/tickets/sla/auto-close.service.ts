@@ -95,7 +95,7 @@ export class AutoCloseService {
 
         await qr.commitTransaction();
 
-        this.messaging.emit('ticket.state_changed', {
+        this.messaging.emit('ticket.closed', {
           ticketId:  t.ticket_id,
           title:     t.title,
           createdBy: t.created_by,

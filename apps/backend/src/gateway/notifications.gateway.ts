@@ -94,6 +94,12 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     this.broadcastAll('ticket:queue_updated', { ticketId: payload.ticketId });
   }
 
+  @OnEvent('ticket.closed')
+  handleTicketClosed(payload: { ticketId: string; [key: string]: unknown }) {
+    this.server?.to(`ticket:${payload.ticketId}`).emit('ticket:state_changed', payload);
+    this.broadcastAll('ticket:queue_updated', { ticketId: payload.ticketId });
+  }
+
   @OnEvent('ticket.comment_added')
   handleTicketCommentAdded(payload: { ticketId: string; [key: string]: unknown }) {
     this.server?.to(`ticket:${payload.ticketId}`).emit('ticket:comment_added', payload);

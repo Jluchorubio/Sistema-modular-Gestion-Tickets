@@ -644,6 +644,14 @@ export class TicketsService {
         toLabel:   toState?.label ?? toState?.name ?? '',
         actorId:   userId,
       });
+    } else {
+      this.messaging.emit('ticket.closed', {
+        ticketId,
+        title:     ticket.title,
+        createdBy: ticket.created_by,
+        toLabel:   toState?.label ?? toState?.name ?? '',
+        actorId:   userId,
+      });
     }
 
     return { ok: true };

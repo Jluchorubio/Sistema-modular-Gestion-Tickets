@@ -178,15 +178,72 @@ export class NotificationsService {
     authorName: string;
     actorId:    string;
   }) {
-    if (ev.actorId === ev.createdBy) return;
+    // Notify ticket creator when someone else comments
+    if (ev.actorId !== ev.createdBy) {
+      await this.notifyUser({
+        userId:    ev.createdBy,
+        eventType: 'ticket.comment_added',
+        subject:   `Respuesta en tu ticket: ${ev.title}`,
+        body:      `${ev.authorName} respondió a tu ticket "${ev.title}". Revisa la actualización.`,
+        channels:  ['in_app'],
+        meta:      { ticketId: ev.ticketId },
+      });
+    }
+
+    // Notify assigned tech when creator or another user comments
+    const [owner] = await this.db.query<{ user_id: string }[]>(
+      `SELECT user_id FROM tickets.ticket_assignments
+       WHERE ticket_id = $1 AND role = 'owner' AND is_active = true LIMIT 1`,
+      [ev.ticketId],
+    );
+    if (owner && owner.user_id !== ev.actorId && owner.user_id !== ev.createdBy) {
+      await this.notifyUser({
+        userId:    owner.user_id,
+        eventType: 'ticket.comment_added',
+        subject:   `Nuevo comentario: ${ev.title}`,
+        body:      `${ev.authorName} comentó en el ticket "${ev.title}" que tienes asignado.`,
+        channels:  ['in_app'],
+        meta:      { ticketId: ev.ticketId },
+      });
+    }
+  }
+
+  @OnEvent('ticket.closed')
+  async onTicketClosed(ev: { ticketId: string; title: string; createdBy: string; toLabel: string; actorId: string }) {
+    if (ev.createdBy === ev.actorId) return;
     await this.notifyUser({
       userId:    ev.createdBy,
-      eventType: 'ticket.comment_added',
-      subject:   `Respuesta en tu ticket: ${ev.title}`,
-      body:      `${ev.authorName} respondió a tu ticket "${ev.title}". Revisa la actualización.`,
-      channels:  ['in_app'],
+      eventType: 'ticket.closed',
+      subject:   `Ticket resuelto: ${ev.title}`,
+      body:      `Tu ticket "${ev.title}" fue cerrado con estado "${ev.toLabel}".`,
+      channels:  ['in_app', 'email'],
       meta:      { ticketId: ev.ticketId },
     });
+  }
+
+  @OnEvent('request.created')
+  async onRequestCreated(ev: { requestId: string; title: string; requesterId: string; moduleId?: string; type: string }) {
+    if (!ev.moduleId || ev.type === 'task') return;
+    const admins = await this.db.query<{ user_id: string }[]>(
+      `SELECT umr.user_id
+       FROM   modules.user_module_roles umr
+       JOIN   modules.module_roles      mr ON mr.id = umr.role_id
+       WHERE  umr.module_id = $1
+         AND  mr.name IN ('jefe_tecnico', 'admin_modulo')
+         AND  umr.is_active = true`,
+      [ev.moduleId],
+    );
+    for (const { user_id } of admins) {
+      if (user_id === ev.requesterId) continue;
+      await this.notifyUser({
+        userId:    user_id,
+        eventType: 'request.created',
+        subject:   `Nueva solicitud: ${ev.title}`,
+        body:      `Se ha recibido una nueva solicitud "${ev.title}" que requiere revisión.`,
+        channels:  ['in_app'],
+        meta:      { requestId: ev.requestId },
+      });
+    }
   }
 
   @OnEvent('ticket.approval_expired')

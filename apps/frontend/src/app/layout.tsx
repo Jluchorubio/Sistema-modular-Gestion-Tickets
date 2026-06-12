@@ -14,6 +14,14 @@ export const metadata: Metadata = {
   title: 'NEXO ITSM',
   description: 'Plataforma modular de gestión ITSM empresarial',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/nexo-icon.png',     sizes: 'any',   type: 'image/png' },
+    ],
+    shortcut: '/favicon-16x16.png',
+    apple: '/nexo-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -34,7 +42,8 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#0e2235" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" href="/nexo-icon.png" />
       </head>
       <body className={jakarta.className}>
         <Providers>{children}</Providers>

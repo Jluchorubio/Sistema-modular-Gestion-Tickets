@@ -59,6 +59,13 @@ export class RequestsService {
        VALUES ($1, $2, 'created', 'pending', $3)`,
       [row.id, requesterId, autoEscalated ? 'Auto-escalada: sin admin en módulo' : null],
     );
+    this.messaging.emit('request.created', {
+      requestId:   row.id,
+      title:       row.title,
+      requesterId,
+      moduleId,
+      type:        dto.type,
+    });
     return row;
   }
 

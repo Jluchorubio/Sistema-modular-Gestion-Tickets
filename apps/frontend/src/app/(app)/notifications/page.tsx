@@ -13,16 +13,22 @@ import styles                                              from './notifications
 /* ── Constants ────────────────────────────────────────────────────────────── */
 
 const EVENT_LABELS: Record<string, string> = {
-  'ticket.created':             'Ticket creado',
-  'ticket.assigned':            'Ticket asignado',
-  'ticket.state_changed':       'Cambio de estado',
-  'ticket.validation_required': 'Requiere validación',
-  'ticket.escalated':           'Ticket escalado',
-  'ticket.comment_added':       'Nuevo comentario',
-  'request.approved':           'Solicitud aprobada',
-  'request.rejected':           'Solicitud rechazada',
-  'request.taken':              'Solicitud tomada',
-  'meeting.scheduled':          'Reunión programada',
+  'ticket.created':               'Ticket creado',
+  'ticket.assigned':              'Ticket asignado',
+  'ticket.closed':                'Ticket cerrado',
+  'ticket.state_changed':         'Cambio de estado',
+  'ticket.validation_required':   'Requiere validación',
+  'ticket.escalated':             'Ticket escalado',
+  'ticket.comment_added':         'Nuevo comentario',
+  'ticket.sla_breached':          'SLA vencido',
+  'ticket.waiting_timeout':       'Ticket en espera vencida',
+  'ticket.approval_expired':      'Aprobación expirada',
+  'ticket.approval_expiring_soon': 'Validación próxima a vencer',
+  'request.created':              'Solicitud recibida',
+  'request.approved':             'Solicitud aprobada',
+  'request.rejected':             'Solicitud rechazada',
+  'request.taken':                'Solicitud tomada',
+  'meeting.scheduled':            'Reunión programada',
 };
 
 type FilterType = 'all' | 'unread' | 'ticket' | 'request' | 'meeting' | 'dismissed';

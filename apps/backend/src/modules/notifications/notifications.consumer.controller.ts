@@ -71,6 +71,17 @@ export class NotificationsConsumerController {
     return this.svc.onTicketEscalated(ev);
   }
 
+  @EventPattern('ticket.closed')
+  async onTicketClosed(@Payload() ev: Parameters<NotificationsService['onTicketClosed']>[0] & { ticketId: string }) {
+    await this.svc.onTicketClosed(ev);
+    this.gateway.handleTicketClosed(ev);
+  }
+
+  @EventPattern('request.created')
+  onRequestCreated(@Payload() ev: Parameters<NotificationsService['onRequestCreated']>[0]) {
+    return this.svc.onRequestCreated(ev);
+  }
+
   @EventPattern('meeting.scheduled')
   onMeetingScheduled(@Payload() ev: Parameters<NotificationsService['onMeetingScheduled']>[0]) {
     return this.svc.onMeetingScheduled(ev);

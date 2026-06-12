@@ -236,12 +236,22 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
     staleTime: 5 * 60_000,
   });
 
-  /* Merge area + department nodes for the department field */
+  /* Cascading: if both dept + area exist, show two dropdowns; otherwise merge */
+  const [selectedDeptId, setSelectedDeptId] = useState('');
+  const showCascading = deptNodes.length > 0 && areaNodes.length > 0;
+
+  const filteredAreas = useMemo(() =>
+    selectedDeptId
+      ? areaNodes.filter(a => a.parent_id === selectedDeptId)
+      : areaNodes,
+  [areaNodes, selectedDeptId]);
+
   const deptOptions = useMemo(() => {
+    if (showCascading) return deptNodes;
     const all = [...deptNodes, ...areaNodes];
     const seen = new Set<string>();
     return all.filter(n => { if (seen.has(n.id)) return false; seen.add(n.id); return true; });
-  }, [deptNodes, areaNodes]);
+  }, [deptNodes, areaNodes, showCascading]);
 
   /* ── Sedes (locations) ── */
   const { data: locations = [], isLoading: locationsLoading } = useQuery({
@@ -430,42 +440,85 @@ export function ProfileFormStep({ form, progressPct, isSubmitting, errorBanner, 
               />
             </div>
 
-            {/* Área / Departamento */}
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>
-                Área / Departamento <span className={styles.req}>*</span>
-              </label>
-              <Controller
-                control={control}
-                name="department"
-                render={({ field }) =>
-                  deptOptions.length > 0 ? (
-                    <OrgSelect
-                      value={watch('org_node_id') ?? ''}
-                      onChange={(id, name) => {
-                        setValue('org_node_id', id, { shouldDirty: true });
-                        field.onChange(name);
-                      }}
-                      options={deptOptions}
-                      placeholder="Selecciona tu área…"
-                      icon={<Building2 size={14} />}
-                      error={errors.department?.message}
-                    />
-                  ) : (
-                    <div className={styles.inputWrap}>
-                      <input
-                        value={field.value ?? ''}
-                        onChange={field.onChange}
-                        id="department" type="text" placeholder="Ej: Soporte TI"
-                        className={`${styles.fieldInput} ${errors.department ? styles.isErr : ''}`}
+            {/* Área / Departamento — cascading cuando hay ambos tipos */}
+            {showCascading ? (
+              <>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>
+                    Departamento <span className={styles.req}>*</span>
+                  </label>
+                  <OrgSelect
+                    value={selectedDeptId}
+                    onChange={(id, name) => {
+                      setSelectedDeptId(id);
+                      setValue('org_node_id', '', { shouldDirty: true });
+                      setValue('department', name, { shouldDirty: true });
+                    }}
+                    options={deptNodes}
+                    placeholder="Selecciona departamento…"
+                    icon={<Building2 size={14} />}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>
+                    Área <span className={styles.req}>*</span>
+                  </label>
+                  <Controller
+                    control={control}
+                    name="department"
+                    render={({ field }) => (
+                      <OrgSelect
+                        value={watch('org_node_id') ?? ''}
+                        onChange={(id, name) => {
+                          setValue('org_node_id', id, { shouldDirty: true });
+                          field.onChange(name);
+                        }}
+                        options={filteredAreas}
+                        placeholder={selectedDeptId ? 'Selecciona área…' : 'Primero selecciona un departamento'}
+                        icon={<Building2 size={14} />}
+                        error={errors.department?.message}
                       />
-                      <span className={styles.fieldIcon}><Building2 size={15} /></span>
-                      {errors.department && <span className={styles.fieldError}>{errors.department.message}</span>}
-                    </div>
-                  )
-                }
-              />
-            </div>
+                    )}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className={styles.field}>
+                <label className={styles.fieldLabel}>
+                  Área / Departamento <span className={styles.req}>*</span>
+                </label>
+                <Controller
+                  control={control}
+                  name="department"
+                  render={({ field }) =>
+                    deptOptions.length > 0 ? (
+                      <OrgSelect
+                        value={watch('org_node_id') ?? ''}
+                        onChange={(id, name) => {
+                          setValue('org_node_id', id, { shouldDirty: true });
+                          field.onChange(name);
+                        }}
+                        options={deptOptions}
+                        placeholder="Selecciona tu área…"
+                        icon={<Building2 size={14} />}
+                        error={errors.department?.message}
+                      />
+                    ) : (
+                      <div className={styles.inputWrap}>
+                        <input
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          id="department" type="text" placeholder="Ej: Soporte TI"
+                          className={`${styles.fieldInput} ${errors.department ? styles.isErr : ''}`}
+                        />
+                        <span className={styles.fieldIcon}><Building2 size={15} /></span>
+                        {errors.department && <span className={styles.fieldError}>{errors.department.message}</span>}
+                      </div>
+                    )
+                  }
+                />
+              </div>
+            )}
           </div>
 
           {/* Sede principal */}

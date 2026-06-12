@@ -12,22 +12,22 @@
   "categories": ["productivity", "business"],
   "icons": [
     {
-      "src": "/nexo-logo.png",
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/nexo-icon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/nexo-logo.png",
+      "src": "/nexo-icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/nexo-logo.png",
-      "sizes": "any",
-      "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [

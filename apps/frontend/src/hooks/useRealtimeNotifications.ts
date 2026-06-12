@@ -18,6 +18,7 @@ export function useRealtimeNotifications() {
 
     socket.on('notification', () => {
       qc.invalidateQueries({ queryKey: ['notifications-me'] });
+      qc.invalidateQueries({ queryKey: ['notifications-history'] });
     });
 
     socket.on('config:branding:updated', () => {
