@@ -200,6 +200,170 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
     }
   }, [moduleId]);
 
+  const handlePdfExport = useCallback(async () => {
+    setExportOpen(false);
+    const { default: jsPDF }     = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+    const doc = new jsPDF() as any;
+    const now = new Date().toLocaleDateString('es-CO');
+
+    doc.setFillColor(14, 34, 53);
+    doc.rect(0, 0, 210, 55, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(26);
+    doc.setFont('helvetica', 'bold');
+    doc.text('NEXO ITSM', 18, 28);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Reporte Mesa de Ayuda', 18, 40);
+    doc.setFontSize(10);
+    doc.text(`Emitido: ${now}`, 18, 50);
+
+    doc.setTextColor(14, 34, 53);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('KPIs Operacionales', 18, 70);
+    autoTable(doc, {
+      startY: 75,
+      head: [['Métrica', 'Valor']],
+      body: [
+        ['Total tickets',          String(n(kpis?.total))],
+        ['Activos',                String(n(kpis?.open))],
+        ['Esta semana',            String(n(kpis?.this_week))],
+        ['Este mes',               String(n(kpis?.this_month))],
+        ['Hoy',                    String(n(kpis?.today))],
+        ['Prom. resolución',       kpis?.avg_resolution_hours ? `${Math.round(n(kpis.avg_resolution_hours))}h` : '—'],
+        ['Rechazados',             String(n(kpis?.rechazados))],
+        ['Reabiertos',             String(n(kpis?.reopen_count))],
+      ],
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [14, 34, 53] },
+      columnStyles: { 1: { fontStyle: 'bold', halign: 'center' } },
+    });
+
+    let y = (doc as any).lastAutoTable.finalY + 14;
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SLA por Prioridad', 18, y);
+    autoTable(doc, {
+      startY: y + 5,
+      head: [['Prioridad', 'Total', 'Vencidos', 'SLA Prom.']],
+      body: (sla?.by_priority ?? []).map(r => [
+        getPriorityConfig(r.priority).label,
+        String(n(r.total)),
+        String(n(r.breached)),
+        r.avg_sla_hours ? `${Math.round(n(r.avg_sla_hours))}h` : '—',
+      ]),
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [14, 34, 53] },
+    });
+
+    if (byTech.length > 0) {
+      y = (doc as any).lastAutoTable.finalY + 14;
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Técnicos', 18, y);
+      autoTable(doc, {
+        startY: y + 5,
+        head: [['Técnico', 'Asignados', 'Resueltos', 'Reprocesos', 'Prom. h', 'Rating']],
+        body: byTech.map(t => [
+          t.technician_name,
+          String(n(t.tickets_assigned)),
+          String(n(t.tickets_resolved)),
+          String(n(t.rechazados)),
+          t.avg_resolution_hours ? `${Math.round(n(t.avg_resolution_hours))}h` : '—',
+          t.avg_rating ? n(t.avg_rating).toFixed(1) : '—',
+        ]),
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [14, 34, 53] },
+      });
+    }
+
+    doc.save(`helpdesk-reporte-${Date.now()}.pdf`);
+  }, [kpis, sla, byTech]);
+
+  const handleExcelExport = useCallback(async () => {
+    setExportOpen(false);
+    const ExcelJS = await import('exceljs');
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'NEXO ITSM';
+    wb.created = new Date();
+
+    const ws1 = wb.addWorksheet('Operación');
+    ws1.columns = [
+      { header: 'Métrica', key: 'metric', width: 30 },
+      { header: 'Valor',   key: 'value',  width: 18 },
+    ];
+    ws1.getRow(1).font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    ws1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E2235' } };
+    [
+      { metric: 'Total tickets',       value: n(kpis?.total) },
+      { metric: 'Activos',             value: n(kpis?.open) },
+      { metric: 'Esta semana',         value: n(kpis?.this_week) },
+      { metric: 'Este mes',            value: n(kpis?.this_month) },
+      { metric: 'Hoy',                 value: n(kpis?.today) },
+      { metric: 'Prom. resolución (h)',value: kpis?.avg_resolution_hours ? Math.round(n(kpis.avg_resolution_hours)) : '—' },
+      { metric: 'Rechazados',          value: n(kpis?.rechazados) },
+      { metric: 'Reabiertos',          value: n(kpis?.reopen_count) },
+    ].forEach(r => ws1.addRow(r));
+
+    const ws2 = wb.addWorksheet('SLA');
+    ws2.columns = [
+      { header: 'Prioridad', key: 'priority', width: 16 },
+      { header: 'Total',     key: 'total',    width: 10 },
+      { header: 'Vencidos',  key: 'breached', width: 12 },
+      { header: 'Prom. h',   key: 'avg',      width: 12 },
+    ];
+    ws2.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws2.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E2235' } };
+    (sla?.by_priority ?? []).forEach(r => ws2.addRow({
+      priority: getPriorityConfig(r.priority).label,
+      total:    n(r.total),
+      breached: n(r.breached),
+      avg:      r.avg_sla_hours ? Math.round(n(r.avg_sla_hours)) : '—',
+    }));
+
+    const ws3 = wb.addWorksheet('Técnicos');
+    ws3.columns = [
+      { header: 'Técnico',    key: 'name',     width: 28 },
+      { header: 'Asignados',  key: 'assigned', width: 12 },
+      { header: 'Resueltos',  key: 'resolved', width: 12 },
+      { header: 'Reprocesos', key: 'rejected', width: 12 },
+      { header: 'Prom. h',    key: 'avg',      width: 10 },
+      { header: 'Rating',     key: 'rating',   width: 10 },
+    ];
+    ws3.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws3.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF5E3A' } };
+    byTech.forEach(t => ws3.addRow({
+      name:     t.technician_name,
+      assigned: n(t.tickets_assigned),
+      resolved: n(t.tickets_resolved),
+      rejected: n(t.rechazados),
+      avg:      t.avg_resolution_hours ? Math.round(n(t.avg_resolution_hours)) : '—',
+      rating:   t.avg_rating ? n(t.avg_rating).toFixed(1) : '—',
+    }));
+
+    const ws4 = wb.addWorksheet('Tendencia 30 días');
+    ws4.columns = [
+      { header: 'Fecha',   key: 'day',     width: 16 },
+      { header: 'Tickets', key: 'created', width: 12 },
+    ];
+    ws4.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws4.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF5E3A' } };
+    trend.forEach(d => ws4.addRow({ day: d.day, created: n(d.created) }));
+
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `helpdesk-reporte-${Date.now()}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [kpis, sla, byTech, trend]);
+
   return (
     <div className={mgmt.pageWrap}>
     <div className={mgmt.pageContent}>
@@ -227,6 +391,12 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
               <div className={styles.exportDropdown}>
                 <button type="button" className={styles.exportDropdownItem} onClick={handleCsvExport}>
                   <Download size={13} /> Exportar CSV
+                </button>
+                <button type="button" className={styles.exportDropdownItem} onClick={handlePdfExport}>
+                  <Download size={13} /> Exportar PDF
+                </button>
+                <button type="button" className={styles.exportDropdownItem} onClick={handleExcelExport}>
+                  <Download size={13} /> Exportar Excel
                 </button>
               </div>
             )}

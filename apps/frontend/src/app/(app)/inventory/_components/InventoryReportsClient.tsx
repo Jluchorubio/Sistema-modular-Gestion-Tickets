@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { Package, Shield, BarChart2, Layers } from 'lucide-react';
+import { Package, Shield, BarChart2, Layers, Download, ChevronDown, RefreshCw } from 'lucide-react';
 import { reportingService } from '@/services/reporting.service';
 import { Spinner } from '@/components/ui/Spinner';
 import mgmt from '@/styles/mgmt.module.css';
@@ -63,8 +63,20 @@ export function InventoryReportsClient({ moduleId }: { moduleId?: string }) {
   const [auditAction, setAuditAction] = useState('');
   const [auditFrom,   setAuditFrom]   = useState('');
   const [auditTo,     setAuditTo]     = useState('');
+  const [exportOpen,  setExportOpen]  = useState(false);
+  const [csvLoading,  setCsvLoading]  = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
-  const { data: inv, isLoading } = useQuery({
+  useEffect(() => {
+    if (!exportOpen) return;
+    function handler(e: MouseEvent) {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [exportOpen]);
+
+  const { data: inv, isLoading, refetch, isFetching } = useQuery({
     queryKey:  ['inventory-reports', moduleId],
     queryFn:   () => reportingService.getInventorySummary(moduleId),
     staleTime: 5 * 60_000,
@@ -96,6 +108,124 @@ export function InventoryReportsClient({ moduleId }: { moduleId?: string }) {
     staleTime: 5 * 60_000,
     enabled:   tab === 'auditoria',
   });
+
+  const handleCsvExport = useCallback(() => {
+    setCsvLoading(true);
+    setExportOpen(false);
+    try {
+      const rows: string[][] = [['Estado', 'Total']];
+      rows.push(['Disponible',    String(n(inv?.totals?.disponible))]);
+      rows.push(['Asignado',      String(n(inv?.totals?.asignado))]);
+      rows.push(['En reparación', String(n(inv?.totals?.en_reparacion))]);
+      rows.push(['Dado de baja',  String(n(inv?.totals?.dado_de_baja))]);
+      rows.push(['Total',         String(n(inv?.totals?.total))]);
+      rows.push([]);
+      rows.push(['Categoría', 'Total', 'Disponible', 'Asignado']);
+      (inv?.by_category ?? []).forEach(c => rows.push([c.category_name, String(n(c.total)), String(n(c.disponible)), String(n(c.asignado))]));
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = `inventario-${Date.now()}.csv`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setCsvLoading(false);
+    }
+  }, [inv]);
+
+  const handlePdfExport = useCallback(async () => {
+    setExportOpen(false);
+    const { default: jsPDF }     = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+    const doc = new jsPDF() as any;
+    const now = new Date().toLocaleDateString('es-CO');
+
+    doc.setFillColor(14, 34, 53);
+    doc.rect(0, 0, 210, 55, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(26); doc.setFont('helvetica', 'bold');
+    doc.text('NEXO ITSM', 18, 28);
+    doc.setFontSize(13); doc.setFont('helvetica', 'normal');
+    doc.text('Reporte de Inventario', 18, 40);
+    doc.setFontSize(10);
+    doc.text(`Emitido: ${now}`, 18, 50);
+
+    doc.setTextColor(14, 34, 53);
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+    doc.text('Estado de Activos', 18, 70);
+    autoTable(doc, {
+      startY: 75,
+      head: [['Estado', 'Cantidad']],
+      body: [
+        ['Total',          String(n(inv?.totals?.total))],
+        ['Disponible',     String(n(inv?.totals?.disponible))],
+        ['Asignado',       String(n(inv?.totals?.asignado))],
+        ['En reparación',  String(n(inv?.totals?.en_reparacion))],
+        ['Dado de baja',   String(n(inv?.totals?.dado_de_baja))],
+        ['Nuevos (30d)',   String(n(inv?.totals?.added_last_30))],
+      ],
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [14, 34, 53] },
+      columnStyles: { 1: { fontStyle: 'bold', halign: 'center' } },
+    });
+
+    const y = (doc as any).lastAutoTable.finalY + 14;
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+    doc.text('Por Categoría', 18, y);
+    autoTable(doc, {
+      startY: y + 5,
+      head: [['Categoría', 'Total', 'Disponible', 'Asignado']],
+      body: (inv?.by_category ?? []).map(c => [c.category_name, String(n(c.total)), String(n(c.disponible)), String(n(c.asignado))]),
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [14, 34, 53] },
+    });
+
+    doc.save(`inventario-reporte-${Date.now()}.pdf`);
+  }, [inv]);
+
+  const handleExcelExport = useCallback(async () => {
+    setExportOpen(false);
+    const ExcelJS = await import('exceljs');
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'NEXO ITSM';
+    wb.created = new Date();
+
+    const ws1 = wb.addWorksheet('Resumen');
+    ws1.columns = [
+      { header: 'Estado', key: 'estado', width: 20 },
+      { header: 'Total',  key: 'total',  width: 14 },
+    ];
+    ws1.getRow(1).font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    ws1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E2235' } };
+    [
+      { estado: 'Total',          total: n(inv?.totals?.total) },
+      { estado: 'Disponible',     total: n(inv?.totals?.disponible) },
+      { estado: 'Asignado',       total: n(inv?.totals?.asignado) },
+      { estado: 'En reparación',  total: n(inv?.totals?.en_reparacion) },
+      { estado: 'Dado de baja',   total: n(inv?.totals?.dado_de_baja) },
+      { estado: 'Nuevos (30d)',   total: n(inv?.totals?.added_last_30) },
+    ].forEach(r => ws1.addRow(r));
+
+    const ws2 = wb.addWorksheet('Por Categoría');
+    ws2.columns = [
+      { header: 'Categoría',  key: 'name',       width: 28 },
+      { header: 'Total',      key: 'total',      width: 12 },
+      { header: 'Disponible', key: 'disponible', width: 14 },
+      { header: 'Asignado',   key: 'asignado',   width: 12 },
+    ];
+    ws2.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws2.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF5E3A' } };
+    (inv?.by_category ?? []).forEach(c => ws2.addRow({
+      name: c.category_name, total: n(c.total), disponible: n(c.disponible), asignado: n(c.asignado),
+    }));
+
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `inventario-reporte-${Date.now()}.xlsx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [inv]);
 
   const totals     = inv?.totals;
   const byCategory = inv?.by_category ?? [];
@@ -132,6 +262,32 @@ export function InventoryReportsClient({ moduleId }: { moduleId?: string }) {
           <p className={styles.headerLabel}>Inventario de Activos</p>
           <h1 className={styles.title}>Reportes</h1>
           <p className={styles.sub}>Estado · Categorías · Auditoría</p>
+        </div>
+        <div className={styles.headerActions}>
+          <button type="button" onClick={() => refetch()} disabled={isFetching} className={styles.refreshBtn}>
+            <RefreshCw size={12} style={{ animation: isFetching ? 'spin 1s linear infinite' : 'none' }} />
+            Actualizar
+          </button>
+          <div className={styles.exportWrap} ref={exportRef}>
+            <button type="button" className={styles.exportBtn} disabled={csvLoading} onClick={() => setExportOpen(v => !v)}>
+              <Download size={12} />
+              {csvLoading ? 'Exportando…' : 'Exportar'}
+              <ChevronDown size={11} />
+            </button>
+            {exportOpen && (
+              <div className={styles.exportDropdown}>
+                <button type="button" className={styles.exportDropdownItem} onClick={handleCsvExport}>
+                  <Download size={13} /> Exportar CSV
+                </button>
+                <button type="button" className={styles.exportDropdownItem} onClick={handlePdfExport}>
+                  <Download size={13} /> Exportar PDF
+                </button>
+                <button type="button" className={styles.exportDropdownItem} onClick={handleExcelExport}>
+                  <Download size={13} /> Exportar Excel
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
