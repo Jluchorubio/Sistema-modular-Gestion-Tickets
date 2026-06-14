@@ -698,9 +698,15 @@ export function SlaTicketsTab({ moduleId }: Props) {
 
   if (!activePolicy) {
     return (
-      <div style={{ padding: '16px 20px', borderRadius: 12, background: '#fff5f5',
-        border: '1px solid #fecaca', color: '#ef4444', fontSize: 13 }}>
-        Sin política SLA activa. Aplica la migración 007 para crear la política por defecto.
+      <div style={{ padding: '16px 20px', borderRadius: 12, background: '#eff6ff',
+        border: '1px solid #bfdbfe', fontSize: 13, color: '#1d4ed8' }}>
+        <strong>Sin política SLA configurada para este módulo.</strong>
+        <p style={{ margin: '6px 0 0', fontSize: 12, color: '#1e40af', lineHeight: 1.5 }}>
+          El módulo hereda las reglas SLA globales del sistema. Para configurar reglas específicas,
+          aplica la migración <code style={{ background: '#e0f2fe', padding: '1px 5px', borderRadius: 3 }}>007_sla_policies</code>.
+          Mientras tanto, los tickets SLA se calculan con la configuración global en{' '}
+          <a href="/config" style={{ color: '#2563eb', fontWeight: 700 }}>Configuración del Sistema</a>.
+        </p>
       </div>
     );
   }
@@ -712,6 +718,13 @@ export function SlaTicketsTab({ moduleId }: Props) {
     <>
       <CriticalChangeModal {...critical} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* Inheritance banner */}
+        <div style={{ padding: '10px 14px', borderRadius: 8, background: '#f0fdf4',
+          border: '1px solid #bbf7d0', fontSize: 11, color: '#166534', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 700 }}>Política SLA propia del módulo.</span>
+          <span>Las reglas definidas aquí sobreescriben la configuración global para tickets de este módulo.</span>
+        </div>
 
         {/* Policy header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>

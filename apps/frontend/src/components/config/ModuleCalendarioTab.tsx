@@ -96,12 +96,23 @@ export function ModuleCalendarioTab({ moduleId }: Props) {
     queryFn:  () => systemConfigService.getHolidays(moduleId),
     staleTime: 60_000,
   });
+  const { data: globalHours = [] } = useQuery<BusinessHour[]>({
+    queryKey: ['sys-sla-hours-global'],
+    queryFn:  () => systemConfigService.getBusinessHours(),
+    staleTime: 300_000,
+  });
 
   const hourMap = useMemo(() => {
     const m = new Map<number, BusinessHour>();
     (hours as BusinessHour[]).forEach(h => m.set(h.day_of_week, h));
     return m;
   }, [hours]);
+
+  const globalHourMap = useMemo(() => {
+    const m = new Map<number, BusinessHour>();
+    (globalHours as BusinessHour[]).forEach(h => m.set(h.day_of_week, h));
+    return m;
+  }, [globalHours]);
 
   const [editDay, setEditDay] = useState<number | null>(null);
   const [dayForm, setDayForm] = useState({ start_time: '07:00', end_time: '17:00', is_active: true });
@@ -176,7 +187,35 @@ export function ModuleCalendarioTab({ moduleId }: Props) {
                   ? <span style={{ ...s.meta, color: bh.is_active ? '#22c55e' : '#94a3b8' }}>
                       {bh.is_active ? `${bh.start_time.slice(0, 5)} – ${bh.end_time.slice(0, 5)}` : 'Inactivo'}
                     </span>
-                  : <span style={{ ...s.meta, color: '#94a3b8' }}>Hereda global</span>
+                  : (() => {
+                      const gh = globalHourMap.get(dow);
+                      return (
+                        <span style={{ ...s.meta, color: '#94a3b8' }}>
+                          Hereda global
+                          {gh && gh.is_active && (
+                            <span style={{ marginLeft: 6, fontSize: 11, color: '#60a5fa',
+                              background: '#eff6ff', border: '1px solid #bfdbfe',
+                              borderRadius: 4, padding: '1px 6px' }}>
+                              {gh.start_time.slice(0, 5)} – {gh.end_time.slice(0, 5)}
+                            </span>
+                          )}
+                          {gh && !gh.is_active && (
+                            <span style={{ marginLeft: 6, fontSize: 11, color: '#94a3b8',
+                              background: '#f1f5f9', border: '1px solid #e2e8f0',
+                              borderRadius: 4, padding: '1px 6px' }}>
+                              global inactivo
+                            </span>
+                          )}
+                          {!gh && (
+                            <span style={{ marginLeft: 6, fontSize: 11, color: '#f59e0b',
+                              background: '#fffbeb', border: '1px solid #fde68a',
+                              borderRadius: 4, padding: '1px 6px' }}>
+                              sin configurar en global
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })()
               )}
 
               {isEditing ? (
