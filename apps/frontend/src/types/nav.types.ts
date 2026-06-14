@@ -8,6 +8,7 @@ export interface ModuleNavItem {
   permKey?:      string;
   allowedRoles?: string[];
   exact?:        boolean;
+  divider?:      boolean;
 }
 
 export interface ModuleNavConfig {
