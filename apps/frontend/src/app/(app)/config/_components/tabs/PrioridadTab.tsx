@@ -6,7 +6,7 @@ import { Check, AlertTriangle } from 'lucide-react';
 import { systemConfigService }  from '@/services/system-config.service';
 import { useConfigPending }     from '@/stores/configPending.store';
 import { Spinner }              from '@/components/ui/Spinner';
-import type { PriorityFormula, PriorityPreview, SlaRule } from '@/services/system-config.service';
+import type { PriorityFormula, PriorityPreview, SlaRule, UrgencyLevel, ImpactLevel } from '@/services/system-config.service';
 import type { CriticalAuthData } from '@/hooks/useCriticalChange';
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -62,6 +62,23 @@ export function PrioridadTab() {
   const [preview, setPreview] = useState<PriorityPreview | null>(null);
   const debounceRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [uLevels, setULevels] = useState<UrgencyLevel[]>([]);
+  const [iLevels, setILevels] = useState<ImpactLevel[]>([]);
+
+  const { data: urgencyData } = useQuery<UrgencyLevel[]>({
+    queryKey: ['urgency-levels'],
+    queryFn:  systemConfigService.getUrgencyLevels,
+    staleTime: 60_000,
+  });
+  const { data: impactData } = useQuery<ImpactLevel[]>({
+    queryKey: ['impact-levels'],
+    queryFn:  systemConfigService.getImpactLevels,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => { if (urgencyData) setULevels(urgencyData.map(l => ({ ...l }))); }, [urgencyData]);
+  useEffect(() => { if (impactData)  setILevels(impactData.map(l => ({ ...l }))); }, [impactData]);
+
   useEffect(() => {
     if (!formula) return;
     setW({
@@ -105,6 +122,32 @@ export function PrioridadTab() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sim.cargo, sim.nodo, sim.daño, sim.urgency, sim.impact]);
+
+  const urgencyDirty = uLevels.some(l => {
+    const orig = urgencyData?.find(u => u.id === l.id);
+    return orig && (l.bonus !== orig.bonus || l.label !== orig.label);
+  });
+  const impactDirty = iLevels.some(l => {
+    const orig = impactData?.find(u => u.id === l.id);
+    return orig && (l.bonus !== orig.bonus || l.label !== orig.label);
+  });
+  const levelsDirty = urgencyDirty || impactDirty;
+
+  const saveLevelsMut = useMutation({
+    mutationFn: async () => {
+      const up = uLevels
+        .filter(l => { const o = urgencyData?.find(u => u.id === l.id); return o && (l.bonus !== o.bonus || l.label !== o.label); })
+        .map(l => systemConfigService.updateUrgencyLevel(l.id, { bonus: l.bonus, label: l.label }));
+      const ip = iLevels
+        .filter(l => { const o = impactData?.find(u => u.id === l.id); return o && (l.bonus !== o.bonus || l.label !== o.label); })
+        .map(l => systemConfigService.updateImpactLevel(l.id, { bonus: l.bonus, label: l.label }));
+      await Promise.all([...up, ...ip]);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['urgency-levels'] });
+      qc.invalidateQueries({ queryKey: ['impact-levels'] });
+    },
+  });
 
   const { data: slaRules = [] } = useQuery<SlaRule[]>({
     queryKey: ['sys-sla-rules'],
@@ -228,6 +271,64 @@ export function PrioridadTab() {
         </div>
       </div>
 
+      {/* ── Urgency & Impact bonuses ── */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+          Bonos de urgencia e impacto
+        </div>
+        <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16 }}>
+          Valor sumado al score base. Determina cuánto peso tiene urgencia e impacto en el cálculo final.
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {/* Urgencia */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 }}>Urgencia</div>
+            {uLevels.map((lvl, i) => (
+              <div key={lvl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', flex: 1, minWidth: 0 }}>{lvl.label}</span>
+                <button onClick={() => setULevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.max(0, +(l.bonus - 0.5).toFixed(1)) } : l))}
+                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                <input type="number" min={0} max={10} step={0.5} value={lvl.bonus}
+                  onChange={e => setULevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.min(10, Math.max(0, +e.target.value)) } : l))}
+                  style={{ width: 56, textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontWeight: 700, padding: '3px 4px', fontFamily: 'inherit' }} />
+                <button onClick={() => setULevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.min(10, +(l.bonus + 0.5).toFixed(1)) } : l))}
+                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+              </div>
+            ))}
+          </div>
+
+          {/* Impacto */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 }}>Impacto</div>
+            {iLevels.map((lvl, i) => (
+              <div key={lvl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', flex: 1, minWidth: 0 }}>{lvl.label}</span>
+                <button onClick={() => setILevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.max(0, +(l.bonus - 0.5).toFixed(1)) } : l))}
+                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                <input type="number" min={0} max={10} step={0.5} value={lvl.bonus}
+                  onChange={e => setILevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.min(10, Math.max(0, +e.target.value)) } : l))}
+                  style={{ width: 56, textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontWeight: 700, padding: '3px 4px', fontFamily: 'inherit' }} />
+                <button onClick={() => setILevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.min(10, +(l.bonus + 0.5).toFixed(1)) } : l))}
+                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {levelsDirty && (
+          <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              disabled={saveLevelsMut.isPending}
+              onClick={() => saveLevelsMut.mutate()}
+              style={{ padding: '7px 18px', background: saveLevelsMut.isSuccess ? '#22c55e' : '#ff5e3a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, opacity: saveLevelsMut.isPending ? 0.6 : 1 }}>
+              <Check size={12} /> {saveLevelsMut.isPending ? 'Guardando…' : saveLevelsMut.isSuccess ? 'Guardado ✓' : 'Guardar bonos'}
+            </button>
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>Sin verificación 2FA — los cambios aplican inmediatamente al motor.</span>
+          </div>
+        )}
+      </div>
+
       {/* ── Save ── */}
       <div style={{ marginBottom: 24 }}>
         <button
@@ -293,21 +394,19 @@ export function PrioridadTab() {
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Urgencia del caso</div>
             <select value={sim.urgency} onChange={e => setSim(p => ({ ...p, urgency: e.target.value }))}
-              style={{ ...tInput, width: 130, textAlign: 'left' }}>
-              <option value="urgente">Urgente (+1.5)</option>
-              <option value="alta">Alta (+1.0)</option>
-              <option value="media">Media (+0.5)</option>
-              <option value="baja">Baja (+0)</option>
+              style={{ ...tInput, width: 150, textAlign: 'left' }}>
+              {(uLevels.length ? uLevels : urgencyData ?? []).map(l => (
+                <option key={l.slug} value={l.slug}>{l.label} (+{l.bonus})</option>
+              ))}
             </select>
           </div>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Impacto operativo</div>
             <select value={sim.impact} onChange={e => setSim(p => ({ ...p, impact: e.target.value }))}
-              style={{ ...tInput, width: 130, textAlign: 'left' }}>
-              <option value="critico">Crítico (+1.5)</option>
-              <option value="alto">Alto (+1.0)</option>
-              <option value="medio">Medio (+0.5)</option>
-              <option value="bajo">Bajo (+0)</option>
+              style={{ ...tInput, width: 150, textAlign: 'left' }}>
+              {(iLevels.length ? iLevels : impactData ?? []).map(l => (
+                <option key={l.slug} value={l.slug}>{l.label} (+{l.bonus})</option>
+              ))}
             </select>
           </div>
         </div>
