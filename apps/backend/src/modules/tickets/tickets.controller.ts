@@ -414,6 +414,17 @@ export class TicketsController {
     });
   }
 
+  @Get('knowledge/deleted')
+  @RequirePermission('helpdesk:tickets:view')
+  getDeletedKnowledge(
+    @Req() req: RequestWithUser,
+    @Query('module_id') moduleId: string,
+  ) {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!moduleId || !UUID_RE.test(moduleId)) return { articles: [], posts: [] };
+    return this.knowledge.getDeleted(moduleId, req.user.sub);
+  }
+
   @Get('knowledge/:id')
   @RequirePermission('helpdesk:tickets:view')
   getKnowledgeArticle(@Param('id', ParseUUIDPipe) id: string) {
@@ -442,8 +453,31 @@ export class TicketsController {
   @Delete('knowledge/:id')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:edit')
-  deleteKnowledgeArticle(@Param('id', ParseUUIDPipe) id: string) {
+  deleteKnowledgeArticle(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.knowledge.deleteArticle(id);
+  }
+
+  @Post('knowledge/:id/restore')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  restoreKnowledgeArticle(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.knowledge.restoreArticle(id, req.user.sub);
+  }
+
+  @Delete('knowledge/:id/permanent')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:edit')
+  permanentDeleteKnowledgeArticle(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.knowledge.permanentDeleteArticle(id, req.user.sub);
   }
 
   @Post('knowledge/:id/vote')
@@ -514,6 +548,26 @@ export class TicketsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.knowledge.deletePost(req.user.sub, id);
+  }
+
+  @Post('knowledge-posts/:id/restore')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  restoreKnowledgePost(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.knowledge.restorePost(id, req.user.sub);
+  }
+
+  @Delete('knowledge-posts/:id/permanent')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  permanentDeleteKnowledgePost(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.knowledge.permanentDeletePost(id, req.user.sub);
   }
 
   @Delete('knowledge-posts/:postId/replies/:replyId')

@@ -58,6 +58,20 @@ export interface Article {
   ticket_id: string | null;
 }
 
+export interface DeletedItem {
+  type: 'article' | 'post';
+  id: string;
+  title: string;
+  doc_type: string | null;
+  file_mime: string | null;
+  created_by: string;
+  author_name: string;
+  author_avatar: string | null;
+  deleted_at: string;
+  scheduled_hard_delete_at: string | null;
+  days_remaining: number;
+}
+
 export const forumService = {
   getPosts: (moduleId: string, q?: string, filter?: string) =>
     api.get('/tickets/knowledge-posts', { params: { module_id: moduleId, ...(q ? { q } : {}), ...(filter ? { filter } : {}) } })
@@ -74,6 +88,12 @@ export const forumService = {
 
   deletePost: (id: string) =>
     api.delete(`/tickets/knowledge-posts/${id}`).then((r: any) => r.data),
+
+  restorePost: (id: string) =>
+    api.post(`/tickets/knowledge-posts/${id}/restore`).then((r: any) => r.data),
+
+  permanentDeletePost: (id: string) =>
+    api.delete(`/tickets/knowledge-posts/${id}/permanent`).then((r: any) => r.data),
 
   createReply: (postId: string, content: string) =>
     api.post(`/tickets/knowledge-posts/${postId}/replies`, { content }).then((r: any) => r.data),
@@ -109,6 +129,16 @@ export const docsService = {
 
   deleteArticle: (id: string) =>
     api.delete(`/tickets/knowledge/${id}`).then((r: any) => r.data),
+
+  restoreArticle: (id: string) =>
+    api.post(`/tickets/knowledge/${id}/restore`).then((r: any) => r.data),
+
+  permanentDeleteArticle: (id: string) =>
+    api.delete(`/tickets/knowledge/${id}/permanent`).then((r: any) => r.data),
+
+  getDeleted: (moduleId: string) =>
+    api.get('/tickets/knowledge/deleted', { params: { module_id: moduleId } })
+      .then((r: any) => r.data as { articles: DeletedItem[]; posts: DeletedItem[] }),
 
   voteArticle: (id: string, value: 1 | -1) =>
     api.post(`/tickets/knowledge/${id}/vote`, { value }).then((r: any) => r.data),
