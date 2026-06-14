@@ -60,6 +60,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   const [selectedImg,      setSelectedImg]      = useState(0);
   const [cropPending,      setCropPending]      = useState<{ file: File; source: "file" | "camera" } | null>(null);
   const [showCamera,       setShowCamera]       = useState(false);
+  const [confirmDeleteImgId, setConfirmDeleteImgId] = useState<string | null>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -165,7 +166,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     mutationFn: (imageId: string) => inventoryService.deleteAssetImage(assetId, imageId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["asset-images", assetId] }); inv();
-      if (images.length <= 1) setLightboxIdx(null);
+      setLightboxIdx(null);
     },
     onError: (e: any) => setActionErr(e?.response?.data?.message ?? "Error al eliminar imagen"),
   });
@@ -208,6 +209,13 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     const id = setInterval(() => setSelectedImg(i => (i + 1) % images.length), 4000);
     return () => clearInterval(id);
   }, [images.length, editing, lightboxIdx]);
+
+  useEffect(() => {
+    if (!confirmDeleteImgId) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setConfirmDeleteImgId(null); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmDeleteImgId]);
 
   /* ── Loading / not found ── */
   if (isLoading) return (
@@ -272,12 +280,6 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                       style={{ width: 56, height: 56, borderRadius: 7, overflow: "hidden", border: `2px solid ${idx === safeIdx ? C.coral : C.border}`, background: "#fff", cursor: "pointer", padding: 2, display: "block", transition: "border-color .15s" }}>
                       <img src={img.storage_url} alt={img.file_name} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
                     </button>
-                    {editing && canEdit && (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); deleteImgMut.mutate(img.id); }} disabled={deleteImgMut.isPending && deleteImgMut.variables === img.id}
-                        style={{ position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: 5, background: "#ef4444", border: "1.5px solid #fff", cursor: "pointer", display: "grid", placeItems: "center", color: "#fff", zIndex: 1, padding: 0 }}>
-                        <X size={10} />
-                      </button>
-                    )}
                   </div>
                 ))}
               </div>
@@ -286,9 +288,9 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             {images.length === 1 && editing && canEdit && (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", background: C.bg, borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
                 <p style={{ fontSize: 10, color: C.muted, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "60%" }}>{images[0].file_name}</p>
-                <button type="button" onClick={() => deleteImgMut.mutate(images[0].id)} disabled={deleteImgMut.isPending}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 6, background: "#fef2f2", border: "1px solid #fecaca", cursor: "pointer", color: "#ef4444", fontSize: 10, fontWeight: 700, fontFamily: "inherit", opacity: deleteImgMut.isPending ? 0.5 : 1 }}>
-                  <Trash2 size={11} /> {deleteImgMut.isPending ? "…" : "Eliminar"}
+                <button type="button" onClick={() => setConfirmDeleteImgId(images[0].id)}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 6, background: "#fef2f2", border: "1px solid #fecaca", cursor: "pointer", color: "#ef4444", fontSize: 10, fontWeight: 700, fontFamily: "inherit" }}>
+                  <Trash2 size={11} /> Eliminar
                 </button>
               </div>
             )}
@@ -702,10 +704,37 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
         <CropModal file={cropPending.file} source={cropPending.source} onConfirm={handleCropConfirm} onCancel={() => setCropPending(null)} />
       )}
       {lightboxIdx !== null && images.length > 0 && (
-        <ImageLightbox images={images} initialIdx={lightboxIdx} onClose={() => setLightboxIdx(null)} canEdit={canEdit} onDelete={(id) => deleteImgMut.mutate(id)} deletePending={deleteImgMut.isPending} />
+        <ImageLightbox images={images} initialIdx={lightboxIdx} onClose={() => setLightboxIdx(null)} canEdit={canEdit && editing} onDelete={(id) => setConfirmDeleteImgId(id)} deletePending={deleteImgMut.isPending} />
       )}
       {showQr && (
         <QrModal assetId={assetId} assetName={asset.name} onClose={() => setShowQr(false)} />
+      )}
+      {confirmDeleteImgId && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => setConfirmDeleteImgId(null)}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: "28px 28px 24px", width: 340, boxShadow: "0 8px 40px rgba(0,0,0,.22)" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: "#fef2f2", border: "1.5px solid #fecaca", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <Trash2 size={17} style={{ color: "#ef4444" }} />
+              </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 800, color: "#0e2235", margin: "0 0 2px" }}>¿Eliminar imagen?</p>
+                <p style={{ fontSize: 11, color: "#94a3b8", margin: 0 }}>Esta acción no se puede deshacer.</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button type="button" onClick={() => setConfirmDeleteImgId(null)}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 12, fontWeight: 700, color: "#0e2235", cursor: "pointer", fontFamily: "inherit" }}>
+                Cancelar
+              </button>
+              <button type="button" disabled={deleteImgMut.isPending} onClick={() => { deleteImgMut.mutate(confirmDeleteImgId); setConfirmDeleteImgId(null); }}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ef4444", fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", opacity: deleteImgMut.isPending ? 0.6 : 1 }}>
+                {deleteImgMut.isPending ? "Eliminando…" : "Sí, eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </ModuleLayout>
   );

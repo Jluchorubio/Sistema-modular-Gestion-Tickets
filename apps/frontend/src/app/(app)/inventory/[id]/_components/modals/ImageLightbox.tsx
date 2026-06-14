@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { X, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Maximize2, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { type AssetImage } from "@/services/inventory.service";
 import { C } from "../_shared";
 
@@ -79,6 +79,12 @@ export function ImageLightbox({
           {zoom !== 1 && <p style={{ fontSize: 11, color: C.coral, margin: 0, fontWeight: 700 }}>{Math.round(zoom * 100)}%</p>}
         </div>
         <div style={{ display: "flex", gap: 7 }}>
+          {canEdit && (
+            <button type="button" disabled={deletePending} onClick={(e) => { e.stopPropagation(); onDelete(current.id); }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 14px", height: 36, borderRadius: 8, background: "rgba(239,68,68,.18)", border: "1px solid rgba(239,68,68,.35)", cursor: "pointer", color: "#fca5a5", fontSize: 11, fontWeight: 700, fontFamily: "inherit", opacity: deletePending ? 0.5 : 1, whiteSpace: "nowrap" }}>
+              <Trash2 size={13} /> Eliminar imagen
+            </button>
+          )}
           <button type="button" onClick={(e) => { e.stopPropagation(); toggleFs(); }} style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,.12)", border: "none", cursor: "pointer", display: "grid", placeItems: "center", color: "#fff" }}>
             <Maximize2 size={16} />
           </button>
