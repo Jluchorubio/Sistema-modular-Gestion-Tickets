@@ -346,6 +346,24 @@ export const usersService = {
     return data;
   },
 
+  async getDashboardOps(): Promise<{
+    urgent_tickets:    number;
+    sla_breached:      number;
+    sla_at_risk:       number;
+    pending_approvals: number;
+    recent_tickets: {
+      id: string; title: string; priority: string; created_at: string;
+      state_label: string; state_color: string | null; created_by_name: string;
+    }[];
+    recent_requests: {
+      id: string; title: string; status: string; priority: string;
+      created_at: string; requester_name: string;
+    }[];
+  }> {
+    const { data } = await api.get('/users/dashboard-ops');
+    return data;
+  },
+
   async bulkAssignToModule(
     moduleId: string,
     userIds: string[],

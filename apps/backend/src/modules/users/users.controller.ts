@@ -215,6 +215,12 @@ export class UsersController {
     return this.roleService.getSystemStats();
   }
 
+  @Get('dashboard-ops')
+  @ApiOperation({ summary: 'KPIs operativos del dashboard — tickets urgentes, SLA, solicitudes, actividad reciente.' })
+  getDashboardOps() {
+    return this.roleService.getDashboardOps();
+  }
+
   // ─── Roles globales ──────────────────────────────────────────────────────────
 
   @Get('global-roles')

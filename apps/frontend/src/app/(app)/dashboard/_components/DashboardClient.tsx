@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { ModuleFormModal } from '@/components/modules/ModuleFormModal';
 import type { SystemModule } from '@/types/module.types';
 import { DashboardStats } from './DashboardStats';
+import { DashboardOpsPanel } from './DashboardOpsPanel';
 import { ModulesGrid } from './ModulesGrid';
 import { DeleteModuleModal } from './DeleteModuleModal';
 import { MaintenanceModal } from './MaintenanceModal';
@@ -94,6 +95,13 @@ export function DashboardClient() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: opsData } = useQuery({
+    queryKey:  ['dashboard-ops'],
+    queryFn:   () => usersService.getDashboardOps(),
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+  });
+
   /* ── Search ── */
   const [search, setSearch] = useState('');
   const [moduleView, setModuleView] = useState<'card' | 'list' | 'summary'>('card');
@@ -171,6 +179,8 @@ export function DashboardClient() {
         </div>
 
         {isSuperadmin && sysStats && <DashboardStats stats={sysStats} />}
+
+        {opsData && <DashboardOpsPanel ops={opsData} />}
 
         <ModulesGrid
           builtins={{ helpdesk: filteredHelpdesk, inventory: filteredInventory, gestion: filteredGestion }}
