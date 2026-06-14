@@ -1,4 +1,4 @@
-import { Home, UserCog, ShieldCheck, BarChart2, Settings2, FileText, Trash2 } from 'lucide-react';
+import { Home, UserCog, ShieldCheck, BarChart2, Settings2, FileText } from 'lucide-react';
 import type { ModuleNavItem } from '@/types/nav.types';
 
 export const INVENTORY_MODULE_NAME = 'Inventario';
@@ -16,6 +16,5 @@ export const INVENTORY_NAV: ModuleNavItem[] = [
   { key: 'roles',   label: 'Roles',        Icon: ShieldCheck,  href: '/inventory/roles'   },
   { key: 'requests', label: 'Solicitudes',   Icon: FileText,  href: '/inventory/requests' },
   { key: 'reports',  label: 'Reportes',     Icon: BarChart2, href: '/inventory/reports'  },
-  { key: 'config',   label: 'Configuración', Icon: Settings2, href: '/inventory/config',  allowedRoles: ['admin_modulo']                },
-  { key: 'trash',    label: 'Papelera',      Icon: Trash2,    href: '/inventory/trash',   allowedRoles: ['admin_modulo'], divider: true },
+  { key: 'config',   label: 'Configuración',Icon: Settings2, href: '/inventory/config'   },
 ];
