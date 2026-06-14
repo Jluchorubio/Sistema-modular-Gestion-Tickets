@@ -359,11 +359,19 @@ export class KnowledgeService {
   /* ── Eliminados (soft-deleted content) ────────────────────────────────────── */
 
   async getDeleted(moduleId: string, userId: string) {
-    const [actor] = await this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]);
-    const isSuperadmin = actor?.is_superadmin ?? false;
-    const params: any[] = isSuperadmin ? [moduleId] : [moduleId, userId];
-    const articleOwner = isSuperadmin ? '' : 'AND a.created_by = $2';
-    const postOwner    = isSuperadmin ? '' : 'AND kp.created_by = $2';
+    const [[actor], [adminRole]] = await Promise.all([
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+      this.db.query<any[]>(
+        `SELECT 1 FROM modules.user_module_roles umr
+         JOIN modules.module_roles mr ON mr.id = umr.role_id
+         WHERE umr.user_id = $1 AND umr.module_id = $2 AND mr.name = 'admin_modulo' AND umr.is_active = true`,
+        [userId, moduleId],
+      ),
+    ]);
+    const canSeeAll = (actor?.is_superadmin ?? false) || !!adminRole;
+    const params: any[] = canSeeAll ? [moduleId] : [moduleId, userId];
+    const articleOwner = canSeeAll ? '' : 'AND a.created_by = $2';
+    const postOwner    = canSeeAll ? '' : 'AND kp.created_by = $2';
     const articles = await this.db.query<any[]>(
       `SELECT 'article'::text AS type,
               a.id, a.title, a.doc_type, a.file_mime,
