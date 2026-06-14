@@ -48,6 +48,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   const moduleId = inventoryId ?? "";
 
   /* ── UI state ── */
+  const [detailTab,        setDetailTab]        = useState<'detalles' | 'historial' | 'tickets'>('detalles');
   const [showQr,           setShowQr]           = useState(false);
   const [editing,          setEditing]          = useState(false);
   const [actionErr,        setActionErr]        = useState("");
@@ -434,8 +435,32 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
           </div>
         </div>
 
-        {/* Specs */}
-        {fieldSchema.length > 0 && (
+        {/* Tab bar */}
+        {!editing && (
+          <div style={{ display: 'flex', gap: 0, borderTop: `1px solid ${C.border}`, background: '#f8fafc' }}>
+            {(['detalles', 'historial', 'tickets'] as const).map(t => {
+              const labels: Record<string, string> = {
+                detalles:  'Detalles',
+                historial: `Historial${history.length > 0 ? ` (${history.length})` : ''}`,
+                tickets:   `Tickets${asset.tickets_count > 0 ? ` (${asset.tickets_count})` : ''}`,
+              };
+              const active = detailTab === t;
+              return (
+                <button key={t} type="button" onClick={() => setDetailTab(t)} style={{
+                  padding: '11px 22px', border: 'none', background: active ? '#fff' : 'transparent',
+                  borderBottom: active ? '2px solid #ff5e3a' : '2px solid transparent',
+                  fontSize: 12, fontWeight: 700, color: active ? '#ff5e3a' : '#94a3b8',
+                  cursor: 'pointer', fontFamily: 'inherit', transition: 'color .15s, border-color .15s',
+                }}>
+                  {labels[t]}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Specs — Detalles tab */}
+        {detailTab === 'detalles' && fieldSchema.length > 0 && (
           <div style={{ padding: "26px 36px", borderTop: `1px solid ${C.border}` }}>
             <SectionHeader label="Ficha técnica" />
             {editing ? (
@@ -478,8 +503,8 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
           </div>
         )}
 
-        {/* Responsable | Relaciones */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: `1px solid ${C.border}` }}>
+        {/* Responsable | Relaciones — Detalles tab */}
+        {detailTab === 'detalles' && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: `1px solid ${C.border}` }}>
           <div style={{ padding: "26px 36px", borderRight: `1px solid ${C.border}` }}>
             <SectionHeader label="Responsable / Custodia" />
             {assignments.length === 0 ? (
@@ -588,24 +613,17 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
               <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>Sin componentes asociados.</p>
             )}
           </div>
-        </div>
+        </div>}
 
-        {/* Tickets | Historial */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: `1px solid ${C.border}` }}>
-          <div style={{ padding: "26px 36px", borderRight: `1px solid ${C.border}` }}>
-            <SectionHeader
-              label={`Tickets asociados${asset.tickets_count > 0 ? ` (${asset.tickets_count})` : ""}`}
-              action={asset.tickets_count > 0 ? (
-                <button type="button" onClick={() => router.push(`/inventory/${assetId}/tickets`)} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, color: C.coral, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
-                  Ver todos <ChevronRight size={13} />
-                </button>
-              ) : null}
-            />
+        {/* Tickets tab — full list */}
+        {detailTab === 'tickets' && (
+          <div style={{ padding: "26px 36px", borderTop: `1px solid ${C.border}` }}>
+            <SectionHeader label={`Tickets asociados${asset.tickets_count > 0 ? ` (${asset.tickets_count})` : ""}`} action={null} />
             {assetTickets.length === 0 ? (
               <EmptyState icon={<CheckCircle2 size={24} />} text="Sin tickets asociados a este activo." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                {assetTickets.slice(0, 3).map((ticket) => {
+                {assetTickets.map((ticket) => {
                   const pColor = PRIORITY_COLORS[ticket.priority] ?? C.muted;
                   return (
                     <div key={ticket.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
@@ -622,32 +640,23 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                     </div>
                   );
                 })}
-                {asset.tickets_count > 3 && (
-                  <button type="button" onClick={() => router.push(`/inventory/${assetId}/tickets`)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.coral}30`, background: `${C.coral}06`, color: C.coral, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                    Ver todos los tickets ({asset.tickets_count}) <ChevronRight size={13} />
-                  </button>
-                )}
               </div>
             )}
           </div>
+        )}
 
-          <div style={{ padding: "26px 36px" }}>
-            <SectionHeader
-              label="Auditoría reciente"
-              action={history.length > 0 ? (
-                <button type="button" onClick={() => router.push(`/inventory/${assetId}/history`)} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, color: C.coral, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
-                  Ver historial <ChevronRight size={13} />
-                </button>
-              ) : null}
-            />
+        {/* Historial tab — full timeline */}
+        {detailTab === 'historial' && (
+          <div style={{ padding: "26px 36px", borderTop: `1px solid ${C.border}` }}>
+            <SectionHeader label={`Auditoría del activo${history.length > 0 ? ` (${history.length})` : ""}`} action={null} />
             {history.length === 0 ? (
               <EmptyState icon={<Clock size={24} />} text="Sin eventos registrados." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {history.slice(0, 3).map((h, i) => {
-                  const color = ASSET_ACTION_COLORS[h.action] ?? C.muted;
-                  const label = ASSET_ACTION_LABELS[h.action] ?? h.action;
-                  const isLast = i === Math.min(history.length - 1, 2);
+                {history.map((h, i) => {
+                  const color  = ASSET_ACTION_COLORS[h.action] ?? C.muted;
+                  const label  = ASSET_ACTION_LABELS[h.action] ?? h.action;
+                  const isLast = i === history.length - 1;
                   return (
                     <div key={h.id} style={{ display: "flex", gap: 14, paddingBottom: isLast ? 0 : 16, position: "relative" }}>
                       {!isLast && <div style={{ position: "absolute", left: 12, top: 24, width: 2, height: "calc(100% - 6px)", background: C.border }} />}
@@ -664,15 +673,11 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                     </div>
                   );
                 })}
-                {history.length > 3 && (
-                  <button type="button" onClick={() => router.push(`/inventory/${assetId}/history`)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.coral}30`, background: `${C.coral}06`, color: C.coral, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 14 }}>
-                    Ver historial completo <ChevronRight size={13} />
-                  </button>
-                )}
               </div>
             )}
           </div>
-        </div>
+        )}
+
       </div>
 
       {/* ── Modals ── */}
