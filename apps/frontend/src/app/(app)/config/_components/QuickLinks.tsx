@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, Shield, Users, Zap, CheckCircle2, AlertTriangle, Trash2 } from 'lucide-react';
+import { ExternalLink, Shield, Users, Zap, CheckCircle2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 const LINKS = [
@@ -9,7 +9,6 @@ const LINKS = [
   { href: '/helpdesk/config',  Icon: Zap,          label: 'Config Helpdesk',     desc: 'SLA tickets, tipos de daño, sedes y calendario del módulo'         },
   { href: '/inventory/config', Icon: CheckCircle2, label: 'Config Inventario',   desc: 'Categorías de activos, sedes, SLA y calendario del módulo'         },
   { href: '/requests/config',  Icon: AlertTriangle, label: 'Config Solicitudes', desc: 'SLA solicitudes, tipos de solicitud, calendario del módulo'        },
-  { href: '/trash',            Icon: Trash2,        label: 'Papelera Global',    desc: 'Elementos eliminados — restaurar o borrar definitivamente'           },
 ];
 
 export function QuickLinks() {
