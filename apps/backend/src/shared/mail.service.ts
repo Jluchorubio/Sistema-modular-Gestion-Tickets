@@ -40,7 +40,7 @@ export class MailService {
       return;
     }
     const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({ from: 'onboarding@resend.dev', to, subject, html });
+    const { error } = await resend.emails.send({ from: `"${appName}" <${from}>`, to, subject, html });
     if (error) this.logger.error(`Resend error: ${error.message}`);
     else       this.logger.log(`Email enviado via Resend a ${to}`);
   }

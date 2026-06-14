@@ -375,14 +375,20 @@ export class SystemConfigService {
 
   /* ── Damage types (lectura pública, filtrable por category_id) ────── */
 
-  async getDamageTypesAdmin() {
+  async getDamageTypesAdmin(moduleId?: string) {
+    const where = moduleId
+      ? `WHERE (dt.module_id IS NULL OR dt.module_id = $1)`
+      : `WHERE dt.module_id IS NULL`;
+    const params = moduleId ? [moduleId] : [];
     return this.db.query<any[]>(
       `SELECT dt.id, dt.category_id, tc.slug AS category_slug, tc.label AS category_label,
-              dt.slug, dt.label, dt.description,
+              dt.slug, dt.label, dt.description, dt.module_id,
               dt.default_priority, dt.weight, dt.allow_freetext, dt.is_other, dt.is_active, dt.sort_order
        FROM tickets.damage_types dt
        JOIN config.ticket_categories tc ON tc.id = dt.category_id
+       ${where}
        ORDER BY tc.sort_order, dt.sort_order`,
+      params,
     );
   }
 
@@ -392,31 +398,43 @@ export class SystemConfigService {
       .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     const [row] = await this.db.query<any[]>(
       `INSERT INTO tickets.damage_types
-         (category_id, slug, label, description, default_priority, weight, sort_order, is_active)
+         (category_id, slug, label, description, default_priority, weight, sort_order, is_active, module_id)
        VALUES ($1, $2, $3, $4, $5, $6,
          COALESCE($7, (SELECT COALESCE(MAX(sort_order), 0) + 10
                        FROM tickets.damage_types WHERE category_id = $1)),
-         TRUE)
+         TRUE, $8)
        RETURNING *`,
       [dto.category_id, slug, dto.label.trim(), dto.description ?? null,
-       dto.default_priority, dto.weight, dto.sort_order ?? null],
+       dto.default_priority, dto.weight, dto.sort_order ?? null, dto.module_id ?? null],
     );
     await this.cache.delByPrefix('sys:damage-types:');
     return row;
   }
 
-  async getDamageTypes(categoryId?: string) {
-    const key = `sys:damage-types:${categoryId ?? 'all'}`;
+  async getDamageTypes(categoryId?: string, moduleId?: string) {
+    const key = `sys:damage-types:${categoryId ?? 'all'}:${moduleId ?? 'global'}`;
     return this.cache.wrap(key, TTL.DAMAGE_TYPES, () => {
-      const where  = categoryId ? `AND dt.category_id = $1` : '';
-      const params = categoryId ? [categoryId] : [];
+      const conditions: string[] = ['dt.is_active = TRUE'];
+      const params: any[] = [];
+      let idx = 1;
+
+      if (categoryId) {
+        conditions.push(`dt.category_id = $${idx++}`);
+        params.push(categoryId);
+      }
+      if (moduleId) {
+        conditions.push(`(dt.module_id IS NULL OR dt.module_id = $${idx++})`);
+        params.push(moduleId);
+      }
+
+      const where = `WHERE ${conditions.join(' AND ')}`;
       return this.db.query<any[]>(
         `SELECT dt.id, dt.category_id, tc.slug AS category_slug, tc.label AS category_label,
-                dt.slug, dt.label, dt.description,
+                dt.slug, dt.label, dt.description, dt.module_id,
                 dt.default_priority, dt.weight, dt.allow_freetext, dt.is_other, dt.sort_order
          FROM tickets.damage_types dt
          JOIN config.ticket_categories tc ON tc.id = dt.category_id
-         WHERE dt.is_active = TRUE ${where}
+         ${where}
          ORDER BY tc.sort_order, dt.sort_order`,
         params,
       );
@@ -425,7 +443,7 @@ export class SystemConfigService {
 
   async getDamageTypeById(id: string) {
     const [row] = await this.db.query<any[]>(
-      `SELECT id, slug, label, weight, is_active FROM tickets.damage_types WHERE id = $1`,
+      `SELECT id, slug, label, weight, is_active, module_id FROM tickets.damage_types WHERE id = $1`,
       [id],
     );
     return row ?? null;
@@ -933,10 +951,15 @@ export class SystemConfigService {
     urgency?:   string;
     impact?:    string;
   }) {
-    const URGENCY: Record<string, number> = { urgente: 1.5, alta: 1.0, media: 0.5, baja: 0 };
-    const IMPACT:  Record<string, number> = { critico: 1.5, alto: 1.0, medio: 0.5, bajo: 0 };
+    const [formula, urgencies, impacts] = await Promise.all([
+      this.getPriorityFormula(),
+      this.getUrgencyLevels(),
+      this.getImpactLevels(),
+    ]);
 
-    const formula = await this.getPriorityFormula();
+    const urgencyMap: Record<string, number> = Object.fromEntries(urgencies.map((r: any) => [r.slug, +r.bonus]));
+    const impactMap:  Record<string, number> = Object.fromEntries(impacts.map((r: any) => [r.slug, +r.bonus]));
+
     const w_cargo = formula?.w_cargo ?? 0.25;
     const w_nodo  = formula?.w_nodo  ?? 0.35;
     const w_daño  = formula?.w_daño  ?? 0.40;
@@ -944,8 +967,8 @@ export class SystemConfigService {
     const t_a = formula?.threshold_alta    ?? 7;
     const t_m = formula?.threshold_media   ?? 5;
 
-    const ub = URGENCY[dto.urgency ?? 'media'] ?? 0.5;
-    const ib = IMPACT [dto.impact  ?? 'medio'] ?? 0.5;
+    const ub = urgencyMap[dto.urgency ?? 'media'] ?? 0.5;
+    const ib = impactMap [dto.impact  ?? 'medio'] ?? 0.5;
 
     const base  = dto.peso_cargo * w_cargo + dto.peso_nodo * w_nodo + dto.peso_daño * w_daño;
     const score = base + ub + ib;
@@ -958,6 +981,85 @@ export class SystemConfigService {
       urgency_bonus: ub,
       impact_bonus:  ib,
     };
+  }
+
+  /* ── Priority / Urgency / Impact levels (configurables) ─────────────────── */
+
+  async getPriorityLevels() {
+    return this.db.query<any[]>(
+      `SELECT id, slug, label, sort_order, is_active
+       FROM config.priority_levels
+       ORDER BY sort_order, created_at`,
+    );
+  }
+
+  async updatePriorityLevel(id: string, dto: { label?: string; sort_order?: number; is_active?: boolean }) {
+    const fields: string[] = [];
+    const values: any[]   = [];
+    let idx = 1;
+    if (dto.label      !== undefined) { fields.push(`label = $${idx++}`);      values.push(dto.label); }
+    if (dto.sort_order !== undefined) { fields.push(`sort_order = $${idx++}`); values.push(dto.sort_order); }
+    if (dto.is_active  !== undefined) { fields.push(`is_active = $${idx++}`);  values.push(dto.is_active); }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    const [row] = await this.db.query<any[]>(
+      `UPDATE config.priority_levels SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, values,
+    );
+    if (!row) throw new NotFoundException(`Nivel de prioridad ${id} no encontrado`);
+    return row;
+  }
+
+  async getUrgencyLevels() {
+    return this.db.query<any[]>(
+      `SELECT id, slug, label, bonus, sort_order, is_active
+       FROM config.urgency_levels
+       ORDER BY sort_order, created_at`,
+    );
+  }
+
+  async updateUrgencyLevel(id: string, dto: { label?: string; bonus?: number; sort_order?: number; is_active?: boolean }) {
+    const fields: string[] = [];
+    const values: any[]   = [];
+    let idx = 1;
+    if (dto.label      !== undefined) { fields.push(`label = $${idx++}`);      values.push(dto.label); }
+    if (dto.bonus      !== undefined) { fields.push(`bonus = $${idx++}`);      values.push(dto.bonus); }
+    if (dto.sort_order !== undefined) { fields.push(`sort_order = $${idx++}`); values.push(dto.sort_order); }
+    if (dto.is_active  !== undefined) { fields.push(`is_active = $${idx++}`);  values.push(dto.is_active); }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    const [row] = await this.db.query<any[]>(
+      `UPDATE config.urgency_levels SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, values,
+    );
+    if (!row) throw new NotFoundException(`Nivel de urgencia ${id} no encontrado`);
+    return row;
+  }
+
+  async getImpactLevels() {
+    return this.db.query<any[]>(
+      `SELECT id, slug, label, bonus, sort_order, is_active
+       FROM config.impact_levels
+       ORDER BY sort_order, created_at`,
+    );
+  }
+
+  async updateImpactLevel(id: string, dto: { label?: string; bonus?: number; sort_order?: number; is_active?: boolean }) {
+    const fields: string[] = [];
+    const values: any[]   = [];
+    let idx = 1;
+    if (dto.label      !== undefined) { fields.push(`label = $${idx++}`);      values.push(dto.label); }
+    if (dto.bonus      !== undefined) { fields.push(`bonus = $${idx++}`);      values.push(dto.bonus); }
+    if (dto.sort_order !== undefined) { fields.push(`sort_order = $${idx++}`); values.push(dto.sort_order); }
+    if (dto.is_active  !== undefined) { fields.push(`is_active = $${idx++}`);  values.push(dto.is_active); }
+    if (!fields.length) throw new BadRequestException('Nada que actualizar');
+    fields.push(`updated_at = now()`);
+    values.push(id);
+    const [row] = await this.db.query<any[]>(
+      `UPDATE config.impact_levels SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, values,
+    );
+    if (!row) throw new NotFoundException(`Nivel de impacto ${id} no encontrado`);
+    return row;
   }
 
   /* ── Datos públicos de empresa (accesible a todos los usuarios autenticados) */

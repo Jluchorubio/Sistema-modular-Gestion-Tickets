@@ -81,12 +81,18 @@ services:
       BACKEND_URL: ${BACKEND_URL:-https://nexo.proyectoscampus.top/api/v1}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-https://nexo.proyectoscampus.top/api/v1/auth/google/callback}
       STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
-      # S3 / R2 (descomentar cuando STORAGE_DRIVER=s3):
-      # R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
-      # R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
-      # R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
-      # R2_BUCKET_NAME: ${R2_BUCKET_NAME}
-      # R2_PUBLIC_URL: ${R2_PUBLIC_URL}
+      APP_NAME: ${APP_NAME:-NEXO ITSM}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@nexo.proyectoscampus.top}
+      # Storage S3-compatible — activo cuando STORAGE_DRIVER=s3 en root .env
+      # GCS: S3_ENDPOINT=https://storage.googleapis.com + S3_REGION=us-central1 (o tu región)
+      # R2:  R2_ACCOUNT_ID=tu-account-id  (S3_ENDPOINT no requerido)
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_REGION: ${S3_REGION:-auto}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME:-}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
       # RabbitMQ (descomentar cuando --profile rabbitmq):
       # RABBITMQ_URL: amqp://${RABBITMQ_USER:-tickets}:${RABBITMQ_PASS:-tickets_pass}@rabbitmq:5672
     volumes:

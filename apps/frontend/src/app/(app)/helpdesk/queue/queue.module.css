@@ -470,6 +470,38 @@
 }
 
 /* ══════════════════════════════════════════════
+   LOAD MORE
+   ══════════════════════════════════════════════ */
+.loadMoreWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 0 8px;
+}
+.loadMoreBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  color: #0e2235;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.loadMoreBtn:hover { border-color: #0e2235; background: #f8fafc; }
+.loadMoreBtn:disabled { opacity: .5; cursor: not-allowed; }
+.loadMoreMeta {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* ══════════════════════════════════════════════
    TOAST
    ══════════════════════════════════════════════ */
 .toast {

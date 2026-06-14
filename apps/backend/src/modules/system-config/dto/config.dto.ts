@@ -224,6 +224,49 @@ export class CreateDamageTypeDto {
 
   @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional()
   sort_order?: number;
+
+  @ApiPropertyOptional({ description: 'NULL = global; UUID = específico del módulo' })
+  @IsString() @IsOptional()
+  module_id?: string;
+}
+
+export class UpdatePriorityLevelDto {
+  @ApiPropertyOptional() @IsString() @IsOptional() @MinLength(2) @MaxLength(100)
+  label?: string;
+
+  @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional()
+  sort_order?: number;
+
+  @ApiPropertyOptional() @IsBoolean() @IsOptional()
+  is_active?: boolean;
+}
+
+export class UpdateUrgencyLevelDto {
+  @ApiPropertyOptional() @IsString() @IsOptional() @MinLength(2) @MaxLength(100)
+  label?: string;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 10 }) @IsNumber() @IsOptional()
+  bonus?: number;
+
+  @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional()
+  sort_order?: number;
+
+  @ApiPropertyOptional() @IsBoolean() @IsOptional()
+  is_active?: boolean;
+}
+
+export class UpdateImpactLevelDto {
+  @ApiPropertyOptional() @IsString() @IsOptional() @MinLength(2) @MaxLength(100)
+  label?: string;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 10 }) @IsNumber() @IsOptional()
+  bonus?: number;
+
+  @ApiPropertyOptional({ minimum: 0 }) @IsInt() @Min(0) @IsOptional()
+  sort_order?: number;
+
+  @ApiPropertyOptional() @IsBoolean() @IsOptional()
+  is_active?: boolean;
 }
 
 export class UpdateRequestTypeDto {

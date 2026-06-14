@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { MailService } from '../../../shared/mail.service';
 import type { NotificationPayload } from '../notifications.service';
 
@@ -8,6 +9,7 @@ import type { NotificationPayload } from '../notifications.service';
 export class EmailChannel {
   constructor(
     private readonly mail: MailService,
+    private readonly config: ConfigService,
     @InjectDataSource() private readonly db: DataSource,
   ) {}
 
@@ -18,7 +20,7 @@ export class EmailChannel {
     );
     if (!cred?.email) return;
 
-    const appName = 'Tickets System';
+    const appName = this.config.get<string>('APP_NAME') ?? 'NEXO ITSM';
     const html = `
 <!DOCTYPE html>
 <html>

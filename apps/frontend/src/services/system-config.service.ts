@@ -79,6 +79,7 @@ export interface DamageType {
   slug:                string;
   label:               string;
   description:         string | null;
+  module_id:           string | null;
   default_priority:    string;
   weight:              number;
   allow_freetext:      boolean;
@@ -169,6 +170,32 @@ export interface OrgNode {
   child_count: number;
   user_count:  number;
   children?:   OrgNode[];
+}
+
+export interface PriorityLevel {
+  id:         string;
+  slug:       string;
+  label:      string;
+  sort_order: number;
+  is_active:  boolean;
+}
+
+export interface UrgencyLevel {
+  id:         string;
+  slug:       string;
+  label:      string;
+  bonus:      number;
+  sort_order: number;
+  is_active:  boolean;
+}
+
+export interface ImpactLevel {
+  id:         string;
+  slug:       string;
+  label:      string;
+  bonus:      number;
+  sort_order: number;
+  is_active:  boolean;
 }
 
 export interface PriorityFormula {
@@ -271,13 +298,19 @@ export const systemConfigService = {
     api.post<TicketCategory>(`${BASE}/ticket-categories`, dto).then(r => r.data),
 
   /* ── Damage types (public read, filterable by category_id) ── */
-  getDamageTypes: (categoryId?: string) =>
-    api.get<DamageType[]>(`${BASE}/damage-types`, { params: categoryId ? { category_id: categoryId } : {} }).then(r => r.data),
-  getDamageTypesAdmin: () =>
-    api.get<DamageType[]>(`${BASE}/damage-types/admin`).then(r => r.data),
+  getDamageTypes: (categoryId?: string, moduleId?: string) =>
+    api.get<DamageType[]>(`${BASE}/damage-types`, {
+      params: { ...(categoryId ? { category_id: categoryId } : {}), ...(moduleId ? { module_id: moduleId } : {}) },
+    }).then(r => r.data),
+  getDamageTypesAdmin: (moduleId?: string) =>
+    api.get<DamageType[]>(`${BASE}/damage-types/admin`, {
+      params: moduleId ? { module_id: moduleId } : {},
+    }).then(r => r.data),
   updateDamageType: (id: string, dto: { is_active?: boolean; weight?: number; label?: string }, auth?: CriticalAuthData) =>
     api.patch<DamageType>(`${BASE}/damage-types/${id}`, dto, { headers: criticalHeaders(auth) }).then(r => r.data),
-  createDamageType: (dto: { category_id: string; label: string; default_priority: string; weight: number; description?: string }) =>
+  updateModuleDamageType: (id: string, dto: { is_active?: boolean; weight?: number; label?: string }) =>
+    api.patch<DamageType>(`${BASE}/damage-types/${id}/module`, dto).then(r => r.data),
+  createDamageType: (dto: { category_id: string; label: string; default_priority: string; weight: number; description?: string; module_id?: string }) =>
     api.post<DamageType>(`${BASE}/damage-types`, dto).then(r => r.data),
 
   /* ── Business hours ── */
@@ -353,6 +386,22 @@ export const systemConfigService = {
     api.patch<PriorityFormula>(`${BASE}/priority-formula`, dto, { headers: criticalHeaders(auth) }).then(r => r.data),
   previewPriority: (dto: { peso_cargo: number; peso_nodo: number; peso_daño: number; urgency?: string; impact?: string }) =>
     api.post<PriorityPreview>(`${BASE}/priority-formula/preview`, dto).then(r => r.data),
+
+  /* ── Priority / Urgency / Impact levels ── */
+  getPriorityLevels: () =>
+    api.get<PriorityLevel[]>(`${BASE}/priority-levels`).then(r => r.data),
+  updatePriorityLevel: (id: string, dto: { label?: string; sort_order?: number; is_active?: boolean }) =>
+    api.patch<PriorityLevel>(`${BASE}/priority-levels/${id}`, dto).then(r => r.data),
+
+  getUrgencyLevels: () =>
+    api.get<UrgencyLevel[]>(`${BASE}/urgency-levels`).then(r => r.data),
+  updateUrgencyLevel: (id: string, dto: { label?: string; bonus?: number; sort_order?: number; is_active?: boolean }) =>
+    api.patch<UrgencyLevel>(`${BASE}/urgency-levels/${id}`, dto).then(r => r.data),
+
+  getImpactLevels: () =>
+    api.get<ImpactLevel[]>(`${BASE}/impact-levels`).then(r => r.data),
+  updateImpactLevel: (id: string, dto: { label?: string; bonus?: number; sort_order?: number; is_active?: boolean }) =>
+    api.patch<ImpactLevel>(`${BASE}/impact-levels/${id}`, dto).then(r => r.data),
 
   /* ── Audit logs ── */
   getAuditLogs: (params?: { limit?: number; offset?: number; entity_type?: string; entity_id?: string; user_id?: string }) =>

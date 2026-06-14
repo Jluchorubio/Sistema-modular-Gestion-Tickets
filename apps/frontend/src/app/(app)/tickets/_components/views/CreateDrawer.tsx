@@ -6,16 +6,13 @@ import { Plus, X, Ticket, Search, Monitor, BookOpen, ExternalLink } from 'lucide
 import {
   ticketsService,
   type CreateTicketDto, type AssetSearchResult,
-  TICKET_PRIORITIES,
-  type TicketPriority,
+  type TicketPriority, type TicketUrgency, type TicketImpact,
 } from '@/services/tickets.service';
 import { getPriorityConfig } from '@/constants/status';
-import { systemConfigService, type DamageType } from '@/services/system-config.service';
+import { systemConfigService, type DamageType, type PriorityLevel, type UrgencyLevel, type ImpactLevel } from '@/services/system-config.service';
 import { modulesService, type ModuleLocation } from '@/services/modules.service';
 import { docsService, type Article } from '@/app/(app)/helpdesk/knowledge/_lib/knowledge.service';
 import styles from './CreateDrawer.module.css';
-
-const PRIORITIES = TICKET_PRIORITIES;
 
 export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose: () => void }) {
   const qc = useQueryClient();
@@ -24,9 +21,13 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   const { data: moduleCategories, isLoading: categoriesLoading } = useQuery({ queryKey: ['ticket-module-categories', moduleId], queryFn: () => ticketsService.getCategories(moduleId), staleTime: 5 * 60_000 });
   const { data: damageCategories } = useQuery({ queryKey: ['damage-categories'], queryFn: () => systemConfigService.getTicketCategories(), staleTime: 10 * 60_000 });
   const { data: locations = [] }   = useQuery<ModuleLocation[]>({ queryKey: ['module-locations', moduleId], queryFn: () => modulesService.getModuleLocations(moduleId), staleTime: 5 * 60_000 });
+  const { data: priorityLevels = [] } = useQuery<PriorityLevel[]>({ queryKey: ['priority-levels'], queryFn: () => systemConfigService.getPriorityLevels(), staleTime: 10 * 60_000 });
+  const { data: urgencyLevels  = [] } = useQuery<UrgencyLevel[]>({ queryKey: ['urgency-levels'],  queryFn: () => systemConfigService.getUrgencyLevels(),  staleTime: 10 * 60_000 });
+  const { data: impactLevels   = [] } = useQuery<ImpactLevel[]>({ queryKey: ['impact-levels'],   queryFn: () => systemConfigService.getImpactLevels(),   staleTime: 10 * 60_000 });
 
-  /* ── Form state ── */
-  const [form, setForm] = useState<Partial<CreateTicketDto>>({ module_id: moduleId, priority: 'media', urgency: 'media', impact: 'medio' });
+  /* ── Form state — defaults sobrescritos cuando cargan los niveles ── */
+  const [form, setForm]       = useState<Partial<CreateTicketDto>>({ module_id: moduleId });
+  const [levelsReady, setLevelsReady] = useState(false);
   const [selectedLocationId,     setSelectedLocationId]     = useState('');
   const [selectedDamageCategory, setSelectedDamageCategory] = useState('');
   const [selectedDamageType,     setSelectedDamageType]     = useState<DamageType | null>(null);
@@ -38,10 +39,28 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   const [warning,                setWarning]                = useState('');
   const [kbQuery,                setKbQuery]               = useState('');
 
+  /* ── Derived active lists ── */
+  const activePriorities = priorityLevels.filter(l => l.is_active);
+  const activeUrgencies  = urgencyLevels.filter(l => l.is_active);
+  const activeImpacts    = impactLevels.filter(l => l.is_active);
+
+  /* ── Set form defaults once levels load ── */
+  useEffect(() => {
+    if (levelsReady || !activePriorities.length || !activeUrgencies.length || !activeImpacts.length) return;
+    const mid = (arr: { slug: string }[]) => arr[Math.floor(arr.length / 2)]?.slug ?? '';
+    setForm(f => ({
+      ...f,
+      priority: (f.priority || mid(activePriorities) || 'media') as TicketPriority,
+      urgency:  (f.urgency  || mid(activeUrgencies)  || 'media') as TicketUrgency,
+      impact:   (f.impact   || mid(activeImpacts)    || 'medio') as TicketImpact,
+    }));
+    setLevelsReady(true);
+  }, [activePriorities, activeUrgencies, activeImpacts, levelsReady]);
+
   /* ── Damage types cascade ── */
   const { data: damageTypes } = useQuery({
-    queryKey: ['damage-types', selectedDamageCategory],
-    queryFn:  () => systemConfigService.getDamageTypes(selectedDamageCategory || undefined),
+    queryKey: ['damage-types', selectedDamageCategory, moduleId],
+    queryFn:  () => systemConfigService.getDamageTypes(selectedDamageCategory || undefined, moduleId),
     enabled:  !!selectedDamageCategory,
     staleTime: 5 * 60_000,
   });
@@ -308,20 +327,29 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
               <div className={styles.grid3}>
                 <div>
                   <label className={styles.lbl}>Prioridad</label>
-                  <select value={form.priority ?? 'media'} onChange={e => set('priority', e.target.value)} className={styles.inp}>
-                    {PRIORITIES.map(p => <option key={p} value={p}>{getPriorityConfig(p).label}</option>)}
+                  <select value={form.priority ?? ''} onChange={e => set('priority', e.target.value)} className={styles.inp}>
+                    {activePriorities.length === 0
+                      ? <option value="">Cargando…</option>
+                      : activePriorities.map(p => <option key={p.slug} value={p.slug}>{getPriorityConfig(p.slug).label || p.label}</option>)
+                    }
                   </select>
                 </div>
                 <div>
                   <label className={styles.lbl}>Urgencia</label>
-                  <select value={form.urgency ?? 'media'} onChange={e => set('urgency', e.target.value)} className={styles.inp}>
-                    <option value="baja">Baja</option><option value="media">Media</option><option value="alta">Alta</option>
+                  <select value={form.urgency ?? ''} onChange={e => set('urgency', e.target.value)} className={styles.inp}>
+                    {activeUrgencies.length === 0
+                      ? <option value="">Cargando…</option>
+                      : activeUrgencies.map(u => <option key={u.slug} value={u.slug}>{u.label}</option>)
+                    }
                   </select>
                 </div>
                 <div>
                   <label className={styles.lbl}>Impacto</label>
-                  <select value={form.impact ?? 'medio'} onChange={e => set('impact', e.target.value)} className={styles.inp}>
-                    <option value="bajo">Bajo</option><option value="medio">Medio</option><option value="alto">Alto</option>
+                  <select value={form.impact ?? ''} onChange={e => set('impact', e.target.value)} className={styles.inp}>
+                    {activeImpacts.length === 0
+                      ? <option value="">Cargando…</option>
+                      : activeImpacts.map(i => <option key={i.slug} value={i.slug}>{i.label}</option>)
+                    }
                   </select>
                 </div>
               </div>

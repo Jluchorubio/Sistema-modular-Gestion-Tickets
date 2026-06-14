@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Inbox, AlertTriangle, Clock, Search, UserPlus, ChevronRight, CheckCircle2, ChevronDown,
+  Inbox, AlertTriangle, Search, UserPlus, ChevronRight, CheckCircle2, ChevronDown, RefreshCw,
 } from 'lucide-react';
 import { ModuleLayout } from '@/components/layout/ModuleLayout';
 import { useAuthStore } from '@/stores/auth.store';
@@ -21,6 +21,7 @@ import { fmtDate } from '@/lib/formatters';
 import styles from './queue.module.css';
 
 const PRIORITY_ORDER = TICKET_PRIORITY_ORDER;
+const QUEUE_LIMIT    = 50;
 
 const PRIORITY_GROUPS: { priority: TicketPriority; label: string; urgency: string }[] = [
   { priority: 'critica', label: 'Crítica',  urgency: 'Requiere atención inmediata' },
@@ -344,6 +345,12 @@ export default function QueuePage() {
   const toastRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const assignedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Pagination state
+  const [queuePage,    setQueuePage]    = useState(1);
+  const [accumulated,  setAccumulated]  = useState<TicketListItem[]>([]);
+  const [serverTotal,  setServerTotal]  = useState(0);
+  const lastResRef = useRef<import('@/services/tickets.service').PaginatedTickets | null>(null);
+
   function showToast(msg: string) {
     if (toastRef.current) clearTimeout(toastRef.current);
     setToast(msg);
@@ -358,13 +365,42 @@ export default function QueuePage() {
   const canTake         = usePermission('helpdesk:tickets:assign');
   const canAssignOthers = isSuperadmin || moduleRole === 'admin_modulo' || moduleRole === 'jefe_tecnico';
 
-  const { data: res, isLoading } = useQuery({
-    queryKey:  ['queue-unassigned', helpdeskId],
-    queryFn:   () => ticketsService.getAll({ module_id: helpdeskId!, unassigned: true, limit: 200 }),
+  const { data: res, isLoading, isFetching } = useQuery({
+    queryKey:  ['queue-unassigned', helpdeskId, queuePage],
+    queryFn:   () => ticketsService.getAll({ module_id: helpdeskId!, unassigned: true, limit: QUEUE_LIMIT, page: queuePage }),
     enabled:   !!helpdeskId,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: queuePage === 1 ? 60_000 : false,
   });
+
+  // Reset accumulation when module changes
+  useEffect(() => {
+    setQueuePage(1);
+    setAccumulated([]);
+    setServerTotal(0);
+    lastResRef.current = null;
+  }, [helpdeskId]);
+
+  // Accumulate tickets as pages load
+  useEffect(() => {
+    if (!res || res === lastResRef.current) return;
+    lastResRef.current = res;
+    setServerTotal(res.total);
+    if (res.page === 1) {
+      setAccumulated(res.data);
+    } else {
+      setAccumulated(prev => {
+        const existing = new Set(prev.map(t => t.id));
+        return [...prev, ...res.data.filter(t => !existing.has(t.id))];
+      });
+    }
+  }, [res]);
+
+  const loadMore = useCallback(() => {
+    setQueuePage(p => p + 1);
+  }, []);
+
+  const hasMore = serverTotal > accumulated.length;
 
   const { data: techs = [] } = useQuery<ModuleTechnician[]>({
     queryKey: ['module-technicians', helpdeskId],
@@ -374,7 +410,7 @@ export default function QueuePage() {
     refetchInterval: 30_000,
   });
 
-  const allTickets = res?.data ?? [];
+  const allTickets = accumulated;
 
   const categories = useMemo(() => {
     const seen = new Set<string>();
@@ -487,9 +523,9 @@ export default function QueuePage() {
   }).length;
 
   const statPills = [
-    { label: 'Sin asignar', value: allTickets.length,                                    color: '#ff5e3a' },
+    { label: 'Sin asignar', value: serverTotal || allTickets.length,                       color: '#ff5e3a' },
     { label: 'Críticos',    value: allTickets.filter(t => t.priority === 'critica').length, color: '#ef4444' },
-    { label: 'SLA riesgo',  value: riskCount,                                             color: '#f97316' },
+    { label: 'SLA riesgo',  value: riskCount,                                               color: '#f97316' },
     ...(breachedCount > 0 ? [{ label: 'SLA vencido', value: breachedCount, color: '#dc2626' }] : []),
   ];
 
@@ -644,6 +680,24 @@ export default function QueuePage() {
             />
           ))}
         </>
+      )}
+
+      {/* Load more */}
+      {!isLoading && (hasMore || isFetching) && (
+        <div className={styles.loadMoreWrap}>
+          <button
+            type="button"
+            className={styles.loadMoreBtn}
+            disabled={isFetching}
+            onClick={loadMore}
+          >
+            <RefreshCw size={12} style={isFetching ? { animation: 'spin 1s linear infinite' } : undefined} />
+            {isFetching ? 'Cargando…' : 'Cargar más'}
+          </button>
+          <span className={styles.loadMoreMeta}>
+            {allTickets.length} de {serverTotal} tickets
+          </span>
+        </div>
       )}
 
       {/* Toast */}

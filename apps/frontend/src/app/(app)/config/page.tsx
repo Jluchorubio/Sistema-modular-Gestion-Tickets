@@ -8,6 +8,7 @@ import { usePermissionsStore }  from '@/stores/permissions.store';
 import { useSuperadminGuard }   from '@/hooks/useSuperadminGuard';
 import { PendingChangesBar }    from '@/components/config/PendingChangesBar';
 import { OrgFlowTab }           from '@/components/config/OrgFlowTab';
+import { DamageTypesTab }       from '@/components/config/DamageTypesTab';
 import type { OrgNode }         from '@/services/system-config.service';
 
 import { type Tab, TABS, GUARDED_TABS }  from './_components/_types';
@@ -87,6 +88,7 @@ export default function GlobalConfigPage() {
           {tab === 'organigrama' && <OrgFlowTab />}
           {tab === 'prioridad'   && (hasOrg ? <PrioridadTab />  : <OrgRequiredScreen onConfigure={() => setTab('organigrama')} />)}
           {tab === 'calendario'  && (hasOrg ? <CalendarioTab /> : <OrgRequiredScreen onConfigure={() => setTab('organigrama')} />)}
+          {tab === 'incidencias' && (hasOrg ? <DamageTypesTab /> : <OrgRequiredScreen onConfigure={() => setTab('organigrama')} />)}
           {tab === 'auditoria'   && (hasOrg ? <AuditoriaTab />  : <OrgRequiredScreen onConfigure={() => setTab('organigrama')} />)}
           {tab === 'seguridad'   && <SeguridadTab />}
         </div>

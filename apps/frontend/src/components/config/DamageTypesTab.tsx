@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Pencil, Check, X, ToggleLeft, ToggleRight,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, Globe, Lock,
 } from 'lucide-react';
 import { systemConfigService } from '@/services/system-config.service';
 import type { DamageType, TicketCategory } from '@/services/system-config.service';
@@ -44,27 +44,36 @@ const lbl: React.CSSProperties = {
 };
 
 interface CategoryGroup {
-  id:       string;
-  slug:     string;
-  label:    string;
+  id:        string;
+  slug:      string;
+  label:     string;
   is_active: boolean;
-  types:    DamageType[];
+  types:     DamageType[];
 }
 
-export function DamageTypesTab() {
-  const qc      = useQueryClient();
-  const critical = useCriticalChange();
+interface Props {
+  /** Undefined = global config mode (superadmin only). Set = module mode (shows global read-only + module editable). */
+  moduleId?: string;
+}
 
+export function DamageTypesTab({ moduleId }: Props) {
+  const qc       = useQueryClient();
+  const critical = useCriticalChange();
+  const isGlobalMode = !moduleId;
+
+  // Global mode: admin endpoint (includes inactive). Module mode: public endpoint (active only).
   const { data: categories = [], isLoading: loadingCats } =
     useQuery<TicketCategory[]>({
-      queryKey: ['ticket-categories-all'],
-      queryFn:  () => systemConfigService.getTicketCategoriesAll(),
+      queryKey: isGlobalMode ? ['ticket-categories-all'] : ['ticket-categories'],
+      queryFn:  isGlobalMode
+        ? () => systemConfigService.getTicketCategoriesAll()
+        : () => systemConfigService.getTicketCategories(),
     });
 
   const { data: allTypes = [], isLoading: loadingTypes } =
     useQuery<DamageType[]>({
-      queryKey: ['sys-damage-types-admin'],
-      queryFn:  () => systemConfigService.getDamageTypesAdmin(),
+      queryKey: ['sys-damage-types-admin', moduleId ?? 'global'],
+      queryFn:  () => systemConfigService.getDamageTypesAdmin(moduleId),
     });
 
   const [collapsed,    setCollapsed]    = useState<Set<string>>(new Set());
@@ -92,9 +101,17 @@ export function DamageTypesTab() {
     qc.invalidateQueries({ queryKey: ['sys-damage-types'] });
   };
 
+  /* ── Global update (superadmin + critical auth) ── */
   const updateMut = useMutation({
     mutationFn: ({ id, dto, auth }: { id: string; dto: { label?: string; weight?: number; is_active?: boolean }; auth?: any }) =>
       systemConfigService.updateDamageType(id, dto, auth),
+    onSuccess: () => { invalidate(); setEditId(null); },
+  });
+
+  /* ── Module-specific update (admin_modulo, no critical auth) ── */
+  const moduleUpdateMut = useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: { label?: string; weight?: number; is_active?: boolean } }) =>
+      systemConfigService.updateModuleDamageType(id, dto),
     onSuccess: () => { invalidate(); setEditId(null); },
   });
 
@@ -104,24 +121,37 @@ export function DamageTypesTab() {
   });
 
   const createTypeMut = useMutation({
-    mutationFn: (dto: { category_id: string; label: string; default_priority: string; weight: number }) =>
+    mutationFn: (dto: { category_id: string; label: string; default_priority: string; weight: number; module_id?: string }) =>
       systemConfigService.createDamageType(dto),
     onSuccess: () => { invalidate(); setAddingTypeIn(null); setNewType({ label: '', priority: 'media', weight: 5 }); },
   });
 
+  const isGlobalType = (dt: DamageType) => dt.module_id === null;
+  const canEditType  = (dt: DamageType) => isGlobalMode || !isGlobalType(dt);
+
   const handleToggle = (dt: DamageType) => {
     const next = !dt.is_active;
-    critical.triggerCritical(
-      { entityLabel: `Tipo de daño — ${dt.label}`, description: `${next ? 'Activar' : 'Desactivar'} este tipo de daño` },
-      async (auth) => { await updateMut.mutateAsync({ id: dt.id, dto: { is_active: next }, auth }); },
-    );
+    if (isGlobalMode || isGlobalType(dt)) {
+      // Global type: need critical auth
+      critical.triggerCritical(
+        { entityLabel: `Tipo de daño — ${dt.label}`, description: `${next ? 'Activar' : 'Desactivar'} este tipo de daño` },
+        async (auth) => { await updateMut.mutateAsync({ id: dt.id, dto: { is_active: next }, auth }); },
+      );
+    } else {
+      // Module-specific type: no critical auth needed
+      moduleUpdateMut.mutate({ id: dt.id, dto: { is_active: next } });
+    }
   };
 
   const handleSave = (dt: DamageType) => {
-    critical.triggerCritical(
-      { entityLabel: `Tipo de daño — ${dt.label}`, description: `Etiqueta: "${editForm.label}", Peso: ${editForm.weight}` },
-      async (auth) => { await updateMut.mutateAsync({ id: dt.id, dto: editForm, auth }); },
-    );
+    if (isGlobalMode || isGlobalType(dt)) {
+      critical.triggerCritical(
+        { entityLabel: `Tipo de daño — ${dt.label}`, description: `Etiqueta: "${editForm.label}", Peso: ${editForm.weight}` },
+        async (auth) => { await updateMut.mutateAsync({ id: dt.id, dto: editForm, auth }); },
+      );
+    } else {
+      moduleUpdateMut.mutate({ id: dt.id, dto: editForm });
+    }
   };
 
   const toggleCollapse = (id: string) => {
@@ -137,21 +167,25 @@ export function DamageTypesTab() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <div style={{ fontSize: 11, fontWeight: 900, color: C.navy, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Tipos de daño
+          {isGlobalMode ? 'Tipos de daño globales' : 'Tipos de daño del módulo'}
         </div>
-        <button
-          onClick={() => { setAddingCat(v => !v); setCatLabel(''); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.coral, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          <Plus size={12} /> Nueva categoría
-        </button>
+        {isGlobalMode && (
+          <button
+            onClick={() => { setAddingCat(v => !v); setCatLabel(''); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.coral, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <Plus size={12} /> Nueva categoría
+          </button>
+        )}
       </div>
       <div style={{ fontSize: 11, color: C.muted, marginBottom: 20 }}>
-        El <strong>peso</strong> (1–10) alimenta el score de prioridad automática.
-        Desactivar un tipo lo oculta en formularios sin borrar historial.
+        {isGlobalMode
+          ? <>El <strong>peso</strong> (1–10) alimenta el score de prioridad automática. Los tipos globales aplican a todos los módulos.</>
+          : <>Los tipos <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Globe size={11} /></span> globales son solo lectura. Agrega tipos específicos de este módulo con <strong>Agregar tipo</strong>.</>
+        }
       </div>
 
-      {/* Add category form */}
-      {addingCat && (
+      {/* Add category form (global mode only) */}
+      {isGlobalMode && addingCat && (
         <div style={{ background: '#fff', border: `1px solid ${C.coral}40`, borderRadius: 8, padding: 14, marginBottom: 16 }}>
           <label style={lbl}>Nombre de categoría</label>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -180,12 +214,12 @@ export function DamageTypesTab() {
 
       {groups.length === 0 && (
         <div style={{ padding: '32px 0', textAlign: 'center', color: C.muted, fontSize: 13 }}>
-          Sin categorías. Crea una para empezar.
+          Sin categorías. {isGlobalMode ? 'Crea una para empezar.' : 'Contacta al superadmin para crear categorías.'}
         </div>
       )}
 
       {groups.map(cat => {
-        const isCollapsed = collapsed.has(cat.id);
+        const isCollapsed  = collapsed.has(cat.id);
         const isAddingHere = addingTypeIn === cat.id;
 
         return (
@@ -253,10 +287,21 @@ export function DamageTypesTab() {
                           onChange={e => setNewType(f => ({ ...f, weight: Number(e.target.value) }))} />
                       </div>
                     </div>
+                    {!isGlobalMode && (
+                      <div style={{ marginBottom: 8, padding: '5px 8px', background: '#eff6ff', borderRadius: 4, fontSize: 10, color: '#1d4ed8', fontWeight: 600 }}>
+                        Este tipo será específico del módulo actual.
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button
                         disabled={!newType.label.trim() || createTypeMut.isPending}
-                        onClick={() => createTypeMut.mutate({ category_id: cat.id, label: newType.label.trim(), default_priority: newType.priority, weight: newType.weight })}
+                        onClick={() => createTypeMut.mutate({
+                          category_id: cat.id,
+                          label: newType.label.trim(),
+                          default_priority: newType.priority,
+                          weight: newType.weight,
+                          module_id: moduleId,
+                        })}
                         style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: 4, border: 'none', background: '#059669', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: newType.label.trim() ? 1 : 0.5 }}>
                         <Check size={13} /> Crear tipo
                       </button>
@@ -276,7 +321,8 @@ export function DamageTypesTab() {
                 )}
 
                 {cat.types.map((dt, idx) => {
-                  const isEditing = editId === dt.id;
+                  const isEditing  = editId === dt.id;
+                  const isReadOnly = !canEditType(dt);
                   const prioStyle: React.CSSProperties = {
                     fontSize: 10, fontWeight: 700, padding: '1px 8px', borderRadius: 4,
                     ...(PRIORITY_STYLE[dt.default_priority] ?? PRIORITY_STYLE.baja),
@@ -286,13 +332,14 @@ export function DamageTypesTab() {
                     <div key={dt.id} style={{
                       borderBottom: idx < cat.types.length - 1 ? `1px solid ${C.border}` : 'none',
                       opacity: dt.is_active ? 1 : 0.45,
+                      background: isReadOnly ? '#fafbfc' : '#fff',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
                         <button
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: dt.is_active ? C.green : C.muted, flexShrink: 0 }}
-                          title={dt.is_active ? 'Desactivar' : 'Activar'}
-                          disabled={updateMut.isPending}
-                          onClick={() => handleToggle(dt)}>
+                          style={{ background: 'none', border: 'none', cursor: isReadOnly ? 'default' : 'pointer', padding: 2, color: isReadOnly ? C.muted : (dt.is_active ? C.green : C.muted), flexShrink: 0 }}
+                          title={isReadOnly ? 'Tipo global — solo lectura' : (dt.is_active ? 'Desactivar' : 'Activar')}
+                          disabled={isReadOnly || updateMut.isPending || moduleUpdateMut.isPending}
+                          onClick={() => !isReadOnly && handleToggle(dt)}>
                           {dt.is_active ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                         </button>
 
@@ -302,6 +349,13 @@ export function DamageTypesTab() {
                           {!dt.is_active && <span style={{ fontSize: 10, color: C.muted, marginLeft: 6 }}>inactivo</span>}
                         </div>
 
+                        {/* Global badge in module mode */}
+                        {!isGlobalMode && isGlobalType(dt) && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                            <Globe size={9} /> Global
+                          </span>
+                        )}
+
                         <span style={prioStyle}>{dt.default_priority}</span>
 
                         <span style={{ fontSize: 11, fontWeight: 700, minWidth: 28, textAlign: 'center',
@@ -309,12 +363,18 @@ export function DamageTypesTab() {
                           {dt.weight}
                         </span>
 
-                        {!isEditing && (
+                        {!isEditing && !isReadOnly && (
                           <button
                             style={{ display: 'flex', alignItems: 'center', padding: '5px 8px', background: 'transparent', color: '#0e2235', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit' }}
                             onClick={() => { setEditId(dt.id); setEditForm({ label: dt.label, weight: dt.weight }); }}>
                             <Pencil size={12} />
                           </button>
+                        )}
+
+                        {isReadOnly && (
+                          <span title="Tipo global — gestionado desde /config" style={{ display: 'flex', alignItems: 'center', padding: '5px 8px', color: C.muted }}>
+                            <Lock size={12} />
+                          </span>
                         )}
                       </div>
 
@@ -336,7 +396,7 @@ export function DamageTypesTab() {
                           <div style={{ display: 'flex', gap: 8 }}>
                             <button
                               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#059669', color: '#fff', border: 'none', borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-                              disabled={updateMut.isPending || !editForm.label.trim()}
+                              disabled={updateMut.isPending || moduleUpdateMut.isPending || !editForm.label.trim()}
                               onClick={() => handleSave(dt)}>
                               <Check size={13} /> Guardar
                             </button>

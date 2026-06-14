@@ -35,19 +35,29 @@ export class FilesService {
     this.driver = (this.config.get<string>('STORAGE_DRIVER') ?? 'local') as 'local' | 's3';
 
     if (this.driver === 's3') {
-      const accountId  = this.config.get<string>('R2_ACCOUNT_ID') ?? '';
       const accessKey  = this.config.get<string>('R2_ACCESS_KEY_ID') ?? '';
       const secretKey  = this.config.get<string>('R2_SECRET_ACCESS_KEY') ?? '';
       this.bucket      = this.config.get<string>('R2_BUCKET_NAME') ?? '';
       this.publicUrl   = (this.config.get<string>('R2_PUBLIC_URL') ?? '').replace(/\/$/, '');
 
+      // S3_ENDPOINT → GCS / cualquier provider S3-compatible
+      // R2_ACCOUNT_ID → Cloudflare R2 (legacy, si S3_ENDPOINT no está seteado)
+      const explicitEndpoint = this.config.get<string>('S3_ENDPOINT');
+      const r2AccountId      = this.config.get<string>('R2_ACCOUNT_ID');
+      const endpoint = explicitEndpoint
+        ?? (r2AccountId ? `https://${r2AccountId}.r2.cloudflarestorage.com` : undefined);
+
+      const region = this.config.get<string>('S3_REGION') ?? 'auto';
+
       this.s3Client = new S3Client({
-        region:   'auto',
-        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        region,
+        ...(endpoint && { endpoint }),
         credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
+        forcePathStyle: !!explicitEndpoint, // GCS XML API requiere path-style
       });
 
-      this.logger.log(`Storage driver: R2 → bucket "${this.bucket}"`);
+      const provider = explicitEndpoint ? new URL(explicitEndpoint).hostname : (r2AccountId ? 'r2' : 's3');
+      this.logger.log(`Storage driver: ${provider} → bucket "${this.bucket}"`);
     } else {
       this.storagePath = path.resolve(
         this.config.get<string>('STORAGE_PATH') ?? './uploads',
@@ -86,7 +96,7 @@ export class FilesService {
       await this.s3Client.send(new DeleteObjectCommand({
         Bucket: this.bucket,
         Key:    filename,
-      })).catch(err => this.logger.warn(`R2 delete failed for "${filename}": ${err.message}`));
+      })).catch(err => this.logger.warn(`Storage delete failed for "${filename}": ${err.message}`));
     } else {
       const safe     = path.basename(filename);
       const filepath = path.join(this.storagePath, safe);
@@ -112,12 +122,12 @@ export class FilesService {
     const filename = `${randomUUID()}${ext}`;
 
     if (this.driver === 's3' && this.s3Client) {
-      return this._uploadToR2(file, filename);
+      return this._uploadToS3(file, filename);
     }
     return this._writeLocal(file, filename);
   }
 
-  private async _uploadToR2(
+  private async _uploadToS3(
     file: Express.Multer.File,
     filename: string,
   ): Promise<{ url: string }> {

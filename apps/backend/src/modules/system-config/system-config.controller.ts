@@ -1,6 +1,7 @@
 import {
   Controller, Get, Post, Patch, Delete,
   Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus,
+  ForbiddenException, NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -23,6 +24,7 @@ import {
   CreateTicketSlaRuleDto, UpdateTicketSlaRuleDto, CreateTicketSlaConditionDto,
   UpdatePriorityFormulaDto, PreviewPriorityDto,
   CreateTicketCategoryDto, CreateDamageTypeDto, UpdatePasswordPolicyDto,
+  UpdatePriorityLevelDto, UpdateUrgencyLevelDto, UpdateImpactLevelDto,
 } from './dto/config.dto';
 import { PriorityEngineService } from '../tickets/priority/priority-engine.service';
 import { BulkImportUsersDto } from './dto/bulk-import.dto';
@@ -70,21 +72,38 @@ export class SystemConfigController {
   }
 
   @Get('damage-types/admin')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @ApiOperation({ summary: 'Todos los tipos de daño incluyendo inactivos. Solo superadmin.' })
-  getDamageTypesAdmin() { return this.svc.getDamageTypesAdmin(); }
+  @ApiOperation({ summary: 'Tipos de daño con inactivos. Sin module_id = solo globales (superadmin). Con module_id = globales + del módulo (admin_modulo).' })
+  async getDamageTypesAdmin(@Req() req: Request, @Query('module_id') moduleId?: string) {
+    const user = (req as any).user;
+    if (moduleId) {
+      const ok = user?.is_superadmin || user?.module_roles?.some(
+        (r: any) => r.module_id === moduleId && r.role_name === 'admin_modulo' && r.status === 'active',
+      );
+      if (!ok) throw new ForbiddenException('Requiere superadmin o admin_modulo del módulo');
+    } else {
+      if (!user?.is_superadmin) throw new ForbiddenException('Solo superadmin puede ver todos los tipos globales');
+    }
+    return this.svc.getDamageTypesAdmin(moduleId);
+  }
 
   @Get('damage-types')
-  @ApiOperation({ summary: 'Tipos de daño. Filtro ?category_id=uuid para una categoría.' })
-  getDamageTypes(@Query('category_id') categoryId?: string) {
-    return this.svc.getDamageTypes(categoryId);
+  @ApiOperation({ summary: 'Tipos de daño activos. ?category_id + ?module_id (incluye globales + del módulo).' })
+  getDamageTypes(@Query('category_id') categoryId?: string, @Query('module_id') moduleId?: string) {
+    return this.svc.getDamageTypes(categoryId, moduleId);
   }
 
   @Post('damage-types')
-  @UseGuards(RolesGuard) @Roles('superadmin')
-  @RequirePermission('global:config:sla')
-  @ApiOperation({ summary: 'Crear tipo de daño.' })
-  createDamageType(@Body() dto: CreateDamageTypeDto) {
+  @ApiOperation({ summary: 'Crear tipo de daño. Sin module_id = global (superadmin). Con module_id = módulo (admin_modulo).' })
+  async createDamageType(@Req() req: Request, @Body() dto: CreateDamageTypeDto) {
+    const user = (req as any).user;
+    if (!dto.module_id) {
+      if (!user?.is_superadmin) throw new ForbiddenException('Solo superadmin puede crear tipos globales');
+    } else {
+      const ok = user?.is_superadmin || user?.module_roles?.some(
+        (r: any) => r.module_id === dto.module_id && r.role_name === 'admin_modulo' && r.status === 'active',
+      );
+      if (!ok) throw new ForbiddenException('Requiere superadmin o admin_modulo del módulo');
+    }
     return this.svc.createDamageType(dto);
   }
 
@@ -179,7 +198,7 @@ export class SystemConfigController {
   @Patch('damage-types/:id')
   @UseGuards(RolesGuard, CriticalChangeGuard) @Roles('superadmin')
   @RequirePermission('global:config:sla')
-  @ApiOperation({ summary: 'Editar tipo de daño (is_active, weight, label)' })
+  @ApiOperation({ summary: 'Editar tipo de daño global (is_active, weight, label). Solo superadmin con re-auth.' })
   async updateDamageType(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateDamageTypeDto) {
     const prev   = await this.svc.getDamageTypeById(id);
     const result = await this.svc.updateDamageType(id, dto);
@@ -192,6 +211,22 @@ export class SystemConfigController {
       newValue:       result,
     });
     return result;
+  }
+
+  @Patch('damage-types/:id/module')
+  @ApiOperation({ summary: 'Editar tipo de daño específico del módulo. Requiere admin_modulo del módulo propietario.' })
+  async updateModuleDamageType(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateDamageTypeDto) {
+    const dt = await this.svc.getDamageTypeById(id);
+    if (!dt) throw new NotFoundException(`Tipo de daño ${id} no encontrado`);
+    if (!dt.module_id) throw new ForbiddenException('Usa el endpoint estándar para tipos globales');
+
+    const user = (req as any).user;
+    const ok = user?.is_superadmin || user?.module_roles?.some(
+      (r: any) => r.module_id === dt.module_id && r.role_name === 'admin_modulo' && r.status === 'active',
+    );
+    if (!ok) throw new ForbiddenException('Requiere superadmin o admin_modulo del módulo');
+
+    return this.svc.updateDamageType(id, dto);
   }
 
   @Get('business-hours')
@@ -507,6 +542,50 @@ export class SystemConfigController {
   @ApiOperation({ summary: 'Simular score/prioridad dado pesos de cargo, nodo y daño.' })
   previewPriority(@Body() dto: PreviewPriorityDto) {
     return this.svc.previewPriority(dto);
+  }
+
+  /* ── Priority / Urgency / Impact levels (configurables) ────────── */
+
+  @Get('priority-levels')
+  @ApiOperation({ summary: 'Niveles de prioridad de ticket. Disponible para todos los usuarios autenticados.' })
+  getPriorityLevels() { return this.svc.getPriorityLevels(); }
+
+  @Patch('priority-levels/:id')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Editar nivel de prioridad (label, sort_order, is_active). Slug inmutable.' })
+  async updatePriorityLevel(@Param('id') id: string, @Body() dto: UpdatePriorityLevelDto) {
+    const result = await this.svc.updatePriorityLevel(id, dto);
+    this.priorityEngine.invalidateLevelsCache();
+    return result;
+  }
+
+  @Get('urgency-levels')
+  @ApiOperation({ summary: 'Niveles de urgencia de ticket. Disponible para todos los usuarios autenticados.' })
+  getUrgencyLevels() { return this.svc.getUrgencyLevels(); }
+
+  @Patch('urgency-levels/:id')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Editar nivel de urgencia (label, bonus, sort_order, is_active). Slug inmutable.' })
+  async updateUrgencyLevel(@Param('id') id: string, @Body() dto: UpdateUrgencyLevelDto) {
+    const result = await this.svc.updateUrgencyLevel(id, dto);
+    this.priorityEngine.invalidateLevelsCache();
+    return result;
+  }
+
+  @Get('impact-levels')
+  @ApiOperation({ summary: 'Niveles de impacto de ticket. Disponible para todos los usuarios autenticados.' })
+  getImpactLevels() { return this.svc.getImpactLevels(); }
+
+  @Patch('impact-levels/:id')
+  @UseGuards(RolesGuard) @Roles('superadmin')
+  @RequirePermission('global:config:sla')
+  @ApiOperation({ summary: 'Editar nivel de impacto (label, bonus, sort_order, is_active). Slug inmutable.' })
+  async updateImpactLevel(@Param('id') id: string, @Body() dto: UpdateImpactLevelDto) {
+    const result = await this.svc.updateImpactLevel(id, dto);
+    this.priorityEngine.invalidateLevelsCache();
+    return result;
   }
 
   /* ── Audit log ──────────────────────────────────────────────────── */

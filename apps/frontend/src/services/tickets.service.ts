@@ -1,8 +1,8 @@
 import api from './api';
 
 export type TicketPriority = 'baja' | 'media' | 'alta' | 'critica';
-export type TicketUrgency  = 'baja' | 'media' | 'alta';
-export type TicketImpact   = 'bajo' | 'medio' | 'alto';
+export type TicketUrgency  = 'baja' | 'media' | 'alta' | 'urgente';
+export type TicketImpact   = 'bajo' | 'medio' | 'alto' | 'critico';
 export type SlaStatus      = 'active' | 'paused' | 'met' | 'breached';
 
 export interface TicketCategory {
