@@ -261,11 +261,21 @@ export function CompanyTab() {
       </div>
 
       <div style={fRow}>
-        <label style={fLabel}>Idioma</label>
-        <select style={{ ...fInput }} value={form.language ?? ''}
+        <label style={fLabel}>
+          Idioma{' '}
+          <span style={{ fontSize: 10, fontWeight: 600, background: '#fef3c7', color: '#92400e',
+            border: '1px solid #fde68a', borderRadius: 4, padding: '1px 6px', marginLeft: 4 }}>
+            Próximamente
+          </span>
+        </label>
+        <select style={{ ...fInput, opacity: 0.55, cursor: 'not-allowed' }} value={form.language ?? ''}
+          disabled
           onChange={e => setForm(f => ({ ...f, language: e.target.value }))}>
           {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
         </select>
+        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+          La interfaz actualmente solo está disponible en español. La localización multiidioma se activará en una versión futura.
+        </div>
       </div>
 
       <div style={fRow}>

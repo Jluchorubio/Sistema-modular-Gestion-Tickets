@@ -94,13 +94,17 @@ export class ReportingController {
   }
 
   @Get('export/tickets')
-  @ApiOperation({ summary: 'Exportar tickets a CSV (máx 5000 filas).' })
-  @ApiQuery({ name: 'moduleId', required: false })
+  @ApiOperation({ summary: 'Exportar tickets a CSV (máx 5000 filas). Supera el límite → añade fila # TRUNCADO al final.' })
+  @ApiQuery({ name: 'moduleId',  required: false })
+  @ApiQuery({ name: 'dateFrom',  required: false, description: 'ISO date — filtro fecha creación desde' })
+  @ApiQuery({ name: 'dateTo',    required: false, description: 'ISO date — filtro fecha creación hasta' })
   async exportTicketsCsv(
     @Query('moduleId') moduleId: string | undefined,
+    @Query('dateFrom') dateFrom: string | undefined,
+    @Query('dateTo')   dateTo:   string | undefined,
     @Res() res: Response,
   ) {
-    const csv = await this.service.exportTicketsCsv(moduleId);
+    const csv = await this.service.exportTicketsCsv(moduleId, dateFrom, dateTo);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="tickets-${Date.now()}.csv"`);
     res.send('﻿' + csv);

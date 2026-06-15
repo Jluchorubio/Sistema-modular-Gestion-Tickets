@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { Request } from 'express';
 import { JwtAuthGuard }      from '../../gateway/guards/jwt-auth.guard';
 import { RolesGuard }        from '../../gateway/guards/roles.guard';
@@ -38,6 +40,7 @@ export class SystemConfigController {
     private readonly svc:            SystemConfigService,
     private readonly audit:          AuditLogService,
     private readonly priorityEngine: PriorityEngineService,
+    @InjectDataSource() private readonly db: DataSource,
   ) {}
 
   /* ── Public endpoints (all authenticated users) ── */
@@ -74,14 +77,13 @@ export class SystemConfigController {
   @Get('damage-types/admin')
   @ApiOperation({ summary: 'Tipos de daño con inactivos. Sin module_id = solo globales (superadmin). Con module_id = globales + del módulo (admin_modulo).' })
   async getDamageTypesAdmin(@Req() req: Request, @Query('module_id') moduleId?: string) {
-    const user = (req as any).user;
+    const userId: string = (req as any).user?.sub;
+    const isSuperadmin = await this.isUserSuperadmin(userId);
     if (moduleId) {
-      const ok = user?.is_superadmin || user?.module_roles?.some(
-        (r: any) => r.module_id === moduleId && r.role_name === 'admin_modulo' && r.status === 'active',
-      );
+      const ok = isSuperadmin || await this.hasModuleRole(userId, moduleId, 'admin_modulo');
       if (!ok) throw new ForbiddenException('Requiere superadmin o admin_modulo del módulo');
     } else {
-      if (!user?.is_superadmin) throw new ForbiddenException('Solo superadmin puede ver todos los tipos globales');
+      if (!isSuperadmin) throw new ForbiddenException('Solo superadmin puede ver todos los tipos globales');
     }
     return this.svc.getDamageTypesAdmin(moduleId);
   }
@@ -95,13 +97,12 @@ export class SystemConfigController {
   @Post('damage-types')
   @ApiOperation({ summary: 'Crear tipo de daño. Sin module_id = global (superadmin). Con module_id = módulo (admin_modulo).' })
   async createDamageType(@Req() req: Request, @Body() dto: CreateDamageTypeDto) {
-    const user = (req as any).user;
+    const userId: string = (req as any).user?.sub;
+    const isSuperadmin = await this.isUserSuperadmin(userId);
     if (!dto.module_id) {
-      if (!user?.is_superadmin) throw new ForbiddenException('Solo superadmin puede crear tipos globales');
+      if (!isSuperadmin) throw new ForbiddenException('Solo superadmin puede crear tipos globales');
     } else {
-      const ok = user?.is_superadmin || user?.module_roles?.some(
-        (r: any) => r.module_id === dto.module_id && r.role_name === 'admin_modulo' && r.status === 'active',
-      );
+      const ok = isSuperadmin || await this.hasModuleRole(userId, dto.module_id, 'admin_modulo');
       if (!ok) throw new ForbiddenException('Requiere superadmin o admin_modulo del módulo');
     }
     return this.svc.createDamageType(dto);
@@ -220,10 +221,8 @@ export class SystemConfigController {
     if (!dt) throw new NotFoundException(`Tipo de daño ${id} no encontrado`);
     if (!dt.module_id) throw new ForbiddenException('Usa el endpoint estándar para tipos globales');
 
-    const user = (req as any).user;
-    const ok = user?.is_superadmin || user?.module_roles?.some(
-      (r: any) => r.module_id === dt.module_id && r.role_name === 'admin_modulo' && r.status === 'active',
-    );
+    const userId: string = (req as any).user?.sub;
+    const ok = await this.isUserSuperadmin(userId) || await this.hasModuleRole(userId, dt.module_id, 'admin_modulo');
     if (!ok) throw new ForbiddenException('Requiere superadmin o admin_modulo del módulo');
 
     return this.svc.updateDamageType(id, dto);
@@ -608,5 +607,33 @@ export class SystemConfigController {
       entity_id:   entityId,
       user_id:     userId,
     });
+  }
+
+  /* ── Private role-check helpers (DB-backed, not JWT payload) ── */
+
+  private async isUserSuperadmin(userId: string): Promise<boolean> {
+    if (!userId) return false;
+    const [profile] = await this.db.query<{ is_superadmin: boolean }[]>(
+      `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
+      [userId],
+    );
+    return profile?.is_superadmin ?? false;
+  }
+
+  private async hasModuleRole(userId: string, moduleId: string, roleName: string): Promise<boolean> {
+    if (!userId || !moduleId) return false;
+    const [row] = await this.db.query<{ id: string }[]>(
+      `SELECT umr.id
+       FROM   modules.user_module_roles umr
+       JOIN   modules.module_roles      mr  ON mr.id = umr.role_id
+       JOIN   modules.system_modules    sm  ON sm.id = umr.module_id
+       WHERE  umr.user_id   = $1
+         AND  umr.module_id = $2
+         AND  mr.name       = $3
+         AND  umr.is_active = true
+       LIMIT 1`,
+      [userId, moduleId, roleName],
+    );
+    return !!row;
   }
 }

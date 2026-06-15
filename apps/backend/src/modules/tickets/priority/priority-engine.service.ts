@@ -126,10 +126,11 @@ export class PriorityEngineService implements OnModuleInit {
       this.ensureLevels(),
     ]);
 
-    const [pesoCargo, pesoNodo, pesoDaño] = await Promise.all([
+    const [pesoCargo, pesoNodo, pesoDaño, minPriority] = await Promise.all([
       this.loadCargoWeight(ctx.creator_id),
       this.loadNodoWeight(ctx.creator_id),
       this.loadDamageWeight(ctx.damage_type_id),
+      this.loadDamageMinPriority(ctx.damage_type_id),
     ]);
 
     const defaultUrgency = this.priorityOrder.length > 1
@@ -143,11 +144,13 @@ export class PriorityEngineService implements OnModuleInit {
     const baseScore = pesoCargo * formula.w_cargo + pesoNodo * formula.w_nodo + pesoDaño * formula.w_daño;
     const score     = baseScore + urgencyBonus + impactBonus;
 
-    const priority =
+    const scorePriority =
       score >= formula.threshold_critica ? this.priorityOrder[this.priorityOrder.length - 1] :
       score >= formula.threshold_alta    ? this.priorityOrder[this.priorityOrder.length - 2] :
       score >= formula.threshold_media   ? this.priorityOrder[this.priorityOrder.length - 3] :
                                            this.priorityOrder[0];
+
+    const priority = this.applyMinPriority(scorePriority ?? 'baja', minPriority);
 
     return {
       priority: priority ?? 'baja',
@@ -194,6 +197,23 @@ export class PriorityEngineService implements OnModuleInit {
       [damageTypeId],
     );
     return row?.weight ?? 5;
+  }
+
+  private async loadDamageMinPriority(damageTypeId?: string): Promise<string | null> {
+    if (!damageTypeId) return null;
+    const [row] = await this.db.query<{ default_priority: string | null }[]>(
+      `SELECT default_priority FROM tickets.damage_types WHERE id = $1 AND is_active = TRUE`,
+      [damageTypeId],
+    );
+    return row?.default_priority ?? null;
+  }
+
+  private applyMinPriority(computed: string, minPriority: string | null): string {
+    if (!minPriority) return computed;
+    const order = this.priorityOrder; // baja → media → alta → critica
+    const ci = order.indexOf(computed);
+    const mi = order.indexOf(minPriority);
+    return mi > ci ? minPriority : computed;
   }
 
   // peso_cargo: weight of user's position node. Defaults to 1 if not assigned.

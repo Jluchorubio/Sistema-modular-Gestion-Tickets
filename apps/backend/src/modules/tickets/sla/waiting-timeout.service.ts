@@ -67,7 +67,6 @@ export class WaitingTimeoutService {
              ON ta.ticket_id = t.id AND ta.role = 'owner' AND ta.is_active = true
       WHERE  t.deleted_at IS NULL
         AND  tsh.transitioned_at < now() - (COALESCE(m.waiting_timeout_hours, 72) || ' hours')::interval
-      LIMIT  200
     `);
 
     if (!stuck.length) return;

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
+import { Cron } from '@nestjs/schedule';
 import { EmailChannel } from './channels/email.channel';
 import { WhatsappChannel } from './channels/whatsapp.channel';
 import { NotificationsGateway } from '../../gateway/notifications.gateway';
@@ -51,6 +52,23 @@ export class NotificationsService {
     if (channels.includes('whatsapp')) {
       try { await this.whatsapp.send(payload); }
       catch (err) { this.logger.error(`whatsapp send error: ${err.message}`); }
+    }
+  }
+
+  /* ── Scheduled maintenance ───────────────────────────────────────────────── */
+
+  /** Nightly at 02:00 — purge notification_logs older than 90 days. */
+  @Cron('0 2 * * *', { name: 'notification-logs-purge' })
+  async purgeOldLogs(): Promise<void> {
+    try {
+      const result = await this.db.query(
+        `DELETE FROM notifications.notification_logs
+         WHERE created_at < now() - INTERVAL '90 days'`,
+      );
+      const deleted = result[1] ?? 0;
+      if (deleted > 0) this.logger.log(`Purged ${deleted} notification log row(s) older than 90 days`);
+    } catch (err: any) {
+      this.logger.error(`notification_logs purge failed: ${err.message}`);
     }
   }
 
@@ -301,6 +319,44 @@ export class NotificationsService {
         body:      `El ticket "${ev.title}" fue creado pero no pudo asignarse automáticamente. Asígnalo manualmente.`,
         channels:  ['in_app'],
         meta:      { ticketId: ev.ticketId, moduleId: ev.moduleId },
+      });
+    }
+  }
+
+  @OnEvent('security.transition_denied')
+  onTransitionDenied(ev: { ticketId: string; userId: string; userRole: string; transitionId: string; allowedRoles: string[]; at: string }) {
+    this.db.query(
+      `INSERT INTO audit.event_log (actor_id, actor_type, action, entity_type, entity_id, new_value)
+       VALUES ($1, 'user'::actor_type, 'transition_denied', 'ticket', $2, $3)`,
+      [ev.userId, ev.ticketId, JSON.stringify({ userRole: ev.userRole, transitionId: ev.transitionId, allowedRoles: ev.allowedRoles, at: ev.at })],
+    ).catch(() => {/* audit is non-critical */});
+  }
+
+  @OnEvent('request.escalated')
+  async onRequestEscalated(ev: { requestId: string }) {
+    const [req] = await this.db.query<{ title: string; module_id: string | null }[]>(
+      `SELECT title, module_id FROM requests.admin_requests WHERE id = $1`,
+      [ev.requestId],
+    ).catch(() => [null]);
+    if (!req) return;
+
+    const admins = await this.db.query<{ user_id: string }[]>(
+      req.module_id
+        ? `SELECT umr.user_id FROM modules.user_module_roles umr
+           JOIN modules.module_roles mr ON mr.id = umr.role_id
+           WHERE umr.module_id = $1 AND mr.name IN ('jefe_tecnico','admin_modulo') AND umr.is_active = true`
+        : `SELECT id AS user_id FROM users.profiles WHERE is_superadmin = true AND is_active = true LIMIT 5`,
+      req.module_id ? [req.module_id] : [],
+    ).catch(() => []);
+
+    for (const { user_id } of admins) {
+      await this.notifyUser({
+        userId:    user_id,
+        eventType: 'request.escalated',
+        subject:   `Solicitud escalada por SLA: ${req.title}`,
+        body:      `La solicitud "${req.title}" superó su tiempo de SLA y fue escalada automáticamente.`,
+        channels:  ['in_app', 'email'],
+        meta:      { requestId: ev.requestId },
       });
     }
   }

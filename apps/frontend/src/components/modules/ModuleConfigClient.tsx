@@ -49,13 +49,12 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
   const canEdit = isSuperadmin || isAdminModulo;
 
   const [accessMode, setAccessMode]               = useState<'open' | 'request'>((mod as any).access_mode ?? 'request');
-  const [assignmentMode, setAssignmentMode]       = useState<'manual' | 'round_robin' | 'skill_based' | 'hybrid'>((mod as any).assignment_mode ?? 'manual');
-  const [priorityMode, setPriorityMode]           = useState<'auto' | 'manual'>((mod as any).priority_mode ?? 'auto');
+  const [assignmentMode, setAssignmentMode]       = useState<'manual' | 'round_robin' | 'round_robin_skill' | 'skill_only' | 'balanced'>((mod as any).assignment_mode ?? 'manual');
   const [priorityEditors, setPriorityEditors]     = useState<'jefe_tecnico' | 'any_tech'>((mod as any).priority_editors ?? 'jefe_tecnico');
-  const [periodStart, setPeriodStart]             = useState<string>((mod as any).priority_period_start ?? '');
-  const [periodEnd, setPeriodEnd]                 = useState<string>((mod as any).priority_period_end ?? '');
-  const [autoCloseHours, setAutoCloseHours]         = useState<number>((mod as any).auto_close_hours ?? 48);
-  const [waitingTimeoutHours, setWaitingTimeoutHours] = useState<number>((mod as any).waiting_timeout_hours ?? 72);
+  const [autoCloseHours, setAutoCloseHours]             = useState<number>((mod as any).auto_close_hours ?? 48);
+  const [waitingTimeoutHours, setWaitingTimeoutHours]   = useState<number>((mod as any).waiting_timeout_hours ?? 72);
+  const [approvalTimeoutHours, setApprovalTimeoutHours] = useState<number>((mod as any).approval_timeout_hours ?? 48);
+  const [maxReopenCount, setMaxReopenCount]             = useState<number>((mod as any).max_reopen_count ?? 10);
   const [saved, setSaved]                           = useState(false);
 
   const updateMut = useMutation({
@@ -71,11 +70,11 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
     updateMut.mutate({
       ...(isAlwaysOpen ? {} : { access_mode: accessMode }),
       assignment_mode:       assignmentMode,
-      priority_mode:         priorityMode,
-      priority_editors:      priorityMode === 'manual' ? priorityEditors : undefined,
-      priority_period_start: priorityMode === 'manual' && periodStart ? periodStart : null,
-      priority_period_end:   priorityMode === 'manual' && periodEnd   ? periodEnd   : null,
-      auto_close_hours:      autoCloseHours,
+      priority_editors:      priorityEditors,
+      auto_close_hours:        autoCloseHours,
+      waiting_timeout_hours:   waitingTimeoutHours,
+      approval_timeout_hours:  approvalTimeoutHours,
+      max_reopen_count:        maxReopenCount,
     });
   }
 
@@ -173,7 +172,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
             onChange={() => setAssignmentMode('manual')}
             disabled={!canEdit}
             label="Manual"
-            desc="El administrador o jefe técnico asigna cada ticket a mano."
+            desc="Sin asignación automática. Administrador o jefe técnico asigna cada ticket a mano."
           />
           <RadioOption
             name="assignment" value="round_robin"
@@ -181,96 +180,86 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
             onChange={() => setAssignmentMode('round_robin')}
             disabled={!canEdit}
             label="Round Robin"
-            desc="Distribución rotativa automática entre técnicos disponibles."
+            desc="Rotación equitativa entre todos los técnicos del módulo. Prioriza al de menor carga y el que lleva más tiempo sin asignación."
           />
           <RadioOption
-            name="assignment" value="hybrid"
-            checked={assignmentMode === 'hybrid'}
-            onChange={() => setAssignmentMode('hybrid')}
+            name="assignment" value="round_robin_skill"
+            checked={assignmentMode === 'round_robin_skill'}
+            onChange={() => setAssignmentMode('round_robin_skill')}
             disabled={!canEdit}
-            label="Híbrido"
-            desc="Round Robin automático con opción de reasignación manual posterior."
+            label="Round Robin + Especialización"
+            desc="Primero intenta asignar a un técnico especializado en el tipo de daño o categoría. Si no hay especialistas disponibles, aplica Round Robin general."
+          />
+          <RadioOption
+            name="assignment" value="skill_only"
+            checked={assignmentMode === 'skill_only'}
+            onChange={() => setAssignmentMode('skill_only')}
+            disabled={!canEdit}
+            label="Solo especialización"
+            desc="Asigna únicamente a técnicos con especialización registrada para el tipo de daño o categoría. Sin fallback — el ticket queda sin asignar si no hay especialistas."
+          />
+          <RadioOption
+            name="assignment" value="balanced"
+            checked={assignmentMode === 'balanced'}
+            onChange={() => setAssignmentMode('balanced')}
+            disabled={!canEdit}
+            label="Balanceado (score ponderado)"
+            desc="Todos los técnicos son elegibles. Los especializados reciben 3× de peso. Se selecciona según carga + especialización combinadas."
           />
         </div>
+
+        {/* Specialization link: visible when mode requires it */}
+        {['round_robin_skill', 'skill_only', 'balanced'].includes(assignmentMode) && (
+          <div style={{
+            marginTop: 14, padding: '10px 14px',
+            background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#1e40af' }}>
+                Especialización de técnicos
+              </div>
+              <div style={{ fontSize: 11, color: '#3b82f6', marginTop: 2 }}>
+                El modo seleccionado requiere que los técnicos tengan tipos de daño o categorías asignadas.
+                Configúralas en la pestaña <strong>Técnicos → Especializaciones</strong>.
+              </div>
+            </div>
+            <a
+              href={`/config/modules/${moduleId}/specializations`}
+              style={{
+                whiteSpace: 'nowrap', fontSize: 11, fontWeight: 700,
+                padding: '6px 14px', background: '#1e40af', color: '#fff',
+                borderRadius: 6, textDecoration: 'none',
+              }}
+            >
+              Gestionar →
+            </a>
+          </div>
+        )}
       </div>}
 
       {/* ── Gestión de prioridad ── */}
       {!isInventory && <div style={card}>
         <div style={sectionHead}>Gestión de prioridad</div>
-        <span style={fieldLabel}>Modo de asignación de prioridad</span>
+        <span style={fieldLabel}>¿Quiénes pueden editar la prioridad?</span>
         <div style={radioGroup}>
           <RadioOption
-            name="priority" value="auto"
-            checked={priorityMode === 'auto'}
-            onChange={() => setPriorityMode('auto')}
+            name="editors" value="jefe_tecnico"
+            checked={priorityEditors === 'jefe_tecnico'}
+            onChange={() => setPriorityEditors('jefe_tecnico')}
             disabled={!canEdit}
-            label="Automática (sistema)"
-            desc="El sistema calcula la prioridad según las reglas SLA configuradas."
+            label="Solo jefe técnico"
+            desc="Únicamente el Jefe Técnico puede modificar la prioridad."
           />
           <RadioOption
-            name="priority" value="manual"
-            checked={priorityMode === 'manual'}
-            onChange={() => setPriorityMode('manual')}
+            name="editors" value="any_tech"
+            checked={priorityEditors === 'any_tech'}
+            onChange={() => setPriorityEditors('any_tech')}
             disabled={!canEdit}
-            label="Manual"
-            desc="Los usuarios autorizados definen la prioridad de cada ticket."
+            label="Cualquier técnico"
+            desc="Cualquier técnico asignado al ticket puede modificar la prioridad."
           />
         </div>
-
-        {priorityMode === 'manual' && (
-          <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid #f1f5f9' }}>
-            <span style={fieldLabel}>¿Quiénes pueden editar la prioridad?</span>
-            <div style={radioGroup}>
-              <RadioOption
-                name="editors" value="jefe_tecnico"
-                checked={priorityEditors === 'jefe_tecnico'}
-                onChange={() => setPriorityEditors('jefe_tecnico')}
-                disabled={!canEdit}
-                label="Solo jefe técnico"
-                desc="Únicamente el Jefe Técnico puede modificar la prioridad."
-              />
-              <RadioOption
-                name="editors" value="any_tech"
-                checked={priorityEditors === 'any_tech'}
-                onChange={() => setPriorityEditors('any_tech')}
-                disabled={!canEdit}
-                label="Cualquier técnico"
-                desc="Cualquier técnico asignado al ticket puede modificar la prioridad."
-              />
-            </div>
-
-            <div style={{ marginTop: 20 }}>
-              <span style={fieldLabel}>Período de organización</span>
-              <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2, marginBottom: 14, lineHeight: 1.55 }}>
-                Los tickets se agrupan por día dentro de este período y se ordenan por prioridad dentro de cada día.
-              </p>
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 6 }}>
-                    Fecha de inicio
-                  </label>
-                  <input
-                    type="date" value={periodStart}
-                    onChange={(e) => setPeriodStart(e.target.value)}
-                    disabled={!canEdit}
-                    style={{ padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 13, color: '#0e2235', fontFamily: 'inherit', background: '#fff' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 6 }}>
-                    Fecha de cierre
-                  </label>
-                  <input
-                    type="date" value={periodEnd} min={periodStart}
-                    onChange={(e) => setPeriodEnd(e.target.value)}
-                    disabled={!canEdit}
-                    style={{ padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 13, color: '#0e2235', fontFamily: 'inherit', background: '#fff' }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>}
 
       {/* ── Especialización de técnicos (gestionado por modo de asignación) ── */}
@@ -323,6 +312,119 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
                   color: autoCloseHours === h ? '#ff5e3a' : '#64748b',
                 }}>
                 {h === 24 ? '1 día' : h === 48 ? '2 días' : h === 72 ? '3 días' : '1 semana'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>}
+
+      {/* ── Timeout por inactividad (Waiting) ── */}
+      {!isInventory && <div style={card}>
+        <div style={sectionHead}>Escalación por inactividad</div>
+        <span style={fieldLabel}>Horas en pausa antes de escalar automáticamente</span>
+        <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2, marginBottom: 14, lineHeight: 1.55 }}>
+          Si un ticket permanece en estado <strong>En espera</strong> más de este tiempo,
+          el sistema notifica al técnico y al jefe técnico. Al doblar el período, escala la prioridad.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="number" min={1} max={720}
+              value={waitingTimeoutHours}
+              disabled={!canEdit}
+              onChange={e => setWaitingTimeoutHours(Math.max(1, Math.min(720, +e.target.value)))}
+              style={{ width: 80, padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', textAlign: 'center', color: '#0e2235' }}
+            />
+            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>horas</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[24, 48, 72, 168].map(h => (
+              <button key={h} type="button" disabled={!canEdit}
+                onClick={() => setWaitingTimeoutHours(h)}
+                style={{
+                  padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                  cursor: canEdit ? 'pointer' : 'default', fontFamily: 'inherit',
+                  border: waitingTimeoutHours === h ? '1px solid #ff5e3a' : '1px solid #e2e8f0',
+                  background: waitingTimeoutHours === h ? 'rgba(255,94,58,.08)' : '#f8fafc',
+                  color: waitingTimeoutHours === h ? '#ff5e3a' : '#64748b',
+                }}>
+                {h === 24 ? '1 día' : h === 48 ? '2 días' : h === 72 ? '3 días' : '1 semana'}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 10, lineHeight: 1.5 }}>
+          Fase 1 ({waitingTimeoutHours}h): aviso al técnico y jefe técnico. Fase 2 ({waitingTimeoutHours * 2}h): prioridad escalada automáticamente.
+        </p>
+      </div>}
+
+      {/* ── Tiempo de expiración de aprobación ── */}
+      {!isInventory && <div style={card}>
+        <div style={sectionHead}>Expiración de aprobación</div>
+        <span style={fieldLabel}>Horas antes de que expire el token de aprobación</span>
+        <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2, marginBottom: 14, lineHeight: 1.55 }}>
+          Cuando un ticket entra en estado de aprobación, el solicitante recibe un enlace válido por este tiempo.
+          Al expirar sin respuesta, el ticket se reabre automáticamente.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="number" min={1} max={720}
+              value={approvalTimeoutHours}
+              disabled={!canEdit}
+              onChange={e => setApprovalTimeoutHours(Math.max(1, Math.min(720, +e.target.value)))}
+              style={{ width: 80, padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', textAlign: 'center', color: '#0e2235' }}
+            />
+            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>horas</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[24, 48, 72, 168].map(h => (
+              <button key={h} type="button" disabled={!canEdit}
+                onClick={() => setApprovalTimeoutHours(h)}
+                style={{
+                  padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                  cursor: canEdit ? 'pointer' : 'default', fontFamily: 'inherit',
+                  border: approvalTimeoutHours === h ? '1px solid #ff5e3a' : '1px solid #e2e8f0',
+                  background: approvalTimeoutHours === h ? 'rgba(255,94,58,.08)' : '#f8fafc',
+                  color: approvalTimeoutHours === h ? '#ff5e3a' : '#64748b',
+                }}>
+                {h === 24 ? '1 día' : h === 48 ? '2 días' : h === 72 ? '3 días' : '1 semana'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>}
+
+      {/* ── Límite de reaperturas ── */}
+      {!isInventory && <div style={card}>
+        <div style={sectionHead}>Límite de reaperturas por aprobación</div>
+        <span style={fieldLabel}>Máximo de veces que un ticket puede reabrirse por expiración de aprobación</span>
+        <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2, marginBottom: 14, lineHeight: 1.55 }}>
+          Al alcanzar este límite el ticket se escala automáticamente a <strong>Crítica</strong> y se notifica al jefe técnico.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="number" min={1} max={100}
+              value={maxReopenCount}
+              disabled={!canEdit}
+              onChange={e => setMaxReopenCount(Math.max(1, Math.min(100, +e.target.value)))}
+              style={{ width: 80, padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', textAlign: 'center', color: '#0e2235' }}
+            />
+            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>reaperturas</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[3, 5, 10].map(n => (
+              <button key={n} type="button" disabled={!canEdit}
+                onClick={() => setMaxReopenCount(n)}
+                style={{
+                  padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                  cursor: canEdit ? 'pointer' : 'default', fontFamily: 'inherit',
+                  border: maxReopenCount === n ? '1px solid #ff5e3a' : '1px solid #e2e8f0',
+                  background: maxReopenCount === n ? 'rgba(255,94,58,.08)' : '#f8fafc',
+                  color: maxReopenCount === n ? '#ff5e3a' : '#64748b',
+                }}>
+                {n === 10 ? 'Sin límite (10)' : `${n} veces`}
               </button>
             ))}
           </div>

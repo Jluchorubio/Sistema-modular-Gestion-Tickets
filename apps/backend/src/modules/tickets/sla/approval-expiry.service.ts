@@ -88,18 +88,21 @@ export class ApprovalExpiryService {
       current_state_id:     string;
       reprocess_count:      number;
       priority:             string;
+      max_reopen_count:     number;
     }[]>(`
-      SELECT t.id                  AS ticket_id,
+      SELECT t.id                                       AS ticket_id,
              t.title,
              t.created_by,
              t.module_id,
              t.workflow_version_id,
              t.current_state_id,
              t.reprocess_count,
-             t.priority
+             t.priority,
+             COALESCE(m.max_reopen_count, 10)           AS max_reopen_count
       FROM   tickets.ticket_approvals ap
-      JOIN   tickets.tickets t ON t.id = ap.ticket_id
-      JOIN   tickets.states  s ON s.id = t.current_state_id AND s.is_approval_state = true
+      JOIN   tickets.tickets  t ON t.id = ap.ticket_id
+      JOIN   tickets.states   s ON s.id = t.current_state_id AND s.is_approval_state = true
+      JOIN   modules.modules  m ON m.id = t.module_id
       WHERE  ap.status = 'pending'
         AND  ap.expires_at < now()
         AND  t.deleted_at IS NULL
@@ -131,20 +134,15 @@ export class ApprovalExpiryService {
         }
 
         const reopenCount    = (t.reprocess_count ?? 0) + 1;
-        const shouldEscalate = reopenCount >= 3 && t.priority !== 'critica';
+        const maxReached     = reopenCount >= t.max_reopen_count;
+        // Escalate at 3 reopens OR when max is reached and ticket isn't already critica
+        const shouldEscalate = (reopenCount >= 3 || maxReached) && t.priority !== 'critica';
         const newPriority    = shouldEscalate ? this.priorityEngine.escalatePriority(t.priority) : t.priority;
 
-        // Fetch approval wait duration BEFORE transaction (read-only)
-        const [approval] = await this.db.query<{ created_at: string }[]>(
-          `SELECT created_at FROM tickets.ticket_approvals
-           WHERE ticket_id = $1 AND status = 'pending' LIMIT 1`,
-          [t.ticket_id],
-        );
-        const waitSecs = approval
-          ? Math.ceil((Date.now() - new Date(approval.created_at).getTime()) / 1000)
-          : 0;
-
-        // Atomic transaction: ticket state + approval status + SLA extension
+        // Atomic transaction: ticket state + approval status
+        // SLA deadline is NOT extended: the requester failed to approve within the allotted
+        // window — the SLA clock kept running (correct). Reactivate tracking so status stays
+        // 'active' (or 'breached' if already past deadline) but deadline is not moved.
         const qr = this.db.createQueryRunner();
         await qr.connect();
         await qr.startTransaction();
@@ -167,16 +165,13 @@ export class ApprovalExpiryService {
             [t.ticket_id],
           );
 
-          // Extend SLA by time spent in approval; reactivate tracking
-          if (waitSecs > 0) {
-            await qr.query(
-              `UPDATE tickets.ticket_sla_tracking
-               SET deadline_at = deadline_at + ($1 || ' seconds')::interval,
-                   status      = 'active'
-               WHERE ticket_id = $2 AND status IN ('active', 'breached')`,
-              [waitSecs, t.ticket_id],
-            );
-          }
+          // Reactivate SLA tracking so the ticket is tracked again (no deadline change)
+          await qr.query(
+            `UPDATE tickets.ticket_sla_tracking
+             SET status = CASE WHEN deadline_at < now() THEN 'breached' ELSE 'active' END
+             WHERE ticket_id = $1 AND status IN ('active', 'breached')`,
+            [t.ticket_id],
+          );
 
           await qr.commitTransaction();
         } catch (txErr) {
@@ -201,13 +196,21 @@ export class ApprovalExpiryService {
           reopenCount,
         });
 
+        const escalateReason = maxReached
+          ? `Superó el máximo de reaperturas (${t.max_reopen_count})`
+          : `Auto-escalado por ${reopenCount} reaperturas de aprobación`;
+
         if (shouldEscalate) {
           this.messaging.emit('ticket.escalated', {
             ticketId:  t.ticket_id,
             title:     t.title,
             moduleId:  t.module_id,
-            reason:    `Auto-escalado por ${reopenCount} reaperturas de aprobación`,
+            reason:    escalateReason,
           });
+        }
+
+        if (maxReached) {
+          this.logger.warn(`Ticket ${t.ticket_id} reached max reopen count (${t.max_reopen_count}) — escalated`);
         }
 
         this.logger.log(`Ticket ${t.ticket_id} reopened after approval expiry (reopen #${reopenCount})`);

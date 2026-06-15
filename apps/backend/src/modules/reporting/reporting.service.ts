@@ -41,7 +41,7 @@ export class ReportingService {
          t.priority,
          COUNT(*)                                                      AS total,
          COUNT(*) FILTER (WHERE tst.status = 'breached')              AS breached,
-         AVG(EXTRACT(EPOCH FROM (tst.deadline_at - tst.started_at)) / 3600) AS avg_sla_hours
+         AVG(EXTRACT(EPOCH FROM (tst.deadline_at - tst.started_at)) / 3600) AS avg_sla_window_hours
        FROM tickets.tickets t
        JOIN tickets.states s ON s.id = t.current_state_id
        LEFT JOIN tickets.ticket_sla_tracking tst ON tst.ticket_id = t.id
@@ -104,10 +104,18 @@ export class ReportingService {
     return { totals, by_category: byCategory };
   }
 
-  async exportTicketsCsv(moduleId?: string): Promise<string> {
-    const cond   = moduleId ? `AND t.module_id = $1` : '';
-    const params = moduleId ? [moduleId] : [];
+  async exportTicketsCsv(moduleId?: string, dateFrom?: string, dateTo?: string): Promise<string> {
+    const conditions: string[] = [];
+    const params: any[]        = [];
+    let   idx = 1;
 
+    if (moduleId)  { conditions.push(`t.module_id = $${idx++}`);    params.push(moduleId); }
+    if (dateFrom)  { conditions.push(`t.created_at >= $${idx++}`);  params.push(dateFrom); }
+    if (dateTo)    { conditions.push(`t.created_at <= $${idx++}`);  params.push(dateTo); }
+
+    const cond = conditions.length ? `AND ${conditions.join(' AND ')}` : '';
+
+    const LIMIT = 5000;
     const rows = await this.db.query<any[]>(
       `SELECT t.id, t.title, t.priority, t.created_at, t.updated_at, t.sla_deadline,
               s.label  AS state,
@@ -118,14 +126,17 @@ export class ReportingService {
        FROM   tickets.tickets t
        JOIN   tickets.states        s ON s.id  = t.current_state_id
        JOIN   modules.modules       m ON m.id  = t.module_id
-       JOIN   modules.environments  e ON e.id  = t.environment_id
+       LEFT JOIN modules.environments  e ON e.id  = t.environment_id
        JOIN   modules.categories    c ON c.id  = t.category_id
        LEFT JOIN users.profiles     p ON p.id  = t.created_by
-       WHERE  1=1 ${cond}
+       WHERE  t.deleted_at IS NULL ${cond}
        ORDER  BY t.created_at DESC
-       LIMIT  5000`,
+       LIMIT  ${LIMIT + 1}`,
       params,
     );
+
+    const truncated = rows.length > LIMIT;
+    const data      = truncated ? rows.slice(0, LIMIT) : rows;
 
     const escape = (v: unknown) => {
       if (v === null || v === undefined) return '';
@@ -134,14 +145,19 @@ export class ReportingService {
     };
 
     const headers = ['id','title','priority','state','module','environment','category','created_by','created_at','updated_at','sla_deadline'];
-    const lines   = [
+    const lines: string[] = [
       headers.join(','),
-      ...rows.map((r) => [
+      ...data.map((r) => [
         r.id, r.title, r.priority, r.state, r.module_name,
         r.environment_name, r.category_name, r.created_by_name,
         r.created_at, r.updated_at, r.sla_deadline ?? '',
       ].map(escape).join(',')),
     ];
+
+    if (truncated) {
+      lines.push(`# TRUNCADO: se muestran ${LIMIT} de más de ${LIMIT} registros. Usa filtros de fecha para acotar.`);
+    }
+
     return lines.join('\r\n');
   }
 

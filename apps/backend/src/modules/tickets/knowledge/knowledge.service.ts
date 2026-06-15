@@ -312,7 +312,7 @@ export class KnowledgeService {
     if (!reply) throw new NotFoundException('Reply not found');
     if (!actor?.is_superadmin && reply.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar esta respuesta.');
     await this.db.query(
-      `UPDATE tickets.knowledge_replies SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`,
+      `UPDATE tickets.knowledge_replies SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days' WHERE id = $1 AND deleted_at IS NULL`,
       [replyId],
     );
     return { ok: true };

@@ -319,6 +319,24 @@ export function PrioridadTab() {
 
   return (
     <div>
+      {/* ── Scope banner ── */}
+      <div style={{
+        background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8,
+        padding: '12px 16px', marginBottom: 16,
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+      }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.2"
+          style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <div style={{ fontSize: 12, color: '#1e40af', lineHeight: 1.55 }}>
+          <strong>Alcance de esta sección:</strong> La fórmula de prioridad y sus bonos aplican globalmente a todos los módulos.
+          El SLA del simulador corresponde a <strong>Gestión Administrativa</strong>.
+          El SLA de <strong>tickets de Helpdesk</strong> se configura en{' '}
+          <em>Módulo Helpdesk → Configuración → Políticas SLA</em>.
+        </div>
+      </div>
+
       {/* ── Formula weights ── */}
       <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>

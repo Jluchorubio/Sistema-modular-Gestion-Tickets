@@ -30,9 +30,10 @@ export class RequestsService {
     const metaJson   = meta ? JSON.stringify(meta) : null;
     const moduleId   = (meta as any)?.module_id as string | undefined;
 
-    // Auto-calculate priority from rules
+    // Auto-calculate priority from rules (same formula as tickets)
+    const damageTypeId = (meta as any)?.damage_type_id as string | undefined ?? null;
     const { priority, auto } = await calculatePriority(
-      this.db, dto.type, requesterId, dto.priority,
+      this.db, dto.type, requesterId, dto.priority, damageTypeId,
     );
 
     // Auto-route to module admin or superadmin queue
@@ -59,6 +60,30 @@ export class RequestsService {
        VALUES ($1, $2, 'created', 'pending', $3)`,
       [row.id, requesterId, autoEscalated ? 'Auto-escalada: sin admin en módulo' : null],
     );
+
+    // Recurrence check: same requester+type 3+ times in last 30 days → auto-escalate
+    const [{ count: recentCount }] = await this.db.query<{ count: string }[]>(
+      `SELECT COUNT(*) AS count
+       FROM requests.admin_requests
+       WHERE requester_id = $1
+         AND type         = $2
+         AND created_at   > now() - INTERVAL '30 days'
+         AND deleted_at   IS NULL`,
+      [requesterId, dto.type],
+    );
+    if (Number(recentCount) >= 3) {
+      await this.db.query(
+        `UPDATE requests.admin_requests
+         SET escalated    = TRUE,
+             escalated_at = now(),
+             escalation_note = 'Auto-escalada por reincidencia: 3+ solicitudes del mismo tipo en 30 días',
+             updated_at   = now()
+         WHERE id = $1`,
+        [row.id],
+      );
+      this.messaging.emit('request.escalated', { requestId: row.id });
+    }
+
     this.messaging.emit('request.created', {
       requestId:   row.id,
       title:       row.title,

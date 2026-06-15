@@ -91,7 +91,7 @@ export class TicketsService {
     const limit  = Math.min(200, opts.limit ?? 25);
     const offset = (page - 1) * limit;
 
-    const conds: string[] = [];
+    const conds: string[] = ['t.deleted_at IS NULL'];
     const params: any[]   = [];
     let p = 1;
 
@@ -216,7 +216,7 @@ export class TicketsService {
        LEFT JOIN tickets.ticket_sla_tracking st   ON st.ticket_id   = t.id
        LEFT JOIN tickets.ticket_approvals    appr ON appr.ticket_id = t.id
                                                   AND appr.status = 'pending'
-       WHERE  t.id = $1`,
+       WHERE  t.id = $1 AND t.deleted_at IS NULL`,
       [id],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
@@ -404,8 +404,8 @@ export class TicketsService {
   }) {
     const now = new Date();
 
-    // Load workflow, initial state, and SLA policy in parallel
-    const [[wf], [initialState], [slaPolicy]] = await Promise.all([
+    // Load workflow, initial state, SLA policy, and module config in parallel
+    const [[wf], [initialState], [slaPolicy], [moduleConf]] = await Promise.all([
       this.db.query<any[]>(
         `SELECT id FROM tickets.workflow_versions WHERE module_id = $1 AND is_active = true LIMIT 1`,
         [dto.module_id],
@@ -421,16 +421,41 @@ export class TicketsService {
         `SELECT id FROM tickets.sla_policies WHERE module_id = $1 AND is_active = true LIMIT 1`,
         [dto.module_id],
       ),
+      this.db.query<{ priority_editors: string | null; maintenance_mode: boolean }[]>(
+        `SELECT priority_editors, maintenance_mode FROM modules.modules WHERE id = $1`,
+        [dto.module_id],
+      ),
     ]);
 
     if (!wf)          throw new BadRequestException('No active workflow for this module.');
     if (!initialState) throw new BadRequestException('Workflow has no initial state.');
     if (!slaPolicy)   throw new BadRequestException('No active SLA policy for this module.');
+    if (moduleConf?.maintenance_mode) throw new BadRequestException('El módulo está en modo mantenimiento. No se pueden crear tickets temporalmente.');
 
-    // Resolve priority: staff can override, everyone else goes through engine
+    // Resolve priority: enforce priority_editors policy, everyone else goes through engine
     const isStaff = await this.isStaffInModule(userId, dto.module_id);
+    const priorityEditors: string = moduleConf?.priority_editors ?? 'any_tech';
     let finalPriority: string;
-    if (dto.priority && isStaff) {
+    let canOverridePriority = false;
+    if (isStaff && dto.priority) {
+      if (priorityEditors === 'jefe_tecnico') {
+        // Only jefe_tecnico, admin_modulo, admin_sistema, superadmin may override
+        const [actorRole] = await this.db.query<{ is_superadmin: boolean; role_name: string | null }[]>(
+          `SELECT u.is_superadmin, mr.name AS role_name
+           FROM users.profiles u
+           LEFT JOIN modules.user_module_roles umr ON umr.user_id = u.id AND umr.module_id = $2 AND umr.is_active = true
+           LEFT JOIN modules.module_roles mr ON mr.id = umr.role_id
+           WHERE u.id = $1 LIMIT 1`,
+          [userId, dto.module_id],
+        );
+        const elevated = ['jefe_tecnico', 'admin_modulo', 'admin_sistema'];
+        canOverridePriority = !!actorRole?.is_superadmin || elevated.includes(actorRole?.role_name ?? '');
+      } else {
+        // any_tech — current behavior: any staff member may override
+        canOverridePriority = true;
+      }
+    }
+    if (canOverridePriority && dto.priority) {
       finalPriority = dto.priority;
     } else {
       const scored = await this.priorityEngine.compute({
@@ -499,16 +524,14 @@ export class TicketsService {
       baseParams,
     );
 
-    // Write SLA tracking record
-    if (slaResult.rule_id) {
-      await this.db.query(
-        `INSERT INTO tickets.ticket_sla_tracking
-           (ticket_id, sla_policy_id, sla_rule_id, started_at, deadline_at, status)
-         VALUES ($1, $2, $3, $4, $5, 'active')
-         ON CONFLICT (ticket_id) DO NOTHING`,
-        [ticket.id, slaPolicy.id, slaResult.rule_id, now, slaResult.deadline],
-      );
-    }
+    // Always write SLA tracking record (even hard-fallback tickets need breach detection)
+    await this.db.query(
+      `INSERT INTO tickets.ticket_sla_tracking
+         (ticket_id, sla_policy_id, sla_rule_id, started_at, deadline_at, status)
+       VALUES ($1, $2, $3, $4, $5, 'active')
+       ON CONFLICT (ticket_id) DO NOTHING`,
+      [ticket.id, slaPolicy.id, slaResult.rule_id ?? null, now, slaResult.deadline],
+    );
 
     // Link asset to ticket in junction table so inventory can query its tickets
     if (dto.asset_id) {
@@ -531,9 +554,9 @@ export class TicketsService {
       );
     }
 
-    // Auto-assignment: round_robin or hybrid mode assigns a technician immediately
+    // Auto-assignment
     const assignedTo = await this.assignment.assign(
-      ticket.id, dto.module_id, dto.category_id, userId,
+      ticket.id, dto.module_id, dto.category_id ?? null, dto.damage_type_id ?? null, userId,
     );
 
     if (!assignedTo) {
@@ -607,6 +630,37 @@ export class TicketsService {
       }
     }
 
+    // ── Blocks relation guard: cannot close a ticket still blocked by open tickets ──
+    const [toStatePre] = await this.db.query<{ is_final: boolean }[]>(
+      `SELECT is_final FROM tickets.states WHERE id = $1`,
+      [trans.to_state_id],
+    );
+    if (toStatePre?.is_final) {
+      const [blockedBy] = await this.db.query<{ cnt: string }[]>(
+        `SELECT COUNT(*) AS cnt
+         FROM tickets.ticket_relations r
+         JOIN tickets.tickets t2
+              ON t2.id = CASE
+                WHEN r.source_ticket_id = $1 AND r.relation_type = 'bloqueado_por' THEN r.target_ticket_id
+                WHEN r.target_ticket_id = $1 AND r.relation_type = 'bloquea'       THEN r.source_ticket_id
+                ELSE NULL
+              END
+         JOIN tickets.states s ON s.id = t2.current_state_id
+         WHERE (
+               (r.source_ticket_id = $1 AND r.relation_type = 'bloqueado_por')
+            OR (r.target_ticket_id = $1 AND r.relation_type = 'bloquea')
+         )
+           AND s.is_final = false
+           AND t2.deleted_at IS NULL`,
+        [ticketId],
+      );
+      if (Number(blockedBy?.cnt ?? 0) > 0) {
+        throw new ConflictException(
+          `Este ticket está bloqueado por ${blockedBy.cnt} ticket(s) aún abierto(s). Ciérralos antes de continuar.`,
+        );
+      }
+    }
+
     // ── Atomic write: state update + SLA clock in one transaction ────────────
     const qr = this.db.createQueryRunner();
     await qr.connect();
@@ -670,9 +724,17 @@ export class TicketsService {
 
       // 4. Approval state → generate approval token (DB function, must be in txn)
       if (toState?.is_approval_state) {
+        const modConfRows = await qr.query(
+          `SELECT COALESCE(m.approval_timeout_hours, 48) AS approval_timeout_hours
+           FROM tickets.tickets t JOIN modules.modules m ON m.id = t.module_id
+           WHERE t.id = $1`,
+          [ticketId],
+        );
+        const modConf = modConfRows[0] as { approval_timeout_hours: number } | undefined;
+        const approvalHours = modConf?.approval_timeout_hours ?? 48;
         await qr.query(
-          `SELECT tickets.generate_approval_token($1, $2, 48)`,
-          [ticketId, ticket.created_by],
+          `SELECT tickets.generate_approval_token($1, $2, $3)`,
+          [ticketId, ticket.created_by, approvalHours],
         );
       }
 
@@ -913,7 +975,7 @@ export class TicketsService {
         `SELECT t.id, t.title, t.created_by, t.workflow_version_id, t.current_state_id,
                 t.reprocess_count, t.module_id, t.priority, s.is_final
          FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
-         WHERE  t.id = $1
+         WHERE  t.id = $1 AND t.deleted_at IS NULL
          FOR UPDATE OF t`,
         [ticketId],
       );
@@ -1185,7 +1247,7 @@ export class TicketsService {
 
   async getComments(ticketId: string, requesterId: string) {
     const [ticket] = await this.db.query<{ module_id: string }[]>(
-      `SELECT module_id FROM tickets.tickets WHERE id = $1`,
+      `SELECT module_id FROM tickets.tickets WHERE id = $1 AND deleted_at IS NULL`,
       [ticketId],
     );
     if (!ticket) return [];
@@ -1209,7 +1271,7 @@ export class TicketsService {
 
   async addComment(userId: string, ticketId: string, dto: { content: string; comment_type?: string }) {
     const [ticket] = await this.db.query<{ id: string; title: string; created_by: string; module_id: string }[]>(
-      `SELECT id, title, created_by, module_id FROM tickets.tickets WHERE id = $1`,
+      `SELECT id, title, created_by, module_id FROM tickets.tickets WHERE id = $1 AND deleted_at IS NULL`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
@@ -1326,6 +1388,7 @@ export class TicketsService {
        LEFT JOIN users.profiles po ON po.id = oa.user_id
        WHERE  ta.asset_id = $1
          AND  ta.ticket_id <> $2
+         AND  t.deleted_at IS NULL
        ORDER  BY t.created_at DESC
        LIMIT  20`,
       [assetId, currentTicketId],
@@ -1390,7 +1453,8 @@ export class TicketsService {
       `SELECT t.id, t.title, t.priority, s.label AS state_label, s.is_final
        FROM   tickets.tickets t
        JOIN   tickets.states  s ON s.id = t.current_state_id
-       WHERE  t.id <> $2
+       WHERE  t.deleted_at IS NULL
+         AND  t.id <> $2
          AND  (t.title ILIKE $1 OR t.id::text ILIKE $1)
        ORDER BY t.created_at DESC
        LIMIT 10`,
@@ -1408,7 +1472,7 @@ export class TicketsService {
     }
 
     const [target] = await this.db.query<any[]>(
-      `SELECT id FROM tickets.tickets WHERE id = $1`,
+      `SELECT id FROM tickets.tickets WHERE id = $1 AND deleted_at IS NULL`,
       [dto.target_ticket_id],
     );
     if (!target) throw new NotFoundException('Ticket relacionado no encontrado');
@@ -1449,7 +1513,7 @@ export class TicketsService {
     }
 
     const [ticket] = await this.db.query<any[]>(
-      `SELECT id, module_id FROM tickets.tickets WHERE id = $1`,
+      `SELECT id, module_id FROM tickets.tickets WHERE id = $1 AND deleted_at IS NULL`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');

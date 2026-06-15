@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
 @Injectable()
 export class SystemModulesService {
+  private readonly logger = new Logger(SystemModulesService.name);
+
   constructor(@InjectDataSource() private readonly db: DataSource) {}
 
   async findAll(userId: string) {
@@ -50,7 +52,7 @@ export class SystemModulesService {
               m.is_active, m.maintenance_mode, m.maintenance_message,
               m.access_mode, m.assignment_mode, m.priority_mode, m.priority_editors,
               m.priority_period_start, m.priority_period_end,
-              m.specialization_mode, m.auto_close_hours,
+              m.specialization_mode, m.auto_close_hours, m.waiting_timeout_hours, m.approval_timeout_hours, m.max_reopen_count,
               COUNT(DISTINCT umr.user_id) AS members_count,
               COUNT(DISTINCT CASE WHEN mr.name IN ('tecnico','jefe_tecnico') THEN umr.user_id END) AS techs_count,
               COUNT(DISTINCT CASE WHEN mr.name = 'admin_modulo' THEN umr.user_id END) AS admins_count
@@ -128,7 +130,7 @@ export class SystemModulesService {
       name, description, type, image_url, color, is_active,
       access_mode, assignment_mode, priority_mode, priority_editors,
       priority_period_start, priority_period_end,
-      specialization_mode, auto_close_hours,
+      specialization_mode, auto_close_hours, waiting_timeout_hours, approval_timeout_hours, max_reopen_count,
     } = dto as any;
     const fields: string[] = [];
     const values: any[] = [];
@@ -174,9 +176,12 @@ export class SystemModulesService {
     if ('priority_period_start' in dto)     { fields.push(`priority_period_start = $${idx++}`); values.push(priority_period_start ?? null); }
     if ('priority_period_end' in dto)       { fields.push(`priority_period_end = $${idx++}`);   values.push(priority_period_end ?? null); }
 
-    /* ── Extended behavior config (migration 019) ── */
-    if (specialization_mode !== undefined)  { fields.push(`specialization_mode = $${idx++}`);  values.push(specialization_mode); }
-    if (auto_close_hours !== undefined)     { fields.push(`auto_close_hours = $${idx++}`);      values.push(auto_close_hours); }
+    /* ── Extended behavior config (migrations 019 + 048) ── */
+    if (specialization_mode !== undefined)     { fields.push(`specialization_mode = $${idx++}`);     values.push(specialization_mode); }
+    if (auto_close_hours !== undefined)        { fields.push(`auto_close_hours = $${idx++}`);         values.push(auto_close_hours); }
+    if (waiting_timeout_hours !== undefined)   { fields.push(`waiting_timeout_hours = $${idx++}`);    values.push(waiting_timeout_hours); }
+    if (approval_timeout_hours !== undefined)  { fields.push(`approval_timeout_hours = $${idx++}`);   values.push(approval_timeout_hours); }
+    if (max_reopen_count !== undefined)        { fields.push(`max_reopen_count = $${idx++}`);         values.push(max_reopen_count); }
 
     if (!fields.length) throw new BadRequestException('Nada que actualizar');
 
@@ -485,6 +490,28 @@ export class SystemModulesService {
        RETURNING *`,
       [moduleId, priority, dto.hours_to_resolve, dto.hours_to_first_response],
     );
+
+    // Bridge: keep tickets.sla_rules in sync so the active SLA engine sees admin changes.
+    // sort_order=500 → below condition-based rules (which use lower values), acts as priority fallback.
+    const [policy] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM tickets.sla_policies WHERE module_id = $1 AND is_active = true LIMIT 1`,
+      [moduleId],
+    );
+    if (policy) {
+      await this.db.query(
+        `DELETE FROM tickets.sla_rules
+         WHERE policy_id = $1 AND priority_result = $2 AND sort_order = 500`,
+        [policy.id, priority],
+      );
+      await this.db.query(
+        `INSERT INTO tickets.sla_rules (policy_id, sort_order, hours_to_resolve, priority_result, is_active)
+         VALUES ($1, 500, $2, $3, true)`,
+        [policy.id, dto.hours_to_resolve, priority],
+      );
+    } else {
+      this.logger.warn(`Module ${moduleId}: no active sla_policy — ticket SLA bridge skipped`);
+    }
+
     return row;
   }
 
@@ -493,6 +520,20 @@ export class SystemModulesService {
       `DELETE FROM modules.module_sla_rules WHERE module_id = $1 AND priority = $2`,
       [moduleId, priority],
     );
+
+    // Remove bridge rule from tickets.sla_rules (falls back to evaluator hard constants)
+    const [policy] = await this.db.query<{ id: string }[]>(
+      `SELECT id FROM tickets.sla_policies WHERE module_id = $1 AND is_active = true LIMIT 1`,
+      [moduleId],
+    );
+    if (policy) {
+      await this.db.query(
+        `DELETE FROM tickets.sla_rules
+         WHERE policy_id = $1 AND priority_result = $2 AND sort_order = 500`,
+        [policy.id, priority],
+      );
+    }
+
     return { ok: true };
   }
 
@@ -706,5 +747,114 @@ export class SystemModulesService {
       [id],
     );
     return { ok: true, message: `Ambiente "${env.name}" eliminado` };
+  }
+
+  /* ── Technician specializations ─────────────────────────────────── */
+
+  /**
+   * Returns all active specializations for a module, grouped by technician.
+   * Each tech entry contains arrays of their damage_type and category associations.
+   */
+  async getSpecializations(moduleId: string) {
+    const rows = await this.db.query<{
+      spec_id:         string;
+      user_id:         string;
+      first_name:      string;
+      last_name:       string;
+      email:           string;
+      role_name:       string;
+      damage_type_id:  string | null;
+      damage_label:    string | null;
+      damage_weight:   number | null;
+      category_id:     string | null;
+      category_name:   string | null;
+    }[]>(
+      `SELECT ts.id              AS spec_id,
+              ts.user_id,
+              p.first_name,
+              p.last_name,
+              c.email,
+              mr.name            AS role_name,
+              ts.damage_type_id,
+              dt.label           AS damage_label,
+              dt.weight          AS damage_weight,
+              ts.category_id,
+              cat.name           AS category_name
+       FROM   modules.technician_specializations ts
+       JOIN   users.profiles                     p   ON p.id  = ts.user_id
+       JOIN   auth.credentials                   c   ON c.user_id = p.id
+       JOIN   modules.user_module_roles           umr ON umr.user_id  = ts.user_id
+                                                    AND umr.module_id = ts.module_id
+                                                    AND umr.is_active = true
+       JOIN   modules.module_roles                mr  ON mr.id = umr.role_id
+       LEFT JOIN tickets.damage_types             dt  ON dt.id = ts.damage_type_id
+       LEFT JOIN modules.categories               cat ON cat.id = ts.category_id
+       WHERE  ts.module_id = $1 AND ts.is_active = true
+       ORDER  BY p.first_name, p.last_name, dt.label NULLS LAST, cat.name NULLS LAST`,
+      [moduleId],
+    );
+
+    // Group by user
+    const techMap = new Map<string, any>();
+    for (const r of rows) {
+      if (!techMap.has(r.user_id)) {
+        techMap.set(r.user_id, {
+          user_id: r.user_id,
+          name: `${r.first_name} ${r.last_name}`.trim(),
+          email: r.email,
+          role_name: r.role_name,
+          damage_types: [],
+          categories: [],
+        });
+      }
+      const entry = techMap.get(r.user_id)!;
+      if (r.damage_type_id) {
+        entry.damage_types.push({ spec_id: r.spec_id, id: r.damage_type_id, label: r.damage_label, weight: r.damage_weight });
+      }
+      if (r.category_id) {
+        entry.categories.push({ spec_id: r.spec_id, id: r.category_id, name: r.category_name });
+      }
+    }
+    return Array.from(techMap.values());
+  }
+
+  async addSpecialization(moduleId: string, dto: {
+    user_id:        string;
+    damage_type_id?: string | null;
+    category_id?:   string | null;
+  }) {
+    if (!dto.damage_type_id && !dto.category_id) {
+      throw new BadRequestException('Se requiere damage_type_id o category_id');
+    }
+    // Verify user belongs to this module as tech/jefe
+    const [member] = await this.db.query<{ user_id: string }[]>(
+      `SELECT umr.user_id FROM modules.user_module_roles umr
+       JOIN modules.module_roles mr ON mr.id = umr.role_id
+       WHERE umr.user_id = $1 AND umr.module_id = $2 AND umr.is_active = true
+         AND mr.name IN ('tecnico', 'jefe_tecnico')`,
+      [dto.user_id, moduleId],
+    );
+    if (!member) throw new BadRequestException('El usuario no es técnico activo de este módulo');
+
+    const [row] = await this.db.query<{ id: string }[]>(
+      `INSERT INTO modules.technician_specializations
+         (user_id, module_id, damage_type_id, category_id)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [dto.user_id, moduleId, dto.damage_type_id ?? null, dto.category_id ?? null],
+    );
+    return row ?? { already_exists: true };
+  }
+
+  async removeSpecialization(specId: string, moduleId: string) {
+    const result = await this.db.query(
+      `DELETE FROM modules.technician_specializations
+       WHERE id = $1 AND module_id = $2
+       RETURNING id`,
+      [specId, moduleId],
+    );
+    if (!(result as any[]).length) throw new NotFoundException('Especialización no encontrada');
+    return { ok: true };
   }
 }
