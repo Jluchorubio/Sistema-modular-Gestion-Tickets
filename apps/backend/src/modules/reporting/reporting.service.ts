@@ -25,8 +25,8 @@ export class ReportingService {
          COUNT(*) FILTER (WHERE tst.status = 'breached')                  AS breached,
          COUNT(*) FILTER (WHERE tst.status IN ('met', 'active'))           AS compliant,
          ROUND(
-           100.0 * COUNT(*) FILTER (WHERE tst.status IN ('met', 'active'))
-           / NULLIF(COUNT(*) FILTER (WHERE tst.ticket_id IS NOT NULL), 0)
+           100.0 * COUNT(*) FILTER (WHERE tst.status = 'met')
+           / NULLIF(COUNT(*) FILTER (WHERE tst.status IN ('met', 'breached')), 0)
          , 1) AS compliance_pct
        FROM tickets.tickets t
        JOIN tickets.states s ON s.id = t.current_state_id

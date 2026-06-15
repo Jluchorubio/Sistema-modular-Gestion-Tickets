@@ -212,20 +212,21 @@ export class RoleService {
         FROM   tickets.tickets t
         JOIN   tickets.states s ON s.id = t.current_state_id
         WHERE  s.is_final = false
+          AND  t.deleted_at IS NULL
           AND  t.priority IN ('alta', 'critica')
           AND  t.created_at >= ${cutoff}
       `),
       this.db.query<any[]>(`
         SELECT COUNT(*) AS count
         FROM   tickets.ticket_sla_tracking sla
-        JOIN   tickets.tickets t ON t.id = sla.ticket_id AND t.created_at >= ${cutoff}
+        JOIN   tickets.tickets t ON t.id = sla.ticket_id AND t.created_at >= ${cutoff} AND t.deleted_at IS NULL
         JOIN   tickets.states s  ON s.id = t.current_state_id
         WHERE  s.is_final = false AND sla.status = 'breached'
       `),
       this.db.query<any[]>(`
         SELECT COUNT(*) AS count
         FROM   tickets.ticket_sla_tracking sla
-        JOIN   tickets.tickets t ON t.id = sla.ticket_id AND t.created_at >= ${cutoff}
+        JOIN   tickets.tickets t ON t.id = sla.ticket_id AND t.created_at >= ${cutoff} AND t.deleted_at IS NULL
         JOIN   tickets.states s  ON s.id = t.current_state_id
         WHERE  s.is_final = false
           AND  sla.status = 'active'
@@ -245,6 +246,7 @@ export class RoleService {
         JOIN   tickets.states  s ON s.id = t.current_state_id
         JOIN   users.profiles  p ON p.id = t.created_by
         WHERE  t.created_at >= ${cutoff}
+          AND  t.deleted_at IS NULL
         ORDER  BY t.created_at DESC
         LIMIT  6
       `),

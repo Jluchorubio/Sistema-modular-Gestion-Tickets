@@ -30,7 +30,15 @@ export class NotificationsService {
   async notifyUser(payload: NotificationPayload): Promise<void> {
     const { userId, eventType, subject, body, channels, meta } = payload;
 
-    if (channels.includes('in_app')) {
+    // Respect per-user channel preferences (default: allow all if no row exists)
+    const [prefs] = await this.db.query<{ notification_email: boolean; notification_in_app: boolean }[]>(
+      `SELECT notification_email, notification_in_app FROM users.preferences WHERE user_id = $1`,
+      [userId],
+    ).catch(() => [undefined]);
+    const allowEmail = prefs?.notification_email  !== false;
+    const allowInApp = prefs?.notification_in_app !== false;
+
+    if (channels.includes('in_app') && allowInApp) {
       try {
         await this.db.query(
           `INSERT INTO notifications.notification_logs (user_id, channel, event_type, status, payload)
@@ -44,7 +52,7 @@ export class NotificationsService {
       }
     }
 
-    if (channels.includes('email')) {
+    if (channels.includes('email') && allowEmail) {
       try { await this.email.send(payload); }
       catch (err) { this.logger.error(`email send error: ${err.message}`); }
     }

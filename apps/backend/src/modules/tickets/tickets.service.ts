@@ -882,6 +882,12 @@ export class TicketsService {
       [trans.to_state_id, ticketId],
     );
 
+    await this.db.query(
+      `UPDATE tickets.ticket_assignments SET is_active = false, unassigned_at = now()
+       WHERE ticket_id = $1 AND is_active = true`,
+      [ticketId],
+    );
+
     const sigHash = dto.signature ? Buffer.from(dto.signature).toString('base64') : null;
     await this.db.query(
       `UPDATE tickets.ticket_approvals
@@ -919,15 +925,19 @@ export class TicketsService {
   async rejectTicket(userId: string, ticketId: string, dto: { reason: string }) {
     const [ticket] = await this.db.query<any[]>(
       `SELECT t.id, t.title, t.created_by, t.workflow_version_id, t.current_state_id,
-              t.reprocess_count, t.module_id, t.priority, s.is_approval_state
-       FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
+              t.reprocess_count, t.module_id, t.priority, s.is_approval_state,
+              COALESCE(m.max_reopen_count, 10) AS max_reopen_count
+       FROM   tickets.tickets t
+       JOIN   tickets.states  s ON s.id = t.current_state_id
+       JOIN   modules.modules m ON m.id = t.module_id
        WHERE  t.id = $1 AND t.deleted_at IS NULL`,
       [ticketId],
     );
     if (!ticket) throw new NotFoundException('Ticket not found');
     if (!ticket.is_approval_state)     throw new BadRequestException('El ticket no está pendiente de validación.');
     if (ticket.created_by !== userId)  throw new ForbiddenException('Solo el solicitante puede validar este ticket.');
-    if (ticket.reprocess_count >= 5)   throw new BadRequestException('Límite de reaperturas alcanzado (5). Contacta a soporte.');
+    if (ticket.reprocess_count >= ticket.max_reopen_count)
+      throw new BadRequestException(`Límite de reaperturas alcanzado (${ticket.max_reopen_count}). Contacta a soporte.`);
 
     const [trans] = await this.db.query<any[]>(
       `SELECT tr.id, tr.to_state_id
@@ -1005,8 +1015,11 @@ export class TicketsService {
 
       const ticketRows: any[] = await qr.query(
         `SELECT t.id, t.title, t.created_by, t.workflow_version_id, t.current_state_id,
-                t.reprocess_count, t.module_id, t.priority, s.is_final
-         FROM   tickets.tickets t JOIN tickets.states s ON s.id = t.current_state_id
+                t.reprocess_count, t.module_id, t.priority, s.is_final,
+                COALESCE(m.max_reopen_count, 10) AS max_reopen_count
+         FROM   tickets.tickets t
+         JOIN   tickets.states  s ON s.id = t.current_state_id
+         JOIN   modules.modules m ON m.id = t.module_id
          WHERE  t.id = $1 AND t.deleted_at IS NULL
          FOR UPDATE OF t`,
         [ticketId],
@@ -1014,7 +1027,8 @@ export class TicketsService {
       ticket = ticketRows[0];
       if (!ticket)          throw new NotFoundException('Ticket not found');
       if (!ticket.is_final) throw new BadRequestException('Solo se pueden reabrir tickets en estado final.');
-      if ((ticket.reprocess_count ?? 0) >= 5) throw new BadRequestException('Límite de reaperturas alcanzado (5).');
+      if ((ticket.reprocess_count ?? 0) >= ticket.max_reopen_count)
+        throw new BadRequestException(`Límite de reaperturas alcanzado (${ticket.max_reopen_count}).`);
 
       const initStateRows: any[] = await qr.query(
         `SELECT id FROM tickets.states WHERE workflow_version_id = $1 AND is_initial = true AND is_active = true LIMIT 1`,
