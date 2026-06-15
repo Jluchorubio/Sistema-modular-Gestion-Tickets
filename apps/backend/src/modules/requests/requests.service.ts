@@ -385,6 +385,42 @@ export class RequestsService {
     return updated;
   }
 
+  async untake(userId: string, requestId: string) {
+    const [req] = await this.db.query<{
+      id: string; status: string; taken_by: string | null;
+    }[]>(
+      `SELECT id, status, taken_by FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
+      [requestId],
+    );
+    if (!req) throw new NotFoundException(`Solicitud ${requestId} no encontrada`);
+    if (req.status !== 'taken') throw new BadRequestException('Solo se puede liberar una solicitud en estado "taken"');
+
+    const [actor] = await this.db.query<{ is_superadmin: boolean }[]>(
+      `SELECT is_superadmin FROM users.profiles WHERE id = $1 AND deleted_at IS NULL`,
+      [userId],
+    );
+    if (req.taken_by !== userId && !actor?.is_superadmin) {
+      throw new ForbiddenException('Solo quien tomó la solicitud o un superadmin puede liberarla');
+    }
+
+    const [updated] = await this.db.query<any[]>(
+      `UPDATE requests.admin_requests
+       SET status     = 'pending',
+           taken_by   = NULL,
+           taken_at   = NULL,
+           updated_at = now()
+       WHERE id = $1
+       RETURNING *`,
+      [requestId],
+    );
+    await this.db.query(
+      `INSERT INTO requests.request_timeline (request_id, actor_id, action, old_status, new_status)
+       VALUES ($1, $2, 'untaken', 'taken', 'pending')`,
+      [requestId, userId],
+    );
+    return updated;
+  }
+
   async updateProgress(userId: string, requestId: string, status: 'in_progress' | 'completed') {
     const [req] = await this.db.query<{ id: string; status: string; taken_by: string | null }[]>(
       `SELECT id, status, taken_by FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,

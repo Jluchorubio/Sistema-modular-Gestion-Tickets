@@ -114,6 +114,94 @@ export class ApprovalExpiryService {
 
     for (const t of expired) {
       try {
+        const reopenCount = (t.reprocess_count ?? 0) + 1;
+        const maxReached  = reopenCount >= t.max_reopen_count;
+
+        if (maxReached) {
+          // Limit reached → close ticket permanently instead of cycling again
+          const [finalTrans] = await this.db.query<{ to_state_id: string }[]>(
+            `SELECT tr.to_state_id
+             FROM   tickets.transitions tr
+             JOIN   tickets.states ts2 ON ts2.id = tr.to_state_id
+             WHERE  tr.workflow_version_id = $1
+               AND  tr.from_state_id       = $2
+               AND  ts2.is_final           = true
+               AND  tr.is_active           = true
+             LIMIT 1`,
+            [t.workflow_version_id, t.current_state_id],
+          );
+
+          if (finalTrans) {
+            const qrF = this.db.createQueryRunner();
+            await qrF.connect();
+            await qrF.startTransaction();
+            try {
+              await qrF.query(`SELECT set_config('app.current_user_id', 'system', true)`);
+              await qrF.query(
+                `UPDATE tickets.tickets
+                 SET current_state_id = $1,
+                     escalated        = true,
+                     escalated_at     = now(),
+                     escalation_note  = $2
+                 WHERE id = $3`,
+                [
+                  finalTrans.to_state_id,
+                  `Cerrado automáticamente: superó ${t.max_reopen_count} reaperturas por expiración de aprobación`,
+                  t.ticket_id,
+                ],
+              );
+              await qrF.query(
+                `UPDATE tickets.ticket_approvals SET status = 'expired'
+                 WHERE ticket_id = $1 AND status = 'pending'`,
+                [t.ticket_id],
+              );
+              await qrF.query(
+                `UPDATE tickets.ticket_sla_tracking
+                 SET status      = CASE WHEN deadline_at < now() THEN 'breached' ELSE 'met' END,
+                     breached_at = CASE WHEN deadline_at < now() THEN now() ELSE NULL END,
+                     updated_at  = now()
+                 WHERE ticket_id = $1 AND status IN ('active', 'paused', 'breached')`,
+                [t.ticket_id],
+              );
+              await qrF.query(
+                `UPDATE tickets.ticket_assignments SET is_active = false, unassigned_at = now()
+                 WHERE ticket_id = $1 AND is_active = true`,
+                [t.ticket_id],
+              );
+              await qrF.commitTransaction();
+            } catch (txErr) {
+              await qrF.rollbackTransaction();
+              throw txErr;
+            } finally {
+              await qrF.release();
+            }
+
+            this.logger.warn(
+              `Ticket ${t.ticket_id} auto-closed after reaching max_reopen_count (${t.max_reopen_count})`,
+            );
+            this.messaging.emit('ticket.escalated', {
+              ticketId: t.ticket_id,
+              title:    t.title,
+              moduleId: t.module_id,
+              reason:   `Cerrado automáticamente: superó ${t.max_reopen_count} reaperturas por expiración de aprobación`,
+            });
+            this.messaging.emit('ticket.closed', {
+              ticketId:  t.ticket_id,
+              title:     t.title,
+              createdBy: t.created_by,
+              toLabel:   'Cerrado por límite de reaperturas',
+              actorId:   'system',
+            });
+            continue; // skip the normal reopen logic below
+          }
+
+          // No final transition found — log and fall through to normal reopen
+          this.logger.warn(
+            `Ticket ${t.ticket_id} reached max_reopen_count but no final transition found — doing normal reopen`,
+          );
+        }
+
+        // Normal reopen path
         const [trans] = await this.db.query<{ to_state_id: string }[]>(
           `SELECT tr.to_state_id
            FROM   tickets.transitions tr
@@ -133,10 +221,8 @@ export class ApprovalExpiryService {
           continue;
         }
 
-        const reopenCount    = (t.reprocess_count ?? 0) + 1;
-        const maxReached     = reopenCount >= t.max_reopen_count;
-        // Escalate at 3 reopens OR when max is reached and ticket isn't already critica
-        const shouldEscalate = (reopenCount >= 3 || maxReached) && t.priority !== 'critica';
+        // Escalate at 3 reopens (max not yet reached)
+        const shouldEscalate = reopenCount >= 3 && t.priority !== 'critica';
         const newPriority    = shouldEscalate ? this.priorityEngine.escalatePriority(t.priority) : t.priority;
 
         // Atomic transaction: ticket state + approval status
@@ -196,21 +282,13 @@ export class ApprovalExpiryService {
           reopenCount,
         });
 
-        const escalateReason = maxReached
-          ? `Superó el máximo de reaperturas (${t.max_reopen_count})`
-          : `Auto-escalado por ${reopenCount} reaperturas de aprobación`;
-
         if (shouldEscalate) {
           this.messaging.emit('ticket.escalated', {
             ticketId:  t.ticket_id,
             title:     t.title,
             moduleId:  t.module_id,
-            reason:    escalateReason,
+            reason:    `Auto-escalado por ${reopenCount} reaperturas de aprobación`,
           });
-        }
-
-        if (maxReached) {
-          this.logger.warn(`Ticket ${t.ticket_id} reached max reopen count (${t.max_reopen_count}) — escalated`);
         }
 
         this.logger.log(`Ticket ${t.ticket_id} reopened after approval expiry (reopen #${reopenCount})`);

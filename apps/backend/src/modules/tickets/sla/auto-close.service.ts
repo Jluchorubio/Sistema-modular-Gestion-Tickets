@@ -85,6 +85,12 @@ export class AutoCloseService {
           [t.close_state_id, t.ticket_id],
         );
 
+        await qr.query(
+          `UPDATE tickets.ticket_assignments SET is_active = false, unassigned_at = now()
+           WHERE ticket_id = $1 AND is_active = true`,
+          [t.ticket_id],
+        );
+
         // Close SLA tracking — to_state is always is_final=true (guaranteed by query above)
         await qr.query(
           `UPDATE tickets.ticket_sla_tracking

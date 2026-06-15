@@ -123,6 +123,13 @@ export class RequestsController {
     return this.service.take(req.user.sub, id);
   }
 
+  @Delete(':id/take')
+  @RequirePermission('gestion:requests:take')
+  @ApiOperation({ summary: 'Liberar solicitud tomada — regresa a pendiente.' })
+  untake(@Req() req: any, @Param('id') id: string) {
+    return this.service.untake(req.user.sub, id);
+  }
+
   @Patch(':id/progress')
   @RequirePermission('gestion:requests:progress')
   @ApiOperation({ summary: 'Actualizar progreso: in_progress | completed.' })

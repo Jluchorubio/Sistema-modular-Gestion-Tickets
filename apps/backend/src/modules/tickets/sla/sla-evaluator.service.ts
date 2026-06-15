@@ -306,6 +306,9 @@ export class SlaEvaluatorService {
       next = new Date(next.getTime() + 86_400_000);
     }
 
+    this.logger.warn(
+      `nextDayStart: no working day found in next 7 days — module may have no business hours configured. Falling back to +24h calendar time.`,
+    );
     return new Date(from.getTime() + 86_400_000);
   }
 
@@ -395,9 +398,11 @@ export class SlaEvaluatorService {
 
   private async loadOrgTimezone(): Promise<string> {
     const [row] = await this.db.query<{ timezone: string }[]>(
-      `SELECT timezone FROM users.organizations
-       WHERE id = '00000000-0000-0000-0000-000000000001'`,
+      `SELECT timezone FROM users.organizations ORDER BY created_at LIMIT 1`,
     );
+    if (!row?.timezone) {
+      this.logger.warn('No organization found or timezone not set — using America/Bogota fallback for SLA calculation');
+    }
     return row?.timezone ?? 'America/Bogota';
   }
 

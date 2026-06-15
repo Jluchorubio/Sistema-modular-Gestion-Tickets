@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Cron } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
+import { MessagingService } from '../../../shared/messaging/messaging.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PriorityEngineService } from '../priority/priority-engine.service';
 
@@ -19,6 +20,7 @@ export class WaitingTimeoutService {
 
   constructor(
     @InjectDataSource() private readonly db: DataSource,
+    private readonly messaging: MessagingService,
     private readonly notifications: NotificationsService,
     private readonly priorityEngine: PriorityEngineService,
   ) {}
@@ -94,13 +96,29 @@ export class WaitingTimeoutService {
     const newPriority = this.priorityEngine.escalatePriority(t.priority);
     const escalated   = newPriority !== t.priority;
 
+    const escalationNote = `Escalado automáticamente: en espera más de ${t.timeout_h * 2}h (2× timeout del módulo)`;
+
+    await this.db.query(
+      `UPDATE tickets.tickets
+       SET priority        = $1,
+           escalated       = true,
+           escalated_at    = now(),
+           escalation_note = $2,
+           updated_at      = now()
+       WHERE id = $3`,
+      [newPriority, escalationNote, t.ticket_id],
+    );
+
     if (escalated) {
-      await this.db.query(
-        `UPDATE tickets.tickets SET priority = $1, updated_at = now() WHERE id = $2`,
-        [newPriority, t.ticket_id],
-      );
       this.logger.log(`Escalated ticket ${t.ticket_id}: ${t.priority} → ${newPriority}`);
     }
+
+    this.messaging.emit('ticket.escalated', {
+      ticketId: t.ticket_id,
+      title:    t.title,
+      moduleId: t.module_id,
+      reason:   escalationNote,
+    });
 
     await this.notifyStuckTicket(t, true, escalated ? newPriority : null);
   }

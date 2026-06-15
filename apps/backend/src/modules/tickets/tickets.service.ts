@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { MessagingService } from '../../shared/messaging/messaging.service';
@@ -8,6 +8,8 @@ import { AssignmentService } from './assignment/assignment.service';
 
 @Injectable()
 export class TicketsService {
+  private readonly logger = new Logger(TicketsService.name);
+
   constructor(
     @InjectDataSource() private readonly db: DataSource,
     private readonly messaging: MessagingService,
@@ -476,6 +478,10 @@ export class TicketsService {
         finalPriority = this.priorityEngine.escalatePriority(finalPriority);
         autoEscalated = true;
       }
+    } else if (dto.asset_id || dto.damage_type_id) {
+      this.logger.warn(
+        `Ticket create: recurrence check skipped — only one of asset_id/damage_type_id provided (asset_id=${dto.asset_id ?? 'null'}, damage_type_id=${dto.damage_type_id ?? 'null'})`,
+      );
     }
 
     // Compute SLA deadline via evaluator
@@ -802,12 +808,15 @@ export class TicketsService {
     for (const ticketId of ticketIds) {
       try {
         const [ticket] = await this.db.query<any[]>(
-          `SELECT id, workflow_version_id, current_state_id
-           FROM   tickets.tickets
-           WHERE  id = $1 AND deleted_at IS NULL`,
+          `SELECT t.id, t.workflow_version_id, t.current_state_id, s.is_approval_state
+           FROM   tickets.tickets t
+           JOIN   tickets.states s ON s.id = t.current_state_id
+           WHERE  t.id = $1 AND t.deleted_at IS NULL`,
           [ticketId],
         );
         if (!ticket) { skipped.push(ticketId); continue; }
+        // Cannot bulk-close tickets awaiting requester approval — would bypass the gate
+        if (ticket.is_approval_state) { skipped.push(ticketId); continue; }
 
         const [trans] = await this.db.query<any[]>(
           `SELECT tr.id
@@ -881,6 +890,18 @@ export class TicketsService {
       [sigHash, ticketId],
     );
 
+    // Resume SLA if it was paused (defensive: handles edge case where approval state
+    // is also configured as is_pause_state in the workflow)
+    await this.db.query(
+      `UPDATE tickets.ticket_sla_tracking
+       SET deadline_at           = deadline_at + (now() - paused_at),
+           total_paused_seconds  = total_paused_seconds + EXTRACT(EPOCH FROM (now() - paused_at))::int,
+           paused_at             = NULL,
+           status                = 'active'
+       WHERE ticket_id = $1 AND status = 'paused' AND paused_at IS NOT NULL`,
+      [ticketId],
+    );
+
     await this.db.query(
       `UPDATE tickets.ticket_sla_tracking
        SET status     = CASE WHEN deadline_at < now() THEN 'breached' ELSE 'met' END,
@@ -940,6 +961,17 @@ export class TicketsService {
       [ticketId],
     );
 
+    // Resume SLA if it was paused (edge case: approval state also marked as is_pause_state)
+    await this.db.query(
+      `UPDATE tickets.ticket_sla_tracking
+       SET deadline_at          = deadline_at + (now() - paused_at),
+           total_paused_seconds = total_paused_seconds + EXTRACT(EPOCH FROM (now() - paused_at))::int,
+           paused_at            = NULL,
+           status               = CASE WHEN deadline_at + (now() - paused_at) < now() THEN 'breached' ELSE 'active' END
+       WHERE ticket_id = $1 AND status = 'paused' AND paused_at IS NOT NULL`,
+      [ticketId],
+    );
+
     this.messaging.emit('ticket.state_changed', {
       ticketId,
       title:     ticket.title,
@@ -985,7 +1017,7 @@ export class TicketsService {
       if ((ticket.reprocess_count ?? 0) >= 5) throw new BadRequestException('Límite de reaperturas alcanzado (5).');
 
       const initStateRows: any[] = await qr.query(
-        `SELECT id FROM tickets.states WHERE workflow_version_id = $1 AND is_initial = true LIMIT 1`,
+        `SELECT id FROM tickets.states WHERE workflow_version_id = $1 AND is_initial = true AND is_active = true LIMIT 1`,
         [ticket.workflow_version_id],
       );
       const initState = initStateRows[0];

@@ -20,7 +20,6 @@ export class ReportingService {
     const [summary] = await this.db.query<any[]>(
       `SELECT
          COUNT(*)                                                          AS total,
-         -- Legacy: no sla_deadline column OR no tracking row
          COUNT(*) FILTER (WHERE t.sla_deadline IS NULL
                              OR  tst.ticket_id IS NULL)                   AS without_sla,
          COUNT(*) FILTER (WHERE tst.status = 'breached')                  AS breached,
@@ -32,7 +31,7 @@ export class ReportingService {
        FROM tickets.tickets t
        JOIN tickets.states s ON s.id = t.current_state_id
        LEFT JOIN tickets.ticket_sla_tracking tst ON tst.ticket_id = t.id
-       WHERE 1=1 ${cond}`,
+       WHERE t.deleted_at IS NULL ${cond}`,
       params,
     );
 
@@ -45,7 +44,7 @@ export class ReportingService {
        FROM tickets.tickets t
        JOIN tickets.states s ON s.id = t.current_state_id
        LEFT JOIN tickets.ticket_sla_tracking tst ON tst.ticket_id = t.id
-       WHERE t.sla_deadline IS NOT NULL ${cond}
+       WHERE t.sla_deadline IS NOT NULL AND t.deleted_at IS NULL ${cond}
        GROUP BY t.priority
        ORDER BY t.priority`,
       params,
@@ -75,7 +74,6 @@ export class ReportingService {
   async inventorySummary(moduleId?: string) {
     const cond   = moduleId ? `AND a.module_id = $1` : '';
     const params = moduleId ? [moduleId] : [];
-    let i = params.length + 1;
 
     const [totals] = await this.db.query<any[]>(
       `SELECT
@@ -172,7 +170,6 @@ export class ReportingService {
 
     const cond = conditions.length ? `AND ${conditions.join(' AND ')}` : '';
 
-    // Trend: use supplied date range, or last 30 days if no from-date
     const trendFrom = dateFrom ?? null;
     const trendCond = trendFrom
       ? cond
@@ -184,21 +181,21 @@ export class ReportingService {
                 COUNT(*) AS total
          FROM tickets.tickets t
          JOIN tickets.states s ON s.id = t.current_state_id
-         WHERE 1=1 ${cond}
+         WHERE t.deleted_at IS NULL ${cond}
          GROUP BY s.name, s.label, s.is_final
          ORDER BY s.is_final, s.name`,
         params,
       ),
       this.db.query<any[]>(
         `SELECT t.priority, COUNT(*) AS total
-         FROM tickets.tickets t WHERE 1=1 ${cond}
+         FROM tickets.tickets t WHERE t.deleted_at IS NULL ${cond}
          GROUP BY t.priority ORDER BY t.priority`,
         params,
       ),
       this.db.query<any[]>(
         `SELECT date_trunc('day', t.created_at)::date AS day, COUNT(*) AS created
          FROM tickets.tickets t
-         WHERE 1=1 ${trendCond}
+         WHERE t.deleted_at IS NULL ${trendCond}
          GROUP BY 1 ORDER BY 1`,
         params,
       ),
@@ -210,7 +207,7 @@ export class ReportingService {
            COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '7 days') AS last_7_days
          FROM tickets.tickets t
          JOIN tickets.states s ON s.id = t.current_state_id
-         WHERE 1=1 ${cond}`,
+         WHERE t.deleted_at IS NULL ${cond}`,
         params,
       ),
     ]);
@@ -232,16 +229,23 @@ export class ReportingService {
            COUNT(*) FILTER (WHERE t.created_at >= now() - INTERVAL '30 days')        AS this_month,
            COUNT(*) FILTER (WHERE s.name = 'rechazado')                              AS rechazados,
            ROUND(AVG(
-             EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
+             EXTRACT(EPOCH FROM (
+               (SELECT MAX(tsh2.transitioned_at)
+                FROM tickets.ticket_state_history tsh2
+                JOIN tickets.states fs2 ON fs2.id = tsh2.to_state_id AND fs2.is_final = true
+                WHERE tsh2.ticket_id = t.id)
+               - t.created_at
+             )) / 3600
            ) FILTER (WHERE s.is_final), 1)                                            AS avg_resolution_hours,
            ROUND(AVG(
              EXTRACT(EPOCH FROM (now() - t.created_at)) / 3600
            ) FILTER (WHERE NOT s.is_final), 1)                                        AS avg_open_age_hours,
-           COUNT(*) FILTER (WHERE st.status = 'breached' AND NOT s.is_final)          AS breach_active
+           COUNT(*) FILTER (WHERE st.status = 'breached' AND NOT s.is_final)          AS breach_active,
+           COUNT(*) FILTER (WHERE t.escalated = true)                                 AS escalated_count
          FROM tickets.tickets t
          JOIN tickets.states s ON s.id = t.current_state_id
          LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
-         WHERE t.module_id = $1`,
+         WHERE t.module_id = $1 AND t.deleted_at IS NULL`,
         p,
       ),
       this.db.query<any[]>(
@@ -254,7 +258,7 @@ export class ReportingService {
          FROM tickets.tickets t
          JOIN tickets.states s ON s.id = t.current_state_id
          LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
-         WHERE t.module_id = $1
+         WHERE t.module_id = $1 AND t.deleted_at IS NULL
          GROUP BY t.priority
          ORDER BY CASE t.priority
            WHEN 'critica' THEN 1 WHEN 'alta' THEN 2
@@ -272,13 +276,13 @@ export class ReportingService {
            WHERE  role = 'owner'
            ORDER  BY ticket_id, assigned_at ASC
          ) ta ON ta.ticket_id = t.id
-         WHERE t.module_id = $1`,
+         WHERE t.module_id = $1 AND t.deleted_at IS NULL`,
         p,
       ),
       this.db.query<{ cnt: string }[]>(
         `SELECT COUNT(DISTINCT tsh.ticket_id) AS cnt
          FROM   tickets.ticket_state_history tsh
-         JOIN   tickets.tickets t  ON t.id  = tsh.ticket_id AND t.module_id = $1
+         JOIN   tickets.tickets t  ON t.id  = tsh.ticket_id AND t.module_id = $1 AND t.deleted_at IS NULL
          JOIN   tickets.states  fs ON fs.id = tsh.from_state_id
          JOIN   tickets.states  ts ON ts.id = tsh.to_state_id
          WHERE  (fs.is_final = true OR fs.is_approval_state = true)
@@ -288,10 +292,15 @@ export class ReportingService {
       ),
     ]);
 
+    const total          = parseInt(kpis[0]?.total ?? '0', 10);
+    const escalatedCount = parseInt(kpis[0]?.escalated_count ?? '0', 10);
+    const escalationRate = total > 0 ? parseFloat((escalatedCount / total * 100).toFixed(1)) : 0;
+
     const enrichedKpis = {
       ...(kpis[0] ?? {}),
       avg_first_response_hours: firstResponse[0]?.avg_first_response_hours ?? null,
-      reopen_count: parseInt(reopenCount[0]?.cnt ?? '0', 10),
+      reopen_count:             parseInt(reopenCount[0]?.cnt ?? '0', 10),
+      escalation_rate:          escalationRate,
     };
 
     const byCategory = await this.db.query<any[]>(
@@ -302,7 +311,7 @@ export class ReportingService {
        FROM   tickets.tickets t
        JOIN   modules.categories c ON c.id = t.category_id
        JOIN   tickets.states     s ON s.id = t.current_state_id
-       WHERE  t.module_id = $1
+       WHERE  t.module_id = $1 AND t.deleted_at IS NULL
        GROUP  BY c.name
        ORDER  BY total DESC
        LIMIT  15`,
@@ -316,7 +325,13 @@ export class ReportingService {
               COUNT(DISTINCT ta.ticket_id) FILTER (WHERE s.is_final)                AS tickets_resolved,
               COUNT(DISTINCT ta.ticket_id) FILTER (WHERE s.name = 'rechazado')      AS rechazados,
               ROUND(AVG(
-                EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
+                EXTRACT(EPOCH FROM (
+                  (SELECT MAX(tsh2.transitioned_at)
+                   FROM tickets.ticket_state_history tsh2
+                   JOIN tickets.states fs2 ON fs2.id = tsh2.to_state_id AND fs2.is_final = true
+                   WHERE tsh2.ticket_id = t.id)
+                  - t.created_at
+                )) / 3600
               ) FILTER (WHERE s.is_final), 1)                                        AS avg_resolution_hours,
               ROUND(AVG(
                 EXTRACT(EPOCH FROM (COALESCE(ta.unassigned_at, now()) - ta.assigned_at)) / 3600
@@ -324,7 +339,7 @@ export class ReportingService {
               ROUND(AVG(r.score_overall), 1)                                         AS avg_rating,
               COUNT(r.id)                                                             AS total_ratings
        FROM   tickets.ticket_assignments ta
-       JOIN   tickets.tickets    t  ON t.id  = ta.ticket_id AND t.module_id = $1
+       JOIN   tickets.tickets    t  ON t.id  = ta.ticket_id AND t.module_id = $1 AND t.deleted_at IS NULL
        JOIN   tickets.states     s  ON s.id  = t.current_state_id
        JOIN   users.profiles     p  ON p.id  = ta.user_id
        LEFT JOIN tickets.ticket_ratings r ON r.ticket_id = ta.ticket_id AND r.technician_id = ta.user_id
@@ -339,7 +354,7 @@ export class ReportingService {
     const trend = await this.db.query<any[]>(
       `SELECT date_trunc('day', t.created_at)::date AS day, COUNT(*) AS created
        FROM   tickets.tickets t
-       WHERE  t.module_id = $1 AND t.created_at >= now() - INTERVAL '30 days'
+       WHERE  t.module_id = $1 AND t.deleted_at IS NULL AND t.created_at >= now() - INTERVAL '30 days'
        GROUP  BY 1 ORDER BY 1`,
       p,
     );
