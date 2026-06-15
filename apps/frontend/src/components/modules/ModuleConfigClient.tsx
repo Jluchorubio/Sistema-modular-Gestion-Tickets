@@ -49,14 +49,14 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
   const canEdit = isSuperadmin || isAdminModulo;
 
   const [accessMode, setAccessMode]               = useState<'open' | 'request'>((mod as any).access_mode ?? 'request');
-  const [assignmentMode, setAssignmentMode]       = useState<'manual' | 'round_robin' | 'hybrid'>((mod as any).assignment_mode ?? 'manual');
+  const [assignmentMode, setAssignmentMode]       = useState<'manual' | 'round_robin' | 'skill_based' | 'hybrid'>((mod as any).assignment_mode ?? 'manual');
   const [priorityMode, setPriorityMode]           = useState<'auto' | 'manual'>((mod as any).priority_mode ?? 'auto');
   const [priorityEditors, setPriorityEditors]     = useState<'jefe_tecnico' | 'any_tech'>((mod as any).priority_editors ?? 'jefe_tecnico');
   const [periodStart, setPeriodStart]             = useState<string>((mod as any).priority_period_start ?? '');
   const [periodEnd, setPeriodEnd]                 = useState<string>((mod as any).priority_period_end ?? '');
-  const [specializationMode, setSpecializationMode] = useState<'general' | 'specialist' | 'hybrid'>((mod as any).specialization_mode ?? 'general');
-  const [autoCloseHours, setAutoCloseHours]       = useState<number>((mod as any).auto_close_hours ?? 48);
-  const [saved, setSaved]                         = useState(false);
+  const [autoCloseHours, setAutoCloseHours]         = useState<number>((mod as any).auto_close_hours ?? 48);
+  const [waitingTimeoutHours, setWaitingTimeoutHours] = useState<number>((mod as any).waiting_timeout_hours ?? 72);
+  const [saved, setSaved]                           = useState(false);
 
   const updateMut = useMutation({
     mutationFn: (dto: Record<string, unknown>) => modulesService.updateModule(moduleId, dto),
@@ -75,7 +75,6 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
       priority_editors:      priorityMode === 'manual' ? priorityEditors : undefined,
       priority_period_start: priorityMode === 'manual' && periodStart ? periodStart : null,
       priority_period_end:   priorityMode === 'manual' && periodEnd   ? periodEnd   : null,
-      specialization_mode:   specializationMode,
       auto_close_hours:      autoCloseHours,
     });
   }
@@ -274,35 +273,22 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
         )}
       </div>}
 
-      {/* ── Especialización de técnicos ── */}
-      {!isInventory && <div style={card}>
-        <div style={sectionHead}>Especialización de técnicos</div>
-        <span style={fieldLabel}>¿Cómo se asignan los técnicos según su especialidad?</span>
-        <div style={radioGroup}>
-          <RadioOption
-            name="specialization" value="general"
-            checked={specializationMode === 'general'}
-            onChange={() => setSpecializationMode('general')}
-            disabled={!canEdit}
-            label="Técnicos generales"
-            desc="Cualquier técnico puede atender cualquier tipo de ticket sin filtro por especialidad."
-          />
-          <RadioOption
-            name="specialization" value="specialist"
-            checked={specializationMode === 'specialist'}
-            onChange={() => setSpecializationMode('specialist')}
-            disabled={!canEdit}
-            label="Por especialización"
-            desc="El sistema solo asigna técnicos que tengan la categoría del ticket entre sus especialidades."
-          />
-          <RadioOption
-            name="specialization" value="hybrid"
-            checked={specializationMode === 'hybrid'}
-            onChange={() => setSpecializationMode('hybrid')}
-            disabled={!canEdit}
-            label="Híbrido"
-            desc="Se intenta asignar por especialización; si no hay especialista disponible, se usa un técnico general."
-          />
+      {/* ── Especialización de técnicos (gestionado por modo de asignación) ── */}
+      {!isInventory && <div style={{ ...card, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ fontSize: 20, lineHeight: 1 }}>ℹ️</div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#334155', margin: '0 0 4px' }}>
+              Especialización de técnicos
+            </p>
+            <p style={{ fontSize: 12, color: '#64748b', margin: 0, lineHeight: 1.6 }}>
+              La especialización se controla desde el <strong>Modo de asignación</strong> de arriba.
+              Selecciona <em>Skill-based</em> o <em>Híbrido</em> para que el sistema asigne
+              técnicos según las categorías configuradas en su perfil.
+              Puedes gestionar las habilidades de cada técnico desde
+              <strong> Usuarios → perfil del técnico → Habilidades</strong>.
+            </p>
+          </div>
         </div>
       </div>}
 

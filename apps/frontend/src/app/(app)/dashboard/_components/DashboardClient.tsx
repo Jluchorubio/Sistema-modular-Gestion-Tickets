@@ -11,6 +11,7 @@ import { ModuleFormModal } from '@/components/modules/ModuleFormModal';
 import type { SystemModule } from '@/types/module.types';
 import { DashboardStats } from './DashboardStats';
 import { DashboardOpsPanel } from './DashboardOpsPanel';
+import { SlaAtRiskPanel } from './SlaAtRiskPanel';
 import { ModulesGrid } from './ModulesGrid';
 import { DeleteModuleModal } from './DeleteModuleModal';
 import { MaintenanceModal } from './MaintenanceModal';
@@ -181,6 +182,7 @@ export function DashboardClient() {
         {isSuperadmin && sysStats && <DashboardStats stats={sysStats} />}
 
         {opsData && <DashboardOpsPanel ops={opsData} />}
+        {opsData && <SlaAtRiskPanel />}
 
         <ModulesGrid
           builtins={{ helpdesk: filteredHelpdesk, inventory: filteredInventory, gestion: filteredGestion }}

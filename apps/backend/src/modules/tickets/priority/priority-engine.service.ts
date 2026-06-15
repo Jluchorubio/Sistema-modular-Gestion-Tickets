@@ -35,7 +35,9 @@ interface FormulaConfig {
 
 const FORMULA_DEFAULTS: FormulaConfig = {
   w_cargo: 0.25, w_nodo: 0.35, w_daño: 0.40,
-  threshold_critica: 9, threshold_alta: 7, threshold_media: 5,
+  // Raised to 11: prevents average users from reaching CRITICA via urgency/impact alone.
+  // Max score ≈ 13 (all weights=10 + max bonuses). CRITICA requires high org weight + severe damage.
+  threshold_critica: 11, threshold_alta: 7, threshold_media: 5,
 };
 
 // Fallbacks en caso de fallo de DB — mismos valores que antes de la migración 044
@@ -184,9 +186,9 @@ export class PriorityEngineService implements OnModuleInit {
 
   /* ── Private weight loaders ────────────────────────────────────── */
 
-  // peso_daño: damage_type.weight (1-10), fallback neutral 5
+  // peso_daño: damage_type.weight (1-10). No damage selected → 0 (no contribution).
   private async loadDamageWeight(damageTypeId?: string): Promise<number> {
-    if (!damageTypeId) return 5;
+    if (!damageTypeId) return 0;
     const [row] = await this.db.query<{ weight: number }[]>(
       `SELECT weight FROM tickets.damage_types WHERE id = $1 AND is_active = TRUE`,
       [damageTypeId],
@@ -194,9 +196,9 @@ export class PriorityEngineService implements OnModuleInit {
     return row?.weight ?? 5;
   }
 
-  // peso_cargo: weight of user's position node (org.nodes) via position_node_id
+  // peso_cargo: weight of user's position node. Defaults to 1 if not assigned.
   private async loadCargoWeight(creatorId?: string): Promise<number> {
-    if (!creatorId) return 5;
+    if (!creatorId) return 1;
     const [row] = await this.db.query<{ weight: number | null }[]>(
       `SELECT n.weight
        FROM users.profiles p
@@ -204,12 +206,12 @@ export class PriorityEngineService implements OnModuleInit {
        WHERE p.id = $1`,
       [creatorId],
     );
-    return row?.weight ?? 5;
+    return row?.weight ?? 1;
   }
 
-  // peso_nodo: weight of user's deepest org node via org_node_id
+  // peso_nodo: weight of user's org node. Defaults to 1 if not assigned.
   private async loadNodoWeight(creatorId?: string): Promise<number> {
-    if (!creatorId) return 5;
+    if (!creatorId) return 1;
     const [row] = await this.db.query<{ weight: number | null }[]>(
       `SELECT n.weight
        FROM users.profiles p
@@ -217,6 +219,6 @@ export class PriorityEngineService implements OnModuleInit {
        WHERE p.id = $1`,
       [creatorId],
     );
-    return row?.weight ?? 5;
+    return row?.weight ?? 1;
   }
 }

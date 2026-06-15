@@ -109,6 +109,25 @@ export class TicketsController {
     });
   }
 
+  @Post('preview-priority')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  previewPriority(
+    @Req() req: RequestWithUser,
+    @Body() body: { damage_type_id?: string; urgency?: string; impact?: string; test_user_id?: string },
+  ) {
+    return this.svc.previewPriority(req.user.sub, body);
+  }
+
+  @Get('sla-at-risk')
+  @RequirePermission('helpdesk:tickets:view')
+  getSlaAtRisk(
+    @Query('module_id')     moduleId?:     string,
+    @Query('window_hours')  windowHours?:  string,
+  ) {
+    return this.svc.getSlaAtRisk(moduleId, windowHours ? +windowHours : 2);
+  }
+
   @Get('knowledge')
   @RequirePermission('helpdesk:tickets:view')
   getKnowledgeArticles(

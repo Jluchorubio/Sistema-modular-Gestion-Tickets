@@ -256,7 +256,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {t.category_name}{t.environment_name ? ` · ${t.environment_name}` : ''} · {fmtRelative(t.created_at)}
                   {t.is_pause_state && t.last_transition_reason && (
-                    <span style={{ marginLeft: 6, color: '#92400e', fontWeight: 600 }}>⏸ {t.last_transition_reason}</span>
+                    <span style={{ marginLeft: 6, color: 'var(--status-paused-text)', fontWeight: 600 }}>⏸ {t.last_transition_reason}</span>
                   )}
                 </p>
               </div>
@@ -280,13 +280,13 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </div>
 
               {/* State badge */}
-              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: t.is_final ? '#f0fdf4' : 'var(--status-info-bg)', color: t.is_final ? '#16a34a' : 'var(--status-info-text)', border: `1px solid ${t.is_final ? '#bbf7d0' : 'var(--status-info-border)'}`, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: t.is_final ? 'var(--status-success-bg)' : 'var(--status-info-bg)', color: t.is_final ? 'var(--status-success-text)' : 'var(--status-info-text)', border: `1px solid ${t.is_final ? 'var(--status-success-border)' : 'var(--status-info-border)'}`, flexShrink: 0 }}>
                 {t.state_label}
               </span>
 
               {/* Approval / SLA badge */}
               {t.is_approval_state ? (
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', flexShrink: 0 }}>
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: 'var(--status-approval-bg)', color: 'var(--status-approval-text)', border: '1px solid var(--status-approval-border)', flexShrink: 0 }}>
                   ✓ Por aprobar
                 </span>
               ) : slaC && slaL ? (

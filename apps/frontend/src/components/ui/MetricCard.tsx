@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import Link from 'next/link';
 
 interface MetricCardProps {
   label:    string;
@@ -7,6 +8,8 @@ interface MetricCardProps {
   color?:   string;
   sub?:     string;
   active?:  boolean;
+  warn?:    boolean;
+  href?:    string;
   onClick?: () => void;
   size?:    'sm' | 'md' | 'lg';
   style?:   CSSProperties;
@@ -20,15 +23,20 @@ const ICON_SZ  = { sm: 32,          md: 40,           lg: 48           };
 
 export function MetricCard({
   label, value, icon, color = 'var(--app-navy, #0e2235)',
-  sub, active, onClick, size = 'md', style, className,
+  sub, active, warn, href, onClick, size = 'md', style, className,
 }: MetricCardProps) {
-  const isClickable = !!onClick;
-  return (
+  const isEmpty     = typeof value === 'number' ? value === 0 : false;
+  const isWarnActive = warn && !isEmpty;
+  const effectiveColor = isWarnActive ? 'var(--app-coral, #ff5e3a)' : color;
+  const isActive    = active || isWarnActive;
+  const isClickable = !!onClick || !!href;
+
+  const inner = (
     <div
-      role={isClickable ? 'button' : undefined}
-      tabIndex={isClickable ? 0 : undefined}
+      role={isClickable && !href ? 'button' : undefined}
+      tabIndex={isClickable && !href ? 0 : undefined}
       onClick={onClick}
-      onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); } : undefined}
+      onKeyDown={isClickable && !href ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); } : undefined}
       className={className}
       style={{
         display:       'flex',
@@ -37,14 +45,15 @@ export function MetricCard({
         flex:          1,
         minWidth:      120,
         padding:       SIZE_PAD[size],
-        background:    active ? `color-mix(in srgb, ${color} 8%, transparent)` : 'var(--app-card, #fff)',
-        border:        `1.5px solid ${active ? color : 'var(--app-border, #e2e8f0)'}`,
+        background:    isActive ? `color-mix(in srgb, ${effectiveColor} 8%, transparent)` : 'var(--app-card, #fff)',
+        border:        `1.5px solid ${isActive ? effectiveColor : 'var(--app-border, #e2e8f0)'}`,
         borderRadius:  'var(--radius-lg, 12px)',
         cursor:        isClickable ? 'pointer' : 'default',
         transition:    'border-color .15s, background .15s, box-shadow .15s',
-        boxShadow:     active ? `0 0 0 3px color-mix(in srgb, ${color} 12%, transparent)` : 'var(--shadow-xs)',
+        boxShadow:     isActive ? `0 0 0 3px color-mix(in srgb, ${effectiveColor} 12%, transparent)` : 'var(--shadow-xs)',
         outline:       'none',
         userSelect:    'none',
+        textDecoration:'none',
         ...style,
       }}
     >
@@ -53,10 +62,10 @@ export function MetricCard({
           width:        ICON_SZ[size],
           height:       ICON_SZ[size],
           borderRadius: 'var(--radius-md, 8px)',
-          background:   `color-mix(in srgb, ${color} 12%, transparent)`,
+          background:   `color-mix(in srgb, ${effectiveColor} 12%, transparent)`,
           display:      'grid',
           placeItems:   'center',
-          color,
+          color:        effectiveColor,
           flexShrink:   0,
         }}>
           {icon}
@@ -66,7 +75,7 @@ export function MetricCard({
         <p style={{
           fontSize:   SIZE_VAL[size],
           fontWeight: 'var(--fw-bold, 700)' as CSSProperties['fontWeight'],
-          color,
+          color:      effectiveColor,
           lineHeight:  1,
           margin:      '0 0 3px',
         }}>
@@ -91,6 +100,11 @@ export function MetricCard({
       </div>
     </div>
   );
+
+  if (href) {
+    return <Link href={href} style={{ display: 'flex', flex: 1, textDecoration: 'none', minWidth: 120 }}>{inner}</Link>;
+  }
+  return inner;
 }
 
 /* ── MetricRow: horizontal strip of MetricCards ─────────────────────────── */

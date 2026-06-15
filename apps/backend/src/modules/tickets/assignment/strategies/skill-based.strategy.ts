@@ -33,6 +33,7 @@ export class SkillBasedStrategy {
          ) AS open_count
        FROM  modules.user_module_roles umr
        JOIN  modules.module_roles      mr  ON mr.id = umr.role_id
+       JOIN  users.profiles            p   ON p.id  = umr.user_id AND p.deleted_at IS NULL AND p.is_active = true
        WHERE umr.module_id = $1
          AND mr.name       IN ('tecnico', 'jefe_tecnico')
          AND umr.is_active = true

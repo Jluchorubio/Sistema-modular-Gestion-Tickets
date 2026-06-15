@@ -19,6 +19,7 @@ import {
   type TicketPriority,
   ticketsService,
 } from '@/services/tickets.service';
+import { forumService } from '@/app/(app)/helpdesk/knowledge/_lib/knowledge.service';
 import { getPriorityConfig } from '@/constants/status';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { fmtDate, fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
@@ -142,10 +143,14 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
   const [ratingHover,   setRatingHover]   = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [descExpanded,  setDescExpanded]  = useState(false);
-  const [showToArticle, setShowToArticle] = useState(false);
+  const [kbType,        setKbType]        = useState<'picker' | 'doc' | 'forum' | null>(null);
   const [articleTitle,  setArticleTitle]  = useState('');
   const [articleContent,setArticleContent] = useState('');
   const [articleDone,   setArticleDone]   = useState<string | null>(null);
+  const [forumTitle,    setForumTitle]    = useState('');
+  const [forumContent,  setForumContent]  = useState('');
+  const [forumTags,     setForumTags]     = useState('');
+  const [forumDone,     setForumDone]     = useState<string | null>(null);
 
   const myModuleRole = currentUser?.module_roles?.find(r => r.module_id === helpdeskId && r.status === 'active')?.role_name ?? null;
   const isStaff = (currentUser?.is_superadmin ?? false) || ['tecnico', 'jefe_tecnico', 'admin_modulo', 'admin_sistema'].includes(myModuleRole ?? '');
@@ -165,7 +170,20 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
       ticketsService.convertToArticle(ticket!.id, dto),
     onSuccess: (art) => {
       setArticleDone(art.id);
-      setShowToArticle(false);
+      setKbType(null);
+    },
+  });
+
+  const forumMut = useMutation({
+    mutationFn: () => forumService.createPost({
+      module_id: ticket!.module_id,
+      title:     forumTitle.trim(),
+      content:   forumContent.trim(),
+      tags:      forumTags.split(',').map(t => t.trim()).filter(Boolean),
+    }),
+    onSuccess: (post: any) => {
+      setForumDone(post.id);
+      setKbType(null);
     },
   });
 
@@ -354,26 +372,86 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                   </div>
                 )}
 
-                {/* Convert to KB article */}
-                {canEditKb && !articleDone && !showToArticle && (
+                {/* Convert to KB — trigger */}
+                {canEditKb && !articleDone && !forumDone && !kbType && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
                     <button type="button"
-                      onClick={() => { setArticleTitle(ticket.title); setArticleContent(ticket.description ?? ''); setShowToArticle(true); }}
+                      onClick={() => setKbType('picker')}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
                       <BookOpen size={11} /> Convertir a artículo de conocimiento
                     </button>
                   </div>
                 )}
-                {canEditKb && articleDone && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 10, color: '#16a34a', fontWeight: 700 }}>Artículo creado.</span>
-                    <button type="button" onClick={() => router.push(`/helpdesk/knowledge/docs/${articleDone}`)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                      <ExternalLink size={10} /> Ver artículo
+
+                {/* KB — type picker */}
+                {canEditKb && kbType === 'picker' && (
+                  <div style={{ marginTop: 10, padding: 14, background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '.06em', margin: '0 0 10px' }}>¿Qué tipo de artículo?</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button"
+                        onClick={() => { setForumTitle(ticket.title); setForumContent(ticket.description ?? ''); setKbType('forum'); }}
+                        style={{ flex: 1, padding: '12px 10px', borderRadius: 8, border: '1.5px solid #e9d5ff', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'border-color .15s' }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = '#7c3aed')}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#e9d5ff')}
+                      >
+                        <MessageSquare size={18} style={{ color: '#7c3aed' }} />
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#0e2235' }}>Foro técnico</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center' }}>Debate abierto con el equipo</span>
+                      </button>
+                      <button type="button"
+                        onClick={() => { setArticleTitle(ticket.title); setArticleContent(ticket.description ?? ''); setKbType('doc'); }}
+                        style={{ flex: 1, padding: '12px 10px', borderRadius: 8, border: '1.5px solid #e9d5ff', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'border-color .15s' }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = '#7c3aed')}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#e9d5ff')}
+                      >
+                        <FileText size={18} style={{ color: '#7c3aed' }} />
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#0e2235' }}>Base documental</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center' }}>Artículo con respuesta definitiva</span>
+                      </button>
+                    </div>
+                    <button type="button" onClick={() => setKbType(null)}
+                      style={{ marginTop: 8, fontSize: 10, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                      Cancelar
                     </button>
                   </div>
                 )}
-                {canEditKb && showToArticle && (
+
+                {/* KB — forum form */}
+                {canEditKb && kbType === 'forum' && (
+                  <div style={{ marginTop: 10, padding: 14, background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '.06em', margin: '0 0 10px' }}>Nuevo hilo de foro técnico</p>
+                    <div style={{ marginBottom: 8 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 3 }}>Asunto</label>
+                      <input value={forumTitle} onChange={e => setForumTitle(e.target.value)}
+                        style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 3 }}>Mensaje</label>
+                      <textarea value={forumContent} onChange={e => setForumContent(e.target.value)} rows={4}
+                        style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ marginBottom: 10 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 3 }}>Etiquetas <span style={{ fontWeight: 400, color: '#94a3b8' }}>(separadas por comas)</span></label>
+                      <input value={forumTags} onChange={e => setForumTags(e.target.value)} placeholder="wifi, impresora, correo…"
+                        style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button"
+                        disabled={!forumTitle.trim() || !forumContent.trim() || forumMut.isPending}
+                        onClick={() => forumMut.mutate()}
+                        style={{ padding: '6px 14px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (!forumTitle.trim() || !forumContent.trim()) ? 0.5 : 1 }}>
+                        {forumMut.isPending ? 'Publicando…' : 'Publicar en foro'}
+                      </button>
+                      <button type="button" onClick={() => setKbType('picker')}
+                        style={{ padding: '6px 12px', background: 'transparent', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Atrás
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* KB — doc form */}
+                {canEditKb && kbType === 'doc' && (
                   <div style={{ marginTop: 10, padding: 14, background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 8 }}>
                     <p style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '.06em', margin: '0 0 10px' }}>Nuevo artículo de conocimiento</p>
                     <div style={{ marginBottom: 8 }}>
@@ -393,11 +471,31 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                         style={{ padding: '6px 14px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (!articleTitle.trim() || !articleContent.trim()) ? 0.5 : 1 }}>
                         {toArticleMut.isPending ? 'Creando…' : 'Crear artículo'}
                       </button>
-                      <button type="button" onClick={() => setShowToArticle(false)}
+                      <button type="button" onClick={() => setKbType('picker')}
                         style={{ padding: '6px 12px', background: 'transparent', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        Cancelar
+                        Atrás
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* KB — success states */}
+                {canEditKb && articleDone && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: '#16a34a', fontWeight: 700 }}>Artículo creado.</span>
+                    <button type="button" onClick={() => router.push(`/helpdesk/knowledge/docs/${articleDone}`)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                      <ExternalLink size={10} /> Ver artículo
+                    </button>
+                  </div>
+                )}
+                {canEditKb && forumDone && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: '#16a34a', fontWeight: 700 }}>Publicado en foro.</span>
+                    <button type="button" onClick={() => router.push(`/helpdesk/knowledge/forum/${forumDone}`)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                      <ExternalLink size={10} /> Ver hilo
+                    </button>
                   </div>
                 )}
               </div>

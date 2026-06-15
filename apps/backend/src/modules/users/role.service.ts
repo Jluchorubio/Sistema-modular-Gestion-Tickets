@@ -238,7 +238,8 @@ export class RoleService {
       `),
       this.db.query<any[]>(`
         SELECT t.id, t.title, t.priority, t.created_at,
-               s.label AS state_label, s.color AS state_color,
+               s.label AS state_label,
+               s.is_final, s.is_approval_state, s.is_pause_state,
                p.first_name || ' ' || p.last_name AS created_by_name
         FROM   tickets.tickets t
         JOIN   tickets.states  s ON s.id = t.current_state_id

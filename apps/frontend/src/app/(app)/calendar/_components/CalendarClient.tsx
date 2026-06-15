@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import listPlugin from '@fullcalendar/list';
@@ -121,8 +122,12 @@ export function CalendarClient() {
   const isLoading = reqLoading || ticketLoading;
   const requests  = reqData?.data   ?? [];
   const tickets   = ticketData?.data ?? [];
-  const meetings  = meetingData;
-  const calEvents = calEventData;
+
+  const showTicketMeetings = sourceFilter === 'ticket_meetings';
+  const meetings  = showTicketMeetings ? [] : meetingData;
+  const calEvents = showTicketMeetings
+    ? calEventData.filter(e => e.source === 'meeting')
+    : calEventData.filter(e => e.source !== 'meeting');
 
   /* ── Derived / filters ── */
   const filteredRequests = useMemo(() => {
@@ -340,6 +345,7 @@ export function CalendarClient() {
                     <option value="system_tasks">Sistema</option>
                     <option value="user_tasks">Personal</option>
                     <option value="requests">Gestión Administrativa</option>
+                    <option value="ticket_meetings">Reuniones de ticket</option>
                   </select>
                 </div>
               </div>
@@ -399,6 +405,13 @@ export function CalendarClient() {
 
         {/* ── Right panel ── */}
         <div className={styles.right}>
+          {showTicketMeetings && (
+            <div style={{ margin: '8px 0', padding: '8px 14px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 8, fontSize: 11, color: '#7c3aed', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+              📹 Mostrando solo reuniones originadas en tickets
+              <Link href="/helpdesk/queue" style={{ color: '#6d28d9', textDecoration: 'underline', fontWeight: 700 }}>Ir a tickets →</Link>
+            </div>
+          )}
+
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
             {([
               { id: 'agenda',         icon: <Calendar size={11} />, label: 'Agenda'    },

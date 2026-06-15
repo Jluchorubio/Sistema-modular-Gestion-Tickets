@@ -4,7 +4,7 @@ import { REQUEST_STATUS_COLORS } from '@/constants/requests';
 /* ── Branded types ── */
 export type CalendarRole = 'superadmin' | 'admin' | 'jefe' | 'user';
 export type CalendarView  = 'mes' | 'semana' | 'dia' | 'agenda' | 'año';
-export type SourceFilter  = '' | 'system_tasks' | 'user_tasks' | 'requests';
+export type SourceFilter  = '' | 'system_tasks' | 'user_tasks' | 'requests' | 'ticket_meetings';
 export type RightTab      = 'agenda' | 'actividad' | 'disponibilidad';
 export type AuditPeriod   = 'day' | 'week' | 'month' | 'year';
 

@@ -199,8 +199,8 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
 
                 {/* POR APROBAR */}
                 {approvals.length > 0 && (
-                  <div style={{ background: '#fffbeb', borderRadius: 10, padding: '12px', border: '1.5px solid #fde68a' }}>
-                    <SectionHeader label="✓ Esperando aprobación del usuario" count={approvals.length} color="#92400e" />
+                  <div style={{ background: 'var(--status-approval-bg)', borderRadius: 10, padding: '12px', border: '1.5px solid var(--status-approval-border)' }}>
+                    <SectionHeader label="✓ Esperando aprobación del usuario" count={approvals.length} color="var(--status-approval-text)" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {approvals.map((t) => <TechQueueItem key={t.id} ticket={t} basePath={basePath} />)}
                     </div>

@@ -198,3 +198,18 @@ export function getAssetStatusConfig(status: string): StatusConfig {
     label:  status,
   };
 }
+
+// ── Ticket portal state (derived from booleans on TicketListItem) ─────────────
+
+export function getTicketPortalState(t: {
+  is_final:          boolean;
+  is_approval_state?: boolean;
+  is_pause_state?:    boolean;
+  assignee_name?:     string | null;
+}): StatusConfig {
+  if (t.is_final)          return { text: 'var(--status-neutral-text)',   bg: 'var(--status-neutral-bg)',   border: 'var(--status-neutral-border)',   label: 'Cerrado'    };
+  if (t.is_approval_state) return { text: 'var(--status-success-text)',   bg: 'var(--status-success-bg)',   border: 'var(--status-success-border)',   label: 'Resuelto'   };
+  if (t.is_pause_state)    return { text: 'var(--status-paused-text)',    bg: 'var(--status-paused-bg)',    border: 'var(--status-paused-border)',    label: 'En espera'  };
+  if (t.assignee_name)     return { text: 'var(--status-info-text)',      bg: 'var(--status-info-bg)',      border: 'var(--status-info-border)',      label: 'En proceso' };
+  return                          { text: 'var(--status-escalated-text)', bg: 'var(--status-escalated-bg)', border: 'var(--status-escalated-border)', label: 'Abierto'    };
+}

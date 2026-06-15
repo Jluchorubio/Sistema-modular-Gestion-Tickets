@@ -161,9 +161,10 @@ export class RequestsService {
 
     if (!isSuperadmin) {
       params.push(userId);
-      // Any active module role (admin or staff) scopes visibility to that module's requests
+      // Own requests always visible; active module roles expose module-scoped requests
       conditions.push(`(
-        r.assigned_to = $${params.length}
+        r.requester_id = $${params.length}
+        OR r.assigned_to = $${params.length}
         OR r.metadata->>'module_id' IN (
           SELECT umr.module_id::text
           FROM   modules.user_module_roles umr

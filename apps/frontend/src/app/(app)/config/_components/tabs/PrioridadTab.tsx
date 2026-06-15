@@ -2,11 +2,13 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient }  from '@tanstack/react-query';
-import { Check, AlertTriangle } from 'lucide-react';
+import { Check, AlertTriangle, Users } from 'lucide-react';
 import { systemConfigService }  from '@/services/system-config.service';
 import { useConfigPending }     from '@/stores/configPending.store';
 import { Spinner }              from '@/components/ui/Spinner';
-import type { PriorityFormula, PriorityPreview, SlaRule, UrgencyLevel, ImpactLevel } from '@/services/system-config.service';
+import { ticketsService }       from '@/services/tickets.service';
+import { usersService }         from '@/services/users.service';
+import type { PriorityFormula, PriorityPreview, SlaRule, UrgencyLevel, ImpactLevel, DamageType } from '@/services/system-config.service';
 import type { CriticalAuthData } from '@/hooks/useCriticalChange';
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -44,6 +46,148 @@ const SIM_LABELS: Record<string, string> = {
   nodo:  'Criticidad del nodo',
   daño:  'Gravedad del daño',
 };
+
+/* ── Simulador por perfil de usuario real ── */
+function UserPrioritySimulator({
+  uLevels, iLevels, tInput,
+}: {
+  uLevels: UrgencyLevel[];
+  iLevels: ImpactLevel[];
+  tInput: React.CSSProperties;
+}) {
+  const [userSearch, setUserSearch]   = useState('');
+  const [selectedUser, setSelectedUser] = useState<{ id: string; label: string } | null>(null);
+  const [urgency, setUrgency]         = useState('media');
+  const [impact, setImpact]           = useState('medio');
+  const [damageTypes, setDamageTypes] = useState<{ id: string; label: string }[]>([]);
+  const [damageTypeId, setDamageTypeId] = useState('');
+  const [result, setResult]           = useState<null | { priority: string; score: number; signals: any }>(null);
+  const [loading, setLoading]         = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const { data: usersPage } = useQuery({
+    queryKey: ['users-for-sim', userSearch],
+    queryFn:  () => usersService.getUsers({ search: userSearch, limit: 10 }),
+    enabled:  userSearch.length >= 2,
+    staleTime: 30_000,
+  });
+
+  // Load all damage types for the damage selector
+  useEffect(() => {
+    systemConfigService.getDamageTypes().then((types: DamageType[]) => {
+      setDamageTypes(types.filter(t => t.is_active).map(t => ({ id: t.id, label: t.label })));
+    }).catch(() => {});
+  }, []);
+
+  async function simulate() {
+    if (!selectedUser) return;
+    setLoading(true);
+    try {
+      const r = await ticketsService.previewPriority({
+        urgency,
+        impact,
+        damage_type_id: damageTypeId || undefined,
+        test_user_id:   selectedUser.id,
+      });
+      setResult(r);
+    } finally { setLoading(false); }
+  }
+
+  const pc: Record<string, string> = {
+    baja: '#94a3b8', media: '#f59e0b', alta: '#f97316', critica: '#ef4444',
+  };
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <Users size={14} style={{ color: '#0e2235' }} />
+        <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Simular prioridad para un usuario real
+        </div>
+      </div>
+      <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.5 }}>
+        Selecciona un usuario del sistema para ver qué prioridad recibiría según su perfil organizacional.
+        Útil para verificar la calibración antes de guardar cambios.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* User search */}
+        <div style={{ position: 'relative' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Usuario</label>
+          {selectedUser ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', border: '1.5px solid #0e2235', borderRadius: 8, background: '#f8fafc' }}>
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#0e2235' }}>{selectedUser.label}</span>
+              <button type="button" onClick={() => { setSelectedUser(null); setResult(null); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 14, lineHeight: 1 }}>×</button>
+            </div>
+          ) : (
+            <div style={{ position: 'relative' }}>
+              <input type="text" value={userSearch}
+                onChange={e => { setUserSearch(e.target.value); setShowDropdown(true); }}
+                onFocus={() => setShowDropdown(true)}
+                placeholder="Buscar usuario por nombre o email…"
+                style={{ ...tInput, width: '100%', textAlign: 'left' }} />
+              {showDropdown && (usersPage?.data ?? []).length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, marginTop: 4, boxShadow: '0 4px 16px rgba(0,0,0,.1)', overflow: 'hidden' }}>
+                  {(usersPage?.data ?? []).slice(0, 8).map((u: any) => (
+                    <div key={u.id}
+                      onClick={() => { setSelectedUser({ id: u.id, label: `${u.first_name} ${u.last_name} — ${u.email}` }); setUserSearch(''); setShowDropdown(false); }}
+                      style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 12, borderBottom: '1px solid #f1f5f9', color: '#334155' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                      <strong>{u.first_name} {u.last_name}</strong>
+                      <span style={{ color: '#94a3b8', marginLeft: 6, fontSize: 11 }}>{u.email}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 140px' }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Urgencia</label>
+            <select value={urgency} onChange={e => setUrgency(e.target.value)} style={{ ...tInput, width: '100%', textAlign: 'left' }}>
+              {uLevels.map(l => <option key={l.slug} value={l.slug}>{l.label}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: '1 1 140px' }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Impacto</label>
+            <select value={impact} onChange={e => setImpact(e.target.value)} style={{ ...tInput, width: '100%', textAlign: 'left' }}>
+              {iLevels.map(l => <option key={l.slug} value={l.slug}>{l.label}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: '1 1 140px' }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Tipo de daño</label>
+            <select value={damageTypeId} onChange={e => setDamageTypeId(e.target.value)} style={{ ...tInput, width: '100%', textAlign: 'left' }}>
+              <option value="">Sin especificar</option>
+              {damageTypes.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button type="button" disabled={!selectedUser || loading} onClick={simulate}
+            style={{ padding: '7px 20px', background: !selectedUser ? '#e2e8f0' : '#0e2235', color: !selectedUser ? '#94a3b8' : '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: selectedUser ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+            {loading ? 'Calculando…' : 'Simular'}
+          </button>
+          {result && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20, fontWeight: 900, color: pc[result.priority] ?? '#94a3b8', textTransform: 'uppercase' }}>
+                {result.priority}
+              </span>
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>score: {result.score}</span>
+              <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                (cargo: {result.signals.peso_cargo} · nodo: {result.signals.peso_nodo} · daño: {result.signals.peso_daño} · bonos: +{result.signals.urgency_bonus + result.signals.impact_bonus})
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function PrioridadTab() {
   const qc      = useQueryClient();
@@ -362,7 +506,10 @@ export function PrioridadTab() {
         )}
       </div>
 
-      {/* ── Live Simulator ── */}
+      {/* ── Simulador por usuario real ── */}
+      <UserPrioritySimulator uLevels={uLevels} iLevels={iLevels} tInput={tInput} />
+
+      {/* ── Live Simulator (fórmula) ── */}
       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
           <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -443,6 +590,10 @@ export function PrioridadTab() {
               <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                 SLA estimado
               </div>
+              <p style={{ fontSize: 10, color: '#94a3b8', margin: '0 0 8px', fontStyle: 'italic' }}>
+                ⚠️ SLA mostrado corresponde a <strong>Gestión Administrativa</strong> (solicitudes globales),
+                no al SLA de tickets de helpdesk. El SLA de helpdesk se configura en cada módulo.
+              </p>
               {matchedSla ? (
                 <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
                   <div>
@@ -456,13 +607,13 @@ export function PrioridadTab() {
                     <div style={{ fontSize: 10, color: '#94a3b8' }}>→ {deadlineLabel(matchedSla.hours_to_resolve)}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <span style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic' }}>regla global · prioridad {preview.priority}</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic' }}>regla Gestión · prioridad {preview.priority}</span>
                   </div>
                 </div>
               ) : (
                 <div style={{ fontSize: 11, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <AlertTriangle size={12} />
-                  Sin regla SLA para prioridad <strong>{preview.priority}</strong>. Configura en /requests/config.
+                  Sin regla SLA de Gestión para prioridad <strong>{preview.priority}</strong>.
                 </div>
               )}
             </div>

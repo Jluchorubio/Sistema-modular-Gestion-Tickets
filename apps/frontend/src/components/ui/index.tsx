@@ -4,6 +4,9 @@
  * Colors: use var(--app-*) tokens from globals.css
  */
 
+export { ConfirmModal } from './ConfirmModal';
+export { MetricCard, MetricRow } from './MetricCard';
+
 import React from 'react';
 
 /* ── SectionCard ────────────────────────────────────────────────────────────

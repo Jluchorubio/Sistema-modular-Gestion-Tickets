@@ -10,6 +10,8 @@ import {
   BarChart2, Users, Clock, TrendingUp, RefreshCw, Download,
   Shield, Star, ChevronDown,
 } from 'lucide-react';
+import Link from 'next/link';
+import { MetricCard, MetricRow } from '@/components/ui/MetricCard';
 import { reportingService, type HelpdeskTechnician } from '@/services/reporting.service';
 import api from '@/services/api';
 import { getPriorityConfig } from '@/constants/status';
@@ -62,15 +64,6 @@ const TOOLTIP_STYLE = {
   boxShadow: '0 4px 12px rgba(0,0,0,.08)',
 };
 
-function KpiCard({ label, value, sub, color = C.coral }: { label: string; value: string | number; sub?: string; color?: string }) {
-  return (
-    <div style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '16px 20px' }}>
-      <p style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 800, color, lineHeight: 1 }}>{value}</p>
-      <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 700, color: C.navy }}>{label}</p>
-      {sub && <p style={{ margin: 0, fontSize: 10, color: C.muted }}>{sub}</p>}
-    </div>
-  );
-}
 
 function Stars({ score }: { score: number | null }) {
   if (score === null) return <span style={{ fontSize: 10, color: C.muted }}>—</span>;
@@ -425,16 +418,16 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
           {/* ══ OPERACIÓN ══ */}
           {tab === 'operacion' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div className={styles.kpiGrid}>
-                <KpiCard label="Total tickets"          value={n(kpis?.total)}      sub="histórico"       color={C.navy}    />
-                <KpiCard label="Activos"                value={n(kpis?.open)}       sub="ahora mismo"     color={C.coral}   />
-                <KpiCard label="Esta semana"            value={n(kpis?.this_week)}  sub="últimos 7 días"  color="#3b82f6"   />
-                <KpiCard label="Este mes"               value={n(kpis?.this_month)} sub="últimos 30 días" color="#8b5cf6"   />
-                <KpiCard label="Hoy"                    value={n(kpis?.today)}      sub="tickets creados" color="#0ea5e9"   />
-                <KpiCard label="Tiempo prom. resolución" value={kpis?.avg_resolution_hours ? `${Math.round(n(kpis.avg_resolution_hours))}h` : '—'} sub="tickets cerrados" color="#10b981" />
-                <KpiCard label="Rechazados"             value={n(kpis?.rechazados)} color={n(kpis?.rechazados) > 0 ? '#f59e0b' : '#22c55e'} />
-                <KpiCard label="Reabiertos"             value={n(kpis?.reopen_count)} color={n(kpis?.reopen_count) > 0 ? '#ef4444' : '#22c55e'} />
-              </div>
+              <MetricRow gap={10}>
+                <MetricCard label="Total tickets"           value={n(kpis?.total)}      sub="histórico"       color={C.navy}    size="md" />
+                <MetricCard label="Activos"                 value={n(kpis?.open)}       sub="ahora mismo"     color={C.coral}   href="/helpdesk/queue" size="md" />
+                <MetricCard label="Esta semana"             value={n(kpis?.this_week)}  sub="últimos 7 días"  color="#3b82f6"   size="md" />
+                <MetricCard label="Este mes"                value={n(kpis?.this_month)} sub="últimos 30 días" color="#8b5cf6"   size="md" />
+                <MetricCard label="Hoy"                     value={n(kpis?.today)}      sub="tickets creados" color="#0ea5e9"   size="md" />
+                <MetricCard label="Prom. resolución"        value={kpis?.avg_resolution_hours ? `${Math.round(n(kpis.avg_resolution_hours))}h` : '—'} sub="tickets cerrados" color="#10b981" size="md" />
+                <MetricCard label="Rechazados"              value={n(kpis?.rechazados)} color={n(kpis?.rechazados) > 0 ? '#f59e0b' : '#22c55e'} size="md" />
+                <MetricCard label="Reabiertos"              value={n(kpis?.reopen_count)} color={n(kpis?.reopen_count) > 0 ? '#ef4444' : '#22c55e'} size="md" />
+              </MetricRow>
 
               <div className={styles.chartPanel}>
                 <p className={styles.chartTitle}><TrendingUp size={13} style={{ color: C.coral }} /> Tendencia últimos 30 días</p>
@@ -592,12 +585,12 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
           {/* ══ SLA ══ */}
           {tab === 'sla' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div className={styles.kpiGrid}>
-                <KpiCard label="Total con SLA"   value={n(sla?.summary?.total)}       color={C.navy}    />
-                <KpiCard label="Cumplimiento"    value={`${slaPct}%`}                  color={slaPct >= 90 ? '#22c55e' : slaPct >= 70 ? '#f59e0b' : '#ef4444'} />
-                <KpiCard label="Vencidos"        value={n(sla?.summary?.breached)}    color="#ef4444"  sub="Breach activo" />
-                <KpiCard label="Sin SLA"         value={n(sla?.summary?.without_sla)} color={C.muted}  />
-              </div>
+              <MetricRow gap={10}>
+                <MetricCard label="Total con SLA"   value={n(sla?.summary?.total)}       color={C.navy}  href="/helpdesk/sla" size="md" />
+                <MetricCard label="Cumplimiento"    value={`${slaPct}%`}                  color={slaPct >= 90 ? '#22c55e' : slaPct >= 70 ? '#f59e0b' : '#ef4444'} size="md" />
+                <MetricCard label="Vencidos"        value={n(sla?.summary?.breached)}    color="#ef4444" sub="Breach activo" href="/helpdesk/sla" warn size="md" />
+                <MetricCard label="Sin SLA"         value={n(sla?.summary?.without_sla)} color={C.muted} size="md" />
+              </MetricRow>
 
               <div className={styles.chartsGrid}>
                 <div className={styles.chartPanel}>

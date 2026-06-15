@@ -61,13 +61,13 @@ export async function calculatePriority(
     return { priority: rule.base_priority as Priority, auto: true };
   }
 
-  // No rule → compute score from requester's org weights (neutral damage weight = 5)
+  // No rule → compute score from requester's org weights (no damage context → 0 contribution)
   const [cargoWeight, nodoWeight] = await Promise.all([
     loadCargoWeight(db, requesterId),
     loadNodoWeight(db, requesterId),
   ]);
 
-  const score = cargoWeight * W_CARGO + nodoWeight * W_NODO + 5 * (1 - W_CARGO - W_NODO);
+  const score = cargoWeight * W_CARGO + nodoWeight * W_NODO;
   return { priority: scoreToP(score), auto: true, score };
 }
 
@@ -79,7 +79,7 @@ async function loadCargoWeight(db: DataSource, userId: string): Promise<number> 
      WHERE p.id = $1`,
     [userId],
   );
-  return row?.weight ?? 5;
+  return row?.weight ?? 1;
 }
 
 async function loadNodoWeight(db: DataSource, userId: string): Promise<number> {
@@ -90,5 +90,5 @@ async function loadNodoWeight(db: DataSource, userId: string): Promise<number> {
      WHERE p.id = $1`,
     [userId],
   );
-  return row?.weight ?? 5;
+  return row?.weight ?? 1;
 }

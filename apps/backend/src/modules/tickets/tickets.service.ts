@@ -316,6 +316,56 @@ export class TicketsService {
 
   /* ── Create ─────────────────────────────────────────────────────────────── */
 
+  async previewPriority(
+    userId: string,
+    dto: { damage_type_id?: string; urgency?: string; impact?: string; test_user_id?: string },
+  ) {
+    // test_user_id: admin-only override to simulate priority for a different user profile
+    const creatorId = dto.test_user_id ?? userId;
+    return this.priorityEngine.compute({
+      damage_type_id: dto.damage_type_id,
+      urgency:        dto.urgency,
+      impact:         dto.impact,
+      creator_id:     creatorId,
+    });
+  }
+
+  async getSlaAtRisk(moduleId?: string, windowHours = 2) {
+    const params: any[] = [windowHours];
+    const moduleFilter = moduleId ? `AND t.module_id = $2` : '';
+    if (moduleId) params.push(moduleId);
+
+    return this.db.query<{
+      ticket_id:     string;
+      title:         string;
+      priority:      string;
+      module_name:   string;
+      assignee_name: string | null;
+      deadline_at:   string;
+      minutes_left:  number;
+    }[]>(
+      `SELECT t.id                                                            AS ticket_id,
+              t.title,
+              t.priority,
+              mod.name                                                        AS module_name,
+              CONCAT(ap.first_name, ' ', ap.last_name)                       AS assignee_name,
+              trk.deadline_at,
+              EXTRACT(EPOCH FROM (trk.deadline_at - now())) / 60             AS minutes_left
+       FROM   tickets.tickets t
+       JOIN   tickets.ticket_sla_tracking trk ON trk.ticket_id = t.id AND trk.status = 'active'
+       JOIN   modules.modules              mod ON mod.id = t.module_id
+       LEFT JOIN tickets.ticket_assignments ta  ON ta.ticket_id = t.id AND ta.role = 'owner' AND ta.is_active = true
+       LEFT JOIN users.profiles             ap  ON ap.id = ta.user_id
+       JOIN   tickets.states               s   ON s.id = t.current_state_id AND s.is_final = FALSE
+       WHERE  t.deleted_at IS NULL
+         AND  trk.deadline_at BETWEEN now() AND now() + ($1 || ' hours')::interval
+         ${moduleFilter}
+       ORDER  BY trk.deadline_at ASC
+       LIMIT  50`,
+      params,
+    );
+  }
+
   async searchAssets(q: string) {
     if (!q || q.length < 2) return [];
     return this.db.query<any[]>(
@@ -377,9 +427,12 @@ export class TicketsService {
     if (!initialState) throw new BadRequestException('Workflow has no initial state.');
     if (!slaPolicy)   throw new BadRequestException('No active SLA policy for this module.');
 
-    // Resolve priority: manual override → scoring engine → default
-    let finalPriority = dto.priority ?? 'media';
-    if (!dto.priority) {
+    // Resolve priority: staff can override, everyone else goes through engine
+    const isStaff = await this.isStaffInModule(userId, dto.module_id);
+    let finalPriority: string;
+    if (dto.priority && isStaff) {
+      finalPriority = dto.priority;
+    } else {
       const scored = await this.priorityEngine.compute({
         damage_type_id: dto.damage_type_id,
         urgency:        dto.urgency,
@@ -483,6 +536,14 @@ export class TicketsService {
       ticket.id, dto.module_id, dto.category_id, userId,
     );
 
+    if (!assignedTo) {
+      this.messaging.emit('ticket.unassigned_alert', {
+        ticketId: ticket.id,
+        title:    ticket.title,
+        moduleId: dto.module_id,
+      });
+    }
+
     this.messaging.emit('ticket.created', {
       ticketId:        ticket.id,
       title:           ticket.title,
@@ -534,6 +595,14 @@ export class TicketsService {
       const isSuperadmin = actor?.is_superadmin ?? false;
       const userRole     = actor?.role_name ?? null;
       if (!isSuperadmin && (!userRole || !trans.allowed_roles.includes(userRole))) {
+        this.messaging.emit('security.transition_denied', {
+          ticketId,
+          userId,
+          userRole:     userRole ?? 'sin rol',
+          transitionId: dto.transition_id,
+          allowedRoles: trans.allowed_roles,
+          at:           new Date().toISOString(),
+        });
         throw new ForbiddenException(`Tu rol "${userRole ?? 'sin rol'}" no puede ejecutar esta transición.`);
       }
     }

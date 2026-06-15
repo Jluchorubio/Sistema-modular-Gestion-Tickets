@@ -48,26 +48,38 @@ export class AssignmentService {
         const lockedRows = await qr.query(
           `SELECT umr.user_id
            FROM modules.user_module_roles umr
+           JOIN users.profiles p ON p.id = umr.user_id AND p.deleted_at IS NULL AND p.is_active = true
            WHERE umr.user_id   = $1
              AND umr.module_id = $2
              AND umr.is_active = true
-           FOR UPDATE SKIP LOCKED`,
+           FOR UPDATE OF umr SKIP LOCKED`,
           [skillTechId, moduleId],
         ) as { user_id: string }[];
         technicianId = lockedRows[0]?.user_id ?? null;
       }
 
-      // Round-robin: pick the technician who was assigned a ticket the longest ago
-      // (NULL = never assigned → goes first). Ensures fair rotation, not just load balance.
+      // Round-robin with workload balancing:
+      // Primary sort: fewest open (non-final) tickets → ensures even distribution.
+      // Secondary sort: longest since last assignment (NULLS FIRST) → tie-breaker for equal load.
       if (!technicianId) {
         const rrRows = await qr.query(
           `SELECT umr.user_id
            FROM modules.user_module_roles umr
            JOIN modules.module_roles mr ON mr.id = umr.role_id
+           JOIN users.profiles        p  ON p.id = umr.user_id AND p.deleted_at IS NULL AND p.is_active = true
            WHERE umr.module_id = $1
              AND mr.name       IN ('tecnico', 'jefe_tecnico')
              AND umr.is_active = true
            ORDER BY (
+             SELECT COUNT(*)
+             FROM   tickets.ticket_assignments ta
+             JOIN   tickets.tickets t2 ON t2.id = ta.ticket_id AND t2.deleted_at IS NULL
+             JOIN   tickets.states  s  ON s.id  = t2.current_state_id AND s.is_final = FALSE
+             WHERE  ta.user_id   = umr.user_id
+               AND  ta.role      = 'owner'
+               AND  ta.is_active = TRUE
+           ) ASC,
+           (
              SELECT MAX(ta.assigned_at)
              FROM   tickets.ticket_assignments ta
              WHERE  ta.user_id = umr.user_id

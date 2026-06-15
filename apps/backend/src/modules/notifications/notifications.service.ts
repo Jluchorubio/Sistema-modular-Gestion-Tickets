@@ -282,6 +282,29 @@ export class NotificationsService {
     }
   }
 
+  @OnEvent('ticket.unassigned_alert')
+  async onTicketUnassigned(ev: { ticketId: string; title: string; moduleId: string }) {
+    const chiefs = await this.db.query<{ user_id: string }[]>(
+      `SELECT umr.user_id
+       FROM   modules.user_module_roles umr
+       JOIN   modules.module_roles      mr ON mr.id = umr.role_id
+       WHERE  umr.module_id = $1
+         AND  mr.name IN ('jefe_tecnico', 'admin_modulo')
+         AND  umr.is_active = true`,
+      [ev.moduleId],
+    );
+    for (const { user_id } of chiefs) {
+      await this.notifyUser({
+        userId:    user_id,
+        eventType: 'ticket.unassigned_alert',
+        subject:   `Ticket sin asignar: ${ev.title}`,
+        body:      `El ticket "${ev.title}" fue creado pero no pudo asignarse automáticamente. Asígnalo manualmente.`,
+        channels:  ['in_app'],
+        meta:      { ticketId: ev.ticketId, moduleId: ev.moduleId },
+      });
+    }
+  }
+
   @OnEvent('meeting.scheduled')
   async onMeetingScheduled(ev: {
     meetingId:      string;

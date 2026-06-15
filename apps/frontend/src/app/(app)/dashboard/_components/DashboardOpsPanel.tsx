@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { AlertTriangle, Clock, FileText, Ticket, ArrowRight } from 'lucide-react';
+import { MetricCard } from '@/components/ui/MetricCard';
 import { fmtRelative } from '@/lib/formatters';
+import { getPriorityConfig, getRequestStatusConfig, getTicketPortalState } from '@/constants/status';
 
 const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
 
@@ -13,7 +15,8 @@ type OpsData = {
   pending_approvals: number;
   recent_tickets: {
     id: string; title: string; priority: string; created_at: string;
-    state_label: string; state_color: string | null; created_by_name: string;
+    state_label: string; is_final: boolean; is_approval_state: boolean; is_pause_state: boolean;
+    created_by_name: string;
   }[];
   recent_requests: {
     id: string; title: string; status: string; priority: string;
@@ -21,57 +24,11 @@ type OpsData = {
   }[];
 };
 
-const PRIORITY_COLOR: Record<string, string> = {
-  critica: '#ef4444',
-  alta:    '#f97316',
-  media:   '#eab308',
-  baja:    '#22c55e',
-};
 
-const STATUS_LABEL: Record<string, string> = {
-  pending:      'Pendiente',
-  taken:        'Tomada',
-  in_progress:  'En proceso',
-  completed:    'Completada',
-  rejected:     'Rechazada',
-  cancelled:    'Cancelada',
-  under_review: 'En revisión',
-  approved:     'Aprobada',
-};
-
-function KpiChip({ icon: Icon, label, value, href, warn }: {
-  icon: React.ElementType; label: string; value: number; href: string; warn?: boolean;
-}) {
-  const isEmpty = value === 0;
-  return (
-    <Link href={href} style={{ textDecoration: 'none' }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px',
-        background: warn && !isEmpty ? '#fff8f6' : '#fff',
-        border: `1.5px solid ${warn && !isEmpty ? '#fed7aa' : C.border}`,
-        borderRadius: 12, cursor: 'pointer', transition: 'border-color .12s',
-        minWidth: 160,
-      }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 9,
-          background: warn && !isEmpty ? '#fff1eb' : `${C.navy}08`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <Icon size={16} style={{ color: warn && !isEmpty ? C.coral : C.navy }} />
-        </div>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: warn && !isEmpty ? C.coral : C.navy, lineHeight: 1 }}>
-            {value}
-          </div>
-          <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>{label}</div>
-        </div>
-      </div>
-    </Link>
-  );
-}
 
 function RecentTicket({ t }: { t: OpsData['recent_tickets'][0] }) {
-  const pc = PRIORITY_COLOR[t.priority] ?? C.muted;
+  const pc = getPriorityConfig(t.priority).color;
+  const sc = getTicketPortalState(t);
   return (
     <Link href={`/helpdesk/ticket/${t.id}`} style={{ textDecoration: 'none' }}>
       <div style={{
@@ -90,9 +47,7 @@ function RecentTicket({ t }: { t: OpsData['recent_tickets'][0] }) {
         </div>
         <span style={{
           fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-          background: t.state_color ? `${t.state_color}18` : `${C.navy}0d`,
-          color: t.state_color ?? C.sub,
-          border: `1px solid ${t.state_color ? `${t.state_color}40` : C.border}`,
+          background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`,
           flexShrink: 0,
         }}>
           {t.state_label}
@@ -103,7 +58,8 @@ function RecentTicket({ t }: { t: OpsData['recent_tickets'][0] }) {
 }
 
 function RecentRequest({ r }: { r: OpsData['recent_requests'][0] }) {
-  const pc = PRIORITY_COLOR[r.priority] ?? C.muted;
+  const pc  = getPriorityConfig(r.priority).color;
+  const sc  = getRequestStatusConfig(r.status);
   return (
     <Link href={`/requests`} style={{ textDecoration: 'none' }}>
       <div style={{
@@ -122,12 +78,10 @@ function RecentRequest({ r }: { r: OpsData['recent_requests'][0] }) {
         </div>
         <span style={{
           fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-          background: r.status === 'pending' ? '#fff8ee' : `${C.navy}0d`,
-          color: r.status === 'pending' ? '#f97316' : C.sub,
-          border: `1px solid ${r.status === 'pending' ? '#fed7aa' : C.border}`,
+          background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`,
           flexShrink: 0,
         }}>
-          {STATUS_LABEL[r.status] ?? r.status}
+          {sc.label}
         </span>
       </div>
     </Link>
@@ -142,10 +96,10 @@ export function DashboardOpsPanel({ ops }: { ops: OpsData }) {
     <div style={{ marginBottom: 28 }}>
       {/* KPI chips */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const, marginBottom: 20 }}>
-        <KpiChip icon={AlertTriangle} label="Tickets urgentes / críticos" value={ops.urgent_tickets} href="/helpdesk/queue" warn />
-        <KpiChip icon={Clock}         label="SLA incumplidos"             value={ops.sla_breached}    href="/helpdesk/sla"   warn />
-        <KpiChip icon={Clock}         label="SLA en riesgo (< 2h)"        value={ops.sla_at_risk}     href="/helpdesk/sla"   warn />
-        <KpiChip icon={FileText}      label="Solicitudes pendientes"       value={ops.pending_approvals} href="/requests"    warn />
+        <MetricCard icon={<AlertTriangle size={16} />} label="Tickets urgentes / críticos" value={ops.urgent_tickets} href="/helpdesk/queue" warn size="sm" />
+        <MetricCard icon={<Clock        size={16} />} label="SLA incumplidos"              value={ops.sla_breached}   href="/helpdesk/sla"   warn size="sm" />
+        <MetricCard icon={<Clock        size={16} />} label="SLA en riesgo (< 2h)"         value={ops.sla_at_risk}    href="/helpdesk/sla"   warn size="sm" />
+        <MetricCard icon={<FileText     size={16} />} label="Solicitudes pendientes"        value={ops.pending_approvals} href="/requests"   warn size="sm" />
       </div>
 
       {/* Recent activity columns */}

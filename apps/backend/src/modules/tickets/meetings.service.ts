@@ -107,6 +107,13 @@ export class MeetingsService {
       participantIds: [...new Set(allParticipants)],
     });
 
+    // Sync to calendar.events (fire-and-forget — non-blocking)
+    this.syncMeetingToCalendar(
+      meeting.id, actorId, ticketId, ticket.module_id,
+      dto, ticketRow?.title ?? '',
+      [...new Set(allParticipants)],
+    ).catch(() => { /* non-critical */ });
+
     return meeting;
   }
 
@@ -176,8 +183,8 @@ export class MeetingsService {
   }
 
   async cancelMeeting(meetingId: string, actorId: string) {
-    const [meeting] = await this.db.query<{ id: string; status: string; created_by: string }[]>(
-      `SELECT id, status, created_by FROM tickets.ticket_meetings WHERE id = $1`,
+    const [meeting] = await this.db.query<{ id: string; status: string; created_by: string; ticket_id: string; scheduled_at: string }[]>(
+      `SELECT id, status, created_by, ticket_id, scheduled_at FROM tickets.ticket_meetings WHERE id = $1`,
       [meetingId],
     );
     if (!meeting) throw new NotFoundException(`Reunión ${meetingId} no encontrada`);
@@ -187,6 +194,63 @@ export class MeetingsService {
       `UPDATE tickets.ticket_meetings SET status = 'cancelled', updated_at = now() WHERE id = $1`,
       [meetingId],
     );
+
+    // Cancel linked calendar event
+    this.db.query(
+      `UPDATE calendar.events SET status = 'cancelled', deleted_at = now()
+       WHERE ticket_id = $1 AND source = 'meeting'
+         AND ABS(EXTRACT(EPOCH FROM (start_at - $2::timestamptz))) < 3600
+         AND deleted_at IS NULL`,
+      [meeting.ticket_id, meeting.scheduled_at],
+    ).catch(() => { /* non-critical */ });
+
     return { ok: true };
+  }
+
+  private async syncMeetingToCalendar(
+    meetingId:    string,
+    actorId:      string,
+    ticketId:     string,
+    moduleId:     string,
+    dto:          CreateMeetingDto,
+    ticketTitle:  string,
+    participantIds: string[],
+  ) {
+    const endAt = dto.duration_minutes
+      ? new Date(new Date(dto.scheduled_at).getTime() + dto.duration_minutes * 60_000).toISOString()
+      : new Date(new Date(dto.scheduled_at).getTime() + 60 * 60_000).toISOString();
+
+    const [calEvent] = await this.db.query<{ id: string }[]>(
+      `INSERT INTO calendar.events
+         (title, description, event_type, visibility, module_id, created_by,
+          start_at, end_at, all_day, priority, color, source, ticket_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       RETURNING id`,
+      [
+        ticketTitle ? `Reunión: ${ticketTitle}` : dto.reason,
+        dto.reason,
+        'module',
+        'participants',
+        moduleId,
+        actorId,
+        dto.scheduled_at,
+        endAt,
+        false,
+        'media',
+        '#7c3aed',
+        'meeting',
+        ticketId,
+      ],
+    );
+
+    if (calEvent?.id && participantIds.length) {
+      for (const uid of participantIds) {
+        await this.db.query(
+          `INSERT INTO calendar.event_participants (event_id, user_id, participant_type)
+           VALUES ($1, $2, 'user') ON CONFLICT DO NOTHING`,
+          [calEvent.id, uid],
+        );
+      }
+    }
   }
 }

@@ -23,7 +23,8 @@ import { getInitials } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
 import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
-import { BulkImportModal } from './BulkImportModal';
+import { BulkImportModal }        from './BulkImportModal';
+import { UserModuleRolesSection } from './UserModuleRolesSection';
 import styles from '../users.module.css';
 import mgmt   from '@/styles/mgmt.module.css';
 import mstyles from '@/components/ui/modal.module.css';
@@ -708,47 +709,11 @@ export function UsersClient() {
                   </div>
                 </div>
 
-                {/* Módulos / Roles */}
-                <div>
-                  <label className={styles.moduleSectionLabel}>Módulos / Roles Permitidos</label>
-                  <div className={styles.modulesBox}>
-                    <div className={styles.moduleRow}>
-                      <label className={styles.moduleCheckLabel}>
-                        <input type="checkbox" className={styles.moduleCheck} />
-                        <span>Helpdesk</span>
-                      </label>
-                      <select className={styles.moduleRoleSelect}>
-                        <option value="usuario">usuario</option>
-                        <option value="tecnico">tecnico</option>
-                        <option value="jefe_tecnico">jefe_tecnico</option>
-                      </select>
-                    </div>
-                    <div className={styles.moduleRow}>
-                      <label className={styles.moduleCheckLabel}>
-                        <input type="checkbox" className={styles.moduleCheck} />
-                        <span>Gestión Administrativa</span>
-                      </label>
-                      <select className={styles.moduleRoleSelect}>
-                        <option value="usuario">usuario</option>
-                        <option value="admin_modulo">admin_modulo</option>
-                      </select>
-                    </div>
-                    <div className={styles.moduleRow}>
-                      <label className={styles.moduleCheckLabel}>
-                        <input type="checkbox" className={styles.moduleCheck} />
-                        <span>Inventario de Activos</span>
-                      </label>
-                      <select className={styles.moduleRoleSelect}>
-                        <option value="usuario">usuario</option>
-                        <option value="tecnico">tecnico</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Info hint */}
                 <p className={styles.fieldHint}>
                   El usuario recibirá el email para acceder. Contraseña inicial: <strong>Ticket2026!</strong>
+                  <br />
+                  <span style={{ color: '#64748b' }}>Después de crear, usa <strong>Editar</strong> para asignar roles de módulo.</span>
                 </p>
 
                 {/* Feedback */}
@@ -848,6 +813,9 @@ export function UsersClient() {
             />
             <span className={mstyles.toggleLabel}>Superadmin</span>
           </div>
+
+          {editUser && <UserModuleRolesSection userId={editUser.id} />}
+
           {modalMsg && <p className={modalMsg.type === 'ok' ? mstyles.msgOk : mstyles.msgErr}>{modalMsg.text}</p>}
           <div className={mstyles.actions}>
             <button type="button" className={mstyles.actCancel}

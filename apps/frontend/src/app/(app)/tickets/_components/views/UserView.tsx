@@ -9,7 +9,7 @@ import {
   ticketsService,
   type TicketListItem, type TicketPriority,
 } from '@/services/tickets.service';
-import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
+import { getPriorityConfig, getSlaStatusConfig, getTicketPortalState } from '@/constants/status';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import styles from '../../tickets.module.css';
 import { isToday, TicketCard } from './shared';
@@ -38,19 +38,12 @@ function fmtHours(h: number): string {
   return `${(h / 24).toFixed(1)}d`;
 }
 
-function portalStateBadge(t: TicketListItem): { label: string; bg: string; color: string } {
-  if (t.is_final)          return { label: 'Cerrado',     bg: '#f1f5f9', color: '#64748b' };
-  if (t.is_approval_state) return { label: 'Resuelto',    bg: '#f0fdf4', color: '#15803d' };
-  if (t.is_pause_state)    return { label: 'En espera',   bg: '#fef3c7', color: '#92400e' };
-  if (t.assignee_name)     return { label: 'En proceso',  bg: '#eff6ff', color: '#1d4ed8' };
-  return                          { label: 'Abierto',      bg: '#fff7ed', color: '#c2410c' };
-}
 
 /* ── Active ticket card ── */
 function ActiveCard({ ticket, basePath }: { ticket: TicketListItem; basePath: string }) {
   const router  = useRouter();
   const pColor  = getPriorityConfig(ticket.priority).color;
-  const badge   = portalStateBadge(ticket);
+  const badge   = getTicketPortalState(ticket);
   const h       = hoursLeft(ticket.sla_deadline_tracked ?? ticket.sla_deadline ?? null);
   const slaColor = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status).text : null;
   const breached = ticket.sla_status === 'breached';
@@ -88,7 +81,7 @@ function ActiveCard({ ticket, basePath }: { ticket: TicketListItem; basePath: st
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`, whiteSpace: 'nowrap' }}>
             {badge.label}
           </span>
           <ChevronRight size={14} style={{ color: C.muted }} />

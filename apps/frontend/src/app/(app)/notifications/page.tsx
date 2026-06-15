@@ -2,7 +2,8 @@
 
 import { useState }                                        from 'react';
 import { useRouter }                                       from 'next/navigation';
-import { Bell, CheckCheck, Trash2, ExternalLink,
+import Link                                                from 'next/link';
+import { Bell, CheckCheck, Trash2,
          Ticket, FileText, Calendar }                      from 'lucide-react';
 import { useQuery, useMutation, useQueryClient }           from '@tanstack/react-query';
 import { notificationsService, type AppNotification }     from '@/services/notifications.service';
@@ -68,6 +69,16 @@ function getTypeKey(event: string): 'ticket' | 'request' | 'meeting' | 'default'
   if (event.startsWith('request')) return 'request';
   if (event.startsWith('meeting')) return 'meeting';
   return 'default';
+}
+
+function getQuickAction(n: AppNotification): { label: string; href: string; alert?: boolean } | null {
+  if (n.dismissed_at) return null;
+  if (n.event_type === 'ticket.sla_breached')          return { label: 'Ver SLA',  href: '/helpdesk/sla',       alert: true };
+  if (n.event_type === 'ticket.validation_required')   return { label: 'Validar',  href: getHref(n) ?? '#',     alert: true };
+  if (n.event_type === 'ticket.approval_expiring_soon') return { label: 'Validar', href: getHref(n) ?? '#',    alert: true };
+  const href = getHref(n);
+  if (href) return { label: 'Ver →', href };
+  return null;
 }
 
 const TYPE_PILL_CLS: Record<string, string> = {
@@ -293,6 +304,7 @@ export default function NotificationsPage() {
                 const msg       = getMessage(n);
                 const typeKey   = getTypeKey(n.event_type);
 
+                const qa = getQuickAction(n);
                 return (
                   <div
                     key={n.id}
@@ -321,7 +333,6 @@ export default function NotificationsPage() {
                         <span className={`${styles.label} ${isUnread ? '' : styles.labelRead}`}>
                           {getLabel(n)}
                         </span>
-                        {href && <ExternalLink size={10} color="#94a3b8" style={{ flexShrink: 0 }} />}
                       </div>
                       {msg && <p className={styles.msg}>{msg}</p>}
                     </div>
@@ -329,6 +340,15 @@ export default function NotificationsPage() {
                     {/* Meta */}
                     <div className={styles.meta}>
                       <span className={styles.time}>{fmtRelative(n.created_at)}</span>
+                      {qa && (
+                        <Link
+                          href={qa.href}
+                          className={`${styles.quickAction} ${qa.alert ? styles.quickActionAlert : ''}`}
+                          onClick={e => { e.stopPropagation(); if (isUnread) markReadMut.mutate(n.id); }}
+                        >
+                          {qa.label}
+                        </Link>
+                      )}
                       <button
                         type="button"
                         title="Descartar"
