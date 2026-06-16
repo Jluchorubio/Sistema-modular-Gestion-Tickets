@@ -5,7 +5,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   X, Play, Loader2, CheckCircle2, TrendingUp, TrendingDown,
   AlertCircle, ShieldCheck, Globe, MapPin, User, Zap, Clock,
-  ChevronDown, ChevronUp, ExternalLink, Info, Eye,
+  ChevronDown, ChevronUp, ExternalLink, Info, Eye, Undo2,
 } from 'lucide-react';
 import { requestsService, type AdmRequest, type RequestStatus } from '@/services/requests.service';
 import { usersService } from '@/services/users.service';
@@ -282,6 +282,11 @@ export function RequestDetailModal({
     onSuccess:  invalidate,
   });
 
+  const untakeMut = useMutation({
+    mutationFn: () => requestsService.untake(request.id),
+    onSuccess:  invalidate,
+  });
+
   const progressMut = useMutation({
     mutationFn: (status: 'in_progress' | 'completed') =>
       requestsService.updateProgress(request.id, status),
@@ -378,6 +383,8 @@ export function RequestDetailModal({
   /* ── Derived ── */
   const statusColor   = REQUEST_STATUS_COLORS[request.status] ?? '#94a3b8';
   const isEscalated   = request.escalated === true;
+  const canUntake     = request.status === 'taken' && permTake &&
+    (isSuperadmin || currentUser?.id === request.taken_by);
   const hasSla        = isActionable && !!request.sla_due_at;
   const canEscalate   = showAdminActions && !isSuperadmin && !isEscalated && ['pending', 'taken', 'in_progress'].includes(request.status);
   const canDeescalate = isSuperadmin && isEscalated;
@@ -590,6 +597,20 @@ export function RequestDetailModal({
                   >
                     <Eye size={11} />
                     {underReviewMut.isPending ? '…' : 'En revisión'}
+                  </button>
+                )}
+
+                {/* Liberar — devuelve a pendiente */}
+                {canUntake && (
+                  <button
+                    type="button"
+                    className={styles.btnGhost}
+                    disabled={untakeMut.isPending}
+                    onClick={() => untakeMut.mutate()}
+                    title="Liberar solicitud — vuelve a estado pendiente"
+                  >
+                    <Undo2 size={11} />
+                    {untakeMut.isPending ? '…' : 'Liberar'}
                   </button>
                 )}
 

@@ -122,6 +122,7 @@ export interface HelpdeskKpis {
   avg_first_response_hours: string | null;
   breach_active:            string;
   reopen_count:             string;
+  escalation_rate:          number | null;
 }
 
 export interface HelpdeskByPriority {

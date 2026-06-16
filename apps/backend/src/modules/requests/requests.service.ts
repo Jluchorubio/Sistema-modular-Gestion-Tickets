@@ -214,7 +214,7 @@ export class RequestsService {
     const rows = await this.db.query<any[]>(
       `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
               r.metadata, r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
-              r.taken_at, r.sla_due_at, r.task_source,
+              r.taken_at, r.taken_by, r.sla_due_at, r.task_source,
               r.escalated, r.escalated_at, r.escalation_note,
               p.first_name || ' ' || p.last_name   AS requester_name,
               p.id                                  AS requester_id,

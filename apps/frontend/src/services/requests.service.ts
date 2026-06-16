@@ -52,6 +52,7 @@ export interface AdmRequest {
   review_notes?:      string | null;
   reviewed_at?:       string | null;
   taken_at?:          string | null;
+  taken_by?:          string | null;
   taken_by_name?:     string | null;
   sla_due_at?:        string | null;
   escalated?:         boolean;
@@ -105,6 +106,11 @@ export const requestsService = {
 
   async take(id: string): Promise<AdmRequest> {
     const { data } = await api.post(`/requests/${id}/take`);
+    return data;
+  },
+
+  async untake(id: string): Promise<AdmRequest> {
+    const { data } = await api.delete(`/requests/${id}/take`);
     return data;
   },
 

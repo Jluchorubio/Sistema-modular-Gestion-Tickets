@@ -226,6 +226,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
         ['Este mes',               String(n(kpis?.this_month))],
         ['Hoy',                    String(n(kpis?.today))],
         ['Prom. resolución',       kpis?.avg_resolution_hours ? `${Math.round(n(kpis.avg_resolution_hours))}h` : '—'],
+        ['1ª respuesta',           kpis?.avg_first_response_hours ? `${n(kpis.avg_first_response_hours).toFixed(1)}h` : '—'],
+        ['Tasa escalado',          kpis?.escalation_rate != null ? `${kpis.escalation_rate}%` : '—'],
         ['Rechazados',             String(n(kpis?.rechazados))],
         ['Reabiertos',             String(n(kpis?.reopen_count))],
       ],
@@ -296,7 +298,9 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
       { metric: 'Esta semana',         value: n(kpis?.this_week) },
       { metric: 'Este mes',            value: n(kpis?.this_month) },
       { metric: 'Hoy',                 value: n(kpis?.today) },
-      { metric: 'Prom. resolución (h)',value: kpis?.avg_resolution_hours ? Math.round(n(kpis.avg_resolution_hours)) : '—' },
+      { metric: 'Prom. resolución (h)', value: kpis?.avg_resolution_hours ? Math.round(n(kpis.avg_resolution_hours)) : '—' },
+      { metric: '1ª respuesta (h)',     value: kpis?.avg_first_response_hours ? n(kpis.avg_first_response_hours).toFixed(1) : '—' },
+      { metric: 'Tasa escalado (%)',    value: kpis?.escalation_rate ?? '—' },
       { metric: 'Rechazados',          value: n(kpis?.rechazados) },
       { metric: 'Reabiertos',          value: n(kpis?.reopen_count) },
     ].forEach(r => ws1.addRow(r));
@@ -427,6 +431,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                 <MetricCard label="Prom. resolución"        value={kpis?.avg_resolution_hours ? `${Math.round(n(kpis.avg_resolution_hours))}h` : '—'} sub="tickets cerrados" color="#10b981" size="md" />
                 <MetricCard label="Rechazados"              value={n(kpis?.rechazados)} color={n(kpis?.rechazados) > 0 ? '#f59e0b' : '#22c55e'} size="md" />
                 <MetricCard label="Reabiertos"              value={n(kpis?.reopen_count)} color={n(kpis?.reopen_count) > 0 ? '#ef4444' : '#22c55e'} size="md" />
+                <MetricCard label="1ª respuesta (h)"        value={kpis?.avg_first_response_hours ? `${n(kpis.avg_first_response_hours).toFixed(1)}h` : '—'} sub="hasta asignación" color="#8b5cf6" size="md" />
+                <MetricCard label="Tasa escalado"           value={kpis?.escalation_rate != null ? `${kpis.escalation_rate}%` : '—'} sub="del total" color={(kpis?.escalation_rate ?? 0) > 10 ? '#ef4444' : '#22c55e'} size="md" />
               </MetricRow>
 
               <div className={styles.chartPanel}>

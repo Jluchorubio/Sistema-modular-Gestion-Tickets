@@ -6,7 +6,8 @@ import { Plus, X, Ticket, Search, Monitor, BookOpen, ExternalLink, Zap } from 'l
 import {
   ticketsService,
   type CreateTicketDto, type AssetSearchResult,
-  type TicketUrgency, type TicketImpact,
+  type TicketUrgency, type TicketImpact, type TicketPriority,
+  TICKET_PRIORITIES, TICKET_PRIORITY_LABELS, TICKET_PRIORITY_COLORS,
 } from '@/services/tickets.service';
 import { usersService } from '@/services/users.service';
 import { PRIORITY_CONFIG } from '@/constants/status';
@@ -86,6 +87,13 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   const [calcPriority,          setCalcPriority]          = useState<string | null>(null);
   const [calcScore,             setCalcScore]             = useState<number | null>(null);
   const [calcLoading,           setCalcLoading]           = useState(false);
+  const [priorityOverride,      setPriorityOverride]      = useState(false);
+
+  const canOverridePriority = !!user?.is_superadmin ||
+    (user?.module_roles ?? []).some(
+      r => r.module_id === moduleId && r.status === 'active' &&
+           ['tecnico', 'jefe_tecnico', 'admin_modulo'].includes(r.role_name),
+    );
 
   /* ── Init urgency/impact defaults once levels load ── */
   useEffect(() => {
@@ -164,6 +172,11 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   /* ── Handlers ── */
   function set(key: keyof CreateTicketDto, val: string) { setForm(f => ({ ...f, [key]: val })); }
 
+  function togglePriorityOverride(on: boolean) {
+    setPriorityOverride(on);
+    if (!on) setForm(f => ({ ...f, priority: undefined }));
+  }
+
   function handleLocationChange(locId: string) {
     setSelectedLocationId(locId);
     setForm(f => ({ ...f, environment_id: undefined }));
@@ -206,7 +219,7 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
     createMut.mutate();
   }
 
-  const canSubmit  = !!(form.title?.trim() && form.category_id);
+  const canSubmit  = !!(form.title?.trim() && form.category_id && (!priorityOverride || form.priority));
   const priorityCfg = calcPriority ? (PRIORITY_CONFIG[calcPriority] ?? null) : null;
 
   /* ── org node display name ── */
@@ -221,7 +234,7 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
           <div className={styles.headerIcon}><Ticket size={16} /></div>
           <div className={styles.headerMeta}>
             <p className={styles.headerTitle}>Nuevo ticket</p>
-            <p className={styles.headerSubtitle}>La prioridad se calcula automáticamente</p>
+            <p className={styles.headerSubtitle}>{canOverridePriority ? 'Prioridad automática — puedes sobreescribirla' : 'La prioridad se calcula automáticamente'}</p>
           </div>
           <button type="button" onClick={onClose} className={styles.closeBtn}><X size={16} /></button>
         </div>
@@ -448,23 +461,72 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
                 </div>
               </div>
 
-              {/* Prioridad calculada — readonly */}
-              <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 9, background: priorityCfg ? `${priorityCfg.color}0d` : '#f8fafc', border: `1px solid ${priorityCfg ? `${priorityCfg.color}33` : '#e2e8f0'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Zap size={14} style={{ color: priorityCfg?.color ?? '#94a3b8', flexShrink: 0 }} />
-                <div>
-                  <p style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', margin: '0 0 1px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Prioridad calculada
-                  </p>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: priorityCfg?.color ?? '#94a3b8', margin: 0 }}>
-                    {calcLoading ? 'Calculando…' : (priorityCfg ? priorityCfg.label : 'Completar formulario')}
-                    {calcScore !== null && !calcLoading && (
-                      <span style={{ fontSize: 10, fontWeight: 400, color: '#94a3b8', marginLeft: 6 }}>
-                        (score: {calcScore})
-                      </span>
-                    )}
-                  </p>
+              {/* Prioridad calculada — readonly (dimmed when override active) */}
+              {!priorityOverride && (
+                <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 9, background: priorityCfg ? `${priorityCfg.color}0d` : '#f8fafc', border: `1px solid ${priorityCfg ? `${priorityCfg.color}33` : '#e2e8f0'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Zap size={14} style={{ color: priorityCfg?.color ?? '#94a3b8', flexShrink: 0 }} />
+                  <div>
+                    <p style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', margin: '0 0 1px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Prioridad calculada
+                    </p>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: priorityCfg?.color ?? '#94a3b8', margin: 0 }}>
+                      {calcLoading ? 'Calculando…' : (priorityCfg ? priorityCfg.label : 'Completar formulario')}
+                      {calcScore !== null && !calcLoading && (
+                        <span style={{ fontSize: 10, fontWeight: 400, color: '#94a3b8', marginLeft: 6 }}>
+                          (score: {calcScore})
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Manual priority override — privileged roles only */}
+              {canOverridePriority && (
+                <div style={{ marginTop: 12 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={priorityOverride}
+                      onChange={e => togglePriorityOverride(e.target.checked)}
+                      style={{ accentColor: '#ff5e3a', width: 14, height: 14 }}
+                    />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#334155' }}>
+                      Establecer prioridad manualmente
+                    </span>
+                  </label>
+
+                  {priorityOverride && (
+                    <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                      {TICKET_PRIORITIES.map(p => {
+                        const color = TICKET_PRIORITY_COLORS[p];
+                        const selected = form.priority === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, priority: p as TicketPriority }))}
+                            style={{
+                              padding: '7px 4px',
+                              borderRadius: 7,
+                              border: `2px solid ${selected ? color : '#e2e8f0'}`,
+                              background: selected ? `${color}15` : '#fafafa',
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                              fontSize: 11,
+                              fontWeight: selected ? 700 : 500,
+                              color: selected ? color : '#64748b',
+                              transition: 'all .15s',
+                            }}
+                          >
+                            {TICKET_PRIORITY_LABELS[p]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
           </form>

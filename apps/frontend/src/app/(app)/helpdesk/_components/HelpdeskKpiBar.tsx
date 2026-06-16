@@ -6,11 +6,13 @@ import { ArrowRight }        from 'lucide-react';
 import { reportingService }  from '@/services/reporting.service';
 
 const ITEMS = [
-  { key: 'total',                label: 'Total',          color: '#0e2235' },
-  { key: 'open',                 label: 'Abiertos',       color: '#3b82f6' },
-  { key: 'today',                label: 'Hoy',            color: '#22c55e' },
-  { key: 'breach_active',        label: 'SLA en riesgo',  color: '#ef4444' },
-  { key: 'avg_resolution_hours', label: 'Avg. resolución (h)', color: '#f59e0b', fmt: (v: string | null) => v ? Number(v).toFixed(1) : '—' },
+  { key: 'total',                    label: 'Total',               color: '#0e2235' },
+  { key: 'open',                     label: 'Abiertos',            color: '#3b82f6' },
+  { key: 'today',                    label: 'Hoy',                 color: '#22c55e' },
+  { key: 'breach_active',            label: 'SLA en riesgo',       color: '#ef4444' },
+  { key: 'avg_resolution_hours',     label: 'Avg. resolución (h)', color: '#f59e0b',  fmt: (v: string | null) => v ? Number(v).toFixed(1) : '—' },
+  { key: 'avg_first_response_hours', label: '1ª respuesta (h)',    color: '#8b5cf6',  fmt: (v: string | null) => v ? Number(v).toFixed(1) : '—' },
+  { key: 'escalation_rate',          label: 'Escalados (%)',        color: '#f97316', fmt: (v: string | null) => v != null ? `${Number(v).toFixed(1)}%` : '—' },
 ] as const;
 
 export function HelpdeskKpiBar({ moduleId }: { moduleId: string }) {
@@ -34,7 +36,7 @@ export function HelpdeskKpiBar({ moduleId }: { moduleId: string }) {
         </Link>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12 }}>
         {ITEMS.map(item => {
           const rawVal = kpis?.[item.key as keyof typeof kpis] as string | null | undefined;
           const display = isLoading ? '…'
