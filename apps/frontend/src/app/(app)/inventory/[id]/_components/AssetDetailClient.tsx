@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -248,7 +248,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
       )}
 
       {/* ══ HEADER CARD ══ */}
-      <div style={{ background: "#fff", borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden", boxShadow: "0 2px 18px rgba(14,34,53,.08)" }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden", boxShadow: "0 2px 18px rgba(14,34,53,.08)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "40% 60%" }}>
           {/* Gallery */}
           <div style={{ background: "#f0f4f8", display: "flex", flexDirection: "column", borderRight: `1px solid ${C.border}` }}>
@@ -277,7 +277,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                 {images.map((img, idx) => (
                   <div key={img.id} style={{ position: "relative", flexShrink: 0 }}>
                     <button type="button" onClick={() => setSelectedImg(idx)}
-                      style={{ width: 56, height: 56, borderRadius: 7, overflow: "hidden", border: `2px solid ${idx === safeIdx ? C.coral : C.border}`, background: "#fff", cursor: "pointer", padding: 2, display: "block", transition: "border-color .15s" }}>
+                      style={{ width: 56, height: 56, borderRadius: 7, overflow: "hidden", border: `2px solid ${idx === safeIdx ? C.coral : C.border}`, background: 'var(--app-card)', cursor: "pointer", padding: 2, display: "block", transition: "border-color .15s" }}>
                       <img src={img.storage_url} alt={img.file_name} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
                     </button>
                   </div>
@@ -304,7 +304,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                   <ImagePlus size={13} /> {uploadImgMut.isPending ? "Subiendo…" : "Agregar imagen"}
                 </button>
                 <button type="button" disabled={uploadImgMut.isPending} onClick={() => pickFile("camera")}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${C.border}`, background: "#fff", fontSize: 11, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${C.border}`, background: 'var(--app-card)', fontSize: 11, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
                   <Camera size={13} /> Cámara
                 </button>
               </div>
@@ -390,11 +390,11 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
 
               {/* Quick actions */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0, minWidth: 116 }}>
-                <button type="button" onClick={() => setShowQr(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.coral, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                <button type="button" onClick={() => setShowQr(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.coral, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                   <QrCode size={13} /> Ver QR
                 </button>
                 {canEdit && asset.status !== "dado_de_baja" && !editing && (
-                  <button type="button" onClick={startEditing} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                  <button type="button" onClick={startEditing} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                     <Pencil size={13} /> Editar
                   </button>
                 )}
@@ -403,7 +403,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                     <button type="button" disabled={updateMut.isPending} onClick={() => updateMut.mutate()} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none", background: C.navy, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%", opacity: updateMut.isPending ? 0.6 : 1 }}>
                       <Save size={13} /> {updateMut.isPending ? "Guardando…" : "Guardar"}
                     </button>
-                    <button type="button" onClick={() => { setEditing(false); setActionErr(""); }} style={{ padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub, width: "100%" }}>
+                    <button type="button" onClick={() => { setEditing(false); setActionErr(""); }} style={{ padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub, width: "100%" }}>
                       Cancelar
                     </button>
                   </>
@@ -413,16 +413,16 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
 
             {!editing && (
               <div style={{ display: "flex", gap: 8, marginTop: 22, alignItems: "center", flexWrap: "wrap" }}>
-                <button type="button" onClick={() => setShowReport(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                <button type="button" onClick={() => setShowReport(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
                   Reportar problema
                 </button>
                 {canEdit && asset.status !== "dado_de_baja" && (
-                  <button type="button" onClick={() => setShowAssign(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                  <button type="button" onClick={() => setShowAssign(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
                     <UserPlus size={13} /> Asignar custodia
                   </button>
                 )}
                 {canEdit && (
-                  <button type="button" onClick={() => setShowRelate(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                  <button type="button" onClick={() => setShowRelate(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
                     Asociar dispositivo
                   </button>
                 )}
@@ -520,7 +520,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                   const initials = asgn.user_name.split(" ").slice(0, 2).map((w: string) => w[0] ?? "").join("").toUpperCase();
                   const scheduleLabel = asgn.shift ? `Turno ${asgn.shift}` : asgn.hours_start && asgn.hours_end ? `${asgn.hours_start} – ${asgn.hours_end}` : null;
                   return (
-                    <div key={asgn.id} style={{ display: "flex", gap: 13, padding: "14px 16px", background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 13 }}>
+                    <div key={asgn.id} style={{ display: "flex", gap: 13, padding: "14px 16px", background: 'var(--app-card)', border: `1.5px solid ${C.border}`, borderRadius: 13 }}>
                       <button type="button" onClick={() => router.push(`/inventory/users/${asgn.user_id}/profile`)} style={{ position: "relative", flexShrink: 0, background: "none", border: "none", padding: 0, cursor: "pointer" }}>
                         {asgn.avatar_url ? (
                           <img src={asgn.avatar_url} alt={asgn.user_name} style={{ width: 44, height: 44, borderRadius: 11, objectFit: "cover", display: "block" }} />
@@ -562,7 +562,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                 <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 9px" }}>↑ Pertenece a</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button type="button" onClick={() => router.push(`/inventory/${asset.parent_asset_id}`)}
-                    style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
+                    style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: 'var(--app-card)', border: `1.5px solid ${C.border}`, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
                     onMouseEnter={e => (e.currentTarget.style.borderColor = C.coral + "80")}
                     onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}>
                     <div style={{ width: 36, height: 36, borderRadius: 9, background: `${C.coral}10`, border: `1.5px solid ${C.coral}28`, display: "grid", placeItems: "center", flexShrink: 0 }}>
@@ -712,7 +712,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
       {confirmDeleteImgId && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}
           onClick={() => setConfirmDeleteImgId(null)}>
-          <div style={{ background: "#fff", borderRadius: 14, padding: "28px 28px 24px", width: 340, boxShadow: "0 8px 40px rgba(0,0,0,.22)" }}
+          <div style={{ background: 'var(--app-card)', borderRadius: 14, padding: "28px 28px 24px", width: 340, boxShadow: "0 8px 40px rgba(0,0,0,.22)" }}
             onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
               <div style={{ width: 38, height: 38, borderRadius: 10, background: "#fef2f2", border: "1.5px solid #fecaca", display: "grid", placeItems: "center", flexShrink: 0 }}>
@@ -725,7 +725,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button type="button" onClick={() => setConfirmDeleteImgId(null)}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 12, fontWeight: 700, color: "#0e2235", cursor: "pointer", fontFamily: "inherit" }}>
+                style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #e2e8f0", background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: "#0e2235", cursor: "pointer", fontFamily: "inherit" }}>
                 Cancelar
               </button>
               <button type="button" disabled={deleteImgMut.isPending} onClick={() => { deleteImgMut.mutate(confirmDeleteImgId); setConfirmDeleteImgId(null); }}

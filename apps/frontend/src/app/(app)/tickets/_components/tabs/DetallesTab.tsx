@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -100,7 +100,7 @@ export function DetallesTab({
     <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* Solicitante */}
-      <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
         <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Solicitante</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#0e2235', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -115,7 +115,7 @@ export function DetallesTab({
 
       {/* Historial de asignaciones */}
       {techHistory.length > 0 && (
-        <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+        <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
           <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Historial de asignaciones</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {techHistory.map(a => (
@@ -137,7 +137,7 @@ export function DetallesTab({
       )}
 
       {/* Detalles del ticket */}
-      <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
         <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Detalles del ticket</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           {([
@@ -162,7 +162,7 @@ export function DetallesTab({
 
       {/* Relacionados */}
       {(relations.length > 0 || !ticket.is_final) && (
-        <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+        <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
           <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>
             Tickets relacionados{relations.length > 0 ? ` (${relations.length})` : ''}
           </p>
@@ -214,7 +214,7 @@ export function DetallesTab({
                 </div>
               )}
               <select value={relType} onChange={e => setRelType(e.target.value)}
-                style={{ width: '100%', padding: '5px 7px', borderRadius: 5, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: '#fff', marginBottom: 5, boxSizing: 'border-box' }}>
+                style={{ width: '100%', padding: '5px 7px', borderRadius: 5, border: '1px solid #e2e8f0', fontSize: 11, fontFamily: 'inherit', background: 'var(--app-card)', marginBottom: 5, boxSizing: 'border-box' }}>
                 <option value="related">Relacionado</option>
                 <option value="duplicado">Duplicado</option>
                 <option value="bloquea">Bloquea</option>
@@ -222,7 +222,7 @@ export function DetallesTab({
               </select>
               <div style={{ display: 'flex', gap: 5 }}>
                 <button type="button" onClick={() => { setShowRelForm(false); setRelSearch(''); setRelTarget(null); setRelResults([]); }}
-                  style={{ flex: 1, padding: '6px', borderRadius: 5, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
+                  style={{ flex: 1, padding: '6px', borderRadius: 5, border: '1px solid #e2e8f0', background: 'var(--app-card)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
                   Cancelar
                 </button>
                 <button type="button" disabled={!relTarget || mutPending.addRel} onClick={handleAddRelation}
@@ -243,7 +243,7 @@ export function DetallesTab({
           (h.transition_reason ?? '').toLowerCase().includes('auto-escal')
         );
         return (
-          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #fed7aa', padding: '14px 16px' }}>
+          <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #fed7aa', padding: '14px 16px' }}>
             <p style={{ fontSize: 10, fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Historial de escalaciones</p>
             {escalEvents.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -283,7 +283,7 @@ export function DetallesTab({
         const prevCount = prevTickets?.length ?? 0;
         if (reprocess === 0 && prevCount === 0) return null;
         return (
-          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+          <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
             <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--status-info-text)', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Contexto de recurrencia</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {reprocess > 0 && (
@@ -317,7 +317,7 @@ export function DetallesTab({
 
       {/* Base de conocimiento */}
       {(ticket.category_name || ticket.damage_type_label) && (
-        <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+        <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
           <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 8px' }}>Base de conocimiento</p>
           <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 10px' }}>
             Artículos relacionados con <strong style={{ color: '#475569' }}>{ticket.damage_type_label ?? ticket.category_name}</strong>

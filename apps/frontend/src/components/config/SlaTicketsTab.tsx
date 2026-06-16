@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Pencil, Check, X, ChevronRight, ChevronDown, ToggleLeft, ToggleRight, ShieldAlert } from 'lucide-react';
@@ -44,7 +44,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 const inp: React.CSSProperties = {
   border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 10px',
-  fontSize: 12, fontFamily: 'inherit', background: '#fff', outline: 'none',
+  fontSize: 12, fontFamily: 'inherit', background: 'var(--app-card)', outline: 'none',
 };
 
 /* ── Multi-select chip picker (for IN operator) ── */
@@ -310,7 +310,7 @@ function AddConditionForm({
   const canSubmit = value.trim().length > 0;
 
   return (
-    <div style={{ padding: '12px 14px', background: '#fff', borderRadius: 10,
+    <div style={{ padding: '12px 14px', background: 'var(--app-card)', borderRadius: 10,
       border: `1.5px dashed ${C.border}`, marginTop: 10 }}>
       <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 800, color: C.muted,
         textTransform: 'uppercase', letterSpacing: '.06em' }}>Nueva condición</p>
@@ -376,7 +376,7 @@ function AddConditionForm({
         </button>
         <button onClick={onDone}
           style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.border}`,
-            background: '#fff', color: C.sub, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+            background: 'var(--app-card)', color: C.sub, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
           Cancelar
         </button>
       </div>
@@ -526,7 +526,7 @@ function SlaRuleRow({
                 </button>
                 <button onClick={() => { setHours(rule.hours_to_resolve); setEditingHours(false); }}
                   style={{ padding: '4px 8px', borderRadius: 8, border: `1px solid ${C.border}`,
-                    background: '#fff', color: C.sub, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    background: 'var(--app-card)', color: C.sub, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                   <X size={11} />
                 </button>
               </>
@@ -611,7 +611,7 @@ function AddRuleForm({
   };
 
   return (
-    <div style={{ padding: '14px 16px', background: '#fff', borderRadius: 12,
+    <div style={{ padding: '14px 16px', background: 'var(--app-card)', borderRadius: 12,
       border: `1.5px solid ${C.navy}`, marginBottom: 12 }}>
       <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: C.navy }}>Nueva regla SLA</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
@@ -645,7 +645,7 @@ function AddRuleForm({
           </button>
           <button onClick={onDone}
             style={{ padding: '7px 10px', borderRadius: 9, border: `1px solid ${C.border}`,
-              background: '#fff', color: C.sub, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+              background: 'var(--app-card)', color: C.sub, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
             Cancelar
           </button>
         </div>
@@ -748,7 +748,7 @@ export function SlaTicketsTab({ moduleId }: Props) {
               onClick={() => breachCheckMut.mutate()}
               disabled={breachCheckMut.isPending}
               style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid #fecaca',
-                background: '#fff', color: '#ef4444', fontSize: 12, fontWeight: 700,
+                background: 'var(--app-card)', color: '#ef4444', fontSize: 12, fontWeight: 700,
                 cursor: breachCheckMut.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 opacity: breachCheckMut.isPending ? 0.6 : 1 }}>

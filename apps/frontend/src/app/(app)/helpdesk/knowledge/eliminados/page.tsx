@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -121,7 +121,7 @@ export default function EliminadosPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {items.map(item => (
-            <div key={item.id} style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div key={item.id} style={{ background: 'var(--app-card)', border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
               {/* Icon */}
               <div style={{ width: 40, height: 40, borderRadius: 9, background: `${C.coral}10`, border: `1px solid ${C.coral}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {item.type === 'post'
@@ -168,7 +168,7 @@ export default function EliminadosPage() {
       {confirmItem && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={() => setConfirmItem(null)}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: '28px 28px 24px', width: 380, boxShadow: '0 8px 40px rgba(0,0,0,.2)' }}
+          <div style={{ background: 'var(--app-card)', borderRadius: 14, padding: '28px 28px 24px', width: 380, boxShadow: '0 8px 40px rgba(0,0,0,.2)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
@@ -184,7 +184,7 @@ export default function EliminadosPage() {
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setConfirmItem(null)}
-                style={{ padding: '8px 18px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', fontSize: 12, fontWeight: 700, color: C.navy, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ padding: '8px 18px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.navy, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancelar
               </button>
               <button type="button" disabled={permanentMut.isPending}

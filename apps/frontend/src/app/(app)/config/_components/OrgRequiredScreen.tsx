@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Lock, Network } from 'lucide-react';
 
@@ -12,7 +12,7 @@ export function OrgRequiredScreen({ onConfigure }: { onConfigure: () => void }) 
       }}>
         <Lock size={24} style={{ color: '#94a3b8' }} />
       </div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: '#0e2235', marginBottom: 8 }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--app-text-main)', marginBottom: 8 }}>
         Requiere estructura organizacional
       </div>
       <p style={{ fontSize: 13, color: '#64748b', maxWidth: 380, margin: '0 auto 24px', lineHeight: 1.6 }}>

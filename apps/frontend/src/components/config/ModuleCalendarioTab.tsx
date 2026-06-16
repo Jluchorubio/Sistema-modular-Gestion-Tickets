@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Pencil, Check, X, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -34,7 +34,7 @@ const s = {
     marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
     padding: '4px 10px', border: '1px solid #e2e8f0', borderRadius: 4,
     fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-    background: '#fff', color: '#0e2235',
+    background: 'var(--app-card)', color: '#0e2235',
   } satisfies React.CSSProperties,
   btnSave: {
     display: 'flex', alignItems: 'center', gap: 4,
@@ -46,7 +46,7 @@ const s = {
     display: 'flex', alignItems: 'center', gap: 4,
     padding: '5px 10px', borderRadius: 4, fontSize: 11, fontWeight: 700,
     cursor: 'pointer', fontFamily: 'inherit',
-    background: '#fff', color: '#64748b', border: '1px solid #e2e8f0',
+    background: 'var(--app-card)', color: '#64748b', border: '1px solid #e2e8f0',
   } satisfies React.CSSProperties,
   btnPrimary: {
     display: 'flex', alignItems: 'center', gap: 4,
@@ -57,7 +57,7 @@ const s = {
   btnDanger: {
     display: 'flex', alignItems: 'center', padding: '4px 6px',
     border: '1px solid #fecaca', borderRadius: 4, cursor: 'pointer',
-    background: '#fff', color: '#ef4444', marginLeft: 'auto',
+    background: 'var(--app-card)', color: '#ef4444', marginLeft: 'auto',
   } satisfies React.CSSProperties,
   editRow: {
     display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const,

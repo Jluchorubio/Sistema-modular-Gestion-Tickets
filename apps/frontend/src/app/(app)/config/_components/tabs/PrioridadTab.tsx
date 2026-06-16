@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient }  from '@tanstack/react-query';
@@ -36,7 +36,7 @@ const PRESETS = [
 ] as const;
 
 const WEIGHT_META = [
-  { key: 'cargo' as const, label: 'Jerarquía del cargo', desc: 'Rango jerárquico del solicitante en el organigrama', color: '#0e2235' },
+  { key: 'cargo' as const, label: 'Jerarquía del cargo', desc: 'Rango jerárquico del solicitante en el organigrama', color: 'var(--app-text-main)' },
   { key: 'nodo'  as const, label: 'Criticidad del nodo', desc: 'Importancia del nodo organizacional afectado',       color: '#0ea5e9' },
   { key: 'daño'  as const, label: 'Severidad del daño',  desc: 'Gravedad del daño o problema reportado',             color: '#f97316' },
 ];
@@ -98,10 +98,10 @@ function UserPrioritySimulator({
   };
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
+    <div style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <Users size={14} style={{ color: '#0e2235' }} />
-        <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <Users size={14} style={{ color: 'var(--app-text-main)' }} />
+        <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Simular prioridad para un usuario real
         </div>
       </div>
@@ -115,8 +115,8 @@ function UserPrioritySimulator({
         <div style={{ position: 'relative' }}>
           <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Usuario</label>
           {selectedUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', border: '1.5px solid #0e2235', borderRadius: 8, background: '#f8fafc' }}>
-              <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#0e2235' }}>{selectedUser.label}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', border: '1.5px solid #0e2235', borderRadius: 8, background: 'var(--app-page)' }}>
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--app-text-main)' }}>{selectedUser.label}</span>
               <button type="button" onClick={() => { setSelectedUser(null); setResult(null); }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 14, lineHeight: 1 }}>×</button>
             </div>
@@ -128,11 +128,11 @@ function UserPrioritySimulator({
                 placeholder="Buscar usuario por nombre o email…"
                 style={{ ...tInput, width: '100%', textAlign: 'left' }} />
               {showDropdown && (usersPage?.data ?? []).length > 0 && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, marginTop: 4, boxShadow: '0 4px 16px rgba(0,0,0,.1)', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, marginTop: 4, boxShadow: '0 4px 16px rgba(0,0,0,.1)', overflow: 'hidden' }}>
                   {(usersPage?.data ?? []).slice(0, 8).map((u: any) => (
                     <div key={u.id}
                       onClick={() => { setSelectedUser({ id: u.id, label: `${u.first_name} ${u.last_name} — ${u.email}` }); setUserSearch(''); setShowDropdown(false); }}
-                      style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 12, borderBottom: '1px solid #f1f5f9', color: '#334155' }}
+                      style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 12, borderBottom: '1px solid #f1f5f9', color: 'var(--app-text)' }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
                       onMouseLeave={e => (e.currentTarget.style.background = '')}>
                       <strong>{u.first_name} {u.last_name}</strong>
@@ -314,7 +314,7 @@ export function PrioridadTab() {
   };
   const num: React.CSSProperties = {
     fontSize: 12, fontWeight: 800, minWidth: 38, textAlign: 'center',
-    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '3px 6px',
+    background: 'var(--app-page)', border: '1px solid #e2e8f0', borderRadius: 8, padding: '3px 6px',
   };
 
   return (
@@ -338,10 +338,10 @@ export function PrioridadTab() {
       </div>
 
       {/* ── Formula weights ── */}
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
+      <div style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Pesos de la fórmula
             </div>
             <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
@@ -372,8 +372,8 @@ export function PrioridadTab() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
           {WEIGHT_META.map(({ key, label, desc: metaDesc, color }) => (
-            <div key={key} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#0e2235', marginBottom: 2 }}>{label}</div>
+            <div key={key} style={{ background: 'var(--app-page)', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--app-text-main)', marginBottom: 2 }}>{label}</div>
               <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 12, lineHeight: 1.4 }}>{metaDesc}</div>
               <div style={{ fontSize: 28, fontWeight: 900, color, textAlign: 'center', lineHeight: 1, marginBottom: 10 }}>
                 {w[key]}%
@@ -384,7 +384,7 @@ export function PrioridadTab() {
               <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                 <button onClick={() => setW(p => ({ ...p, [key]: Math.max(0, p[key] - 5) }))}
                   style={{ width: 32, height: 28, border: '1px solid #e2e8f0', borderRadius: 8,
-                    background: '#fff', fontSize: 18, lineHeight: 1, fontWeight: 700, cursor: 'pointer',
+                    background: 'var(--app-card)', fontSize: 18, lineHeight: 1, fontWeight: 700, cursor: 'pointer',
                     color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   −
                 </button>
@@ -394,7 +394,7 @@ export function PrioridadTab() {
                     fontSize: 13, fontWeight: 700, fontFamily: 'inherit', padding: '3px 4px', color }} />
                 <button onClick={() => setW(p => ({ ...p, [key]: Math.min(100, p[key] + 5) }))}
                   style={{ width: 32, height: 28, border: '1px solid #e2e8f0', borderRadius: 8,
-                    background: '#fff', fontSize: 18, lineHeight: 1, fontWeight: 700, cursor: 'pointer',
+                    background: 'var(--app-card)', fontSize: 18, lineHeight: 1, fontWeight: 700, cursor: 'pointer',
                     color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   +
                 </button>
@@ -411,8 +411,8 @@ export function PrioridadTab() {
       </div>
 
       {/* ── Thresholds ── */}
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
+      <div style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
           Umbrales de prioridad
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -434,8 +434,8 @@ export function PrioridadTab() {
       </div>
 
       {/* ── Urgency & Impact bonuses ── */}
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+      <div style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
           Bonos de urgencia e impacto
         </div>
         <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16 }}>
@@ -445,34 +445,34 @@ export function PrioridadTab() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {/* Urgencia */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 }}>Urgencia</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 }}>Urgencia</div>
             {uLevels.map((lvl, i) => (
               <div key={lvl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', flex: 1, minWidth: 0 }}>{lvl.label}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--app-text)', flex: 1, minWidth: 0 }}>{lvl.label}</span>
                 <button onClick={() => setULevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.max(0, +(l.bonus - 0.5).toFixed(1)) } : l))}
-                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: 'var(--app-card)', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                 <input type="number" min={0} max={10} step={0.5} value={lvl.bonus}
                   onChange={e => setULevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.min(10, Math.max(0, +e.target.value)) } : l))}
                   style={{ width: 56, textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontWeight: 700, padding: '3px 4px', fontFamily: 'inherit' }} />
                 <button onClick={() => setULevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.min(10, +(l.bonus + 0.5).toFixed(1)) } : l))}
-                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: 'var(--app-card)', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
               </div>
             ))}
           </div>
 
           {/* Impacto */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 }}>Impacto</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 }}>Impacto</div>
             {iLevels.map((lvl, i) => (
               <div key={lvl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', flex: 1, minWidth: 0 }}>{lvl.label}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--app-text)', flex: 1, minWidth: 0 }}>{lvl.label}</span>
                 <button onClick={() => setILevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.max(0, +(l.bonus - 0.5).toFixed(1)) } : l))}
-                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: 'var(--app-card)', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                 <input type="number" min={0} max={10} step={0.5} value={lvl.bonus}
                   onChange={e => setILevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.min(10, Math.max(0, +e.target.value)) } : l))}
                   style={{ width: 56, textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, fontWeight: 700, padding: '3px 4px', fontFamily: 'inherit' }} />
                 <button onClick={() => setILevels(prev => prev.map((l, j) => j === i ? { ...l, bonus: Math.min(10, +(l.bonus + 0.5).toFixed(1)) } : l))}
-                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: 'var(--app-card)', fontSize: 16, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
               </div>
             ))}
           </div>
@@ -528,9 +528,9 @@ export function PrioridadTab() {
       <UserPrioritySimulator uLevels={uLevels} iLevels={iLevels} tInput={tInput} />
 
       {/* ── Live Simulator (fórmula) ── */}
-      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20 }}>
+      <div style={{ background: 'var(--app-page)', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Simulador de prioridad
           </div>
           <span style={{ fontSize: 10, color: previewMut.isPending ? '#ff5e3a' : '#94a3b8' }}>
@@ -577,11 +577,11 @@ export function PrioridadTab() {
         </div>
 
         {preview && (
-          <div style={{ background: '#fff', border: `2px solid ${PRIORITY_COLOR[preview.priority]}30`, borderRadius: 8, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--app-card)', border: `2px solid ${PRIORITY_COLOR[preview.priority]}30`, borderRadius: 8, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 16px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
               <div>
                 <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Score</div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: '#0e2235', lineHeight: 1 }}>{preview.score}</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--app-text-main)', lineHeight: 1 }}>{preview.score}</div>
               </div>
               <div>
                 <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Base</div>
@@ -616,12 +616,12 @@ export function PrioridadTab() {
                 <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginBottom: 2 }}>Primera respuesta</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#0e2235' }}>{matchedSla.hours_to_first_response}h</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--app-text-main)' }}>{matchedSla.hours_to_first_response}h</div>
                     <div style={{ fontSize: 10, color: '#94a3b8' }}>→ {deadlineLabel(matchedSla.hours_to_first_response)}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginBottom: 2 }}>Resolución</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#0e2235' }}>{matchedSla.hours_to_resolve}h</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--app-text-main)' }}>{matchedSla.hours_to_resolve}h</div>
                     <div style={{ fontSize: 10, color: '#94a3b8' }}>→ {deadlineLabel(matchedSla.hours_to_resolve)}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -636,7 +636,7 @@ export function PrioridadTab() {
               )}
             </div>
 
-            <div style={{ padding: '10px 16px', background: '#f8fafc' }}>
+            <div style={{ padding: '10px 16px', background: 'var(--app-page)' }}>
               <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
                 Routing automático
               </div>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -50,7 +50,7 @@ const TABS: { key: Tab; label: string; Icon: typeof BarChart2 }[] = [
 
 function KpiCard({ label, value, color = C.navy, sub }: { label: string; value: string | number; color?: string; sub?: string }) {
   return (
-    <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 20px' }}>
+    <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 20px' }}>
       <p style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 800, color, lineHeight: 1 }}>{value}</p>
       <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 700, color: C.navy }}>{label}</p>
       {sub && <p style={{ margin: 0, fontSize: 10, color: C.muted }}>{sub}</p>}

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState }                                       from 'react';
 import { useQuery, useMutation, useQueryClient }          from '@tanstack/react-query';
 import { ArrowRight, Pencil, Check, X }                   from 'lucide-react';
@@ -123,7 +123,7 @@ function TransitionRow({
         border: `1px solid ${editing ? C.coral : C.border}`,
         borderRadius: 10,
         padding: '14px 16px',
-        background: '#fff',
+        background: 'var(--app-card)',
         transition: 'border-color 0.15s',
       }}
     >

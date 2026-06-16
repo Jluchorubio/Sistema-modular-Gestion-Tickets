@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -94,7 +94,7 @@ export default function DocsPage() {
       <div style={{ position: 'relative', marginBottom: 16 }}>
         <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar artículos…"
-          style={{ width: '100%', padding: '8px 12px 8px 30px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#fff', boxSizing: 'border-box' as const }} />
+          style={{ width: '100%', padding: '8px 12px 8px 30px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: 'var(--app-card)', boxSizing: 'border-box' as const }} />
       </div>
 
       {/* Category filters */}
@@ -127,7 +127,7 @@ export default function DocsPage() {
           {filtered.map(a => (
             <div key={a.id}
               onClick={() => router.push(`/helpdesk/knowledge/docs/${a.id}`)}
-              style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 16, transition: 'border-color .15s, box-shadow .15s' }}
+              style={{ background: 'var(--app-card)', border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 16, transition: 'border-color .15s, box-shadow .15s' }}
               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = `${C.coral}50`; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 10px rgba(14,34,53,.06)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = C.border; (e.currentTarget as HTMLDivElement).style.boxShadow = ''; }}
             >
@@ -175,7 +175,7 @@ export default function DocsPage() {
                         {delMut.isPending ? '…' : 'Sí'}
                       </button>
                       <button type="button" onClick={() => setDeleteConfirm(null)}
-                        style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                         No
                       </button>
                     </>

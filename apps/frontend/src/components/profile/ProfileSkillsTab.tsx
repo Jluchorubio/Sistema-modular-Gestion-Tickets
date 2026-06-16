@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -78,7 +78,7 @@ function ProfileCard({
   return (
     <div style={{
       border: '1px solid #e9eef4', borderRadius: 2, padding: '16px 20px',
-      background: '#fff', marginBottom: 12,
+      background: 'var(--app-card)', marginBottom: 12,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div>
@@ -125,7 +125,7 @@ function ProfileCard({
               <select
                 value={techType}
                 onChange={e => setTechType(e.target.value as 'generalist' | 'specialist')}
-                style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: '#fff' }}
+                style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: 'var(--app-card)' }}
               >
                 <option value="generalist">Generalista</option>
                 <option value="specialist">Especialista</option>
@@ -201,7 +201,7 @@ function ProfileCard({
                     );
                   }}
                   defaultValue=""
-                  style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: '#fff' }}
+                  style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: 'var(--app-card)' }}
                 >
                   <option value="">Seleccionar categoría…</option>
                   {availableCats.map(c => (
@@ -264,7 +264,7 @@ function AddProfileForm({
           <select
             value={moduleId}
             onChange={e => setModuleId(e.target.value)}
-            style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: '#fff' }}
+            style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: 'var(--app-card)' }}
           >
             <option value="">Seleccionar…</option>
             {available.map(m => (
@@ -277,7 +277,7 @@ function AddProfileForm({
           <select
             value={techType}
             onChange={e => setTechType(e.target.value as 'generalist' | 'specialist')}
-            style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: '#fff' }}
+            style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: 'var(--app-card)' }}
           >
             <option value="generalist">Generalista</option>
             <option value="specialist">Especialista</option>
@@ -390,7 +390,7 @@ function AvailabilityRow({
   const sc = s ? (STATUS_COLOR[s] ?? STATUS_COLOR.offline) : null;
 
   return (
-    <div style={{ border: '1px solid #e9eef4', borderRadius: 2, padding: '14px 18px', background: '#fff', marginBottom: 8 }}>
+    <div style={{ border: '1px solid #e9eef4', borderRadius: 2, padding: '14px 18px', background: 'var(--app-card)', marginBottom: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#0e2235' }}>{moduleName}</div>
@@ -463,7 +463,7 @@ function AvailabilityRow({
                 <select
                   value={reason}
                   onChange={e => setReason(e.target.value)}
-                  style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: '#fff' }}
+                  style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontFamily: 'inherit', color: '#0e2235', background: 'var(--app-card)' }}
                 >
                   <option value="">Sin especificar</option>
                   {Object.entries(REASON_LABEL).map(([v, l]) => (

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -139,7 +139,7 @@ export default function AssetHistoryPage() {
             <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.muted, pointerEvents: "none" }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por acción, usuario o razón…"
-              style={{ width: "100%", padding: "9px 12px 9px 30px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, background: "#fff" }} />
+              style={{ width: "100%", padding: "9px 12px 9px 30px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, background: 'var(--app-card)' }} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
             {ACTION_FILTERS.map(f => {
@@ -174,7 +174,7 @@ export default function AssetHistoryPage() {
             </p>
           </div>
         ) : (
-          <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden" }}>
             {(() => {
               const groups: { label: string; events: typeof filtered }[] = [];
               filtered.forEach(h => {

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRef, useState, useEffect } from "react";
 import { C } from "../_shared";
@@ -74,7 +74,7 @@ export function CropModal({
       style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.88)", zIndex: 95, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}
     >
       <div
-        style={{ background: "#fff", borderRadius: 16, padding: "26px 28px", maxWidth: 440, width: "100%", boxShadow: "0 32px 80px rgba(0,0,0,.5)" }}
+        style={{ background: 'var(--app-card)', borderRadius: 16, padding: "26px 28px", maxWidth: 440, width: "100%", boxShadow: "0 32px 80px rgba(0,0,0,.5)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 5px" }}>
@@ -109,7 +109,7 @@ export function CropModal({
         </div>
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button type="button" onClick={onCancel} style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
+          <button type="button" onClick={onCancel} style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
           <button type="button" onClick={confirm} disabled={!img} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: C.navy, color: "#fff", fontSize: 12, fontWeight: 700, cursor: img ? "pointer" : "not-allowed", fontFamily: "inherit", opacity: img ? 1 : 0.5 }}>Confirmar recorte</button>
         </div>
       </div>

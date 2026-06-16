@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -97,7 +97,7 @@ export function RelateAssetModal({
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: 14, maxWidth: 500, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)", overflow: "hidden", maxHeight: "88vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, maxWidth: 500, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)", overflow: "hidden", maxHeight: "88vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
 
         <div style={{ padding: "22px 28px 0", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -149,7 +149,7 @@ export function RelateAssetModal({
                   <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.muted, pointerEvents: "none" }} />
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre, serial o QR…" style={{ width: "100%", padding: "8px 10px 8px 30px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }} />
                 </div>
-                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{ padding: "8px 10px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, flexShrink: 0 }}>
+                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{ padding: "8px 10px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", background: 'var(--app-card)', color: C.text, flexShrink: 0 }}>
                   <option value="">Todas las categorías</option>
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
@@ -187,7 +187,7 @@ export function RelateAssetModal({
         </div>
 
         <div style={{ padding: "14px 28px 22px", borderTop: `1px solid ${C.border}`, display: "flex", gap: 8, justifyContent: "flex-end", flexShrink: 0 }}>
-          <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
+          <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
           <button type="button" disabled={!selected || pending} onClick={() => { if (selected) onRelate(selected.id, relType); }}
             style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: selected && !pending ? C.navy : C.muted, color: "#fff", fontSize: 12, fontWeight: 700, cursor: selected && !pending ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
             {pending ? "Asociando…" : selected ? `Asociar "${selected.name.slice(0, 20)}${selected.name.length > 20 ? "…" : ""}"` : "Selecciona un activo"}

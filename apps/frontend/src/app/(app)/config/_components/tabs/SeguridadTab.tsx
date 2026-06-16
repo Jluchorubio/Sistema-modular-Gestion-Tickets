@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState }  from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -61,8 +61,8 @@ export function SeguridadTab() {
 
   const criticalLogs = (recentCritical as AuditLog[]).filter(l => l.verified_2fa);
 
-  const card: React.CSSProperties = { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 12 };
-  const sectionTitle: React.CSSProperties = { fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 };
+  const card: React.CSSProperties = { background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 12 };
+  const sectionTitle: React.CSSProperties = { fontSize: 11, fontWeight: 900, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 };
 
   return (
     <div>
@@ -77,7 +77,7 @@ export function SeguridadTab() {
             }}>
               <ShieldCheck size={16} style={{ color: '#22c55e', flexShrink: 0, marginTop: 1 }} />
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#0e2235' }}>{p.label}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--app-text-main)' }}>{p.label}</div>
                 <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>{p.desc}</div>
               </div>
             </div>
@@ -115,7 +115,7 @@ export function SeguridadTab() {
           <Spinner />
         ) : criticalLogs.length === 0 ? (
           <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: 12,
-            background: '#f8fafc', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
+            background: 'var(--app-page)', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
             Sin operaciones críticas registradas aún.
           </div>
         ) : (
@@ -123,11 +123,11 @@ export function SeguridadTab() {
             {criticalLogs.map(log => (
               <div key={log.id} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8,
+                padding: '8px 12px', background: 'var(--app-page)', border: '1px solid #e2e8f0', borderRadius: 8,
               }}>
                 <ShieldCheck size={13} style={{ color: '#22c55e', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#0e2235' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--app-text-main)' }}>
                     {log.entity_type.replace(/_/g, ' ')}
                   </span>
                   <span style={{ fontSize: 11, color: '#64748b', marginLeft: 8 }}>
@@ -158,7 +158,7 @@ export function SeguridadTab() {
           {policyForm !== null && (
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={() => setPolicyForm(null)}
-                style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', color: '#64748b' }}>
+                style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'var(--app-card)', cursor: 'pointer', color: '#64748b' }}>
                 Cancelar
               </button>
               <button onClick={savePolicy}
@@ -175,7 +175,7 @@ export function SeguridadTab() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#0e2235' }}>Longitud mínima</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--app-text-main)' }}>Longitud mínima</div>
                 <div style={{ fontSize: 11, color: '#64748b' }}>Número mínimo de caracteres requeridos</div>
               </div>
               <input type="number" min={6} max={128} value={form.min_length}
@@ -194,7 +194,7 @@ export function SeguridadTab() {
               return (
                 <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#0e2235' }}>{label}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--app-text-main)' }}>{label}</div>
                     <div style={{ fontSize: 11, color: '#64748b' }}>{desc}</div>
                   </div>
                   <button type="button"
@@ -208,7 +208,7 @@ export function SeguridadTab() {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#0e2235' }}>Expiración (días)</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--app-text-main)' }}>Expiración (días)</div>
                 <div style={{ fontSize: 11, color: '#64748b' }}>Días hasta que la contraseña expira. 0 = sin expiración</div>
               </div>
               <input type="number" min={0} max={365} value={form.expiry_days}

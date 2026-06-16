@@ -30,6 +30,8 @@ const EVENT_LABELS: Record<string, string> = {
   'request.rejected':             'Solicitud rechazada',
   'request.taken':                'Solicitud tomada',
   'meeting.scheduled':            'Reunión programada',
+  'reminder.calendar_event':      'Recordatorio de evento',
+  'reminder.meeting':             'Recordatorio de reunión',
 };
 
 type FilterType = 'all' | 'unread' | 'ticket' | 'request' | 'meeting' | 'dismissed';
@@ -58,9 +60,12 @@ function getMessage(n: AppNotification): string {
 }
 
 function getHref(n: AppNotification): string | null {
-  const { ticketId, requestId } = n.payload as Record<string, string | undefined>;
+  const { ticketId, requestId, eventId, meetingId } = n.payload as Record<string, string | undefined>;
   if (ticketId)  return `/helpdesk/ticket/${ticketId}`;
   if (requestId) return `/requests/${requestId}`;
+  if (eventId)   return `/calendar`;
+  if (meetingId && ticketId) return `/helpdesk/ticket/${ticketId}`;
+  if (eventId || meetingId)  return `/calendar`;
   return null;
 }
 

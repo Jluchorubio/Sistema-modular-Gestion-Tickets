@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import FullCalendar from '@fullcalendar/react';
@@ -360,7 +360,7 @@ export function CalendarClient() {
                 <div style={{ textAlign: 'center', padding: 24 }}>
                   <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#ef4444' }}>Error al cargar el calendario</p>
                   <p style={{ margin: '0 0 12px', fontSize: 11, color: '#94a3b8' }}>Verifica tu conexión e intenta de nuevo</p>
-                  <button type="button" onClick={() => refetch()} style={{ padding: '6px 16px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: '#0e2235' }}>Reintentar</button>
+                  <button type="button" onClick={() => refetch()} style={{ padding: '6px 16px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'var(--app-card)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: '#0e2235' }}>Reintentar</button>
                 </div>
               </div>
             )}
@@ -514,7 +514,7 @@ export function CalendarClient() {
                     <select value={auditYear} onChange={(e) => setAuditYear(Number(e.target.value))} style={{ width: 68, fontSize: 11, padding: '3px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontFamily: 'inherit' }}>
                       {[today.getFullYear() - 1, today.getFullYear()].map((y) => <option key={y} value={y}>{y}</option>)}
                     </select>
-                    <button onClick={() => refetchAudit()} title="Actualizar" style={{ padding: '3px 7px', border: '1px solid #e2e8f0', borderRadius: 4, background: '#fff', cursor: 'pointer', color: '#ff5e3a', display: 'flex', alignItems: 'center' }}>
+                    <button onClick={() => refetchAudit()} title="Actualizar" style={{ padding: '3px 7px', border: '1px solid #e2e8f0', borderRadius: 4, background: 'var(--app-card)', cursor: 'pointer', color: '#ff5e3a', display: 'flex', alignItems: 'center' }}>
                       <RefreshCw size={11} />
                     </button>
                   </div>

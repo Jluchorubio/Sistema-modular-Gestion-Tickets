@@ -26,7 +26,7 @@ export function SlaAtRiskPanel() {
 
   return (
     <div style={{
-      background: '#fff7ed',
+      background: 'var(--app-card)',
       border: '1.5px solid #fed7aa',
       borderRadius: 12,
       padding: '16px 20px',
@@ -49,13 +49,13 @@ export function SlaAtRiskPanel() {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 14px', borderRadius: 9,
-                background: urgent ? '#fff1f0' : '#fff',
+                background: urgent ? 'rgba(239,68,68,.08)' : 'var(--app-card)',
                 border: `1px solid ${urgent ? '#fca5a5' : '#fed7aa'}`,
                 cursor: 'pointer',
               }}>
                 <div style={{ width: 3, height: 30, borderRadius: 2, background: pc?.color ?? '#94a3b8', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#0e2235', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--app-text-main)', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.title}
                   </p>
                   <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>

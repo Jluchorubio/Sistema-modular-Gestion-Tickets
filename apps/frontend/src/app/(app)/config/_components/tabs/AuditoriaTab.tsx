@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery }               from '@tanstack/react-query';
@@ -43,14 +43,14 @@ function JsonDiff({ prev, next }: { prev: Record<string, unknown> | null; next: 
 
   return (
     <div style={{ marginTop: 8, border: '1px solid #e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', background: 'var(--app-page)', borderBottom: '1px solid #e2e8f0' }}>
         <div style={{ padding: '4px 8px', fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.04em' }}>Campo</div>
         <div style={{ padding: '4px 8px', fontSize: 10, fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '.04em' }}>Anterior</div>
         <div style={{ padding: '4px 8px', fontSize: 10, fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '.04em' }}>Nuevo</div>
       </div>
       {changes.map(c => (
         <div key={c.key} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', borderBottom: '1px solid #f1f5f9' }}>
-          <div style={{ padding: '5px 8px', background: '#f8fafc', fontWeight: 700, fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center' }}>{c.key}</div>
+          <div style={{ padding: '5px 8px', background: 'var(--app-page)', fontWeight: 700, fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center' }}>{c.key}</div>
           <div style={DIFF_ROW(c.type === 'added' ? 'same' : c.type)}>
             {c.type === 'added' ? '—' : <span style={{ color: '#991b1b' }}>{String(c.from)}</span>}
           </div>
@@ -123,13 +123,13 @@ export function AuditoriaTab() {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-        <div style={{ fontSize: 11, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Historial de cambios críticos
         </div>
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: isFetching ? 0.5 : 1 }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'var(--app-card)', color: '#64748b', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: isFetching ? 0.5 : 1 }}>
           <RefreshCw size={11} />
           Actualizar
         </button>
@@ -143,7 +143,7 @@ export function AuditoriaTab() {
         <select
           value={actionFilter}
           onChange={e => setActionFilter(e.target.value)}
-          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontWeight: 600, background: '#fff', color: '#334155', fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}>
+          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontWeight: 600, background: 'var(--app-card)', color: 'var(--app-text)', fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}>
           <option value="all">Todas las acciones</option>
           <option value="CREATE">CREATE</option>
           <option value="UPDATE">UPDATE</option>
@@ -153,7 +153,7 @@ export function AuditoriaTab() {
         <select
           value={entityFilter}
           onChange={e => setEntityFilter(e.target.value)}
-          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontWeight: 600, background: '#fff', color: '#334155', fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}>
+          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 11, fontWeight: 600, background: 'var(--app-card)', color: 'var(--app-text)', fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}>
           <option value="all">Todos los tipos</option>
           {entityTypes.map(et => (
             <option key={et} value={et}>{et.replace(/_/g, ' ')}</option>
@@ -163,7 +163,7 @@ export function AuditoriaTab() {
         {(actionFilter !== 'all' || entityFilter !== 'all') && (
           <button
             onClick={() => { setActionFilter('all'); setEntityFilter('all'); }}
-            style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'var(--app-card)', color: '#94a3b8', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             Limpiar
           </button>
         )}
@@ -175,7 +175,7 @@ export function AuditoriaTab() {
 
       {/* Log list */}
       {filtered.length === 0 ? (
-        <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
+        <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: 13, background: 'var(--app-page)', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
           Sin registros para los filtros seleccionados.
         </div>
       ) : (
@@ -188,12 +188,12 @@ export function AuditoriaTab() {
               const isDiffOpen = expandedDiff.has(log.id);
 
               return (
-                <div key={log.id} style={{ padding: '12px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 8 }}>
+                <div key={log.id} style={{ padding: '12px 16px', background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 4, ...aStyle }}>
                       {log.action}
                     </span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#0e2235' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--app-text-main)' }}>
                       {log.entity_type.replace(/_/g, ' ')}
                     </span>
                     <span style={{ flex: 1 }} />
@@ -207,13 +207,13 @@ export function AuditoriaTab() {
                   </div>
 
                   <div style={{ fontSize: 12, color: '#475569', marginBottom: log.reason ? 6 : 0 }}>
-                    <strong style={{ color: '#0e2235' }}>{log.user_name}</strong>
+                    <strong style={{ color: 'var(--app-text-main)' }}>{log.user_name}</strong>
                     {log.username   && <span style={{ color: '#94a3b8' }}> (@{log.username})</span>}
                     {log.ip_address && <span style={{ color: '#94a3b8' }}> · {log.ip_address}</span>}
                   </div>
 
                   {log.reason && (
-                    <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', background: '#f8fafc', padding: '6px 10px', borderRadius: 4, borderLeft: '3px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', background: 'var(--app-page)', padding: '6px 10px', borderRadius: 4, borderLeft: '3px solid #e2e8f0' }}>
                       "{log.reason}"
                     </div>
                   )}
@@ -221,7 +221,7 @@ export function AuditoriaTab() {
                   {hasDiff && (
                     <button
                       onClick={() => toggleDiff(log.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, padding: '3px 8px', borderRadius: 4, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, padding: '3px 8px', borderRadius: 4, border: '1px solid #e2e8f0', background: 'var(--app-page)', color: '#64748b', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                       {isDiffOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                       {isDiffOpen ? 'Ocultar cambios' : 'Ver cambios'}
                     </button>
@@ -240,7 +240,7 @@ export function AuditoriaTab() {
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={isFetching}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 20px', border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', color: '#0e2235', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: isFetching ? 0.5 : 1 }}>
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 20px', border: '1px solid #e2e8f0', borderRadius: 6, background: 'var(--app-card)', color: 'var(--app-text-main)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: isFetching ? 0.5 : 1 }}>
                 <RefreshCw size={12} /> Cargar más · {accumulated.length} cargados
               </button>
             </div>

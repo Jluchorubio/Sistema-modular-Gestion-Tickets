@@ -524,7 +524,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Table */}
-              <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, overflowX: 'auto' }}>
                 {byTech.length === 0 ? (
                   <div style={{ padding: '60px 0', textAlign: 'center', color: C.muted }}>
                     <Users size={28} style={{ display: 'block', margin: '0 auto 12px', color: C.border }} />

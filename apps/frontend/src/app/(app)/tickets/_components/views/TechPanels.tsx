@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -105,7 +105,7 @@ export function TechCard({
   if (isHelpdeskMockup) {
     return (
       <div style={{
-        background: '#fff',
+        background: 'var(--app-card)',
         border: '1px solid #eef2f6',
         borderRadius: 12,
         padding: '14px',
@@ -146,7 +146,7 @@ export function TechCard({
             fontSize: 10, fontWeight: 900,
             border: '1px solid #e2e8f0',
             padding: '5px 10px', borderRadius: 8,
-            background: '#fff', color: '#1e293b',
+            background: 'var(--app-card)', color: '#1e293b',
             cursor: 'pointer', fontFamily: 'inherit',
             letterSpacing: '.02em', flexShrink: 0,
             boxShadow: '0 1px 2px rgba(0,0,0,.04)',
@@ -278,7 +278,7 @@ export function AvailabilityWidget({ userId, moduleId }: { userId: string; modul
   const color = AVAIL_COLORS[currentStatus];
 
   return (
-    <div style={{ background: '#fff', padding: 14, borderRadius: 14, border: '1px solid #e8edf3' }}>
+    <div style={{ background: 'var(--app-card)', padding: 14, borderRadius: 14, border: '1px solid #e8edf3' }}>
       <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Mi disponibilidad</p>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -300,7 +300,7 @@ export function AvailabilityWidget({ userId, moduleId }: { userId: string; modul
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as TechAvailStatus)}
-            style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', background: '#fff', color: '#0f172a' }}
+            style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, fontFamily: 'inherit', background: 'var(--app-card)', color: '#0f172a' }}
           >
             {AVAIL_STATUS_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>

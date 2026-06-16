@@ -9,7 +9,7 @@ import { systemConfigService } from '@/services/system-config.service';
 import { useSuperadminGuard } from '@/hooks/useSuperadminGuard';
 import mgmt from '@/styles/mgmt.module.css';
 
-const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', bg: '#f8fafc' };
+const C = { navy: 'var(--app-text-main)', coral: '#ff5e3a', border: 'var(--app-border)', muted: 'var(--app-text-muted)', bg: 'var(--app-page)' };
 
 export default function SpecializationsPage() {
   const { moduleId } = useParams<{ moduleId: string }>();
@@ -114,7 +114,7 @@ export default function SpecializationsPage() {
 
       {/* Add form */}
       {addOpen && (
-        <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
+        <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: '0 0 14px' }}>Nueva especialización</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <div>
@@ -171,7 +171,7 @@ export default function SpecializationsPage() {
       {isLoading ? (
         <div style={{ padding: '60px 0', textAlign: 'center', color: C.muted, fontSize: 13 }}>Cargando…</div>
       ) : specs.length === 0 ? (
-        <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, padding: '60px 0', textAlign: 'center' }}>
+        <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '60px 0', textAlign: 'center' }}>
           <Users size={28} style={{ display: 'block', margin: '0 auto 12px', color: C.border }} />
           <p style={{ fontSize: 14, fontWeight: 700, color: C.navy, margin: '0 0 4px' }}>Sin especializaciones</p>
           <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>Agrega una para enrutar tickets al técnico más adecuado.</p>
@@ -179,9 +179,9 @@ export default function SpecializationsPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {specs.map(tech => (
-            <div key={tech.user_id} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, padding: 18 }}>
+            <div key={tech.user_id} style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, padding: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--app-navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
                     {tech.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </span>

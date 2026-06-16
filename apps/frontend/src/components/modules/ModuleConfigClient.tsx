@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -79,7 +79,7 @@ export function ModuleConfigClient({ module: mod, moduleId, isSuperadmin, isAdmi
   }
 
   const card: React.CSSProperties = {
-    background: '#fff',
+    background: 'var(--app-card)',
     border: '1px solid #e9eef4',
     borderRadius: 2,
     padding: '20px 24px',

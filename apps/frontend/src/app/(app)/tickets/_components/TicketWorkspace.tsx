@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -239,7 +239,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#f8fafc' }}>
 
           {/* HEADER */}
-          <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', height: 56, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--app-card)', borderBottom: '1px solid #e2e8f0', padding: '0 20px', height: 56, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <button type="button" onClick={() => router.back()}
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 11, fontWeight: 600, color: '#475569', cursor: 'pointer', flexShrink: 0 }}>
               <ArrowLeft size={12} /> Volver
@@ -331,7 +331,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e2e8f0' }}>
 
               {/* TICKET DETAIL */}
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', background: 'var(--app-card)', flexShrink: 0 }}>
                 <h2 style={{ margin: '0 0 10px', fontSize: 17, fontWeight: 800, color: '#0e2235', lineHeight: 1.3 }}>{ticket.title}</h2>
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: ticket.description ? 10 : 0 }}>
                   <PriorityBadge priority={ticket.priority} />
@@ -390,7 +390,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button type="button"
                         onClick={() => { setForumTitle(ticket.title); setForumContent(ticket.description ?? ''); setKbType('forum'); }}
-                        style={{ flex: 1, padding: '12px 10px', borderRadius: 8, border: '1.5px solid #e9d5ff', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'border-color .15s' }}
+                        style={{ flex: 1, padding: '12px 10px', borderRadius: 8, border: '1.5px solid #e9d5ff', background: 'var(--app-card)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'border-color .15s' }}
                         onMouseEnter={e => (e.currentTarget.style.borderColor = '#7c3aed')}
                         onMouseLeave={e => (e.currentTarget.style.borderColor = '#e9d5ff')}
                       >
@@ -400,7 +400,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                       </button>
                       <button type="button"
                         onClick={() => { setArticleTitle(ticket.title); setArticleContent(ticket.description ?? ''); setKbType('doc'); }}
-                        style={{ flex: 1, padding: '12px 10px', borderRadius: 8, border: '1.5px solid #e9d5ff', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'border-color .15s' }}
+                        style={{ flex: 1, padding: '12px 10px', borderRadius: 8, border: '1.5px solid #e9d5ff', background: 'var(--app-card)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'border-color .15s' }}
                         onMouseEnter={e => (e.currentTarget.style.borderColor = '#7c3aed')}
                         onMouseLeave={e => (e.currentTarget.style.borderColor = '#e9d5ff')}
                       >
@@ -586,7 +586,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                             {isRejecting ? '…' : 'Confirmar'}
                           </button>
                           <button type="button" onClick={() => { setShowRejectForm(false); setRejectReason(''); }}
-                            style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
+                            style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'var(--app-card)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}>
                             Cancelar
                           </button>
                         </div>
@@ -645,7 +645,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                         <XCircle size={13} style={{ color: '#64748b', flexShrink: 0 }} />
                         <span style={{ fontSize: 11, color: '#64748b', flex: 1 }}>Ticket cerrado. Puedes reabrirlo si fue resuelto incorrectamente.</span>
                         <button type="button" onClick={() => setShowReopenForm(true)}
-                          style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                          style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #cbd5e1', background: 'var(--app-card)', color: '#334155', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                           Reabrir
                         </button>
                       </div>
@@ -676,7 +676,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                               {isReopening ? '…' : 'Confirmar'}
                             </button>
                             <button type="button" onClick={() => { setShowReopenForm(false); setReopenReason(''); }}
-                              style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'var(--app-card)', color: '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Cancelar
                             </button>
                           </div>
@@ -688,7 +688,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
               )}
 
               {/* TAB BAR */}
-              <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 16px', display: 'flex', gap: 0, flexShrink: 0 }}>
+              <div style={{ background: 'var(--app-card)', borderBottom: '1px solid #e2e8f0', padding: '0 16px', display: 'flex', gap: 0, flexShrink: 0 }}>
                 {TABS.map(tab => {
                   const active = activeTab === tab.id;
                   return (
@@ -730,7 +730,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                     </div>
                     <PermissionGate perm="helpdesk:comments:add">
                       {!ticket.is_final && (
-                        <div style={{ borderTop: '2px solid #f1f5f9', padding: '14px 20px', flexShrink: 0, background: '#fff' }}>
+                        <div style={{ borderTop: '2px solid #f1f5f9', padding: '14px 20px', flexShrink: 0, background: 'var(--app-card)' }}>
                           <input ref={fileInputRef} type="file" style={{ display: 'none' }}
                             accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                             onChange={handleFileChange} />
@@ -787,7 +787,7 @@ export function TicketWorkspace({ ticketId }: { ticketId: string }) {
                 {activeTab === 'colaboracion' && (
                   <ColaboracionTab
                     ticketId={ticketId}
-                    ticket={{ is_final: ticket.is_final }}
+                    ticket={{ is_final: ticket.is_final, approval_expires_at: ticket.approval_expires_at, is_approval_state: ticket.is_approval_state }}
                     allGuests={allGuests}
                     meetings={meetings}
                     technicians={technicians}

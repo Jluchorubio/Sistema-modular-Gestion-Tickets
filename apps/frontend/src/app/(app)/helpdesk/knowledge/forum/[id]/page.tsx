@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -129,7 +129,7 @@ export default function ForumThreadPage() {
       </button>
 
       {/* Thread post */}
-      <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
+      <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
 
         {/* Thread header */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -171,7 +171,7 @@ export default function ForumThreadPage() {
                     {delPostMut.isPending ? '…' : 'Sí'}
                   </button>
                   <button type="button" onClick={() => setDeletePostConfirm(false)}
-                    style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                     No
                   </button>
                 </div>
@@ -209,7 +209,7 @@ export default function ForumThreadPage() {
                     {updatePostMut.isPending ? 'Guardando…' : 'Guardar cambios'}
                   </button>
                   <button type="button" onClick={() => setEditingPost(false)}
-                    style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                     Cancelar
                   </button>
                 </div>
@@ -258,7 +258,7 @@ export default function ForumThreadPage() {
                             {updateReplyMut.isPending ? 'Guardando…' : 'Guardar'}
                           </button>
                           <button type="button" onClick={() => { setEditingReply(null); setEditReplyText(''); }}
-                            style={{ padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            style={{ padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                             Cancelar
                           </button>
                         </div>
@@ -288,7 +288,7 @@ export default function ForumThreadPage() {
                                   {delReplyMut.isPending ? '…' : 'Sí'}
                                 </button>
                                 <button type="button" onClick={() => setDeleteReplyConfirm(null)}
-                                  style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                   No
                                 </button>
                               </div>
@@ -321,7 +321,7 @@ export default function ForumThreadPage() {
 
               {/* File attachment */}
               <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', fontSize: 11, fontWeight: 600, color: C.sub, cursor: 'pointer' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 11, fontWeight: 600, color: C.sub, cursor: 'pointer' }}>
                   <Paperclip size={12} /> Adjuntar archivo
                   <input type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif" onChange={e => setReplyFiles(prev => [...prev, ...Array.from(e.target.files ?? [])].slice(0, 3))} style={{ display: 'none' }} />
                 </label>

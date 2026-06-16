@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/Skeleton';
+﻿import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function TrashLoading() {
   return (
@@ -14,7 +14,7 @@ export default function TrashLoading() {
         ))}
       </div>
       {Array.from({ length: 4 }, (_, i) => (
-        <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'space-between', marginBottom: 10 }}>
+        <div key={i} style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 10, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ flex: 1 }}>
             <Skeleton height={14} width="50%" style={{ marginBottom: 6 }} />
             <Skeleton height={11} width="35%" />

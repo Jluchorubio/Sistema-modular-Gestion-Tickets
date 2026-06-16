@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -197,7 +197,7 @@ export default function DocDetailPage() {
                   {delMut.isPending ? '…' : 'Sí, eliminar'}
                 </button>
                 <button type="button" onClick={() => setDeleteConfirm(false)}
-                  style={{ padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                   Cancelar
                 </button>
               </div>
@@ -216,14 +216,14 @@ export default function DocDetailPage() {
               <Save size={12} /> {updateMut.isPending ? 'Guardando…' : 'Guardar cambios'}
             </button>
             <button type="button" onClick={() => { setIsEditing(false); router.replace(`/helpdesk/knowledge/docs/${id}`); }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', fontSize: 12, fontWeight: 600, color: C.sub, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 600, color: C.sub, cursor: 'pointer', fontFamily: 'inherit' }}>
               <X size={12} /> Cancelar
             </button>
           </div>
         )}
       </div>
 
-      <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
 
         {/* Document header */}
         <div style={{ padding: '28px 32px', borderBottom: `1px solid ${C.border}` }}>

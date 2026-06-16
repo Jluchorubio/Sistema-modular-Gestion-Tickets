@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -29,7 +29,7 @@ export function ReportProblemModal({
   const [selectedEnvId,      setSelectedEnvId]      = useState(environmentId);
 
   const BTN: React.CSSProperties = { padding: "9px 22px", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
-  const SEL: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, boxSizing: "border-box" as const, marginBottom: 14 };
+  const SEL: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: 'var(--app-card)', color: C.text, boxSizing: "border-box" as const, marginBottom: 14 };
 
   const { data: allModules = [] } = useQuery({
     queryKey: ["system-modules-for-report"],
@@ -78,7 +78,7 @@ export function ReportProblemModal({
   if (createMut.isSuccess) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
-        <div style={{ background: "#fff", borderRadius: 14, padding: "32px", maxWidth: 380, width: "100%", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ background: 'var(--app-card)', borderRadius: 14, padding: "32px", maxWidth: 380, width: "100%", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#f0fdf4", border: "2px solid #22c55e", display: "grid", placeItems: "center", margin: "0 auto 16px" }}>
             <CheckCircle2 size={24} style={{ color: "#22c55e" }} />
           </div>
@@ -97,7 +97,7 @@ export function ReportProblemModal({
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 480, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)", maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, padding: "28px 32px", maxWidth: 480, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)", maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
             <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Soporte técnico</p>
@@ -155,7 +155,7 @@ export function ReportProblemModal({
           style={{ ...SEL, resize: "vertical", marginBottom: 22 }} />
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button type="button" onClick={onClose} style={{ ...BTN, border: `1px solid ${C.border}`, background: "#fff", color: C.sub }}>Cancelar</button>
+          <button type="button" onClick={onClose} style={{ ...BTN, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub }}>Cancelar</button>
           <button type="button" disabled={!canSubmit || createMut.isPending}
             onClick={() => { if (canSubmit) createMut.mutate(); }}
             style={{ ...BTN, background: canSubmit && !createMut.isPending ? C.coral : C.muted, color: "#fff", cursor: canSubmit && !createMut.isPending ? "pointer" : "not-allowed" }}>

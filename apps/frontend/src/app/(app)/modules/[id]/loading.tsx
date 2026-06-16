@@ -1,4 +1,4 @@
-import { Skeleton, SkeletonTableRows } from '@/components/ui/Skeleton';
+﻿import { Skeleton, SkeletonTableRows } from '@/components/ui/Skeleton';
 
 export default function ModuleDetailLoading() {
   return (
@@ -13,14 +13,14 @@ export default function ModuleDetailLoading() {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
         {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '18px 20px' }}>
+          <div key={i} style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 10, padding: '18px 20px' }}>
             <Skeleton height={11} width="50%" style={{ marginBottom: 10 }} />
             <Skeleton height={28} width="40%" />
           </div>
         ))}
       </div>
       <Skeleton height={14} width={160} style={{ marginBottom: 16 }} />
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
           <Skeleton height={11} width="100%" />
         </div>

@@ -96,7 +96,7 @@ export function DashboardClient() {
     refetchOnWindowFocus: true,
   });
 
-  const { data: opsData } = useQuery({
+  const { data: opsData, isError: opsError, refetch: opsRefetch } = useQuery({
     queryKey:  ['dashboard-ops'],
     queryFn:   () => usersService.getDashboardOps(),
     staleTime: 60_000,
@@ -183,8 +183,17 @@ export function DashboardClient() {
 
         {isSuperadmin && sysStats && <DashboardStats stats={sysStats} />}
 
-        {opsData && <DashboardOpsPanel ops={opsData} />}
-        {opsData && <SlaAtRiskPanel />}
+        {opsError ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', marginBottom: 20, borderRadius: 10, background: 'var(--app-card)', border: '1px solid #fecaca', color: '#ef4444', fontSize: 12 }}>
+            <span>Error al cargar métricas operativas.</span>
+            <button type="button" onClick={() => opsRefetch()} style={{ fontSize: 11, color: '#ff5e3a', background: 'none', border: '1px solid #ff5e3a', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>Reintentar</button>
+          </div>
+        ) : opsData ? (
+          <>
+            <DashboardOpsPanel ops={opsData} />
+            <SlaAtRiskPanel />
+          </>
+        ) : null}
 
         <ModulesGrid
           builtins={{ helpdesk: filteredHelpdesk, inventory: filteredInventory, gestion: filteredGestion }}

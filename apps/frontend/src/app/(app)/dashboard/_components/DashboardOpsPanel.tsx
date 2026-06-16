@@ -6,7 +6,7 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { fmtRelative } from '@/lib/formatters';
 import { getPriorityConfig, getRequestStatusConfig, getTicketPortalState } from '@/constants/status';
 
-const C = { navy: '#0e2235', coral: '#ff5e3a', border: '#e2e8f0', muted: '#94a3b8', sub: '#64748b', bg: '#f8fafc' };
+const C = { navy: 'var(--app-text-main)', coral: '#ff5e3a', border: 'var(--app-border)', muted: 'var(--app-text-muted)', sub: 'var(--app-text-sub)', bg: 'var(--app-page)' };
 
 type OpsData = {
   urgent_tickets:    number;
@@ -33,7 +33,7 @@ function RecentTicket({ t }: { t: OpsData['recent_tickets'][0] }) {
     <Link href={`/helpdesk/ticket/${t.id}`} style={{ textDecoration: 'none' }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-        borderRadius: 9, background: '#fff', border: `1px solid ${C.border}`,
+        borderRadius: 9, background: 'var(--app-card)', border: `1px solid ${C.border}`,
         marginBottom: 6, cursor: 'pointer',
       }}>
         <div style={{ width: 3, height: 32, borderRadius: 2, background: pc, flexShrink: 0 }} />
@@ -64,7 +64,7 @@ function RecentRequest({ r }: { r: OpsData['recent_requests'][0] }) {
     <Link href={`/requests`} style={{ textDecoration: 'none' }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-        borderRadius: 9, background: '#fff', border: `1px solid ${C.border}`,
+        borderRadius: 9, background: 'var(--app-card)', border: `1px solid ${C.border}`,
         marginBottom: 6, cursor: 'pointer',
       }}>
         <div style={{ width: 3, height: 32, borderRadius: 2, background: pc, flexShrink: 0 }} />

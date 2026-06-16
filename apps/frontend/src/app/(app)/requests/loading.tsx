@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/Skeleton';
+﻿import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function RequestsLoading() {
   return (
@@ -11,7 +11,7 @@ export default function RequestsLoading() {
         <Skeleton height={36} width={150} style={{ borderRadius: 8 }} />
       </div>
       {Array.from({ length: 4 }, (_, i) => (
-        <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '18px 20px', marginBottom: 12 }}>
+        <div key={i} style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 10, padding: '18px 20px', marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ flex: 1 }}>
               <Skeleton height={14} width="55%" style={{ marginBottom: 8 }} />

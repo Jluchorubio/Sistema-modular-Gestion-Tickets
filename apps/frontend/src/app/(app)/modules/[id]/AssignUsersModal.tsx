@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -64,7 +64,7 @@ export function AssignUsersModal({ moduleId, existingUserIds, onClose }: Props) 
   const inp: React.CSSProperties = {
     width: '100%', padding: '9px 12px', fontSize: 13,
     border: '1px solid #E2E8F0', borderRadius: 8,
-    background: '#fff', color: '#0F172A', fontFamily: 'inherit',
+    background: 'var(--app-card)', color: '#0F172A', fontFamily: 'inherit',
     outline: 'none', boxSizing: 'border-box',
   };
 
@@ -75,7 +75,7 @@ export function AssignUsersModal({ moduleId, existingUserIds, onClose }: Props) 
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
     }}>
       <div style={{
-        background: '#fff', borderRadius: 14, width: '100%', maxWidth: 520,
+        background: 'var(--app-card)', borderRadius: 14, width: '100%', maxWidth: 520,
         maxHeight: '85vh', display: 'flex', flexDirection: 'column',
         boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
       }}>
