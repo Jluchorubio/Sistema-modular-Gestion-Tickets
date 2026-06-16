@@ -12,7 +12,7 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
       clientID:         config.get<string>('MICROSOFT_CLIENT_ID')     || 'MICROSOFT_NOT_CONFIGURED',
       clientSecret:     config.get<string>('MICROSOFT_CLIENT_SECRET') || 'MICROSOFT_NOT_CONFIGURED',
       callbackURL:      config.get<string>('MICROSOFT_CALLBACK_URL')  ||
-                        'http://localhost:3001/api/v1/auth/microsoft/callback',
+                        `${config.get<string>('BACKEND_URL') ?? 'http://localhost:3001/api/v1'}/auth/microsoft/callback`,
       scope:            ['openid', 'email', 'profile', 'User.Read'],
     });
   }
