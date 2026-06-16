@@ -288,8 +288,8 @@ export function RequestDetailModal({
   });
 
   const progressMut = useMutation({
-    mutationFn: (status: 'in_progress' | 'completed') =>
-      requestsService.updateProgress(request.id, status),
+    mutationFn: ({ status, notes }: { status: 'in_progress' | 'completed'; notes?: string }) =>
+      requestsService.updateProgress(request.id, status, notes),
     onSuccess: invalidate,
   });
 
@@ -620,7 +620,7 @@ export function RequestDetailModal({
                     type="button"
                     className={styles.btnSecondary}
                     disabled={progressMut.isPending}
-                    onClick={() => progressMut.mutate('in_progress')}
+                    onClick={() => progressMut.mutate({ status: 'in_progress' })}
                   >
                     <Loader2 size={11} />
                     {progressMut.isPending ? '…' : 'Iniciar'}
@@ -660,7 +660,7 @@ export function RequestDetailModal({
                     type="button"
                     className={canExecute ? styles.btnGhost : styles.btnSuccess}
                     disabled={progressMut.isPending}
-                    onClick={() => { progressMut.mutate('completed'); onClose(); }}
+                    onClick={() => { progressMut.mutate({ status: 'completed', notes: resolveNotes || undefined }); onClose(); }}
                     title={canExecute ? 'Finalizar sin aplicar cambio automático' : undefined}
                   >
                     <CheckCircle2 size={11} />
