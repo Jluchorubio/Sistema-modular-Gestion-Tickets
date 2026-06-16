@@ -222,7 +222,6 @@ export class UsersController {
   }
 
   @Get('dashboard-ops')
-  @RequirePermission('helpdesk:tickets:view_all')
   @ApiOperation({ summary: 'KPIs operativos del dashboard — tickets urgentes, SLA, solicitudes, actividad reciente.' })
   getDashboardOps() {
     return this.roleService.getDashboardOps();

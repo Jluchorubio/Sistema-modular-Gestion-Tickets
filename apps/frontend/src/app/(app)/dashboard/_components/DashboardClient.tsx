@@ -99,6 +99,7 @@ export function DashboardClient() {
   const { data: opsData, isError: opsError, refetch: opsRefetch } = useQuery({
     queryKey:  ['dashboard-ops'],
     queryFn:   () => usersService.getDashboardOps(),
+    enabled:   isSuperadmin,
     staleTime: 60_000,
     refetchOnWindowFocus: true,
   });
