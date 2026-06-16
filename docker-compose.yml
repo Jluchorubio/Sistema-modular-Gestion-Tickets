@@ -58,6 +58,8 @@ services:
 
   # ── Backend ───────────────────────────────────────────────────────────────────
   backend:
+    # IMPORTANT: run as single replica only — cron jobs (sla-breach, approval-expiry, etc.)
+    # are not distributed-lock-protected and will fire on every replica simultaneously.
     build:
       context: ./apps/backend
       dockerfile: Dockerfile

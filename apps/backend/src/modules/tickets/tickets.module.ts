@@ -16,10 +16,11 @@ import { AssignmentService } from './assignment/assignment.service';
 import { SkillBasedStrategy } from './assignment/strategies/skill-based.strategy';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { MessagingModule } from '../../shared/messaging/messaging.module';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
-    MessagingModule, TypeOrmModule.forFeature([]), NotificationsModule, PriorityEngineModule],
+    MessagingModule, TypeOrmModule.forFeature([]), NotificationsModule, PriorityEngineModule, FilesModule],
   controllers: [TicketsController, MeetingsController],
   providers: [TicketsService, KnowledgeService, MeetingsService, SlaService, SlaEvaluatorService, SlaBreachService, AutoCloseService, ApprovalExpiryService, WaitingTimeoutService, AssignmentService, SkillBasedStrategy],
   exports: [TicketsService, KnowledgeService, MeetingsService, SlaService, SlaEvaluatorService],

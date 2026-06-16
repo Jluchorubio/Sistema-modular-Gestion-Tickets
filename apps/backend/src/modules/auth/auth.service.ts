@@ -663,8 +663,7 @@ export class AuthService {
       [userId, codeHash],
     );
 
-    // Always log to terminal for dev/debugging
-    this.logger.log(`\n┌─────────────────────────────────────┐\n│  OTP → ${email.padEnd(27)}│\n│  Código: ${rawCode}                      │\n│  Válido: ${OTP_EXPIRY_MINUTES} minutos                      │\n└─────────────────────────────────────┘`);
+    this.logger.debug(`OTP for ${email}: ${rawCode} (expires in ${OTP_EXPIRY_MINUTES}m)`);
 
     await this.sendOtpEmail(email, rawCode);
   }

@@ -18,6 +18,7 @@ import { TransitionTicketDto } from './dto/transition-ticket.dto';
 import { Throttle } from '@nestjs/throttler';
 import { CreateKnowledgeArticleDto, UpdateKnowledgeArticleDto } from './dto/knowledge-article.dto';
 import { AddCommentDto, AddAttachmentDto, ApproveTicketDto, RejectTicketDto, AddAssignmentDto, AddRelationDto, RateTicketDto } from './dto/ticket-actions.dto';
+import { FilesService } from '../files/files.service';
 
 @ApiTags('tickets')
 @ApiBearerAuth()
@@ -28,6 +29,7 @@ export class TicketsController {
     private readonly svc: TicketsService,
     private readonly knowledge: KnowledgeService,
     private readonly slaBreach: SlaBreachService,
+    private readonly files: FilesService,
   ) {}
 
   @Post('sla/breach-check')
@@ -404,19 +406,13 @@ export class TicketsController {
   ) {
     if (!file) throw new BadRequestException('No se subió ningún archivo');
     const path = require('path');
-    const fs   = require('fs');
     const ALLOWED_EXTS  = ['.pdf','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.txt','.csv','.zip','.png','.jpg','.jpeg','.gif','.webp','.mp4','.mov'];
     const ALLOWED_MIMES = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation','text/plain','text/csv','application/zip','application/x-zip-compressed','image/png','image/jpeg','image/gif','image/webp','video/mp4','video/quicktime'];
     const ext  = path.extname(file.originalname).toLowerCase();
     if (!ALLOWED_EXTS.includes(ext) || !ALLOWED_MIMES.includes(file.mimetype)) {
       throw new BadRequestException('Tipo de archivo no permitido.');
     }
-    const name = `knowledge-${Date.now()}${ext}`;
-    const uploadsDir = process.env.STORAGE_PATH ?? './uploads';
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-    fs.writeFileSync(path.join(uploadsDir, name), file.buffer);
-    const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
-    const fileUrl = `${backendUrl}/uploads/${name}`;
+    const { url: fileUrl } = await this.files.saveDocument(file);
 
     return this.knowledge.createArticle(req.user.sub, {
       module_id:    body.module_id,

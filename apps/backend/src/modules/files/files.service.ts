@@ -87,6 +87,15 @@ export class FilesService {
     return { ...result, storedName };
   }
 
+  /* ── Knowledge document (pre-validated by caller, 10 MB) ─────────── */
+
+  async saveDocument(file: Express.Multer.File): Promise<{ url: string; storedName: string }> {
+    this._validateSize(file, MAX_BYTES_ATTACHMENT, '10 MB');
+    const result = await this._upload(file);
+    const storedName = result.url.split('/').pop() ?? '';
+    return { ...result, storedName };
+  }
+
   /* ── Delete ─────────────────────────────────────────────────────── */
 
   async delete(filenameOrUrl: string): Promise<void> {
