@@ -175,7 +175,9 @@ export function DashboardClient() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button type="button" className={styles.searchBtn}>Ir</button>
+            {search && (
+              <button type="button" className={styles.searchBtn} onClick={() => setSearch('')} aria-label="Limpiar búsqueda">✕</button>
+            )}
           </div>
         </div>
 

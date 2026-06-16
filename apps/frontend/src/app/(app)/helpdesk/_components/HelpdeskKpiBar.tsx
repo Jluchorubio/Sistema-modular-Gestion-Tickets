@@ -31,12 +31,16 @@ export function HelpdeskKpiBar({ moduleId }: { moduleId: string }) {
         <span style={{ fontSize: 10, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.08em' }}>
           Resumen operativo
         </span>
-        <Link href="/helpdesk/reports" style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#ff5e3a', textDecoration: 'none' }}>
+        <Link href="/helpdesk/reports"
+          style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#ff5e3a', textDecoration: 'none', transition: 'opacity .15s' }}
+          onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+          onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+        >
           Reportes completos <ArrowRight size={11} />
         </Link>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 12 }}>
         {ITEMS.map(item => {
           const rawVal = kpis?.[item.key as keyof typeof kpis] as string | null | undefined;
           const display = isLoading ? '…'

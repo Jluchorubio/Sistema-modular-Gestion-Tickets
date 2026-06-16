@@ -58,7 +58,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
   const [bulkCloseModal,  setBulkCloseModal] = useState(false);
   const [bulkCloseReason, setBulkCloseReason] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['tickets', moduleId, stateFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, page],
     queryFn:  () => ticketsService.getAll({
       module_id:   moduleId    || undefined,
@@ -506,6 +506,10 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 <div style={{ background: '#fff', borderRadius: 10, padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: 12, border: '1px solid #e2e8f0' }}>
                   Cargando tickets…
                 </div>
+              ) : error ? (
+                <div style={{ background: '#fff', borderRadius: 10, padding: '24px', textAlign: 'center', border: '1px solid #fecaca', color: '#ef4444', fontSize: 12 }}>
+                  Error al cargar tickets. Verifica tu conexión e intenta de nuevo.
+                </div>
               ) : ticketsOld.length === 0 && ticketsToday.length === 0 ? (
                 <div style={{ background: '#fff', borderRadius: 10, padding: '32px', textAlign: 'center', border: '1px solid #e2e8f0', color: '#94a3b8' }}>
                   <Ticket size={24} style={{ marginBottom: 8, opacity: .5 }} />
@@ -901,6 +905,11 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
           {/* Cards */}
           {isLoading ? (
             <div className={styles.loadingState}>Cargando tickets…</div>
+          ) : error ? (
+            <div className={styles.emptyState} style={{ borderColor: '#fecaca' }}>
+              <AlertTriangle size={28} style={{ marginBottom: 8, color: '#ef4444', opacity: .7 }} />
+              <p className={styles.emptyText} style={{ color: '#ef4444' }}>Error al cargar tickets. Verifica tu conexión.</p>
+            </div>
           ) : ticketsOld.length === 0 && ticketsToday.length === 0 ? (
             <div className={styles.emptyState}>
               <Ticket size={28} className={styles.emptyIcon} />
