@@ -40,7 +40,7 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
   const [showDrawer,   setShowDrawer]   = useState(false);
   const [showCreate,   setShowCreate]   = useState(false);
 
-  const { data: assigned, isLoading } = useQuery({
+  const { data: assigned, isLoading, isError, refetch } = useQuery({
     queryKey: ['my-assigned-tickets', moduleId],
     queryFn:  () => usersService.getMyAssignedTickets(moduleId, 100),
     staleTime: 60_000,
@@ -168,6 +168,11 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
 
           {isLoading ? (
             <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>Cargando cola de trabajo…</p>
+          ) : isError ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <p style={{ fontSize: 13, color: '#ef4444', margin: '0 0 8px' }}>Error al cargar tickets</p>
+              <button type="button" onClick={() => refetch()} style={{ fontSize: 11, color: '#ff5e3a', background: 'none', border: '1px solid #ff5e3a', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>Reintentar</button>
+            </div>
           ) : (() => {
             const all = (assigned ?? []) as AssignedTicket[];
             const breached   = all.filter(t => t.sla_status === 'breached' && !t.is_final);
@@ -326,6 +331,11 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
 
           {isLoading ? (
             <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', marginTop: 40 }}>Cargando cola de trabajo…</div>
+          ) : isError ? (
+            <div style={{ textAlign: 'center', marginTop: 40 }}>
+              <p style={{ fontSize: 13, color: '#ef4444', margin: '0 0 8px' }}>Error al cargar tickets</p>
+              <button type="button" onClick={() => refetch()} style={{ fontSize: 11, color: '#ff5e3a', background: 'none', border: '1px solid #ff5e3a', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>Reintentar</button>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
               {previous.length > 0 && (
@@ -367,10 +377,10 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
 
       {/* Performance drawer */}
       {showDrawer && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.5)', zIndex: 40, display: 'flex', justifyContent: 'flex-end' }} onClick={() => setShowDrawer(false)}>
-          <div style={{ width: 360, background: '#fff', padding: '32px 28px', overflowY: 'auto', boxShadow: '-8px 0 32px rgba(0,0,0,.12)' }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.5)', zIndex: 151, display: 'flex', justifyContent: 'flex-end' }} onClick={() => setShowDrawer(false)}>
+          <div style={{ width: 360, background: 'var(--app-card, #fff)', padding: '32px 28px', overflowY: 'auto', boxShadow: '-8px 0 32px rgba(0,0,0,.12)' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0e2235' }}>Rendimiento</h2>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--app-text-main)' }}>Rendimiento</h2>
               <button type="button" onClick={() => setShowDrawer(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
                 <X size={18} />
               </button>
@@ -382,13 +392,13 @@ export function TechView({ user, moduleId, basePath, moduleRole, canCreate, visu
                 { label: 'Pendientes hoy', value: String(today.length), accent: '#ff5e3a' },
                 { label: 'Del día anterior', value: String(previous.length), accent: '#a855f7' },
               ].map((s) => (
-                <div key={s.label} style={{ background: '#f8fafc', borderRadius: 12, padding: '16px', border: `2px solid ${s.accent}22` }}>
+                <div key={s.label} style={{ background: 'var(--app-page)', borderRadius: 12, padding: '16px', border: `2px solid ${s.accent}22` }}>
                   <p style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: s.accent }}>{s.value}</p>
                   <p style={{ margin: 0, fontSize: 10.5, color: '#64748b', fontWeight: 600 }}>{s.label}</p>
                 </div>
               ))}
             </div>
-            <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, border: '1px solid #e8edf3' }}>
+            <div style={{ background: 'var(--app-page)', borderRadius: 12, padding: 16, border: '1px solid var(--app-border)' }}>
               <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '.06em' }}>Calificación general</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Stars rating={avgRating} size={16} />

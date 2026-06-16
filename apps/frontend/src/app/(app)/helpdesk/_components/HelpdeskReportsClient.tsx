@@ -60,8 +60,10 @@ const SEV = {
 const TOOLTIP_STYLE = {
   fontSize: 11,
   borderRadius: 8,
-  border: '1px solid #e2e8f0',
+  border: '1px solid var(--app-border)',
   boxShadow: '0 4px 12px rgba(0,0,0,.08)',
+  background: 'var(--app-card)',
+  color: 'var(--app-text-main)',
 };
 
 
@@ -522,7 +524,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Table */}
-              <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
                 {byTech.length === 0 ? (
                   <div style={{ padding: '60px 0', textAlign: 'center', color: C.muted }}>
                     <Users size={28} style={{ display: 'block', margin: '0 auto 12px', color: C.border }} />
@@ -546,7 +548,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                       const rating      = tech.avg_rating ? n(tech.avg_rating) : null;
                       return (
                         <div key={tech.technician_id}
-                          style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: `1px solid ${C.border}`, background: '#fff' }}>
+                          style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: `1px solid ${C.border}`, background: 'var(--app-card)' }}>
                           <div>
                             <p style={{ margin: '0 0 1px', fontSize: 12.5, fontWeight: 700, color: C.navy }}>{tech.technician_name}</p>
                             <div style={{ height: 4, background: C.bg, borderRadius: 2, overflow: 'hidden', marginTop: 3 }}>

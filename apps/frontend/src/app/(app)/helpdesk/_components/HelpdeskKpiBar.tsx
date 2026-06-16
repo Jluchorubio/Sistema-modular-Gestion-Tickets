@@ -26,7 +26,7 @@ export function HelpdeskKpiBar({ moduleId }: { moduleId: string }) {
   const kpis = data?.kpis;
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 20px', marginBottom: 20 }}>
+    <div style={{ background: 'var(--app-card)', border: '1px solid var(--app-border)', borderRadius: 12, padding: '14px 20px', marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <span style={{ fontSize: 10, fontWeight: 900, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.08em' }}>
           Resumen operativo

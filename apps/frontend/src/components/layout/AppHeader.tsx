@@ -160,7 +160,7 @@ export function AppHeader({ noSidebar = false }: Props) {
                 flexShrink: 0,
               }}
             />
-            <span className={styles.brandName} style={{ color: '#FF6B00', fontSize: 'clamp(11px, 1.2vw, 14px)' }}>NEXO</span>
+            <span className={styles.brandName} style={{ color: '#ff5e3a', fontSize: 'clamp(11px, 1.2vw, 14px)' }}>NEXO</span>
           </Link>
         </div>
 
@@ -310,7 +310,7 @@ export function AppHeader({ noSidebar = false }: Props) {
                           aria-label="Descartar notificación"
                           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 5px', opacity: 0.4, fontSize: 16, lineHeight: 1, borderRadius: 4, transition: 'opacity .15s, background .15s' }}
                           title="Descartar"
-                          onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#f1f5f9'; }}
+                          onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--app-border)'; }}
                           onMouseLeave={e => { e.currentTarget.style.opacity = '0.4'; e.currentTarget.style.background = 'none'; }}
                           onClick={(e) => { e.stopPropagation(); dismissMut.mutate(n.id); }}
                         >

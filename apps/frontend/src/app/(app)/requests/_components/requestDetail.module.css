@@ -394,3 +394,27 @@
   transition: color .12s;
 }
 .timelineToggle:hover { color: #374151; }
+
+/* ══ Dark mode ══ */
+:global([data-theme="dark"]) .modal { background: #132030; }
+:global([data-theme="dark"]) .header { border-color: #1e3448; }
+:global([data-theme="dark"]) .title { color: #e2e8f0; }
+:global([data-theme="dark"]) .closeBtn { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .metaChip { background: #1a2d40; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .description { background: #1a2d40; border-color: #1e3448; color: #cbd5e1; }
+:global([data-theme="dark"]) .adminSection { border-color: #1e3448; }
+:global([data-theme="dark"]) .fieldLabel { color: #94a3b8; }
+:global([data-theme="dark"]) .select { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .select:disabled { background: #132030; }
+:global([data-theme="dark"]) .input { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .input:disabled { background: #132030; }
+:global([data-theme="dark"]) .textarea { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .btnDangerOutline { background: #1a0a0a; border-color: #7f1d1d; color: #fca5a5; }
+:global([data-theme="dark"]) .btnWarningOutline { background: #1a1200; border-color: #78350f; color: #fcd34d; }
+:global([data-theme="dark"]) .btnGhost { background: #1a2d40; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .btnGhost:hover { background: #253d56; }
+:global([data-theme="dark"]) .btnSecondary { background: #1e1a40; border-color: #3730a3; color: #93c5fd; }
+:global([data-theme="dark"]) .timelineSection { border-color: #1e3448; }
+:global([data-theme="dark"]) .rejectBox { background: #1a0a0a; border-color: #7f1d1d; }
+:global([data-theme="dark"]) .execSection { background: #0d1f0f; border-color: #14532d; }
+:global([data-theme="dark"]) .execNote { color: #cbd5e1; }

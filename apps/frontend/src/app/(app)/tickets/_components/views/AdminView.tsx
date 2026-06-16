@@ -815,15 +815,6 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                       <option value="state">Por estado</option>
                     </select>
                   </div>
-                  {isHelpdeskMockup && canCreate && moduleId && (
-                    <button
-                      type="button"
-                      onClick={() => setShowCreate(true)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: '#ff5e3a', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, boxShadow: '0 1px 4px rgba(255,94,58,.25)' }}
-                    >
-                      <Plus size={12} />Reportar Nuevo Incidente
-                    </button>
-                  )}
                 </div>
 
                 {/* Search bar — standalone */}

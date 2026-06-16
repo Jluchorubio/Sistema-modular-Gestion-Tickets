@@ -26,7 +26,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--app-bg, #F8FAFC)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spinner />
       </div>
     );
