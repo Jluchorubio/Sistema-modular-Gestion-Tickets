@@ -915,7 +915,7 @@ export class AuthService {
     }
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from,
       to,
       subject,
       html,

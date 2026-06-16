@@ -62,7 +62,8 @@ export class FilesService {
       this.storagePath = path.resolve(
         this.config.get<string>('STORAGE_PATH') ?? './uploads',
       );
-      this.backendUrl = this.config.get<string>('BACKEND_URL') ?? 'http://localhost:3001';
+      const rawBackendUrl = this.config.get<string>('BACKEND_URL') ?? 'http://localhost:3001';
+      this.backendUrl = rawBackendUrl.replace(/\/api(\/v\d+)?$/, '');
       fs.mkdirSync(this.storagePath, { recursive: true });
       this.logger.warn('Storage driver: local — files will be lost on container restart');
     }
