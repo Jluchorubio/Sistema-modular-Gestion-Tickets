@@ -127,6 +127,9 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
         {selectMode && (
           <button
             type="button"
+            role="checkbox"
+            aria-checked={selectedIds.has(t.id)}
+            aria-label={selectedIds.has(t.id) ? 'Deseleccionar ticket' : 'Seleccionar ticket'}
             onClick={(e) => { e.stopPropagation(); toggleSelect(t.id); }}
             style={{ position: 'absolute', top: 8, left: 8, zIndex: 10, background: selectedIds.has(t.id) ? '#0e2235' : '#fff', border: `1.5px solid ${selectedIds.has(t.id) ? '#0e2235' : '#cbd5e1'}`, borderRadius: 6, width: 22, height: 22, display: 'grid', placeItems: 'center', cursor: 'pointer', color: selectedIds.has(t.id) ? '#fff' : '#94a3b8' }}
           >
@@ -233,9 +236,8 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
           return (
             <div key={t.id}
               onClick={() => router.push(`${basePath}/ticket/${t.id}`)}
+              className={styles.ticketRow}
               style={{
-                display: 'grid',
-                gridTemplateColumns: '4px 1fr auto auto auto auto',
                 alignItems: 'center', gap: 12,
                 padding: '11px 14px',
                 borderTop: idx > 0 ? '1px solid #f1f5f9' : 'none',
@@ -286,11 +288,11 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
 
               {/* Approval / SLA badge */}
               {t.is_approval_state ? (
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: 'var(--status-approval-bg)', color: 'var(--status-approval-text)', border: '1px solid var(--status-approval-border)', flexShrink: 0 }}>
+                <span className={styles.ticketRowSlaBadge} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: 'var(--status-approval-bg)', color: 'var(--status-approval-text)', border: '1px solid var(--status-approval-border)', flexShrink: 0 }}>
                   ✓ Por aprobar
                 </span>
               ) : slaC && slaL ? (
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: `${slaC}15`, color: slaC, border: `1px solid ${slaC}30`, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                <span className={styles.ticketRowSlaBadge} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: `${slaC}15`, color: slaC, border: `1px solid ${slaC}30`, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                   <Clock size={8} />
                   {breached && t.breached_at
                     ? `Vencido ${fmtRelative(t.breached_at)}`
@@ -299,7 +301,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               ) : null}
 
               {/* Arrow */}
-              <ChevronRight size={13} style={{ color: '#cbd5e1', flexShrink: 0 }} />
+              <ChevronRight size={13} className={styles.ticketRowArrow} style={{ color: '#cbd5e1', flexShrink: 0 }} />
             </div>
           );
         })}

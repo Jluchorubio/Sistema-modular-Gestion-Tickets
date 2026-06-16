@@ -42,7 +42,8 @@ export function AppHeader({ noSidebar = false }: Props) {
 
   const theme              = useUIStore((s) => s.theme);
   const setTheme           = useUIStore((s) => s.setTheme);
-  const toggleMobileSidebar = useUIStore((s) => s.toggleMobileSidebar);
+  const toggleMobileSidebar  = useUIStore((s) => s.toggleMobileSidebar);
+  const mobileSidebarOpen    = useUIStore((s) => s.mobileSidebarOpen);
 
   const THEME_ICON: Record<AppTheme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
   const ThemeIcon = THEME_ICON[theme];
@@ -140,7 +141,9 @@ export function AppHeader({ noSidebar = false }: Props) {
               type="button"
               className={styles.hamburger}
               onClick={toggleMobileSidebar}
-              aria-label="Abrir menú"
+              aria-label={mobileSidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={mobileSidebarOpen}
+              style={mobileSidebarOpen ? { background: 'rgba(14,34,53,0.08)', borderRadius: 8 } : undefined}
             >
               <Menu size={20} />
             </button>
@@ -304,8 +307,11 @@ export function AppHeader({ noSidebar = false }: Props) {
                         <span className={styles.notifTime}>{fmtRelative(n.created_at)}</span>
                         <button
                           type="button"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', opacity: 0.4, fontSize: 14, lineHeight: 1 }}
+                          aria-label="Descartar notificación"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 5px', opacity: 0.4, fontSize: 16, lineHeight: 1, borderRadius: 4, transition: 'opacity .15s, background .15s' }}
                           title="Descartar"
+                          onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#f1f5f9'; }}
+                          onMouseLeave={e => { e.currentTarget.style.opacity = '0.4'; e.currentTarget.style.background = 'none'; }}
                           onClick={(e) => { e.stopPropagation(); dismissMut.mutate(n.id); }}
                         >
                           ×

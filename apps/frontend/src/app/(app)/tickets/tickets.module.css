@@ -2319,3 +2319,17 @@
 :global([data-theme="dark"]) .workspace   { border-color: #1e3448; }
 :global([data-theme="dark"]) .signatureInput { background: #132030; border-color: #1e3448; color: #e2e8f0; }
 :global([data-theme="dark"]) .rejectTextarea { background: #132030; border-color: #1e3448; color: #e2e8f0; }
+
+/* ── Compact ticket list row — responsive ───────────────────────── */
+.ticketRow {
+  display: grid;
+  grid-template-columns: 4px 1fr auto auto auto auto;
+}
+
+@media (max-width: 640px) {
+  .ticketRow {
+    grid-template-columns: 4px 1fr auto auto;
+  }
+  .ticketRowSlaBadge { display: none; }
+  .ticketRowArrow    { display: none; }
+}

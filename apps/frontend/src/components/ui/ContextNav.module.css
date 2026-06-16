@@ -18,7 +18,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #64748b;
   background: none;
@@ -59,7 +59,7 @@
 .crumbSep { color: #cbd5e1; margin: 0 3px; flex-shrink: 0; }
 
 .crumbLink {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #94a3b8;
   text-decoration: none;
@@ -70,7 +70,7 @@
 .crumbLink:hover { color: #0e2235; }
 
 .crumbText {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #94a3b8;
   white-space: nowrap;
