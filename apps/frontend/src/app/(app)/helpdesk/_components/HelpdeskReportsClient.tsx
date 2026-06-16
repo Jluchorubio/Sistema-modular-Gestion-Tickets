@@ -530,7 +530,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                     <p style={{ fontSize: 11, margin: 0 }}>Aún no hay tickets asignados en este módulo.</p>
                   </div>
                 ) : (
-                  <>
+                  <div style={{ overflowX: 'auto' }}>
+                    <div style={{ minWidth: 600 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', gap: 12, padding: '10px 18px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
                       {['Técnico', 'Asignados', 'Resueltos', 'Reprocesos', 'Tiempo prom.', 'Calificación'].map((h, i) => (
                         <span key={i} style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
@@ -566,7 +567,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                         </div>
                       );
                     })}
-                  </>
+                    </div>
+                  </div>
                 )}
               </div>
 

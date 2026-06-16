@@ -78,7 +78,7 @@ export function CalendarClient() {
   const [selectedCalEvent, setSelectedCalEvent] = useState<CalendarEvent | null>(null);
 
   /* ── Queries ── */
-  const { data: reqData, isLoading: reqLoading, refetch } = useQuery({
+  const { data: reqData, isLoading: reqLoading, isError: reqError, refetch } = useQuery({
     queryKey: ['calendar-requests', ctxIdx, statusFilter, typeFilter],
     queryFn:  () => canSeeAll
       ? requestsService.getAll({ status: statusFilter, type: typeFilter, limit: 300 })
@@ -86,7 +86,7 @@ export function CalendarClient() {
     staleTime: 2 * 60_000,
   });
 
-  const { data: ticketData, isLoading: ticketLoading } = useQuery({
+  const { data: ticketData, isLoading: ticketLoading, isError: ticketError } = useQuery({
     queryKey: ['calendar-tickets', ctxIdx],
     queryFn:  () => canSeeAll
       ? ticketsService.getAll({ module_id: ctx.moduleId, limit: 300 })
@@ -120,6 +120,7 @@ export function CalendarClient() {
   });
 
   const isLoading = reqLoading || ticketLoading;
+  const isError   = reqError || ticketError;
   const requests  = reqData?.data   ?? [];
   const tickets   = ticketData?.data ?? [];
 
@@ -354,6 +355,15 @@ export function CalendarClient() {
 
           <div className={styles.calWrap}>
             {isLoading && <div className={styles.loadOverlay}>Cargando…</div>}
+            {isError && !isLoading && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(248,250,252,0.85)', zIndex: 10, borderRadius: 12 }}>
+                <div style={{ textAlign: 'center', padding: 24 }}>
+                  <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#ef4444' }}>Error al cargar el calendario</p>
+                  <p style={{ margin: '0 0 12px', fontSize: 11, color: '#94a3b8' }}>Verifica tu conexión e intenta de nuevo</p>
+                  <button type="button" onClick={() => refetch()} style={{ padding: '6px 16px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: '#0e2235' }}>Reintentar</button>
+                </div>
+              </div>
+            )}
 
             {view === 'mes' && (
               <>
