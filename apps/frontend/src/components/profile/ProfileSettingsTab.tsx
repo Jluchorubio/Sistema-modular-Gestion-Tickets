@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { usersService } from '@/services/users.service';
+import api from '@/services/api';
 import { type ProfileUser } from './profile.types';
 import styles from './profile.module.css';
 
@@ -15,6 +16,13 @@ export function ProfileSettingsTab({ user }: Props) {
   const [notifEmail,    setNotifEmail]    = useState(user.notification_email    !== false);
   const [notifInApp,    setNotifInApp]    = useState(user.notification_in_app   !== false);
   const [notifWhatsapp, setNotifWhatsapp] = useState(user.notification_whatsapp === true);
+
+  const { data: channels } = useQuery({
+    queryKey: ['notification-channels'],
+    queryFn:  () => api.get('/notifications/channels').then(r => r.data as { in_app: boolean; email: boolean; whatsapp: boolean }),
+    staleTime: 10 * 60_000,
+  });
+  const whatsappAvailable = channels?.whatsapp ?? false;
   const [language,      setLanguage]      = useState(user.preferences?.language  ?? 'es');
   const [timezone,      setTimezone]      = useState(user.preferences?.timezone  ?? 'America/Bogota');
   const [saved,         setSaved]         = useState(false);
@@ -41,20 +49,23 @@ export function ProfileSettingsTab({ user }: Props) {
           <p className={styles.sectionTitle}>Preferencias de notificaciones</p>
         </div>
         {([
-          ['email',    'Notificaciones por correo',  'Recibe alertas de tickets y eventos por email',   notifEmail,    setNotifEmail],
-          ['inapp',    'Notificaciones en app',       'Alertas dentro del sistema',                      notifInApp,    setNotifInApp],
-          ['whatsapp', 'Notificaciones WhatsApp',     'Mensajes para tickets urgentes',                  notifWhatsapp, setNotifWhatsapp],
-        ] as [string, string, string, boolean, (v: boolean) => void][]).map(([id, label, sub, val, setter]) => (
-          <div key={id} className={styles.securityItem}>
+          ['email',    'Notificaciones por correo',  'Recibe alertas de tickets y eventos por email',   notifEmail,    setNotifEmail,    true],
+          ['inapp',    'Notificaciones en app',       'Alertas dentro del sistema',                      notifInApp,    setNotifInApp,    true],
+          ['whatsapp', 'Notificaciones WhatsApp',     'Mensajes para tickets urgentes',                  notifWhatsapp, setNotifWhatsapp, whatsappAvailable],
+        ] as [string, string, string, boolean, (v: boolean) => void, boolean][]).map(([id, label, sub, val, setter, available]) => (
+          <div key={id} className={styles.securityItem} style={{ opacity: available ? 1 : 0.55 }}>
             <div>
               <p className={styles.securityLabel}>{label}</p>
-              <p className={styles.securitySub}>{sub}</p>
+              <p className={styles.securitySub}>
+                {!available ? 'Canal no disponible — requiere configuración del sistema' : sub}
+              </p>
             </div>
-            <label className={styles.prefToggle}>
+            <label className={styles.prefToggle} style={{ pointerEvents: available ? 'auto' : 'none' }}>
               <input
                 type="checkbox"
-                checked={val}
+                checked={val && available}
                 onChange={(e) => setter(e.target.checked)}
+                disabled={!available}
               />
               <span className={styles.prefSlider} />
             </label>

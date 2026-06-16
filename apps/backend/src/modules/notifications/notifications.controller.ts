@@ -2,6 +2,7 @@ import { Controller, Get, Patch, Delete, Param, Req, UseGuards } from '@nestjs/c
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../../gateway/guards/jwt-auth.guard';
 import { RequirePermission } from '../../gateway/decorators/require-permission.decorator';
 
@@ -19,7 +20,21 @@ interface NotificationLog {
 @UseGuards(JwtAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
-  constructor(@InjectDataSource() private readonly db: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly db: DataSource,
+    private readonly config: ConfigService,
+  ) {}
+
+  @Get('channels')
+  @RequirePermission('global:system:access')
+  @ApiOperation({ summary: 'Estado de configuración de canales de notificación.' })
+  getChannelStatus() {
+    return {
+      in_app:    true,
+      email:     !!(this.config.get<string>('RESEND_API_KEY') || this.config.get<string>('SMTP_HOST')),
+      whatsapp:  !!(this.config.get<string>('WHATSAPP_TOKEN') && this.config.get<string>('WHATSAPP_PHONE_ID')),
+    };
+  }
 
   @Get('me')
   @RequirePermission('global:system:access')
