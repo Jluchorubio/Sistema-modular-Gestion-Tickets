@@ -3,7 +3,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY . .
-ARG NEXT_PUBLIC_API_URL=http://localhost
+ARG NEXT_PUBLIC_API_URL=https://nexo.proyectoscampus.top
 ARG BACKEND_INTERNAL_URL=http://backend:3001
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV BACKEND_INTERNAL_URL=$BACKEND_INTERNAL_URL
