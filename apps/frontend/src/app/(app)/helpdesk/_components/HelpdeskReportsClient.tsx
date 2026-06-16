@@ -81,6 +81,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
   const [tab,          setTab]          = useState<Tab>('operacion');
   const [exportOpen,   setExportOpen]   = useState(false);
   const [csvLoading,   setCsvLoading]   = useState(false);
+  const [dateFrom,     setDateFrom]     = useState('');
+  const [dateTo,       setDateTo]       = useState('');
   const [auditAction,  setAuditAction]  = useState('');
   const [auditFrom,    setAuditFrom]    = useState('');
   const [auditTo,      setAuditTo]      = useState('');
@@ -96,8 +98,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
   }, [exportOpen]);
 
   const { data, isLoading, refetch, isFetching } = useQuery({
-    queryKey:  ['helpdesk-reports', moduleId],
-    queryFn:   () => reportingService.getHelpdeskMetrics(moduleId),
+    queryKey:  ['helpdesk-reports', moduleId, dateFrom, dateTo],
+    queryFn:   () => reportingService.getHelpdeskMetrics(moduleId, dateFrom || undefined, dateTo || undefined),
     staleTime: 5 * 60_000,
     enabled:   !!moduleId,
   });
@@ -176,8 +178,11 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
     setCsvLoading(true);
     setExportOpen(false);
     try {
+      const exportParams: Record<string, string> = { moduleId };
+      if (dateFrom) exportParams.dateFrom = dateFrom;
+      if (dateTo)   exportParams.dateTo   = dateTo;
       const res = await api.get('/reporting/export/tickets', {
-        params: { moduleId },
+        params: exportParams,
         responseType: 'blob',
       });
       const url  = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
@@ -191,7 +196,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
     } finally {
       setCsvLoading(false);
     }
-  }, [moduleId]);
+  }, [moduleId, dateFrom, dateTo]);
 
   const handlePdfExport = useCallback(async () => {
     setExportOpen(false);
@@ -374,6 +379,32 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
           <p className={styles.sub}>Operación · Técnicos · SLA · Auditoría</p>
         </div>
         <div className={styles.headerActions}>
+          {/* Date range filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              max={dateTo || undefined}
+              style={{ fontSize: 11, padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 7, color: '#334155', background: '#fafafa', cursor: 'pointer' }}
+              title="Desde"
+            />
+            <span style={{ fontSize: 10, color: '#94a3b8' }}>—</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              min={dateFrom || undefined}
+              style={{ fontSize: 11, padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 7, color: '#334155', background: '#fafafa', cursor: 'pointer' }}
+              title="Hasta"
+            />
+            {(dateFrom || dateTo) && (
+              <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); }}
+                style={{ fontSize: 10, fontWeight: 600, color: '#ff5e3a', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px' }}>
+                Limpiar
+              </button>
+            )}
+          </div>
           <button type="button" onClick={() => refetch()} disabled={isFetching} className={styles.refreshBtn}>
             <RefreshCw size={12} style={{ animation: isFetching ? 'spin 1s linear infinite' : 'none' }} />
             Actualizar

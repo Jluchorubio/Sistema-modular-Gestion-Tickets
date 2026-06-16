@@ -215,8 +215,11 @@ export const reportingService = {
     return data;
   },
 
-  async getHelpdeskMetrics(moduleId: string): Promise<HelpdeskMetrics> {
-    const { data } = await api.get('/reporting/helpdesk', { params: { moduleId } });
+  async getHelpdeskMetrics(moduleId: string, dateFrom?: string, dateTo?: string): Promise<HelpdeskMetrics> {
+    const params: Record<string, string> = { moduleId };
+    if (dateFrom) params.dateFrom = dateFrom;
+    if (dateTo)   params.dateTo   = dateTo;
+    const { data } = await api.get('/reporting/helpdesk', { params });
     return data;
   },
 };

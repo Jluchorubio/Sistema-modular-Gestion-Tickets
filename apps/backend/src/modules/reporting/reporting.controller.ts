@@ -89,8 +89,14 @@ export class ReportingController {
   @Get('helpdesk')
   @ApiOperation({ summary: 'Métricas específicas de Helpdesk: KPIs, técnicos, categorías, SLA.' })
   @ApiQuery({ name: 'moduleId', required: true })
-  helpdeskMetrics(@Query('moduleId') moduleId: string) {
-    return this.service.helpdeskMetrics(moduleId);
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo',   required: false })
+  helpdeskMetrics(
+    @Query('moduleId') moduleId: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo')   dateTo?:   string,
+  ) {
+    return this.service.helpdeskMetrics(moduleId, dateFrom, dateTo);
   }
 
   @Get('export/tickets')

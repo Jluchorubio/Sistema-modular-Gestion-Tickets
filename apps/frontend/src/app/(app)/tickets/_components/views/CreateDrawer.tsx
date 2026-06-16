@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, Ticket, Search, Monitor, BookOpen, ExternalLink, Zap } from 'lucide-react';
+import { Plus, X, Ticket, Search, Monitor, BookOpen, ExternalLink, Zap, Paperclip } from 'lucide-react';
 import {
   ticketsService,
   type CreateTicketDto, type AssetSearchResult,
@@ -88,6 +88,8 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   const [calcScore,             setCalcScore]             = useState<number | null>(null);
   const [calcLoading,           setCalcLoading]           = useState(false);
   const [priorityOverride,      setPriorityOverride]      = useState(false);
+  const [attachments,           setAttachments]           = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canOverridePriority = !!user?.is_superadmin ||
     (user?.module_roles ?? []).some(
@@ -194,7 +196,13 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
   function clearAsset() { setSelectedAsset(null); setForm(f => ({ ...f, asset_id: undefined })); }
 
   const createMut = useMutation({
-    mutationFn: () => ticketsService.create(form as CreateTicketDto),
+    mutationFn: async () => {
+      const ticket = await ticketsService.create(form as CreateTicketDto);
+      if (attachments.length > 0) {
+        await Promise.allSettled(attachments.map(f => ticketsService.uploadAttachment(ticket.id, f)));
+      }
+      return ticket;
+    },
     onSuccess: (ticket) => {
       qc.invalidateQueries({ queryKey: ['tickets'] });
       qc.invalidateQueries({ queryKey: ['my-assigned-tickets'] });
@@ -272,6 +280,48 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
               <textarea value={form.description ?? ''} onChange={e => set('description', e.target.value)}
                 placeholder="Pasos para reproducir, mensajes de error, contexto…"
                 rows={3} className={`${styles.inp} ${styles.inpResize}`} />
+            </div>
+
+            {/* ─ Archivos adjuntos ─ */}
+            <div>
+              <label className={styles.lbl}>
+                Archivos adjuntos <span style={{ fontSize: 10, fontWeight: 400, color: '#94a3b8' }}>(opcional — máx. 5 archivos, 10 MB c/u)</span>
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const files = Array.from(e.target.files ?? []);
+                  setAttachments(prev => {
+                    const merged = [...prev, ...files].slice(0, 5);
+                    return merged;
+                  });
+                  e.target.value = '';
+                }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {attachments.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 7 }}>
+                    <Paperclip size={12} style={{ color: '#0e2235', flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: 11, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{(f.size / 1024).toFixed(0)} KB</span>
+                    <button type="button" onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2, display: 'flex' }}>
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+                {attachments.length < 5 && (
+                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', background: 'none', border: '1px dashed #cbd5e1', borderRadius: 7, cursor: 'pointer', fontSize: 11, fontWeight: 500, color: '#64748b' }}>
+                    <Paperclip size={12} />
+                    {attachments.length === 0 ? 'Adjuntar archivo…' : 'Añadir otro…'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* ─ Tipo de problema ─ */}

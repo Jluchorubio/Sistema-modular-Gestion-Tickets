@@ -215,8 +215,11 @@ export class ReportingService {
     return { totals, by_state: byState, by_priority: byPriority, daily_trend: trend };
   }
 
-  async helpdeskMetrics(moduleId: string) {
-    const p = [moduleId];
+  async helpdeskMetrics(moduleId: string, dateFrom?: string, dateTo?: string) {
+    const p: any[] = [moduleId];
+    let dateFilter = '';
+    if (dateFrom) { p.push(dateFrom); dateFilter += ` AND t.created_at >= $${p.length}`; }
+    if (dateTo)   { p.push(dateTo);   dateFilter += ` AND t.created_at <  $${p.length}::date + INTERVAL '1 day'`; }
 
     const [kpis, byPriority, firstResponse, reopenCount] = await Promise.all([
       this.db.query<any[]>(
@@ -245,7 +248,7 @@ export class ReportingService {
          FROM tickets.tickets t
          JOIN tickets.states s ON s.id = t.current_state_id
          LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
-         WHERE t.module_id = $1 AND t.deleted_at IS NULL`,
+         WHERE t.module_id = $1 AND t.deleted_at IS NULL${dateFilter}`,
         p,
       ),
       this.db.query<any[]>(
@@ -258,7 +261,7 @@ export class ReportingService {
          FROM tickets.tickets t
          JOIN tickets.states s ON s.id = t.current_state_id
          LEFT JOIN tickets.ticket_sla_tracking st ON st.ticket_id = t.id
-         WHERE t.module_id = $1 AND t.deleted_at IS NULL
+         WHERE t.module_id = $1 AND t.deleted_at IS NULL${dateFilter}
          GROUP BY t.priority
          ORDER BY CASE t.priority
            WHEN 'critica' THEN 1 WHEN 'alta' THEN 2
@@ -276,13 +279,13 @@ export class ReportingService {
            WHERE  role = 'owner'
            ORDER  BY ticket_id, assigned_at ASC
          ) ta ON ta.ticket_id = t.id
-         WHERE t.module_id = $1 AND t.deleted_at IS NULL`,
+         WHERE t.module_id = $1 AND t.deleted_at IS NULL${dateFilter}`,
         p,
       ),
       this.db.query<{ cnt: string }[]>(
         `SELECT COUNT(DISTINCT tsh.ticket_id) AS cnt
          FROM   tickets.ticket_state_history tsh
-         JOIN   tickets.tickets t  ON t.id  = tsh.ticket_id AND t.module_id = $1 AND t.deleted_at IS NULL
+         JOIN   tickets.tickets t  ON t.id  = tsh.ticket_id AND t.module_id = $1 AND t.deleted_at IS NULL${dateFilter}
          JOIN   tickets.states  fs ON fs.id = tsh.from_state_id
          JOIN   tickets.states  ts ON ts.id = tsh.to_state_id
          WHERE  (fs.is_final = true OR fs.is_approval_state = true)
@@ -311,7 +314,7 @@ export class ReportingService {
        FROM   tickets.tickets t
        JOIN   modules.categories c ON c.id = t.category_id
        JOIN   tickets.states     s ON s.id = t.current_state_id
-       WHERE  t.module_id = $1 AND t.deleted_at IS NULL
+       WHERE  t.module_id = $1 AND t.deleted_at IS NULL${dateFilter}
        GROUP  BY c.name
        ORDER  BY total DESC
        LIMIT  15`,
@@ -339,7 +342,7 @@ export class ReportingService {
               ROUND(AVG(r.score_overall), 1)                                         AS avg_rating,
               COUNT(r.id)                                                             AS total_ratings
        FROM   tickets.ticket_assignments ta
-       JOIN   tickets.tickets    t  ON t.id  = ta.ticket_id AND t.module_id = $1 AND t.deleted_at IS NULL
+       JOIN   tickets.tickets    t  ON t.id  = ta.ticket_id AND t.module_id = $1 AND t.deleted_at IS NULL${dateFilter}
        JOIN   tickets.states     s  ON s.id  = t.current_state_id
        JOIN   users.profiles     p  ON p.id  = ta.user_id
        LEFT JOIN tickets.ticket_ratings r ON r.ticket_id = ta.ticket_id AND r.technician_id = ta.user_id
@@ -351,10 +354,11 @@ export class ReportingService {
     );
 
     const sla = await this.slaMetrics(moduleId);
+    const trendInterval = dateFrom || dateTo ? '' : ` AND t.created_at >= now() - INTERVAL '30 days'`;
     const trend = await this.db.query<any[]>(
       `SELECT date_trunc('day', t.created_at)::date AS day, COUNT(*) AS created
        FROM   tickets.tickets t
-       WHERE  t.module_id = $1 AND t.deleted_at IS NULL AND t.created_at >= now() - INTERVAL '30 days'
+       WHERE  t.module_id = $1 AND t.deleted_at IS NULL${dateFilter}${trendInterval}
        GROUP  BY 1 ORDER BY 1`,
       p,
     );
