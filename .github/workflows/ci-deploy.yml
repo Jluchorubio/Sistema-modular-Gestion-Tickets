@@ -30,6 +30,7 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             docker compose up -d --build --force-recreate --no-deps backend frontend
             docker image prune -f
