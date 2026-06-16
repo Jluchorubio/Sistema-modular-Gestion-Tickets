@@ -136,9 +136,9 @@ export class RequestsController {
   updateProgress(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() body: { status: 'in_progress' | 'completed' },
+    @Body() body: { status: 'in_progress' | 'completed'; notes?: string },
   ) {
-    return this.service.updateProgress(req.user.sub, id, body.status);
+    return this.service.updateProgress(req.user.sub, id, body.status, body.notes);
   }
 
   @Post(':id/escalate')

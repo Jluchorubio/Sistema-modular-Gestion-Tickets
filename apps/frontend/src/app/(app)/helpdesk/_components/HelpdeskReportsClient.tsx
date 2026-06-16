@@ -81,6 +81,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
   const [tab,          setTab]          = useState<Tab>('operacion');
   const [exportOpen,   setExportOpen]   = useState(false);
   const [csvLoading,   setCsvLoading]   = useState(false);
+  const [csvError,     setCsvError]     = useState('');
   const [dateFrom,     setDateFrom]     = useState('');
   const [dateTo,       setDateTo]       = useState('');
   const [auditAction,  setAuditAction]  = useState('');
@@ -176,6 +177,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
 
   const handleCsvExport = useCallback(async () => {
     setCsvLoading(true);
+    setCsvError('');
     setExportOpen(false);
     try {
       const exportParams: Record<string, string> = { moduleId };
@@ -193,6 +195,9 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      setCsvError(status === 403 ? 'Sin permisos para exportar CSV' : 'Error al exportar CSV');
     } finally {
       setCsvLoading(false);
     }
@@ -410,6 +415,9 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
             Actualizar
           </button>
           <div className={styles.exportWrap} ref={exportRef}>
+            {csvError && (
+              <span style={{ fontSize: 11, color: '#ef4444', marginRight: 8 }}>{csvError}</span>
+            )}
             <button type="button" className={styles.exportBtn} disabled={csvLoading} onClick={() => setExportOpen(v => !v)}>
               <Download size={12} />
               {csvLoading ? 'Exportando…' : 'Exportar'}

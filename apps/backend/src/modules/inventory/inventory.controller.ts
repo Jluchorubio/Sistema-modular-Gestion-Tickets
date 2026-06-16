@@ -128,7 +128,7 @@ export class InventoryController {
   assign(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() dto: { user_id: string; notes?: string },
+    @Body() dto: { user_id: string; notes?: string; shift?: string; hours_start?: string; hours_end?: string },
   ) {
     return this.service.assign(id, req.user.sub, dto);
   }

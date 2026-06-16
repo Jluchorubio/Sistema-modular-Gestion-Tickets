@@ -263,13 +263,15 @@ export class RequestsService {
     const rows = await this.db.query<any[]>(
       `SELECT r.id, r.type, r.title, r.description, r.status, r.priority,
               r.metadata, r.created_at, r.updated_at, r.reviewed_at, r.review_notes,
-              r.taken_at, r.sla_due_at, r.task_source,
-              r.escalated, r.escalated_at, r.escalation_note,
+              r.taken_at, r.taken_by, r.sla_due_at, r.task_source,
+              r.escalated, r.escalated_at, r.escalation_note, r.escalated_by,
               rv.first_name || ' ' || rv.last_name AS reviewer_name,
-              tb.first_name || ' ' || tb.last_name AS taken_by_name
+              tb.first_name || ' ' || tb.last_name AS taken_by_name,
+              eb.first_name || ' ' || eb.last_name AS escalated_by_name
        FROM   requests.admin_requests r
        LEFT JOIN users.profiles rv ON rv.id = r.reviewed_by
        LEFT JOIN users.profiles tb ON tb.id = r.taken_by
+       LEFT JOIN users.profiles eb ON eb.id = r.escalated_by
        ${where}
        ORDER  BY r.created_at DESC
        LIMIT  $${li} OFFSET $${oi}`,
@@ -421,7 +423,7 @@ export class RequestsService {
     return updated;
   }
 
-  async updateProgress(userId: string, requestId: string, status: 'in_progress' | 'completed') {
+  async updateProgress(userId: string, requestId: string, status: 'in_progress' | 'completed', notes?: string) {
     const [req] = await this.db.query<{ id: string; status: string; taken_by: string | null }[]>(
       `SELECT id, status, taken_by FROM requests.admin_requests WHERE id = $1 AND deleted_at IS NULL`,
       [requestId],
@@ -455,18 +457,19 @@ export class RequestsService {
 
     const [updated] = await this.db.query<any[]>(
       `UPDATE requests.admin_requests
-       SET status      = $1,
-           reviewed_by = $2,
-           reviewed_at = now(),
-           updated_at  = now()
-       WHERE id = $3
+       SET status       = $1,
+           reviewed_by  = $2,
+           reviewed_at  = now(),
+           review_notes = $3,
+           updated_at   = now()
+       WHERE id = $4
        RETURNING *`,
-      [status, userId, requestId],
+      [status, userId, notes ?? null, requestId],
     );
     await this.db.query(
-      `INSERT INTO requests.request_timeline (request_id, actor_id, action, old_status, new_status)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [requestId, userId, `progress_${status}`, req.status, status],
+      `INSERT INTO requests.request_timeline (request_id, actor_id, action, old_status, new_status, notes)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [requestId, userId, `progress_${status}`, req.status, status, notes ?? null],
     );
     return updated;
   }

@@ -114,8 +114,8 @@ export const requestsService = {
     return data;
   },
 
-  async updateProgress(id: string, status: 'in_progress' | 'completed'): Promise<AdmRequest> {
-    const { data } = await api.patch(`/requests/${id}/progress`, { status });
+  async updateProgress(id: string, status: 'in_progress' | 'completed', notes?: string): Promise<AdmRequest> {
+    const { data } = await api.patch(`/requests/${id}/progress`, { status, notes });
     return data;
   },
 

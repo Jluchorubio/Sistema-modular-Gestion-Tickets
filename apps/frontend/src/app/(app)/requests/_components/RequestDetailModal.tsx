@@ -353,7 +353,7 @@ export function RequestDetailModal({
         }
       }
 
-      await requestsService.updateProgress(request.id, 'completed');
+      await requestsService.updateProgress(request.id, 'completed', resolveNotes || undefined);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['requests'] });

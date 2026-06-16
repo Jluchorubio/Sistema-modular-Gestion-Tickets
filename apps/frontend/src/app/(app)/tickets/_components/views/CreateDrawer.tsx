@@ -129,7 +129,7 @@ export function CreateDrawer({ moduleId, onClose }: { moduleId: string; onClose:
       });
       setCalcPriority(res.priority);
       setCalcScore(res.score);
-    } catch { /* silencioso */ }
+    } catch { setCalcPriority(null); setCalcScore(null); }
     finally { setCalcLoading(false); }
   }, []);
 
