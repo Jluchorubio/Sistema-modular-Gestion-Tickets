@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -116,7 +116,7 @@ export default function ForumPage() {
 
       {/* ── Inline create form ── */}
       {showCreate && (
-        <div style={{ background: '#fff', border: `1.5px solid ${C.coral}40`, borderRadius: 12, padding: '20px 24px', marginBottom: 16, boxShadow: '0 2px 12px rgba(255,94,58,.08)' }}>
+        <div style={{ background: 'var(--app-card)', border: `1.5px solid ${C.coral}40`, borderRadius: 12, padding: '20px 24px', marginBottom: 16, boxShadow: '0 2px 12px rgba(255,94,58,.08)' }}>
           <p style={{ fontSize: 11, fontWeight: 800, color: C.coral, textTransform: 'uppercase', letterSpacing: '.08em', margin: '0 0 14px' }}>Nuevo debate</p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -150,7 +150,7 @@ export default function ForumPage() {
                 {createMut.isPending ? 'Publicando…' : 'Publicar debate'}
               </button>
               <button type="button" onClick={() => { setShowCreate(false); setNewTitle(''); setNewContent(''); setNewTags(''); setCreateErr(''); }}
-                style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancelar
               </button>
             </div>
@@ -159,7 +159,7 @@ export default function ForumPage() {
       )}
 
       {/* Table */}
-      <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
 
         {/* Column headers */}
         <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 200px 200px 70px 80px 36px', gap: 0, padding: '10px 16px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
@@ -190,7 +190,7 @@ export default function ForumPage() {
 
             return (
               <div key={post.id}
-                style={{ display: 'grid', gridTemplateColumns: '28px 1fr 200px 200px 70px 80px 36px', alignItems: 'center', gap: 0, padding: '12px 16px', borderBottom: `1px solid ${C.border}`, background: '#fff', position: 'relative' }}
+                style={{ display: 'grid', gridTemplateColumns: '28px 1fr 200px 200px 70px 80px 36px', alignItems: 'center', gap: 0, padding: '12px 16px', borderBottom: `1px solid ${C.border}`, background: 'var(--app-card)', position: 'relative' }}
                 onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = C.bg}
                 onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = '#fff'}
               >
@@ -254,7 +254,7 @@ export default function ForumPage() {
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <button type="button" onClick={() => toggleSub(post.id)}
                     style={{ width: 40, height: 22, borderRadius: 99, border: 'none', cursor: 'pointer', background: isSub ? C.coral : '#d1d5db', position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
-                    <span style={{ position: 'absolute', top: 3, left: isSub ? 21 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+                    <span style={{ position: 'absolute', top: 3, left: isSub ? 21 : 3, width: 16, height: 16, borderRadius: '50%', background: 'var(--app-card)', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
                   </button>
                 </div>
 
@@ -267,7 +267,7 @@ export default function ForumPage() {
                         <MoreVertical size={15} />
                       </button>
                       {menuOpen === post.id && (
-                        <div style={{ position: 'absolute', right: 0, top: '100%', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.1)', zIndex: 20, minWidth: 160, overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', right: 0, top: '100%', background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.1)', zIndex: 20, minWidth: 160, overflow: 'hidden' }}>
                           {deleteConfirm === post.id ? (
                             <div style={{ padding: '10px 14px' }}>
                               <p style={{ fontSize: 11, fontWeight: 700, color: '#334155', margin: '0 0 8px' }}>¿Eliminar debate?</p>
@@ -277,7 +277,7 @@ export default function ForumPage() {
                                   {delMut.isPending ? '…' : 'Sí, eliminar'}
                                 </button>
                                 <button type="button" onClick={() => setDeleteConfirm(null)}
-                                  style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                   Cancelar
                                 </button>
                               </div>

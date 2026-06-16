@@ -113,6 +113,14 @@ export function CalEventPopup({ ev, onClose }: { ev: CalendarEvent; onClose: () 
           {ev.created_by_name   && <span>Organizador: {ev.created_by_name}</span>}
           {ev.participant_count > 0 && <span>Participantes: {ev.participant_count}</span>}
         </div>
+        {ev.source === 'meeting' && ev.ticket_id && (
+          <div style={{ marginTop: 14 }}>
+            <a href={`/helpdesk/ticket/${ev.ticket_id}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#0e2235', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+              Ver ticket →
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

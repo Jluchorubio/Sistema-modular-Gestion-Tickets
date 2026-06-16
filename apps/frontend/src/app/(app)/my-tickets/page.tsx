@@ -141,13 +141,13 @@ export default function MyTicketsPage() {
   const router        = useRouter();
   const [tab, setTab] = useState<Tab>('created');
 
-  const { data: created, isLoading: loadingCreated } = useQuery({
+  const { data: created, isLoading: loadingCreated, isError: errorCreated, refetch: refetchCreated } = useQuery({
     queryKey:  ['my-created-tickets'],
     queryFn:   () => usersService.getMyRecentTickets(100),
     staleTime: 60_000,
   });
 
-  const { data: assigned, isLoading: loadingAssigned } = useQuery({
+  const { data: assigned, isLoading: loadingAssigned, isError: errorAssigned, refetch: refetchAssigned } = useQuery({
     queryKey:  ['my-assigned-tickets'],
     queryFn:   () => usersService.getMyAssignedTickets(undefined, 100),
     staleTime: 60_000,
@@ -242,6 +242,12 @@ export default function MyTicketsPage() {
         {tab === 'created' && (
           <div className={styles.lists}>
             {loadingCreated && <div className={styles.loadCard}>Cargando…</div>}
+            {!loadingCreated && errorCreated && (
+              <div className={styles.emptyCard} style={{ borderColor: '#fecaca' }}>
+                <p style={{ color: '#ef4444', fontSize: 13, margin: '0 0 8px' }}>Error al cargar tickets.</p>
+                <button type="button" onClick={() => refetchCreated()} style={{ fontSize: 11, color: '#ff5e3a', background: 'none', border: '1px solid #ff5e3a', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>Reintentar</button>
+              </div>
+            )}
 
             {/* Action required — approval */}
             {!loadingCreated && createdGroups.approval.length > 0 && (
@@ -311,6 +317,12 @@ export default function MyTicketsPage() {
         {tab === 'assigned' && (
           <div className={styles.lists}>
             {loadingAssigned && <div className={styles.loadCard}>Cargando…</div>}
+            {!loadingAssigned && errorAssigned && (
+              <div className={styles.emptyCard} style={{ borderColor: '#fecaca' }}>
+                <p style={{ color: '#ef4444', fontSize: 13, margin: '0 0 8px' }}>Error al cargar tickets asignados.</p>
+                <button type="button" onClick={() => refetchAssigned()} style={{ fontSize: 11, color: '#ff5e3a', background: 'none', border: '1px solid #ff5e3a', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>Reintentar</button>
+              </div>
+            )}
 
             {/* Waiting user approval */}
             {!loadingAssigned && assignedGroups.approval.length > 0 && (

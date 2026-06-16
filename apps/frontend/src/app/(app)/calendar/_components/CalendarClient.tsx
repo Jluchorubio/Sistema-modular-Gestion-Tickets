@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import Link from 'next/link';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import listPlugin from '@fullcalendar/list';
@@ -77,7 +78,7 @@ export function CalendarClient() {
   const [selectedCalEvent, setSelectedCalEvent] = useState<CalendarEvent | null>(null);
 
   /* ── Queries ── */
-  const { data: reqData, isLoading: reqLoading, refetch } = useQuery({
+  const { data: reqData, isLoading: reqLoading, isError: reqError, refetch } = useQuery({
     queryKey: ['calendar-requests', ctxIdx, statusFilter, typeFilter],
     queryFn:  () => canSeeAll
       ? requestsService.getAll({ status: statusFilter, type: typeFilter, limit: 300 })
@@ -85,7 +86,7 @@ export function CalendarClient() {
     staleTime: 2 * 60_000,
   });
 
-  const { data: ticketData, isLoading: ticketLoading } = useQuery({
+  const { data: ticketData, isLoading: ticketLoading, isError: ticketError } = useQuery({
     queryKey: ['calendar-tickets', ctxIdx],
     queryFn:  () => canSeeAll
       ? ticketsService.getAll({ module_id: ctx.moduleId, limit: 300 })
@@ -119,10 +120,15 @@ export function CalendarClient() {
   });
 
   const isLoading = reqLoading || ticketLoading;
+  const isError   = reqError || ticketError;
   const requests  = reqData?.data   ?? [];
   const tickets   = ticketData?.data ?? [];
-  const meetings  = meetingData;
-  const calEvents = calEventData;
+
+  const showTicketMeetings = sourceFilter === 'ticket_meetings';
+  const meetings  = showTicketMeetings ? [] : meetingData;
+  const calEvents = showTicketMeetings
+    ? calEventData.filter(e => e.source === 'meeting')
+    : calEventData.filter(e => e.source !== 'meeting');
 
   /* ── Derived / filters ── */
   const filteredRequests = useMemo(() => {
@@ -340,6 +346,7 @@ export function CalendarClient() {
                     <option value="system_tasks">Sistema</option>
                     <option value="user_tasks">Personal</option>
                     <option value="requests">Gestión Administrativa</option>
+                    <option value="ticket_meetings">Reuniones de ticket</option>
                   </select>
                 </div>
               </div>
@@ -348,6 +355,15 @@ export function CalendarClient() {
 
           <div className={styles.calWrap}>
             {isLoading && <div className={styles.loadOverlay}>Cargando…</div>}
+            {isError && !isLoading && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(248,250,252,0.85)', zIndex: 10, borderRadius: 12 }}>
+                <div style={{ textAlign: 'center', padding: 24 }}>
+                  <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#ef4444' }}>Error al cargar el calendario</p>
+                  <p style={{ margin: '0 0 12px', fontSize: 11, color: '#94a3b8' }}>Verifica tu conexión e intenta de nuevo</p>
+                  <button type="button" onClick={() => refetch()} style={{ padding: '6px 16px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'var(--app-card)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: '#0e2235' }}>Reintentar</button>
+                </div>
+              </div>
+            )}
 
             {view === 'mes' && (
               <>
@@ -399,6 +415,13 @@ export function CalendarClient() {
 
         {/* ── Right panel ── */}
         <div className={styles.right}>
+          {showTicketMeetings && (
+            <div style={{ margin: '8px 0', padding: '8px 14px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 8, fontSize: 11, color: '#7c3aed', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+              📹 Mostrando solo reuniones originadas en tickets
+              <Link href="/helpdesk/queue" style={{ color: '#6d28d9', textDecoration: 'underline', fontWeight: 700 }}>Ir a tickets →</Link>
+            </div>
+          )}
+
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
             {([
               { id: 'agenda',         icon: <Calendar size={11} />, label: 'Agenda'    },
@@ -491,7 +514,7 @@ export function CalendarClient() {
                     <select value={auditYear} onChange={(e) => setAuditYear(Number(e.target.value))} style={{ width: 68, fontSize: 11, padding: '3px 6px', border: '1px solid #e2e8f0', borderRadius: 4, fontFamily: 'inherit' }}>
                       {[today.getFullYear() - 1, today.getFullYear()].map((y) => <option key={y} value={y}>{y}</option>)}
                     </select>
-                    <button onClick={() => refetchAudit()} title="Actualizar" style={{ padding: '3px 7px', border: '1px solid #e2e8f0', borderRadius: 4, background: '#fff', cursor: 'pointer', color: '#ff5e3a', display: 'flex', alignItems: 'center' }}>
+                    <button onClick={() => refetchAudit()} title="Actualizar" style={{ padding: '3px 7px', border: '1px solid #e2e8f0', borderRadius: 4, background: 'var(--app-card)', cursor: 'pointer', color: '#ff5e3a', display: 'flex', alignItems: 'center' }}>
                       <RefreshCw size={11} />
                     </button>
                   </div>

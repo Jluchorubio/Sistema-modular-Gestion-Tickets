@@ -227,6 +227,14 @@ export const usersService = {
     return data;
   },
 
+  async getMyAssets(): Promise<{
+    id: string; name: string; serial_number: string | null; qr_code: string | null;
+    status: string; category_name: string | null; environment_name: string | null; location_name: string | null;
+  }[]> {
+    const { data } = await api.get('/users/me/assets');
+    return data;
+  },
+
   async getMyRecentTickets(limit = 6): Promise<{
     id: string; title: string; priority: string;
     created_at: string; updated_at: string;
@@ -343,6 +351,25 @@ export const usersService = {
     requests: { total: number; pending: number; in_progress: number };
   }> {
     const { data } = await api.get('/users/stats');
+    return data;
+  },
+
+  async getDashboardOps(): Promise<{
+    urgent_tickets:    number;
+    sla_breached:      number;
+    sla_at_risk:       number;
+    pending_approvals: number;
+    recent_tickets: {
+      id: string; title: string; priority: string; created_at: string;
+      state_label: string; is_final: boolean; is_approval_state: boolean; is_pause_state: boolean;
+      created_by_name: string;
+    }[];
+    recent_requests: {
+      id: string; title: string; status: string; priority: string;
+      created_at: string; requester_name: string;
+    }[];
+  }> {
+    const { data } = await api.get('/users/dashboard-ops');
     return data;
   },
 

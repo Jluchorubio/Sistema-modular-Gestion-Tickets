@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useQuery }            from '@tanstack/react-query';
@@ -66,7 +66,7 @@ export function SetupChecklist({ setTab }: { setTab: (t: Tab) => void }) {
         {allDone
           ? <CheckCircle2 size={16} style={{ color: '#22c55e', flexShrink: 0 }} />
           : <AlertCircle  size={16} style={{ color: pending === checks.length ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />}
-        <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: '#0e2235' }}>
+        <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'var(--app-text-main)' }}>
           {allDone
             ? 'Sistema configurado correctamente'
             : `${pending} configuración${pending !== 1 ? 'es' : ''} pendiente${pending !== 1 ? 's' : ''}`}
@@ -77,7 +77,7 @@ export function SetupChecklist({ setTab }: { setTab: (t: Tab) => void }) {
       </button>
 
       {open && (
-        <div style={{ background: '#fff' }}>
+        <div style={{ background: 'var(--app-card)' }}>
           {checks.map((c, i) => (
             <div key={c.key} style={{
               display: 'flex', alignItems: 'center', gap: 10,
@@ -88,7 +88,7 @@ export function SetupChecklist({ setTab }: { setTab: (t: Tab) => void }) {
                 ? <CheckCircle2 size={14} style={{ color: '#22c55e', flexShrink: 0 }} />
                 : <AlertCircle  size={14} style={{ color: '#f59e0b', flexShrink: 0 }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#0e2235' }}>{c.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--app-text-main)' }}>{c.label}</span>
                 <span style={{ fontSize: 11, color: c.done ? '#94a3b8' : '#d97706', marginLeft: 8 }}>
                   {c.info}
                 </span>

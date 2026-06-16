@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -154,7 +154,7 @@ function StatusPicker({
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 50,
-          background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+          background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 10,
           boxShadow: '0 8px 28px rgba(0,0,0,.12)', overflow: 'hidden',
         }}>
           {STATUS_OPTIONS.map(opt => (
@@ -297,7 +297,7 @@ export default function TechProcessPage() {
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', background: '#f8fafc' }}>
 
       {/* ── Top bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 28px', background: '#fff', borderBottom: '1px solid #e8edf3', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 28px', background: 'var(--app-card)', borderBottom: '1px solid #e8edf3', flexShrink: 0 }}>
         <button
           type="button"
           onClick={() => router.push(basePath)}
@@ -311,7 +311,7 @@ export default function TechProcessPage() {
       </div>
 
       {/* ── Stats bar ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', background: '#fff', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', background: 'var(--app-card)', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
         {statsRow.map((s, i) => (
           <div key={s.label} style={{ borderRight: i < 5 ? '1px solid #f1f5f9' : 'none', padding: '14px 8px', textAlign: 'center', background: s.bg }}>
             <span style={{ display: 'block', fontSize: 26, fontWeight: 800, color: s.fg, lineHeight: 1 }}>{s.value}</span>
@@ -324,7 +324,7 @@ export default function TechProcessPage() {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
         {/* Left: profile (280px) */}
-        <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid #e8edf3', padding: '28px 22px', display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto', background: '#fff' }}>
+        <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid #e8edf3', padding: '28px 22px', display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto', background: 'var(--app-card)' }}>
 
           {/* Badge propio perfil */}
           {isOwnProfile && (
@@ -423,7 +423,7 @@ export default function TechProcessPage() {
         </div>
 
         {/* Center: ticket queue */}
-        <div style={{ flex: 1, minWidth: 0, padding: '24px 28px', overflowY: 'auto', background: '#fff', borderRight: '1px solid #e8edf3', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ flex: 1, minWidth: 0, padding: '24px 28px', overflowY: 'auto', background: 'var(--app-card)', borderRight: '1px solid #e8edf3', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '2px solid #f1f5f9', paddingBottom: 12 }}>
             <Ticket size={14} style={{ color: '#0e2235' }} />
             <span style={{ fontSize: 12, fontWeight: 800, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '.06em' }}>Tickets asignados</span>
@@ -473,7 +473,7 @@ export default function TechProcessPage() {
         <div style={{ width: 280, flexShrink: 0, padding: '24px 20px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
 
           {/* Rating */}
-          <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ background: 'var(--app-card)', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
             <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Valoración media</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <p style={{ margin: 0, fontSize: 34, fontWeight: 800, color: '#f59e0b', lineHeight: 1 }}>{avgRating.toFixed(1)}</p>
@@ -485,7 +485,7 @@ export default function TechProcessPage() {
           </div>
 
           {/* Carga actual */}
-          <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ background: 'var(--app-card)', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
             <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Carga actual</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {[
@@ -513,7 +513,7 @@ export default function TechProcessPage() {
             const slaColor = breached > 0 ? '#ef4444' : critical > 0 ? '#f97316' : '#22c55e';
             const slaLabel = breached > 0 ? `${breached} vencido${breached > 1 ? 's' : ''}` : critical > 0 ? `${critical} crítico${critical > 1 ? 's' : ''}` : 'SLA al día';
             return (
-              <div style={{ background: '#fff', border: `1.5px solid ${slaColor}28`, borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ background: 'var(--app-card)', border: `1.5px solid ${slaColor}28`, borderRadius: 12, padding: '16px 18px' }}>
                 <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>Estado SLA</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
                   <span style={{ width: 9, height: 9, borderRadius: '50%', background: slaColor, flexShrink: 0 }} />
@@ -530,7 +530,7 @@ export default function TechProcessPage() {
           })()}
 
           {/* Assignment history */}
-          <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ background: 'var(--app-card)', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
               <History size={12} style={{ color: '#0e2235' }} />
               <p style={{ margin: 0, fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em' }}>

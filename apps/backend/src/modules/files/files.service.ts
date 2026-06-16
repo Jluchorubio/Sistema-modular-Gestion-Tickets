@@ -62,7 +62,8 @@ export class FilesService {
       this.storagePath = path.resolve(
         this.config.get<string>('STORAGE_PATH') ?? './uploads',
       );
-      this.backendUrl = this.config.get<string>('BACKEND_URL') ?? 'http://localhost:3001';
+      const rawBackendUrl = this.config.get<string>('BACKEND_URL') ?? 'http://localhost:3001';
+      this.backendUrl = rawBackendUrl.replace(/\/api(\/v\d+)?$/, '');
       fs.mkdirSync(this.storagePath, { recursive: true });
       this.logger.warn('Storage driver: local — files will be lost on container restart');
     }
@@ -80,6 +81,15 @@ export class FilesService {
 
   async saveAttachment(file: Express.Multer.File): Promise<{ url: string; storedName: string }> {
     this._validateMime(file, ALLOWED_MIME_ATTACHMENT, 'imágenes, PDF, Excel o Word');
+    this._validateSize(file, MAX_BYTES_ATTACHMENT, '10 MB');
+    const result = await this._upload(file);
+    const storedName = result.url.split('/').pop() ?? '';
+    return { ...result, storedName };
+  }
+
+  /* ── Knowledge document (pre-validated by caller, 10 MB) ─────────── */
+
+  async saveDocument(file: Express.Multer.File): Promise<{ url: string; storedName: string }> {
     this._validateSize(file, MAX_BYTES_ATTACHMENT, '10 MB');
     const result = await this._upload(file);
     const storedName = result.url.split('/').pop() ?? '';

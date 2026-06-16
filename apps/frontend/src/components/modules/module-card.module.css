@@ -326,3 +326,18 @@
 .ddDanger      { color: #f87171; }
 .ddDanger:hover { background: #450a0a; color: #fca5a5; }
 .ddSep         { height: 1px; background: #e2e8f0; margin: 4px 0; }
+
+/* ══ Dark mode ══ */
+:global([data-theme="dark"]) .card { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .name { color: #e2e8f0; }
+:global([data-theme="dark"]) .card:hover .name { color: #ff5e3a; }
+:global([data-theme="dark"]) .desc { color: #94a3b8; }
+:global([data-theme="dark"]) .cardFooter { border-color: #1e3448; }
+:global([data-theme="dark"]) .enterBtn { color: #e2e8f0; }
+:global([data-theme="dark"]) .adminAvatar { border-color: #132030; }
+:global([data-theme="dark"]) .kebabBtn { background: #1a2d40; border-color: #253d56; color: #94a3b8; }
+:global([data-theme="dark"]) .kebabBtn:hover { background: #253d56; color: #e2e8f0; }
+:global([data-theme="dark"]) .dropdown { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .ddItem { color: #cbd5e1; }
+:global([data-theme="dark"]) .ddItem:hover { background: #1a2d40; color: #e2e8f0; }
+:global([data-theme="dark"]) .ddSep { background: #1e3448; }

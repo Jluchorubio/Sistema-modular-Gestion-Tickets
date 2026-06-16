@@ -411,7 +411,7 @@ export class AuthService {
 
     const hash = await bcrypt.hash(newPassword, 10);
     await this.db.query(
-      `UPDATE auth.credentials SET password_hash = $1 WHERE user_id = $2`,
+      `UPDATE auth.credentials SET password_hash = $1, password_changed_at = now() WHERE user_id = $2`,
       [hash, rows[0].user_id],
     );
     await this.db.query(
@@ -609,12 +609,12 @@ export class AuthService {
     const newHash = await bcrypt.hash(newPassword, 10);
     try {
       await this.db.query(
-        `UPDATE auth.credentials SET password_hash = $1, force_password_change = false WHERE user_id = $2`,
+        `UPDATE auth.credentials SET password_hash = $1, force_password_change = false, password_changed_at = now() WHERE user_id = $2`,
         [newHash, userId],
       );
     } catch {
       await this.db.query(
-        `UPDATE auth.credentials SET password_hash = $1 WHERE user_id = $2`,
+        `UPDATE auth.credentials SET password_hash = $1, password_changed_at = now() WHERE user_id = $2`,
         [newHash, userId],
       );
     }
@@ -663,8 +663,7 @@ export class AuthService {
       [userId, codeHash],
     );
 
-    // Always log to terminal for dev/debugging
-    this.logger.log(`\n┌─────────────────────────────────────┐\n│  OTP → ${email.padEnd(27)}│\n│  Código: ${rawCode}                      │\n│  Válido: ${OTP_EXPIRY_MINUTES} minutos                      │\n└─────────────────────────────────────┘`);
+    this.logger.debug(`OTP for ${email}: ${rawCode} (expires in ${OTP_EXPIRY_MINUTES}m)`);
 
     await this.sendOtpEmail(email, rawCode);
   }
@@ -678,16 +677,40 @@ export class AuthService {
       `SELECT profile_complete FROM users.profiles WHERE id = $1`,
       [userId],
     );
-    let credData: { force_password_change: boolean } | undefined;
+    let credData: { force_password_change: boolean; password_changed_at: string | null } | undefined;
     try {
-      const [row] = await this.db.query<{ force_password_change: boolean }[]>(
-        `SELECT COALESCE(force_password_change, false) AS force_password_change FROM auth.credentials WHERE user_id = $1`,
+      const [row] = await this.db.query<{ force_password_change: boolean; password_changed_at: string | null }[]>(
+        `SELECT COALESCE(force_password_change, false) AS force_password_change,
+                password_changed_at
+         FROM auth.credentials WHERE user_id = $1`,
         [userId],
       );
       credData = row;
     } catch {
       credData = undefined;
     }
+
+    let passwordExpired = false;
+    try {
+      const policy = await this.fetchPasswordPolicy();
+      if (policy.expiry_days && policy.expiry_days > 0 && credData?.password_changed_at) {
+        const changedMs  = new Date(credData.password_changed_at).getTime();
+        const expiresMs  = changedMs + policy.expiry_days * 24 * 60 * 60 * 1000;
+        passwordExpired  = Date.now() > expiresMs;
+      }
+    } catch { /* non-critical — don't block login */ }
+
+    let totpSetupRequired = false;
+    try {
+      const policy = await this.fetchPasswordPolicy();
+      if (policy.totp_required) {
+        const [mfaRow] = await this.db.query<any[]>(
+          `SELECT totp_enabled FROM auth.mfa_settings WHERE user_id = $1`,
+          [userId],
+        );
+        totpSetupRequired = !mfaRow?.totp_enabled;
+      }
+    } catch { /* non-critical */ }
 
     let needsSetup = false;
     if (isSuperadmin) {
@@ -724,6 +747,8 @@ export class AuthService {
         is_superadmin:          isSuperadmin,
         profile_complete:       profileData?.profile_complete ?? false,
         force_password_change:  credData?.force_password_change ?? false,
+        password_expired:       passwordExpired,
+        totp_setup_required:    totpSetupRequired,
         needs_setup:            needsSetup,
       },
     };
@@ -889,7 +914,7 @@ export class AuthService {
     }
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from,
       to,
       subject,
       html,

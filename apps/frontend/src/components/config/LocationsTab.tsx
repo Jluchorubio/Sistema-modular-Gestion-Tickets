@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, MapPin, Building2, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -9,7 +9,7 @@ interface Props { moduleId: string; isSuperadmin?: boolean }
 
 const inp: React.CSSProperties = {
   width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2,
-  fontSize: 13, fontFamily: 'inherit', color: '#0e2235', background: '#fff',
+  fontSize: 13, fontFamily: 'inherit', color: '#0e2235', background: 'var(--app-card)',
   boxSizing: 'border-box', outline: 'none',
 };
 const fieldLabel: React.CSSProperties = {
@@ -49,7 +49,7 @@ function InlineForm({
           <Check size={13} /> {pending ? 'Guardando…' : 'Guardar'}
         </button>
         <button type="button" onClick={onCancel}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'var(--app-card)', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           <X size={13} /> Cancelar
         </button>
       </div>
@@ -134,7 +134,7 @@ function EnvironmentRow({
             {deleteMut.isPending ? '...' : 'Eliminar'}
           </button>
           <button type="button" onClick={() => setConfirmDel(false)}
-            style={{ padding: '3px 8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+            style={{ padding: '3px 8px', background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
             Cancelar
           </button>
         </div>
@@ -197,7 +197,7 @@ function LocationCard({
   return (
     <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', marginBottom: 12, opacity: loc.is_active ? 1 : 0.6 }}>
       {/* Location header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'var(--app-card)' }}>
         <button type="button" onClick={() => setOpen(v => !v)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#64748b', flexShrink: 0 }}>
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -253,7 +253,7 @@ function LocationCard({
             {deleteLocMut.isPending ? '...' : 'Eliminar'}
           </button>
           <button type="button" onClick={() => setConfirmDel(false)}
-            style={{ padding: '4px 10px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+            style={{ padding: '4px 10px', background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
             Cancelar
           </button>
         </div>
@@ -304,7 +304,7 @@ function LocationCard({
             </div>
           ) : (
             <button type="button" onClick={() => setAddingEnv(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: '#fff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: 2, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: 'var(--app-card)', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: 2, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus size={11} /> Nuevo ambiente
             </button>
           ))}
@@ -392,7 +392,7 @@ export function LocationsTab({ moduleId, isSuperadmin = true }: Props) {
           ))}
           {canEdit && !showCreate && (
             <button type="button" onClick={() => setShowCreate(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', color: '#0e2235', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--app-card)', color: '#0e2235', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus size={13} /> Nueva sede
             </button>
           )}

@@ -17,7 +17,7 @@ export const HELPDESK_NAV: ModuleNavItem[] = [
   { key: 'roles',   label: 'Roles',          Icon: ShieldCheck, href: '/helpdesk/roles',   allowedRoles: ['admin_modulo']                                 },
   { key: 'reports', label: 'Reportes',       Icon: BarChart2,   href: '/helpdesk/reports', allowedRoles: ['admin_modulo', 'jefe_tecnico']                 },
   { key: 'requests', label: 'Solicitudes',    Icon: FileText,    href: '/helpdesk/requests', allowedRoles: ['admin_modulo']                                },
-  { key: 'config',   label: 'Configuración', Icon: Settings2,   href: '/helpdesk/config',   allowedRoles: ['admin_modulo']                                },
+  { key: 'config', label: 'Configuración', Icon: Settings2, href: '/helpdesk/config', allowedRoles: ['admin_modulo'] },
 ];
 
 /** Operational header: shown in the horizontal sub-header above content, Helpdesk only.

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Check, X, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -27,7 +27,7 @@ const s = {
     padding: '6px 12px', borderRadius: 4, fontSize: 11, fontWeight: 700,
     cursor: 'pointer', fontFamily: 'inherit',
     ...(variant === 'save'   && { background: '#059669', color: '#fff', border: 'none' }),
-    ...(variant === 'cancel' && { background: '#fff', color: '#64748b', border: '1px solid #e2e8f0' }),
+    ...(variant === 'cancel' && { background: 'var(--app-card)', color: '#64748b', border: '1px solid #e2e8f0' }),
     ...(variant === 'edit'   && { background: 'transparent', color: '#ff5e3a', border: '1px solid #e2e8f0' }),
   } as React.CSSProperties),
 };
@@ -54,7 +54,7 @@ export function RequestTypesTab() {
 
   const fieldInput: React.CSSProperties = {
     width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0',
-    borderRadius: 4, fontSize: 13, color: '#0e2235', background: '#fff',
+    borderRadius: 4, fontSize: 13, color: '#0e2235', background: 'var(--app-card)',
     boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit',
   };
 

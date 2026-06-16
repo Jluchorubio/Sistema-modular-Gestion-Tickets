@@ -18,6 +18,7 @@ import { TransitionTicketDto } from './dto/transition-ticket.dto';
 import { Throttle } from '@nestjs/throttler';
 import { CreateKnowledgeArticleDto, UpdateKnowledgeArticleDto } from './dto/knowledge-article.dto';
 import { AddCommentDto, AddAttachmentDto, ApproveTicketDto, RejectTicketDto, AddAssignmentDto, AddRelationDto, RateTicketDto } from './dto/ticket-actions.dto';
+import { FilesService } from '../files/files.service';
 
 @ApiTags('tickets')
 @ApiBearerAuth()
@@ -28,6 +29,7 @@ export class TicketsController {
     private readonly svc: TicketsService,
     private readonly knowledge: KnowledgeService,
     private readonly slaBreach: SlaBreachService,
+    private readonly files: FilesService,
   ) {}
 
   @Post('sla/breach-check')
@@ -107,6 +109,25 @@ export class TicketsController {
       page:       page  ? parseInt(page,  10) : undefined,
       limit:      limit ? parseInt(limit, 10) : undefined,
     });
+  }
+
+  @Post('preview-priority')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  previewPriority(
+    @Req() req: RequestWithUser,
+    @Body() body: { damage_type_id?: string; urgency?: string; impact?: string; test_user_id?: string },
+  ) {
+    return this.svc.previewPriority(req.user.sub, body);
+  }
+
+  @Get('sla-at-risk')
+  @RequirePermission('helpdesk:tickets:view')
+  getSlaAtRisk(
+    @Query('module_id')     moduleId?:     string,
+    @Query('window_hours')  windowHours?:  string,
+  ) {
+    return this.svc.getSlaAtRisk(moduleId, windowHours ? +windowHours : 2);
   }
 
   @Get('knowledge')
@@ -385,19 +406,13 @@ export class TicketsController {
   ) {
     if (!file) throw new BadRequestException('No se subió ningún archivo');
     const path = require('path');
-    const fs   = require('fs');
     const ALLOWED_EXTS  = ['.pdf','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.txt','.csv','.zip','.png','.jpg','.jpeg','.gif','.webp','.mp4','.mov'];
     const ALLOWED_MIMES = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation','text/plain','text/csv','application/zip','application/x-zip-compressed','image/png','image/jpeg','image/gif','image/webp','video/mp4','video/quicktime'];
     const ext  = path.extname(file.originalname).toLowerCase();
     if (!ALLOWED_EXTS.includes(ext) || !ALLOWED_MIMES.includes(file.mimetype)) {
       throw new BadRequestException('Tipo de archivo no permitido.');
     }
-    const name = `knowledge-${Date.now()}${ext}`;
-    const uploadsDir = process.env.STORAGE_PATH ?? './uploads';
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-    fs.writeFileSync(path.join(uploadsDir, name), file.buffer);
-    const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
-    const fileUrl = `${backendUrl}/uploads/${name}`;
+    const { url: fileUrl } = await this.files.saveDocument(file);
 
     return this.knowledge.createArticle(req.user.sub, {
       module_id:    body.module_id,
@@ -412,6 +427,17 @@ export class TicketsController {
       file_size:    file.size,
       file_mime:    file.mimetype,
     });
+  }
+
+  @Get('knowledge/deleted')
+  @RequirePermission('helpdesk:tickets:view')
+  getDeletedKnowledge(
+    @Req() req: RequestWithUser,
+    @Query('module_id') moduleId: string,
+  ) {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!moduleId || !UUID_RE.test(moduleId)) return { articles: [], posts: [] };
+    return this.knowledge.getDeleted(moduleId, req.user.sub);
   }
 
   @Get('knowledge/:id')
@@ -442,8 +468,31 @@ export class TicketsController {
   @Delete('knowledge/:id')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('helpdesk:tickets:edit')
-  deleteKnowledgeArticle(@Param('id', ParseUUIDPipe) id: string) {
+  deleteKnowledgeArticle(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.knowledge.deleteArticle(id);
+  }
+
+  @Post('knowledge/:id/restore')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  restoreKnowledgeArticle(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.knowledge.restoreArticle(id, req.user.sub);
+  }
+
+  @Delete('knowledge/:id/permanent')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:edit')
+  permanentDeleteKnowledgeArticle(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.knowledge.permanentDeleteArticle(id, req.user.sub);
   }
 
   @Post('knowledge/:id/vote')
@@ -514,6 +563,26 @@ export class TicketsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.knowledge.deletePost(req.user.sub, id);
+  }
+
+  @Post('knowledge-posts/:id/restore')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  restoreKnowledgePost(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.knowledge.restorePost(id, req.user.sub);
+  }
+
+  @Delete('knowledge-posts/:id/permanent')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('helpdesk:tickets:view')
+  permanentDeleteKnowledgePost(
+    @Req() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.knowledge.permanentDeletePost(id, req.user.sub);
   }
 
   @Delete('knowledge-posts/:postId/replies/:replyId')

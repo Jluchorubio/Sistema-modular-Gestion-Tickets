@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import { ShieldAlert, X, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
@@ -19,7 +19,7 @@ const overlay: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 const modal: React.CSSProperties = {
-  background: '#fff', borderRadius: 2, width: '100%', maxWidth: 440,
+  background: 'var(--app-card)', borderRadius: 2, width: '100%', maxWidth: 440,
   padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,.18)',
   display: 'flex', flexDirection: 'column', gap: 16,
 };
@@ -149,7 +149,7 @@ export function CriticalChangeModal({ isOpen, meta, onConfirm, onCancel, error, 
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button type="button" onClick={handleClose}
-              style={{ ...btnBase, background: '#fff', color: '#64748b', border: '1px solid #e2e8f0' }}>
+              style={{ ...btnBase, background: 'var(--app-card)', color: '#64748b', border: '1px solid #e2e8f0' }}>
               Cancelar
             </button>
             <button

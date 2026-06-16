@@ -58,6 +58,8 @@ services:
 
   # ── Backend ───────────────────────────────────────────────────────────────────
   backend:
+    # IMPORTANT: run as single replica only — cron jobs (sla-breach, approval-expiry, etc.)
+    # are not distributed-lock-protected and will fire on every replica simultaneously.
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
@@ -103,7 +105,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health 2>/dev/null | grep -q '\"status\":\"ok\"' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5

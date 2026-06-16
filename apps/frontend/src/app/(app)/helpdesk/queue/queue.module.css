@@ -546,3 +546,25 @@
   .statsBar   { display: grid; grid-template-columns: 1fr 1fr; }
   .statPill   { flex: none; min-width: 0; }
 }
+
+/* ══ Dark mode ══ */
+:global([data-theme="dark"]) .statPill { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .searchInput { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .filterChip { background: #132030; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .groupTableHead { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .groupRows { border-color: #1e3448; }
+:global([data-theme="dark"]) .ticketRowWrap { border-color: #1e3448; }
+:global([data-theme="dark"]) .ticketRowWrap[data-state='normal'] { background: #132030; }
+:global([data-theme="dark"]) .ticketRowWrap[data-state='normal']:hover { background: #1a2d40; }
+:global([data-theme="dark"]) .ticketRowWrap[data-state='breached'] { background: #1a0505; }
+:global([data-theme="dark"]) .ticketRowWrap[data-state='critical'] { background: #1a1005; }
+:global([data-theme="dark"]) .ticketRowWrap[data-state='assigned'] { background: #051a0c; }
+:global([data-theme="dark"]) .ticketRowTitle { color: #e2e8f0; }
+:global([data-theme="dark"]) .viewBtn { background: #1a2d40; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .assignBtn { background: #1a2d40; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .assignBtn:hover:not(:disabled) { background: #253d56; }
+:global([data-theme="dark"]) .assignMenu { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .assignItem:hover { background: #1a2d40; }
+:global([data-theme="dark"]) .assignName { color: #cbd5e1; }
+:global([data-theme="dark"]) .loadMoreBtn { background: #132030; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .loadMoreBtn:hover { background: #1a2d40; }

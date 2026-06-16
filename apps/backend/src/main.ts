@@ -12,6 +12,14 @@ import * as fs from 'fs';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './gateway/filters/http-exception.filter';
 
+const REQUIRED_ENV = ['DATABASE_URL', 'JWT_SECRET'];
+for (const key of REQUIRED_ENV) {
+  if (!process.env[key]) {
+    console.error(`FATAL: required env var "${key}" is missing — refusing to start`);
+    process.exit(1);
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],

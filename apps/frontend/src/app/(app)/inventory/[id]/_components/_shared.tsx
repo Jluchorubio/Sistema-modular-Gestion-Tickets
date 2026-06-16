@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { getAssetStatusConfig } from "@/constants/status";
@@ -34,7 +34,7 @@ export const INPUT: React.CSSProperties = {
   outline: "none",
   boxSizing: "border-box",
   fontFamily: "inherit",
-  background: "#fff",
+  background: 'var(--app-card)',
   color: C.text,
 };
 

@@ -844,3 +844,34 @@
   border-left: 1px dashed #e2e8f0;
   padding-left: 6px;
 }
+
+/* ══ Dark mode ══ */
+:global([data-theme="dark"]) .pageWrap { background: #0d1b2a; }
+:global([data-theme="dark"]) .content { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .tabBtn { background: #1a2d40; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .tabBtnActive { background: #132030; border-color: #1e3448; border-bottom-color: #132030; color: #e2e8f0; }
+:global([data-theme="dark"]) .tabBtnActive:hover { background: #132030; }
+:global([data-theme="dark"]) .header { border-color: #1e3448; }
+:global([data-theme="dark"]) .fieldInput { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .inlineForm { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .btnSecondary { background: #1a2d40; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .btnCancel { background: #1a2d40; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .listRow { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .listRow:hover { background: #253d56; border-color: #253d56; border-left-color: #ff5e3a; }
+:global([data-theme="dark"]) .listName { color: #e2e8f0; }
+:global([data-theme="dark"]) .slaRow { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .slaInput { background: #132030; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .csvTextarea { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .previewTable th { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .previewTable td { border-color: #1e3448; color: #cbd5e1; }
+:global([data-theme="dark"]) .permRoles { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .permRoleTabBtn { background: #132030; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .permRoleItem:hover { background: #253d56; }
+:global([data-theme="dark"]) .permRoleItemActive { background: rgba(14,34,53,.4); color: #e2e8f0; }
+:global([data-theme="dark"]) .permModuleSelect { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .permNodeRow:hover { background: #1a2d40; }
+:global([data-theme="dark"]) .permNodeLabel { color: #e2e8f0; }
+:global([data-theme="dark"]) .permNodeKey { background: #253d56; color: #94a3b8; }
+:global([data-theme="dark"]) .permCollapseBtn:hover { background: #253d56; }
+:global([data-theme="dark"]) .permScopeHeader { border-color: #1e3448; }
+:global([data-theme="dark"]) .permChildren { border-color: #1e3448; }

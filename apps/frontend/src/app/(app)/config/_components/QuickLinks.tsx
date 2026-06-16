@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { ExternalLink, Shield, Users, Zap, CheckCircle2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
@@ -26,7 +26,7 @@ export function QuickLinks() {
       {LINKS.map(({ href, Icon, label, desc }) => (
         <Link key={href} href={href} style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-          background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
+          background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8,
           textDecoration: 'none', color: 'inherit',
           minWidth: 210, flex: '0 0 auto',
           scrollSnapAlign: 'start',
@@ -36,14 +36,14 @@ export function QuickLinks() {
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; }}
         >
           <div style={{
-            width: 34, height: 34, borderRadius: 8, background: '#f8fafc',
+            width: 34, height: 34, borderRadius: 8, background: 'var(--app-page)',
             border: '1px solid #e2e8f0',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <Icon size={14} style={{ color: '#0e2235' }} />
+            <Icon size={14} style={{ color: 'var(--app-text-main)' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#0e2235', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--app-text-main)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
             <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{desc}</div>
           </div>
           <ExternalLink size={10} style={{ color: '#cbd5e1', flexShrink: 0 }} />

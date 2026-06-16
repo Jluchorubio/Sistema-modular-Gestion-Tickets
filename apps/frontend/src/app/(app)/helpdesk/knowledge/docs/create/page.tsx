@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -103,7 +103,7 @@ export default function DocsCreatePage() {
         </div>
       </div>
 
-      <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
 
         {/* Drop zone */}
         <div style={{ padding: '0 0 0 0' }}>

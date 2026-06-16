@@ -63,7 +63,6 @@ export class AutoCloseService {
                                     AND tr.from_state_id       = at.current_state_id
                                     AND tr.is_active           = true
       JOIN   tickets.states ts2     ON ts2.id = tr.to_state_id AND ts2.is_final = true
-      LIMIT  100
     `);
 
     if (!tickets.length) return;
@@ -76,11 +75,20 @@ export class AutoCloseService {
       try {
         // set_config local=true → transaction-scoped; trigger fn_ticket_state_history
         // reads it via get_current_user_id() which falls back to superadmin UUID on cast error.
+        // Direct UPDATE (not via TicketsService.transition) is intentional here:
+        // blocks guard is irrelevant for system-initiated timeout closure,
+        // and DB trigger fn_ticket_state_history fires via set_config below.
         await qr.query(`SELECT set_config('app.current_user_id', 'system', true)`);
 
         await qr.query(
           `UPDATE tickets.tickets SET current_state_id = $1 WHERE id = $2`,
           [t.close_state_id, t.ticket_id],
+        );
+
+        await qr.query(
+          `UPDATE tickets.ticket_assignments SET is_active = false, unassigned_at = now()
+           WHERE ticket_id = $1 AND is_active = true`,
+          [t.ticket_id],
         );
 
         // Close SLA tracking — to_state is always is_final=true (guaranteed by query above)
@@ -96,6 +104,14 @@ export class AutoCloseService {
         await qr.commitTransaction();
 
         this.messaging.emit('ticket.closed', {
+          ticketId:  t.ticket_id,
+          title:     t.title,
+          createdBy: t.created_by,
+          toLabel:   'Cerrado automáticamente',
+          actorId:   'system',
+        });
+
+        this.messaging.emit('ticket.state_changed', {
           ticketId:  t.ticket_id,
           title:     t.title,
           createdBy: t.created_by,

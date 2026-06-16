@@ -270,3 +270,13 @@
 }
 
 .errorMsg { color: #ef4444; font-size: 13px; padding: 20px; }
+
+/* ══ Dark mode ══ */
+:global([data-theme="dark"]) .card { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .tab { background: #132030; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .btnSecondary { background: #1a2d40; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .btnSecondary:hover:not(:disabled) { border-color: var(--app-navy); color: #e2e8f0; }
+:global([data-theme="dark"]) .btnDanger { background: #1a0a0a; border-color: #7f1d1d; color: #fca5a5; }
+:global([data-theme="dark"]) .btnDanger:hover:not(:disabled) { background: #3b0c0c; }
+:global([data-theme="dark"]) .reAuthPwdInput { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .emptyMsg { background: #132030; border-color: #1e3448; color: #64748b; }

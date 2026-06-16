@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -102,7 +102,7 @@ export default function AssetTicketsPage() {
             <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.muted, pointerEvents: "none" }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por título, ID o creador…"
-              style={{ width: "100%", padding: "9px 12px 9px 30px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, background: "#fff" }} />
+              style={{ width: "100%", padding: "9px 12px 9px 30px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, background: 'var(--app-card)' }} />
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             {STATE_FILTERS.map(f => (
@@ -129,7 +129,7 @@ export default function AssetTicketsPage() {
             {filtered.map((ticket) => {
               const pColor = PRIORITY_COLORS[ticket.priority] ?? C.muted;
               return (
-                <div key={ticket.id} style={{ display: "flex", alignItems: "stretch", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+                <div key={ticket.id} style={{ display: "flex", alignItems: "stretch", background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
                   <div style={{ width: 5, background: pColor, flexShrink: 0 }} />
                   <div style={{ flex: 1, padding: "14px 18px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" as const }}>

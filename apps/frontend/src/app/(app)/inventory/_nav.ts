@@ -16,5 +16,5 @@ export const INVENTORY_NAV: ModuleNavItem[] = [
   { key: 'roles',   label: 'Roles',        Icon: ShieldCheck,  href: '/inventory/roles'   },
   { key: 'requests', label: 'Solicitudes',   Icon: FileText,  href: '/inventory/requests' },
   { key: 'reports',  label: 'Reportes',     Icon: BarChart2, href: '/inventory/reports'  },
-  { key: 'config',   label: 'Configuración',Icon: Settings2, href: '/inventory/config'   },
+  { key: 'config',     label: 'Configuración', Icon: Settings2, href: '/inventory/config' },
 ];

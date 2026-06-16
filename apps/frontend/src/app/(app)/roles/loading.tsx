@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/Skeleton';
+﻿import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function RolesLoading() {
   return (
@@ -12,7 +12,7 @@ export default function RolesLoading() {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div key={i} style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ flex: 1 }}>
               <Skeleton height={14} width="35%" style={{ marginBottom: 6 }} />
               <Skeleton height={11} width="55%" style={{ marginBottom: 4 }} />

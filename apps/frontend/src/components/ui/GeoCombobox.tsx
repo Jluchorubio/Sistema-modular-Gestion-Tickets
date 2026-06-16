@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
@@ -109,7 +109,7 @@ export function GeoCombobox({ value, onChange, options, loading, placeholder, ic
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0,
           zIndex: 60, marginTop: 3,
-          background: '#fff', border: '1px solid #E2E8F0',
+          background: 'var(--app-card)', border: '1px solid #E2E8F0',
           borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.1)',
           maxHeight: 220, overflowY: 'auto',
         }}>

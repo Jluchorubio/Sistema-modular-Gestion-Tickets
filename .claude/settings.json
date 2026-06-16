@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker exec *)",
+      "Bash(curl -s -X POST http://localhost:3001/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"joselu.rubio2008@gmail.com\",\"password\":\"AdminPass2026!\"}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('priority:',d['priority'],'score:',d['score'],'signals:',d['signals']\\)\")",
+      "PowerShell(docker exec tickets_postgres psql -U postgres -d nexo_db -c \"\\\\d auth.credentials\" 2>&1)",
+      "Read(//c/Users/Lenovo/Desktop/Sistema modular/ Gestion/ Tickets/database/**)",
+      "PowerShell($maxWait = 60; $waited = 0; do { Start-Sleep -Seconds 5; $waited += 5; $result = docker info 2>&1; if \\($LASTEXITCODE -eq 0\\) { Write-Output \"Docker ready after ${waited}s\"; break } else { Write-Output \"Waiting... ${waited}s\" } } while \\($waited -lt $maxWait\\); if \\($waited -ge $maxWait\\) { Write-Output \"Timeout - Docker not ready\" })",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:3001/api/system-modules\" -UseBasicParsing -TimeoutSec 10 2>&1)"
+    ]
+  }
+}

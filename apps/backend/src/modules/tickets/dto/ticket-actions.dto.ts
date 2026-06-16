@@ -19,7 +19,7 @@ export class AddCommentDto {
   content: string;
 
   @IsOptional()
-  @IsIn(['comment', 'internal', 'system'])
+  @IsIn(['public', 'internal'])
   comment_type?: string;
 }
 

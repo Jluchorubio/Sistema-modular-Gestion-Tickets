@@ -157,6 +157,9 @@ export class InventoryService {
     if (asset.status === 'dado_de_baja') {
       throw new BadRequestException('No se puede asignar un activo dado de baja');
     }
+    if (asset.status === 'en_reparacion') {
+      throw new BadRequestException('No se puede asignar un activo en reparación. Primero regresa el activo a disponible.');
+    }
 
     /* Check if this specific user already has an active assignment */
     const [existing] = await this.db.query<{ id: string }[]>(
@@ -278,7 +281,8 @@ export class InventoryService {
     try {
       await qr.query(`SELECT set_config('app.current_user_id', $1, true)`, [actorId]);
 
-      if (asset.status === 'asignado' && dto.status !== 'disponible') {
+      if (asset.status === 'asignado') {
+        // Always close active assignments when leaving 'asignado' state
         const closedAssignments: { id: string; user_id: string }[] = await qr.query(
           `UPDATE inventory.asset_assignments
            SET status = 'devuelto', unassigned_at = now()
@@ -286,7 +290,9 @@ export class InventoryService {
            RETURNING id, user_id`,
           [assetId],
         );
-        const histAction = dto.status === 'dado_de_baja' ? 'dado_de_baja' : 'reparacion';
+        const histAction = dto.status === 'dado_de_baja' ? 'dado_de_baja'
+                         : dto.status === 'en_reparacion' ? 'reparacion'
+                         : 'devuelto';
         for (const a of closedAssignments) {
           await qr.query(
             `INSERT INTO inventory.asset_assignment_history

@@ -15,5 +15,5 @@ export const GESTION_NAV: ModuleNavItem[] = [
   { key: 'users',   label: 'Usuarios',      Icon: UserCog,     href: '/requests/users',   permKey: 'gestion:users:view'        },
   { key: 'roles',   label: 'Roles',         Icon: ShieldCheck, href: '/requests/roles',   permKey: 'gestion:roles:view'        },
   { key: 'reports', label: 'Reportes',      Icon: BarChart2,   href: '/requests/reports', permKey: 'gestion:reports:view'      },
-  { key: 'config',  label: 'Configuración', Icon: Settings2,   href: '/requests/config',  allowedRoles: ['admin_modulo']       },
+  { key: 'config',     label: 'Configuración', Icon: Settings2, href: '/requests/config', allowedRoles: ['admin_modulo']       },
 ];

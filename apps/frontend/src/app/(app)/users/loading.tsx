@@ -1,4 +1,4 @@
-import { Skeleton, SkeletonTableRows } from '@/components/ui/Skeleton';
+﻿import { Skeleton, SkeletonTableRows } from '@/components/ui/Skeleton';
 
 export default function UsersLoading() {
   return (
@@ -15,7 +15,7 @@ export default function UsersLoading() {
         <Skeleton height={36} width={120} style={{ borderRadius: 8 }} />
         <Skeleton height={36} width={120} style={{ borderRadius: 8 }} />
       </div>
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
           <Skeleton height={11} width="100%" />
         </div>

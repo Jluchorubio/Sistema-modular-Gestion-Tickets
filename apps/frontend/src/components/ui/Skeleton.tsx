@@ -1,4 +1,4 @@
-import styles from './skeleton.module.css';
+﻿import styles from './skeleton.module.css';
 
 interface SkeletonProps {
   width?:  string | number;
@@ -196,7 +196,7 @@ export function SkeletonMyTickets({ rows = 8 }: { rows?: number }) {
           <Skeleton height={11} width={60} />
         </div>
       </div>
-      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E8EDF3', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, border: '1px solid #E8EDF3', overflow: 'hidden' }}>
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -226,7 +226,7 @@ export function SkeletonReports() {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div key={i} style={{ background: 'var(--app-card)', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
             <Skeleton circle width={44} height={44} />
             <div>
               <Skeleton height={24} width={60} style={{ marginBottom: 6 }} />
@@ -236,27 +236,27 @@ export function SkeletonReports() {
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16, marginBottom: 16 }}>
-        <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
+        <div style={{ background: 'var(--app-card)', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
           <Skeleton height={12} width={120} style={{ marginBottom: 20 }} />
           <Skeleton circle width={110} height={110} style={{ margin: '0 auto 16px' }} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={28} />)}
           </div>
         </div>
-        <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
+        <div style={{ background: 'var(--app-card)', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
           <Skeleton height={12} width={130} style={{ marginBottom: 20 }} />
           {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={14} style={{ marginBottom: 12 }} />)}
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         {Array.from({ length: 2 }, (_, i) => (
-          <div key={i} style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
+          <div key={i} style={{ background: 'var(--app-card)', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
             <Skeleton height={12} width={140} style={{ marginBottom: 20 }} />
             {Array.from({ length: 5 }, (_, j) => <Skeleton key={j} height={8} style={{ marginBottom: 14, borderRadius: 99 }} />)}
           </div>
         ))}
       </div>
-      <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, border: '1.5px solid #E8EDF3', padding: '20px 22px' }}>
         <Skeleton height={12} width={220} style={{ marginBottom: 16 }} />
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 100 }}>
           {Array.from({ length: 30 }, (_, i) => (
@@ -290,7 +290,7 @@ export function SkeletonInventory({ cards = 9 }: { cards?: number }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
         {Array.from({ length: cards }, (_, i) => (
-          <div key={i} style={{ background: '#fff', borderRadius: 12, border: '1.5px solid #E8EDF3', padding: '16px 18px', borderTop: '3px solid #E8EDF3' }}>
+          <div key={i} style={{ background: 'var(--app-card)', borderRadius: 12, border: '1.5px solid #E8EDF3', padding: '16px 18px', borderTop: '3px solid #E8EDF3' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
               <Skeleton circle width={32} height={32} />
               <Skeleton height={20} width={70} style={{ borderRadius: 99 }} />
@@ -326,7 +326,7 @@ export function SkeletonTicketsList({ rows = 8 }: { rows?: number }) {
           <Skeleton key={i} height={32} width={90} style={{ borderRadius: 8 }} />
         ))}
       </div>
-      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E8EDF3', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, border: '1px solid #E8EDF3', overflow: 'hidden' }}>
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', borderBottom: i < rows - 1 ? '1px solid #F1F5F9' : undefined }}>
             <div style={{ flex: 1 }}>
@@ -349,7 +349,7 @@ export function SkeletonWorkspace() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#f8fafc' }}>
 
       {/* Header — 56px sticky */}
-      <div style={{ height: 56, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+      <div style={{ height: 56, background: 'var(--app-card)', borderBottom: '1px solid #e2e8f0', padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         <Skeleton height={28} width={72} style={{ borderRadius: 7, flexShrink: 0 }} />
         <Skeleton height={12} width={160} style={{ borderRadius: 4, flexShrink: 0 }} />
         <Skeleton height={14} style={{ flex: 1, maxWidth: 380, borderRadius: 4 }} />
@@ -373,7 +373,7 @@ export function SkeletonWorkspace() {
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e2e8f0' }}>
 
           {/* Ticket detail card */}
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', background: 'var(--app-card)', flexShrink: 0 }}>
             <Skeleton height={20} width="70%" style={{ marginBottom: 12, borderRadius: 4 }} />
             <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
               <Skeleton height={18} width={50} style={{ borderRadius: 99 }} />
@@ -385,7 +385,7 @@ export function SkeletonWorkspace() {
           </div>
 
           {/* Tab bar */}
-          <div style={{ height: 40, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <div style={{ height: 40, background: 'var(--app-card)', borderBottom: '1px solid #e2e8f0', padding: '0 20px', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             {[90, 64, 84, 64].map((w, i) => (
               <Skeleton key={i} height={26} width={w} style={{ borderRadius: 7 }} />
             ))}
@@ -409,7 +409,7 @@ export function SkeletonWorkspace() {
         </div>
 
         {/* Right sidebar */}
-        <div style={{ padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', background: '#fff' }}>
+        <div style={{ padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', background: 'var(--app-card)' }}>
           {/* SLA block */}
           <div style={{ borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 14px' }}>
             <Skeleton height={10} width={80} style={{ marginBottom: 10 }} />
@@ -455,7 +455,7 @@ export function SkeletonProfileRight() {
   return (
     <div style={{ flex: 1 }}>
       <Skeleton height={36} style={{ marginBottom: 24, borderRadius: 8 }} />
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '22px 22px 26px', marginBottom: 22 }}>
+      <div style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, padding: '22px 22px 26px', marginBottom: 22 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '22px 80px' }}>
           {Array.from({ length: 10 }, (_, i) => (
             <div key={i}>

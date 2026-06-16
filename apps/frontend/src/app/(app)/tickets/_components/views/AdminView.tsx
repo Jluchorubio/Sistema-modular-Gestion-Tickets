@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Search, Filter, ChevronDown, Ticket, Users,
   Home, ArrowLeftRight, Layers, Settings, ShieldCheck, AlertTriangle,
-  ChevronRight, Clock, CheckSquare2, Square, X as XIcon,
+  ChevronRight, Clock, CheckSquare2, Square, X as XIcon, Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import {
@@ -17,6 +17,7 @@ import {
 import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
 import { modulesService } from '@/services/modules.service';
 import { usersService } from '@/services/users.service';
+import { adminService } from '@/services/admin.service';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import styles from '../../tickets.module.css';
 import { STAT_CARDS, isToday, initials, TicketCard, type QuickFilter } from './shared';
@@ -57,8 +58,9 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
   const [selectedIds,     setSelectedIds]    = useState<Set<string>>(new Set());
   const [bulkCloseModal,  setBulkCloseModal] = useState(false);
   const [bulkCloseReason, setBulkCloseReason] = useState('');
+  const [bulkTrashModal,  setBulkTrashModal] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['tickets', moduleId, stateFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, page],
     queryFn:  () => ticketsService.getAll({
       module_id:   moduleId    || undefined,
@@ -113,6 +115,16 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
     },
   });
 
+  const bulkTrashMut = useMutation({
+    mutationFn: () => adminService.bulkSoftDelete('ticket', Array.from(selectedIds)),
+    onSuccess: () => {
+      setBulkTrashModal(false);
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+    },
+  });
+
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -127,6 +139,9 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
         {selectMode && (
           <button
             type="button"
+            role="checkbox"
+            aria-checked={selectedIds.has(t.id)}
+            aria-label={selectedIds.has(t.id) ? 'Deseleccionar ticket' : 'Seleccionar ticket'}
             onClick={(e) => { e.stopPropagation(); toggleSelect(t.id); }}
             style={{ position: 'absolute', top: 8, left: 8, zIndex: 10, background: selectedIds.has(t.id) ? '#0e2235' : '#fff', border: `1.5px solid ${selectedIds.has(t.id) ? '#0e2235' : '#cbd5e1'}`, borderRadius: 6, width: 22, height: 22, display: 'grid', placeItems: 'center', cursor: 'pointer', color: selectedIds.has(t.id) ? '#fff' : '#94a3b8' }}
           >
@@ -217,13 +232,13 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
   function renderTicketList(tickets: TicketListItem[], emptyMsg: string) {
     if (tickets.length === 0) {
       return (
-        <div style={{ background: '#fff', borderRadius: 10, padding: '20px', textAlign: 'center', border: '1px solid #f1f5f9', color: '#94a3b8', fontSize: 12 }}>
+        <div style={{ background: 'var(--app-card)', borderRadius: 10, padding: '20px', textAlign: 'center', border: '1px solid var(--app-border)', color: '#94a3b8', fontSize: 12 }}>
           {emptyMsg}
         </div>
       );
     }
     return (
-      <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 10, border: '1px solid var(--app-border)', overflow: 'hidden' }}>
         {tickets.map((t, idx) => {
           const pColor  = getPriorityConfig(t.priority).color;
           const slaCfg  = t.sla_status ? getSlaStatusConfig(t.sla_status) : null;
@@ -233,17 +248,16 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
           return (
             <div key={t.id}
               onClick={() => router.push(`${basePath}/ticket/${t.id}`)}
+              className={styles.ticketRow}
               style={{
-                display: 'grid',
-                gridTemplateColumns: '4px 1fr auto auto auto auto',
                 alignItems: 'center', gap: 12,
                 padding: '11px 14px',
                 borderTop: idx > 0 ? '1px solid #f1f5f9' : 'none',
-                cursor: 'pointer', background: breached ? '#fff5f5' : '#fff',
+                cursor: 'pointer', background: breached ? 'rgba(239,68,68,.05)' : 'var(--app-card)',
                 transition: 'background .1s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = breached ? '#fee2e2' : '#f8fafc')}
-              onMouseLeave={e => (e.currentTarget.style.background = breached ? '#fff5f5' : '#fff')}
+              onMouseEnter={e => (e.currentTarget.style.background = breached ? 'rgba(239,68,68,.10)' : 'var(--app-page)')}
+              onMouseLeave={e => (e.currentTarget.style.background = breached ? 'rgba(239,68,68,.05)' : 'var(--app-card)')}
             >
               {/* Priority strip */}
               <div style={{ height: 32, borderRadius: 2, background: pColor, flexShrink: 0 }} />
@@ -256,7 +270,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {t.category_name}{t.environment_name ? ` · ${t.environment_name}` : ''} · {fmtRelative(t.created_at)}
                   {t.is_pause_state && t.last_transition_reason && (
-                    <span style={{ marginLeft: 6, color: '#92400e', fontWeight: 600 }}>⏸ {t.last_transition_reason}</span>
+                    <span style={{ marginLeft: 6, color: 'var(--status-paused-text)', fontWeight: 600 }}>⏸ {t.last_transition_reason}</span>
                   )}
                 </p>
               </div>
@@ -280,17 +294,17 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </div>
 
               {/* State badge */}
-              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: t.is_final ? '#f0fdf4' : 'var(--status-info-bg)', color: t.is_final ? '#16a34a' : 'var(--status-info-text)', border: `1px solid ${t.is_final ? '#bbf7d0' : 'var(--status-info-border)'}`, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: t.is_final ? 'var(--status-success-bg)' : 'var(--status-info-bg)', color: t.is_final ? 'var(--status-success-text)' : 'var(--status-info-text)', border: `1px solid ${t.is_final ? 'var(--status-success-border)' : 'var(--status-info-border)'}`, flexShrink: 0 }}>
                 {t.state_label}
               </span>
 
               {/* Approval / SLA badge */}
               {t.is_approval_state ? (
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', flexShrink: 0 }}>
+                <span className={styles.ticketRowSlaBadge} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: 'var(--status-approval-bg)', color: 'var(--status-approval-text)', border: '1px solid var(--status-approval-border)', flexShrink: 0 }}>
                   ✓ Por aprobar
                 </span>
               ) : slaC && slaL ? (
-                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: `${slaC}15`, color: slaC, border: `1px solid ${slaC}30`, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                <span className={styles.ticketRowSlaBadge} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700, background: `${slaC}15`, color: slaC, border: `1px solid ${slaC}30`, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                   <Clock size={8} />
                   {breached && t.breached_at
                     ? `Vencido ${fmtRelative(t.breached_at)}`
@@ -299,7 +313,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               ) : null}
 
               {/* Arrow */}
-              <ChevronRight size={13} style={{ color: '#cbd5e1', flexShrink: 0 }} />
+              <ChevronRight size={13} className={styles.ticketRowArrow} style={{ color: '#cbd5e1', flexShrink: 0 }} />
             </div>
           );
         })}
@@ -378,7 +392,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button type="button"
                   onClick={() => setShowFilters((v) => !v)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: showFilters ? '1px solid #ff5e3a' : '1px solid #e2e8f0', background: showFilters ? '#fff5f0' : '#fff', color: showFilters ? '#ff5e3a' : '#475569', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: showFilters ? '1px solid #ff5e3a' : '1px solid #e2e8f0', background: showFilters ? '#fff5f0' : 'var(--app-card)', color: showFilters ? '#ff5e3a' : 'var(--app-text-sub)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                   <Filter size={10} /> Filtros{(priorityFilter || stateFilter || categoryFilter) ? ' ●' : ''}
                 </button>
                 <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
@@ -398,7 +412,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
             </div>
 
             {/* Search bar — standalone */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', padding: '9px 14px', borderRadius: 12, border: '1px solid #eef2f6', boxShadow: '0 1px 3px rgba(15,23,42,.04)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--app-card)', padding: '9px 14px', borderRadius: 12, border: '1px solid var(--app-border)', boxShadow: '0 1px 3px rgba(15,23,42,.04)', flexShrink: 0 }}>
               <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
               <input
                 type="text"
@@ -485,11 +499,18 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em' }}>Bandeja activa</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {selectMode && selectedIds.size > 0 && (
-                    <button type="button"
-                      onClick={() => setBulkCloseModal(true)}
-                      style={{ fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 6, border: '1.5px solid #ff5e3a', background: '#fff5f2', color: '#ff5e3a', cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Cerrar {selectedIds.size} seleccionado{selectedIds.size !== 1 ? 's' : ''}
-                    </button>
+                    <>
+                      <button type="button"
+                        onClick={() => setBulkCloseModal(true)}
+                        style={{ fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 6, border: '1.5px solid #ff5e3a', background: '#fff5f2', color: '#ff5e3a', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Cerrar {selectedIds.size} seleccionado{selectedIds.size !== 1 ? 's' : ''}
+                      </button>
+                      <button type="button"
+                        onClick={() => setBulkTrashModal(true)}
+                        style={{ fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 6, border: '1.5px solid #dc2626', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Trash2 size={10} /> Papelera
+                      </button>
+                    </>
                   )}
                   <button type="button"
                     onClick={() => { setSelectMode((m) => !m); setSelectedIds(new Set()); }}
@@ -503,11 +524,15 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </div>
 
               {isLoading ? (
-                <div style={{ background: '#fff', borderRadius: 10, padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: 12, border: '1px solid #e2e8f0' }}>
+                <div style={{ background: 'var(--app-card)', borderRadius: 10, padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: 12, border: '1px solid var(--app-border)' }}>
                   Cargando tickets…
                 </div>
+              ) : error ? (
+                <div style={{ background: 'var(--app-card)', borderRadius: 10, padding: '24px', textAlign: 'center', border: '1px solid #fecaca', color: '#ef4444', fontSize: 12 }}>
+                  Error al cargar tickets. Verifica tu conexión e intenta de nuevo.
+                </div>
               ) : ticketsOld.length === 0 && ticketsToday.length === 0 ? (
-                <div style={{ background: '#fff', borderRadius: 10, padding: '32px', textAlign: 'center', border: '1px solid #e2e8f0', color: '#94a3b8' }}>
+                <div style={{ background: 'var(--app-card)', borderRadius: 10, padding: '32px', textAlign: 'center', border: '1px solid var(--app-border)', color: '#94a3b8' }}>
                   <Ticket size={24} style={{ marginBottom: 8, opacity: .5 }} />
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
                     {quickFilter || search ? 'Sin tickets con esos filtros.' : 'No hay tickets activos.'}
@@ -788,7 +813,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
           {/* Search + filter toggle */}
           {(() => {
             const activeFilterCount = [priorityFilter, stateFilter, categoryFilter, assigneeFilter, slaFilter].filter(Boolean).length;
-            const selStyle: React.CSSProperties = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 8px', fontSize: 11, color: '#475569', fontFamily: 'inherit', background: '#fff', cursor: 'pointer' };
+            const selStyle: React.CSSProperties = { border: '1px solid var(--app-border)', borderRadius: 8, padding: '5px 8px', fontSize: 11, color: 'var(--app-text-sub)', fontFamily: 'inherit', background: 'var(--app-card)', cursor: 'pointer' };
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
                 {/* Toolbar row — actions */}
@@ -809,19 +834,10 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                       <option value="state">Por estado</option>
                     </select>
                   </div>
-                  {isHelpdeskMockup && canCreate && moduleId && (
-                    <button
-                      type="button"
-                      onClick={() => setShowCreate(true)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: '#ff5e3a', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, boxShadow: '0 1px 4px rgba(255,94,58,.25)' }}
-                    >
-                      <Plus size={12} />Reportar Nuevo Incidente
-                    </button>
-                  )}
                 </div>
 
                 {/* Search bar — standalone */}
-                <div style={{ background: '#fff', borderRadius: 14, padding: '10px 16px', border: '1px solid #e8edf3', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ background: 'var(--app-card)', borderRadius: 14, padding: '10px 16px', border: '1px solid var(--app-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
                   <input
                     type="text"
@@ -839,7 +855,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 </div>
 
                 {showFilters && (
-                  <div style={{ background: '#fff', borderRadius: 12, padding: '12px 16px', border: '1.5px solid #ffe8e3', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                  <div style={{ background: 'var(--app-card)', borderRadius: 12, padding: '12px 16px', border: '1.5px solid #ffe8e3', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                     <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value as TicketPriority | ''); setPage(1); }} style={selStyle}>
                       <option value="">Prioridad</option>
                       {PRIORITIES.map((p) => <option key={p} value={p}>{getPriorityConfig(p).label}</option>)}
@@ -887,20 +903,39 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
           {/* Section label */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em' }}>Bandeja de Casos Activos</span>
-            <span style={{
-              fontSize: 10,
-              color: isHelpdeskMockup ? '#4a5568' : '#94a3b8',
-              background: isHelpdeskMockup ? '#f1f5f9' : '#fff',
-              border: isHelpdeskMockup ? 'none' : '1px solid #e2e8f0',
-              padding: isHelpdeskMockup ? '2px 8px' : '3px 10px',
-              borderRadius: 6,
-              fontWeight: isHelpdeskMockup ? 900 : 700,
-            }}>Consola Global · {total}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {selectMode && selectedIds.size > 0 && (
+                <>
+                  <button type="button" onClick={() => setBulkCloseModal(true)}
+                    style={{ fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 6, border: '1.5px solid #ff5e3a', background: '#fff5f2', color: '#ff5e3a', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Cerrar {selectedIds.size}
+                  </button>
+                  <button type="button" onClick={() => setBulkTrashModal(true)}
+                    style={{ fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 6, border: '1.5px solid #dc2626', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Trash2 size={10} /> Papelera
+                  </button>
+                </>
+              )}
+              <span style={{
+                fontSize: 10,
+                color: '#94a3b8',
+                background: 'var(--app-card)',
+                border: '1px solid var(--app-border)',
+                padding: '3px 10px',
+                borderRadius: 6,
+                fontWeight: 700,
+              }}>Consola Global · {total}</span>
+            </div>
           </div>
 
           {/* Cards */}
           {isLoading ? (
             <div className={styles.loadingState}>Cargando tickets…</div>
+          ) : error ? (
+            <div className={styles.emptyState} style={{ borderColor: '#fecaca' }}>
+              <AlertTriangle size={28} style={{ marginBottom: 8, color: '#ef4444', opacity: .7 }} />
+              <p className={styles.emptyText} style={{ color: '#ef4444' }}>Error al cargar tickets. Verifica tu conexión.</p>
+            </div>
           ) : ticketsOld.length === 0 && ticketsToday.length === 0 ? (
             <div className={styles.emptyState}>
               <Ticket size={28} className={styles.emptyIcon} />
@@ -957,7 +992,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
                 </div>
                 {ticketsToday.length === 0 ? (
                   isHelpdeskMockup ? (
-                    <div style={{ background: '#fff', borderRadius: 16, padding: '32px 24px', textAlign: 'center', border: '1px solid #f1f5f9', color: '#94a3b8' }}>
+                    <div style={{ background: 'var(--app-card)', borderRadius: 16, padding: '32px 24px', textAlign: 'center', border: '1px solid var(--app-border)', color: '#94a3b8' }}>
                       <p style={{ fontSize: 12, fontWeight: 500, margin: 0 }}>Sin tickets nuevos hoy</p>
                     </div>
                   ) : (
@@ -995,7 +1030,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
         >
 
           {/* Search techs */}
-          <div style={{ background: '#fff', borderRadius: isHelpdeskMockup ? 12 : 10, border: '1px solid #e2e8f0', padding: isHelpdeskMockup ? '8px 12px' : '9px 14px', display: 'flex', alignItems: 'center', gap: 8, boxShadow: isHelpdeskMockup ? '0 1px 3px rgba(0,0,0,.04)' : 'none' }}>
+          <div style={{ background: 'var(--app-card)', borderRadius: isHelpdeskMockup ? 12 : 10, border: '1px solid var(--app-border)', padding: isHelpdeskMockup ? '8px 12px' : '9px 14px', display: 'flex', alignItems: 'center', gap: 8, boxShadow: isHelpdeskMockup ? '0 1px 3px rgba(0,0,0,.04)' : 'none' }}>
             <Search size={12} style={{ color: '#94a3b8', flexShrink: 0 }} />
             <input
               type="text"
@@ -1017,7 +1052,7 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
               </span>
             </div>
           ) : (
-            <div style={{ background: '#fff', borderRadius: 10, border: '1.5px solid #e2e8f0', padding: '9px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ background: 'var(--app-card)', borderRadius: 10, border: '1.5px solid var(--app-border)', padding: '9px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#334155', letterSpacing: '.05em' }}>
                 <Filter size={11} /> Filtros
               </span>
@@ -1054,10 +1089,45 @@ export function AdminView({ moduleId, basePath, canCreate, visualVariant = 'defa
 
       {showCreate && moduleId && <CreateDrawer moduleId={moduleId} onClose={() => setShowCreate(false)} />}
 
+      {/* ── Bulk trash confirmation modal ── */}
+      {bulkTrashModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'var(--app-card)', borderRadius: 14, maxWidth: 400, width: '100%', boxShadow: '0 24px 60px rgba(14,34,53,.2)', padding: '28px 28px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '.12em', margin: '0 0 3px' }}>Papelera</p>
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--app-text-main)', margin: 0 }}>Mover {selectedIds.size} ticket{selectedIds.size !== 1 ? 's' : ''} a papelera</h3>
+              </div>
+              <button type="button" onClick={() => setBulkTrashModal(false)}
+                style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--app-border)', background: 'var(--app-page)', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--app-text-sub)' }}>
+                <XIcon size={14} />
+              </button>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--app-text-sub)', margin: '0 0 20px', lineHeight: 1.5 }}>
+              Los tickets se moverán a la papelera y podrán ser restaurados desde la sección Papelera. Se eliminarán definitivamente tras 90 días.
+            </p>
+            {bulkTrashMut.isError && (
+              <p style={{ fontSize: 12, color: '#ef4444', margin: '0 0 12px' }}>Error al mover a papelera. Intenta de nuevo.</p>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setBulkTrashModal(false)}
+                style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid var(--app-border)', background: 'var(--app-page)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--app-text-sub)', fontWeight: 600 }}>
+                Cancelar
+              </button>
+              <button type="button" disabled={bulkTrashMut.isPending}
+                onClick={() => bulkTrashMut.mutate()}
+                style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: bulkTrashMut.isPending ? '#94a3b8' : '#dc2626', color: '#fff', fontSize: 12, fontWeight: 800, cursor: bulkTrashMut.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                {bulkTrashMut.isPending ? 'Moviendo…' : 'Mover a papelera'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Bulk close confirmation modal ── */}
       {bulkCloseModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#fff', borderRadius: 14, maxWidth: 420, width: '100%', boxShadow: '0 24px 60px rgba(14,34,53,.2)', padding: '28px 28px 24px' }}>
+          <div style={{ background: 'var(--app-card)', borderRadius: 14, maxWidth: 420, width: '100%', boxShadow: '0 24px 60px rgba(14,34,53,.2)', padding: '28px 28px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
                 <p style={{ fontSize: 10, fontWeight: 800, color: '#ff5e3a', textTransform: 'uppercase', letterSpacing: '.12em', margin: '0 0 3px' }}>Operación masiva</p>

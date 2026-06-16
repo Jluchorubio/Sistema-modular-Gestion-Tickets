@@ -483,3 +483,22 @@
   color: #94a3b8;
   cursor: not-allowed;
 }
+
+/* ══ Dark mode ══ */
+:global([data-theme="dark"]) .drawer { background: #132030; }
+:global([data-theme="dark"]) .header { border-color: #1e3448; }
+:global([data-theme="dark"]) .footer { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .inp { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .lbl { color: #94a3b8; }
+:global([data-theme="dark"]) .section { border-color: #1e3448; }
+:global([data-theme="dark"]) .kbBox { background: #1a2510; border-color: #3d4a1e; color: #d4e8a0; }
+:global([data-theme="dark"]) .assetSelected { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .assetSearchInner { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .assetSearchInput { color: #e2e8f0; }
+:global([data-theme="dark"]) .assetDropdown { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .assetDropdownItem { border-color: #1e3448; }
+:global([data-theme="dark"]) .assetDropdownItem:hover { background: #1a2d40; }
+:global([data-theme="dark"]) .assetDropdownItemName { color: #e2e8f0; }
+:global([data-theme="dark"]) .btnCancel { background: #1e3448; border-color: #253d56; color: #94a3b8; }
+:global([data-theme="dark"]) .btnCancel:hover { background: #253d56; }
+:global([data-theme="dark"]) .skeletonBlock { background: linear-gradient(90deg, #1a2d40 25%, #253d56 50%, #1a2d40 75%); }

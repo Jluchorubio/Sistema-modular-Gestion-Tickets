@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useRef, useEffect } from 'react';
 import {
@@ -216,7 +216,7 @@ function AttachmentContent({ ev }: { ev: TicketTimelineEvent }) {
         </span>
         <a
           href={meta.file_url} target="_blank" rel="noopener noreferrer"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 6, background: '#fff', border: `1px solid ${C.border}`, fontSize: 11, color: C.navy, fontWeight: 600, textDecoration: 'none', maxWidth: 260 }}>
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 6, background: 'var(--app-card)', border: `1px solid ${C.border}`, fontSize: 11, color: C.navy, fontWeight: 600, textDecoration: 'none', maxWidth: 260 }}>
           <span style={{ color: '#1d4ed8', display: 'flex', flexShrink: 0 }}><FileIcon mime={meta.mime_type} /></span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.content}</span>
           {meta.file_size && <span style={{ fontSize: 10, color: C.muted, flexShrink: 0 }}>({fmtSize(meta.file_size)})</span>}

@@ -232,19 +232,8 @@ export const inventoryService = {
     id: string,
     dto: { target_id: string; relation: 'set-child' | 'set-parent' | 'remove-parent' },
   ): Promise<{ ok: boolean }> {
-    if (dto.relation === 'remove-parent') {
-      /* Clear parent on current asset */
-      await api.patch(`/inventory/${id}`, { parent_asset_id: null });
-      return { ok: true };
-    }
-    if (dto.relation === 'set-parent') {
-      /* Set parent of current asset to target */
-      await api.patch(`/inventory/${id}`, { parent_asset_id: dto.target_id });
-      return { ok: true };
-    }
-    /* set-child: set parent of TARGET asset to current asset */
-    await api.patch(`/inventory/${dto.target_id}`, { parent_asset_id: id });
-    return { ok: true };
+    const { data } = await api.post(`/inventory/${id}/relate`, dto);
+    return data;
   },
 
   async getAssetImages(id: string): Promise<AssetImage[]> {

@@ -208,3 +208,14 @@
 .deleteInput { border-color: #e2e8f0 !important; }
 .deleteInputOk  { border-color: #22c55e !important; }
 .deleteInputBad { border-color: #ef4444 !important; }
+
+/* ══ Dark mode ══ */
+:global([data-theme="dark"]) .modal { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .title { color: #e2e8f0; }
+:global([data-theme="dark"]) .actCancel { background: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .fieldLabel { color: #94a3b8; }
+:global([data-theme="dark"]) .fieldInput { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .fieldHint { color: #64748b; }
+:global([data-theme="dark"]) .toggle { background: #253d56; }
+:global([data-theme="dark"]) .toggleLabel { color: #94a3b8; }
+:global([data-theme="dark"]) .deleteBanner { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.30); color: #fca5a5; }

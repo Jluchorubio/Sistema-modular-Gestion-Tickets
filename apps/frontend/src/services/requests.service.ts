@@ -52,6 +52,7 @@ export interface AdmRequest {
   review_notes?:      string | null;
   reviewed_at?:       string | null;
   taken_at?:          string | null;
+  taken_by?:          string | null;
   taken_by_name?:     string | null;
   sla_due_at?:        string | null;
   escalated?:         boolean;
@@ -108,8 +109,13 @@ export const requestsService = {
     return data;
   },
 
-  async updateProgress(id: string, status: 'in_progress' | 'completed'): Promise<AdmRequest> {
-    const { data } = await api.patch(`/requests/${id}/progress`, { status });
+  async untake(id: string): Promise<AdmRequest> {
+    const { data } = await api.delete(`/requests/${id}/take`);
+    return data;
+  },
+
+  async updateProgress(id: string, status: 'in_progress' | 'completed', notes?: string): Promise<AdmRequest> {
+    const { data } = await api.patch(`/requests/${id}/progress`, { status, notes });
     return data;
   },
 

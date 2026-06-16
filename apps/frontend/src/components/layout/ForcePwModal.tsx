@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -47,7 +47,7 @@ export function ForcePwModal() {
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 12px', fontSize: 14,
     border: '1px solid #E2E8F0', borderRadius: 8,
-    background: '#fff', color: '#0F172A', fontFamily: 'inherit',
+    background: 'var(--app-card)', color: '#0F172A', fontFamily: 'inherit',
     outline: 'none', boxSizing: 'border-box',
   };
 
@@ -65,7 +65,7 @@ export function ForcePwModal() {
       padding: 24,
     }}>
       <div style={{
-        background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 420,
+        background: 'var(--app-card)', borderRadius: 16, padding: 32, width: '100%', maxWidth: 420,
         boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>

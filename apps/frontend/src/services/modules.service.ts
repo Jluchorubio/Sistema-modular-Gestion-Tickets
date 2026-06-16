@@ -42,6 +42,23 @@ export interface UpdateModuleDto {
   auto_close_hours?:       number;
 }
 
+export interface SpecializationEntry {
+  spec_id:  string;
+  id:       string;
+  label?:   string;
+  name?:    string;
+  weight?:  number | null;
+}
+
+export interface TechnicianSpecialization {
+  user_id:      string;
+  name:         string;
+  email:        string;
+  role_name:    string;
+  damage_types: SpecializationEntry[];
+  categories:   SpecializationEntry[];
+}
+
 export interface FieldDef {
   key:      string;
   label:    string;
@@ -145,28 +162,19 @@ export const modulesService = {
     await api.delete(`/system-modules/roles/${roleId}`);
   },
 
-  /* ── Permission management ── */
-  async getModulePermissions(moduleId: string): Promise<{ id: string; name: string; description: string | null }[]> {
-    const { data } = await api.get(`/system-modules/${moduleId}/permissions`);
+  /* ── Technician specializations ── */
+  async getSpecializations(moduleId: string): Promise<TechnicianSpecialization[]> {
+    const { data } = await api.get(`/system-modules/${moduleId}/specializations`);
     return data;
   },
 
-  async createPermission(moduleId: string, name: string, description?: string) {
-    const { data } = await api.post(`/system-modules/${moduleId}/permissions`, { name, description });
-    return data as { id: string; name: string; description: string | null };
-  },
-
-  async deletePermission(permId: string): Promise<void> {
-    await api.delete(`/system-modules/permissions/${permId}`);
-  },
-
-  async getRolePermissions(roleId: string): Promise<{ id: string; name: string; description: string | null }[]> {
-    const { data } = await api.get(`/system-modules/roles/${roleId}/permissions`);
+  async addSpecialization(moduleId: string, dto: { user_id: string; damage_type_id?: string | null; category_id?: string | null }): Promise<{ id?: string; already_exists?: boolean }> {
+    const { data } = await api.post(`/system-modules/${moduleId}/specializations`, dto);
     return data;
   },
 
-  async setRolePermissions(roleId: string, permissionIds: string[]): Promise<{ id: string; name: string }[]> {
-    const { data } = await api.put(`/system-modules/roles/${roleId}/permissions`, { permission_ids: permissionIds });
+  async removeSpecialization(moduleId: string, specId: string): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/system-modules/${moduleId}/specializations/${specId}`);
     return data;
   },
 

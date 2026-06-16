@@ -2,12 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { MessagingService } from '../../shared/messaging/messaging.service';
 
 @Injectable()
 export class RequestsScheduler {
   private readonly logger = new Logger(RequestsScheduler.name);
 
-  constructor(@InjectDataSource() private readonly db: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly db: DataSource,
+    private readonly messaging: MessagingService,
+  ) {}
 
   /** Every 30 min: escalate requests whose SLA deadline has passed and are still active */
   @Cron(CronExpression.EVERY_30_MINUTES)
@@ -51,6 +55,9 @@ export class RequestsScheduler {
       } catch (err: any) {
         this.logger.warn(`Timeline insert skipped for ${req.id}: ${err.message}`);
       }
+
+      // Notify admins about the escalated request
+      this.messaging.emit('request.escalated', { requestId: req.id });
     }
 
     this.logger.log(`Auto-escalated ${overdue.length} SLA-breached request(s)`);

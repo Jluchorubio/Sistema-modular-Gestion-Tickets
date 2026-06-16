@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { X } from "lucide-react";
@@ -24,11 +24,11 @@ export function DecommissionModal({
     onDecommission(reason);
   }
 
-  const SEL: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, boxSizing: "border-box" as const };
+  const SEL: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, fontFamily: "inherit", outline: "none", background: 'var(--app-card)', color: C.text, boxSizing: "border-box" as const };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, padding: "28px 32px", maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <div>
             <p style={{ fontSize: 10, fontWeight: 800, color: "#ef4444", textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Cambio de estado definitivo</p>
@@ -55,7 +55,7 @@ export function DecommissionModal({
         <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows={2} placeholder="Detalles adicionales sobre la baja…" style={{ ...SEL, resize: "vertical", marginBottom: 22 }} />
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
+          <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
           <button type="button" disabled={!motivo || pending} onClick={handleConfirm} style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: motivo && !pending ? "#ef4444" : C.muted, color: "#fff", fontSize: 12, fontWeight: 700, cursor: motivo && !pending ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
             {pending ? "Procesando…" : "Confirmar baja"}
           </button>

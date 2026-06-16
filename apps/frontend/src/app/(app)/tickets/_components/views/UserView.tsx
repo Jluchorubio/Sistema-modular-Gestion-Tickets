@@ -9,7 +9,7 @@ import {
   ticketsService,
   type TicketListItem, type TicketPriority,
 } from '@/services/tickets.service';
-import { getPriorityConfig, getSlaStatusConfig } from '@/constants/status';
+import { getPriorityConfig, getSlaStatusConfig, getTicketPortalState } from '@/constants/status';
 import { fmtRelativeCompact as fmtRelative } from '@/lib/formatters';
 import styles from '../../tickets.module.css';
 import { isToday, TicketCard } from './shared';
@@ -38,19 +38,12 @@ function fmtHours(h: number): string {
   return `${(h / 24).toFixed(1)}d`;
 }
 
-function portalStateBadge(t: TicketListItem): { label: string; bg: string; color: string } {
-  if (t.is_final)          return { label: 'Cerrado',     bg: '#f1f5f9', color: '#64748b' };
-  if (t.is_approval_state) return { label: 'Resuelto',    bg: '#f0fdf4', color: '#15803d' };
-  if (t.is_pause_state)    return { label: 'En espera',   bg: '#fef3c7', color: '#92400e' };
-  if (t.assignee_name)     return { label: 'En proceso',  bg: '#eff6ff', color: '#1d4ed8' };
-  return                          { label: 'Abierto',      bg: '#fff7ed', color: '#c2410c' };
-}
 
 /* ── Active ticket card ── */
 function ActiveCard({ ticket, basePath }: { ticket: TicketListItem; basePath: string }) {
   const router  = useRouter();
   const pColor  = getPriorityConfig(ticket.priority).color;
-  const badge   = portalStateBadge(ticket);
+  const badge   = getTicketPortalState(ticket);
   const h       = hoursLeft(ticket.sla_deadline_tracked ?? ticket.sla_deadline ?? null);
   const slaColor = ticket.sla_status ? getSlaStatusConfig(ticket.sla_status).text : null;
   const breached = ticket.sla_status === 'breached';
@@ -88,7 +81,7 @@ function ActiveCard({ ticket, basePath }: { ticket: TicketListItem; basePath: st
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`, whiteSpace: 'nowrap' }}>
             {badge.label}
           </span>
           <ChevronRight size={14} style={{ color: C.muted }} />
@@ -321,7 +314,7 @@ export function UserView({
 
   const limit = visualVariant === 'helpdeskMockup' ? 100 : 20;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['tickets', moduleId, 'mine', page, limit],
     queryFn:  () => ticketsService.getAll({ module_id: moduleId, mine: true, page, limit }),
     staleTime: 60_000,
@@ -415,6 +408,13 @@ export function UserView({
     return (
       <>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {isError && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 13, color: '#ef4444', flex: 1 }}>Error al cargar tus tickets.</span>
+              <button type="button" onClick={() => refetch()} style={{ fontSize: 11, color: '#ff5e3a', background: 'none', border: '1px solid #ff5e3a', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>Reintentar</button>
+            </div>
+          )}
 
           {/* ── Hero ── */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -549,7 +549,7 @@ export function UserView({
 
           {/* ── Knowledge base shortcut ── */}
           <div
-            onClick={() => router.push(`${basePath}/knowledge`)}
+            onClick={() => router.push('/helpdesk/knowledge')}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, background: `linear-gradient(135deg, #0e2235 0%, #1a3a55 100%)`, borderRadius: 14, padding: '20px 24px', cursor: 'pointer', flexWrap: 'wrap' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -598,6 +598,11 @@ export function UserView({
             <p style={{ margin: '0 0 14px', fontSize: 10.5, fontWeight: 800, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Mis Reportes Recientes</p>
             {isLoading ? (
               <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>Cargando tickets…</div>
+            ) : isError ? (
+              <div style={{ background: 'var(--app-card)', borderRadius: 16, border: '1.5px solid #fecaca', padding: '32px 0', textAlign: 'center' }}>
+                <p style={{ fontSize: 13, color: '#ef4444', margin: '0 0 8px' }}>Error al cargar tickets</p>
+                <button type="button" onClick={() => refetch()} style={{ fontSize: 11, color: '#ff5e3a', background: 'none', border: '1px solid #ff5e3a', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>Reintentar</button>
+              </div>
             ) : tickets.length === 0 ? (
               <div style={{ background: 'var(--app-card)', borderRadius: 16, border: '1.5px solid var(--app-border)', padding: '48px 0', textAlign: 'center' }}>
                 <Ticket size={28} style={{ color: '#e2e8f0' }} />

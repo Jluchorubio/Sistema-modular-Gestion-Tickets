@@ -321,4 +321,39 @@ export class SystemModulesController {
     return this.service.deleteEnvironment(envId);
   }
 
+  /* ── Technician specializations ─────────────────────────────────── */
+
+  @Get(':id/specializations')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo', 'jefe_tecnico')
+  @ApiOperation({ summary: 'Listar especializaciones de técnicos del módulo.' })
+  getSpecializations(@Param('id') moduleId: string) {
+    return this.service.getSpecializations(moduleId);
+  }
+
+  @Post(':id/specializations')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo', 'jefe_tecnico')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Asignar especialización a un técnico (damage_type o categoría).' })
+  addSpecialization(
+    @Param('id') moduleId: string,
+    @Body() dto: { user_id: string; damage_type_id?: string; category_id?: string },
+  ) {
+    return this.service.addSpecialization(moduleId, dto);
+  }
+
+  @Delete(':id/specializations/:specId')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles('superadmin', 'admin_modulo', 'jefe_tecnico')
+  @RequirePermission('global:config:org')
+  @ApiOperation({ summary: 'Eliminar especialización de un técnico.' })
+  removeSpecialization(
+    @Param('id')     moduleId: string,
+    @Param('specId') specId:   string,
+  ) {
+    return this.service.removeSpecialization(specId, moduleId);
+  }
+
 }

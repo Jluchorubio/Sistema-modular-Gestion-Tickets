@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutGrid, UserCog, ShieldCheck, BarChart2,
-  SlidersHorizontal, Trash2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui.store';
@@ -63,7 +63,6 @@ export function AppSidebar() {
   const canSeeUsers   = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:users'));
   const canSeeRoles   = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:roles'));
   const canSeeReports = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:reports'));
-  const canSeeTrash   = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:trash'));
   const canSeeConfig  = usePermissionsStore((s) => s.loaded && s.hasPermission('global:sidebar:config'));
 
   const { data: company } = useQuery({
@@ -92,8 +91,6 @@ export function AppSidebar() {
   const permsLoaded   = usePermissionsStore((s) => s.loaded);
 
   function renderModuleItem(item: ModuleNavItem) {
-    const active = isActive(item.href, item.key);
-
     /* Role-based gating */
     if (item.allowedRoles && !isSuperadmin) {
       if (!userModuleRole || !item.allowedRoles.includes(userModuleRole)) return null;
@@ -104,17 +101,29 @@ export function AppSidebar() {
       return null;
     }
 
+    const active = isActive(item.href, item.key);
+
     return (
-      <Link
-        key={item.key}
-        href={item.href}
-        title={item.label}
-        aria-label={item.label}
-        className={`${styles.navItem}${active ? ` ${styles.navItemActive}` : ''}`}
-      >
-        <item.Icon className={styles.navIcon} aria-hidden="true" />
-        <span className={styles.navLabel}>{item.label}</span>
-      </Link>
+      <div key={item.key}>
+        {item.divider && (
+          <div style={{
+            height: 1,
+            background: 'var(--border, #e2e8f0)',
+            margin: '6px 12px',
+            opacity: 0.6,
+          }} aria-hidden="true" />
+        )}
+        <Link
+          href={item.href}
+          title={item.label}
+          aria-label={item.label}
+          className={`${styles.navItem}${active ? ` ${styles.navItemActive}` : ''}`}
+          style={item.divider ? { opacity: 0.7 } : undefined}
+        >
+          <item.Icon className={styles.navIcon} aria-hidden="true" />
+          <span className={styles.navLabel}>{item.label}</span>
+        </Link>
+      </div>
     );
   }
 
@@ -211,9 +220,6 @@ export function AppSidebar() {
 
             {/* Reportes — superadmin (global) or module admin/jefe */}
             {globalNavLink('/reports', 'Reportes', BarChart2, canSeeReports || isAnyModuleAdmin)}
-
-            {/* Papelera — superadmin (global) or module admin */}
-            {globalNavLink('/trash', 'Papelera', Trash2, canSeeTrash || isAnyModuleAdmin)}
 
             {/* Configuración del Sistema — superadmin only */}
             {globalNavLink('/config', 'Configuración del Sistema', SlidersHorizontal, canSeeConfig)}

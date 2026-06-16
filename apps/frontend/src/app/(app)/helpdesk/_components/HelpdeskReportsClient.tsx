@@ -10,6 +10,8 @@ import {
   BarChart2, Users, Clock, TrendingUp, RefreshCw, Download,
   Shield, Star, ChevronDown,
 } from 'lucide-react';
+import Link from 'next/link';
+import { MetricCard, MetricRow } from '@/components/ui/MetricCard';
 import { reportingService, type HelpdeskTechnician } from '@/services/reporting.service';
 import api from '@/services/api';
 import { getPriorityConfig } from '@/constants/status';
@@ -58,19 +60,12 @@ const SEV = {
 const TOOLTIP_STYLE = {
   fontSize: 11,
   borderRadius: 8,
-  border: '1px solid #e2e8f0',
+  border: '1px solid var(--app-border)',
   boxShadow: '0 4px 12px rgba(0,0,0,.08)',
+  background: 'var(--app-card)',
+  color: 'var(--app-text-main)',
 };
 
-function KpiCard({ label, value, sub, color = C.coral }: { label: string; value: string | number; sub?: string; color?: string }) {
-  return (
-    <div style={{ background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '16px 20px' }}>
-      <p style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 800, color, lineHeight: 1 }}>{value}</p>
-      <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 700, color: C.navy }}>{label}</p>
-      {sub && <p style={{ margin: 0, fontSize: 10, color: C.muted }}>{sub}</p>}
-    </div>
-  );
-}
 
 function Stars({ score }: { score: number | null }) {
   if (score === null) return <span style={{ fontSize: 10, color: C.muted }}>—</span>;
@@ -88,6 +83,9 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
   const [tab,          setTab]          = useState<Tab>('operacion');
   const [exportOpen,   setExportOpen]   = useState(false);
   const [csvLoading,   setCsvLoading]   = useState(false);
+  const [csvError,     setCsvError]     = useState('');
+  const [dateFrom,     setDateFrom]     = useState('');
+  const [dateTo,       setDateTo]       = useState('');
   const [auditAction,  setAuditAction]  = useState('');
   const [auditFrom,    setAuditFrom]    = useState('');
   const [auditTo,      setAuditTo]      = useState('');
@@ -103,8 +101,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
   }, [exportOpen]);
 
   const { data, isLoading, refetch, isFetching } = useQuery({
-    queryKey:  ['helpdesk-reports', moduleId],
-    queryFn:   () => reportingService.getHelpdeskMetrics(moduleId),
+    queryKey:  ['helpdesk-reports', moduleId, dateFrom, dateTo],
+    queryFn:   () => reportingService.getHelpdeskMetrics(moduleId, dateFrom || undefined, dateTo || undefined),
     staleTime: 5 * 60_000,
     enabled:   !!moduleId,
   });
@@ -181,10 +179,14 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
 
   const handleCsvExport = useCallback(async () => {
     setCsvLoading(true);
+    setCsvError('');
     setExportOpen(false);
     try {
+      const exportParams: Record<string, string> = { moduleId };
+      if (dateFrom) exportParams.dateFrom = dateFrom;
+      if (dateTo)   exportParams.dateTo   = dateTo;
       const res = await api.get('/reporting/export/tickets', {
-        params: { moduleId },
+        params: exportParams,
         responseType: 'blob',
       });
       const url  = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
@@ -195,10 +197,181 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      setCsvError(status === 403 ? 'Sin permisos para exportar CSV' : 'Error al exportar CSV');
     } finally {
       setCsvLoading(false);
     }
-  }, [moduleId]);
+  }, [moduleId, dateFrom, dateTo]);
+
+  const handlePdfExport = useCallback(async () => {
+    setExportOpen(false);
+    const { default: jsPDF }     = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+    const doc = new jsPDF() as any;
+    const now = new Date().toLocaleDateString('es-CO');
+
+    doc.setFillColor(14, 34, 53);
+    doc.rect(0, 0, 210, 55, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(26);
+    doc.setFont('helvetica', 'bold');
+    doc.text('NEXO ITSM', 18, 28);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Reporte Mesa de Ayuda', 18, 40);
+    doc.setFontSize(10);
+    doc.text(`Emitido: ${now}`, 18, 50);
+
+    doc.setTextColor(14, 34, 53);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('KPIs Operacionales', 18, 70);
+    autoTable(doc, {
+      startY: 75,
+      head: [['Métrica', 'Valor']],
+      body: [
+        ['Total tickets',          String(n(kpis?.total))],
+        ['Activos',                String(n(kpis?.open))],
+        ['Esta semana',            String(n(kpis?.this_week))],
+        ['Este mes',               String(n(kpis?.this_month))],
+        ['Hoy',                    String(n(kpis?.today))],
+        ['Prom. resolución',       kpis?.avg_resolution_hours ? `${Math.round(n(kpis.avg_resolution_hours))}h` : '—'],
+        ['1ª respuesta',           kpis?.avg_first_response_hours ? `${n(kpis.avg_first_response_hours).toFixed(1)}h` : '—'],
+        ['Tasa escalado',          kpis?.escalation_rate != null ? `${kpis.escalation_rate}%` : '—'],
+        ['Rechazados',             String(n(kpis?.rechazados))],
+        ['Reabiertos',             String(n(kpis?.reopen_count))],
+      ],
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [14, 34, 53] },
+      columnStyles: { 1: { fontStyle: 'bold', halign: 'center' } },
+    });
+
+    let y = (doc as any).lastAutoTable.finalY + 14;
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SLA por Prioridad', 18, y);
+    autoTable(doc, {
+      startY: y + 5,
+      head: [['Prioridad', 'Total', 'Vencidos', 'SLA Prom.']],
+      body: (sla?.by_priority ?? []).map(r => [
+        getPriorityConfig(r.priority).label,
+        String(n(r.total)),
+        String(n(r.breached)),
+        r.avg_sla_hours ? `${Math.round(n(r.avg_sla_hours))}h` : '—',
+      ]),
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [14, 34, 53] },
+    });
+
+    if (byTech.length > 0) {
+      y = (doc as any).lastAutoTable.finalY + 14;
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Técnicos', 18, y);
+      autoTable(doc, {
+        startY: y + 5,
+        head: [['Técnico', 'Asignados', 'Resueltos', 'Reprocesos', 'Prom. h', 'Rating']],
+        body: byTech.map(t => [
+          t.technician_name,
+          String(n(t.tickets_assigned)),
+          String(n(t.tickets_resolved)),
+          String(n(t.rechazados)),
+          t.avg_resolution_hours ? `${Math.round(n(t.avg_resolution_hours))}h` : '—',
+          t.avg_rating ? n(t.avg_rating).toFixed(1) : '—',
+        ]),
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [14, 34, 53] },
+      });
+    }
+
+    doc.save(`helpdesk-reporte-${Date.now()}.pdf`);
+  }, [kpis, sla, byTech]);
+
+  const handleExcelExport = useCallback(async () => {
+    setExportOpen(false);
+    const ExcelJS = await import('exceljs');
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'NEXO ITSM';
+    wb.created = new Date();
+
+    const ws1 = wb.addWorksheet('Operación');
+    ws1.columns = [
+      { header: 'Métrica', key: 'metric', width: 30 },
+      { header: 'Valor',   key: 'value',  width: 18 },
+    ];
+    ws1.getRow(1).font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    ws1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E2235' } };
+    [
+      { metric: 'Total tickets',       value: n(kpis?.total) },
+      { metric: 'Activos',             value: n(kpis?.open) },
+      { metric: 'Esta semana',         value: n(kpis?.this_week) },
+      { metric: 'Este mes',            value: n(kpis?.this_month) },
+      { metric: 'Hoy',                 value: n(kpis?.today) },
+      { metric: 'Prom. resolución (h)', value: kpis?.avg_resolution_hours ? Math.round(n(kpis.avg_resolution_hours)) : '—' },
+      { metric: '1ª respuesta (h)',     value: kpis?.avg_first_response_hours ? n(kpis.avg_first_response_hours).toFixed(1) : '—' },
+      { metric: 'Tasa escalado (%)',    value: kpis?.escalation_rate ?? '—' },
+      { metric: 'Rechazados',          value: n(kpis?.rechazados) },
+      { metric: 'Reabiertos',          value: n(kpis?.reopen_count) },
+    ].forEach(r => ws1.addRow(r));
+
+    const ws2 = wb.addWorksheet('SLA');
+    ws2.columns = [
+      { header: 'Prioridad', key: 'priority', width: 16 },
+      { header: 'Total',     key: 'total',    width: 10 },
+      { header: 'Vencidos',  key: 'breached', width: 12 },
+      { header: 'Prom. h',   key: 'avg',      width: 12 },
+    ];
+    ws2.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws2.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E2235' } };
+    (sla?.by_priority ?? []).forEach(r => ws2.addRow({
+      priority: getPriorityConfig(r.priority).label,
+      total:    n(r.total),
+      breached: n(r.breached),
+      avg:      r.avg_sla_hours ? Math.round(n(r.avg_sla_hours)) : '—',
+    }));
+
+    const ws3 = wb.addWorksheet('Técnicos');
+    ws3.columns = [
+      { header: 'Técnico',    key: 'name',     width: 28 },
+      { header: 'Asignados',  key: 'assigned', width: 12 },
+      { header: 'Resueltos',  key: 'resolved', width: 12 },
+      { header: 'Reprocesos', key: 'rejected', width: 12 },
+      { header: 'Prom. h',    key: 'avg',      width: 10 },
+      { header: 'Rating',     key: 'rating',   width: 10 },
+    ];
+    ws3.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws3.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF5E3A' } };
+    byTech.forEach(t => ws3.addRow({
+      name:     t.technician_name,
+      assigned: n(t.tickets_assigned),
+      resolved: n(t.tickets_resolved),
+      rejected: n(t.rechazados),
+      avg:      t.avg_resolution_hours ? Math.round(n(t.avg_resolution_hours)) : '—',
+      rating:   t.avg_rating ? n(t.avg_rating).toFixed(1) : '—',
+    }));
+
+    const ws4 = wb.addWorksheet('Tendencia 30 días');
+    ws4.columns = [
+      { header: 'Fecha',   key: 'day',     width: 16 },
+      { header: 'Tickets', key: 'created', width: 12 },
+    ];
+    ws4.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws4.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF5E3A' } };
+    trend.forEach(d => ws4.addRow({ day: d.day, created: n(d.created) }));
+
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `helpdesk-reporte-${Date.now()}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [kpis, sla, byTech, trend]);
 
   return (
     <div className={mgmt.pageWrap}>
@@ -213,11 +386,40 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
           <p className={styles.sub}>Operación · Técnicos · SLA · Auditoría</p>
         </div>
         <div className={styles.headerActions}>
+          {/* Date range filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              max={dateTo || undefined}
+              style={{ fontSize: 11, padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 7, color: '#334155', background: '#fafafa', cursor: 'pointer' }}
+              title="Desde"
+            />
+            <span style={{ fontSize: 10, color: '#94a3b8' }}>—</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              min={dateFrom || undefined}
+              style={{ fontSize: 11, padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 7, color: '#334155', background: '#fafafa', cursor: 'pointer' }}
+              title="Hasta"
+            />
+            {(dateFrom || dateTo) && (
+              <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); }}
+                style={{ fontSize: 10, fontWeight: 600, color: '#ff5e3a', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px' }}>
+                Limpiar
+              </button>
+            )}
+          </div>
           <button type="button" onClick={() => refetch()} disabled={isFetching} className={styles.refreshBtn}>
             <RefreshCw size={12} style={{ animation: isFetching ? 'spin 1s linear infinite' : 'none' }} />
             Actualizar
           </button>
           <div className={styles.exportWrap} ref={exportRef}>
+            {csvError && (
+              <span style={{ fontSize: 11, color: '#ef4444', marginRight: 8 }}>{csvError}</span>
+            )}
             <button type="button" className={styles.exportBtn} disabled={csvLoading} onClick={() => setExportOpen(v => !v)}>
               <Download size={12} />
               {csvLoading ? 'Exportando…' : 'Exportar'}
@@ -227,6 +429,12 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
               <div className={styles.exportDropdown}>
                 <button type="button" className={styles.exportDropdownItem} onClick={handleCsvExport}>
                   <Download size={13} /> Exportar CSV
+                </button>
+                <button type="button" className={styles.exportDropdownItem} onClick={handlePdfExport}>
+                  <Download size={13} /> Exportar PDF
+                </button>
+                <button type="button" className={styles.exportDropdownItem} onClick={handleExcelExport}>
+                  <Download size={13} /> Exportar Excel
                 </button>
               </div>
             )}
@@ -255,16 +463,18 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
           {/* ══ OPERACIÓN ══ */}
           {tab === 'operacion' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div className={styles.kpiGrid}>
-                <KpiCard label="Total tickets"          value={n(kpis?.total)}      sub="histórico"       color={C.navy}    />
-                <KpiCard label="Activos"                value={n(kpis?.open)}       sub="ahora mismo"     color={C.coral}   />
-                <KpiCard label="Esta semana"            value={n(kpis?.this_week)}  sub="últimos 7 días"  color="#3b82f6"   />
-                <KpiCard label="Este mes"               value={n(kpis?.this_month)} sub="últimos 30 días" color="#8b5cf6"   />
-                <KpiCard label="Hoy"                    value={n(kpis?.today)}      sub="tickets creados" color="#0ea5e9"   />
-                <KpiCard label="Tiempo prom. resolución" value={kpis?.avg_resolution_hours ? `${Math.round(n(kpis.avg_resolution_hours))}h` : '—'} sub="tickets cerrados" color="#10b981" />
-                <KpiCard label="Rechazados"             value={n(kpis?.rechazados)} color={n(kpis?.rechazados) > 0 ? '#f59e0b' : '#22c55e'} />
-                <KpiCard label="Reabiertos"             value={n(kpis?.reopen_count)} color={n(kpis?.reopen_count) > 0 ? '#ef4444' : '#22c55e'} />
-              </div>
+              <MetricRow gap={10}>
+                <MetricCard label="Total tickets"           value={n(kpis?.total)}      sub="histórico"       color={C.navy}    size="md" />
+                <MetricCard label="Activos"                 value={n(kpis?.open)}       sub="ahora mismo"     color={C.coral}   href="/helpdesk/queue" size="md" />
+                <MetricCard label="Esta semana"             value={n(kpis?.this_week)}  sub="últimos 7 días"  color="#3b82f6"   size="md" />
+                <MetricCard label="Este mes"                value={n(kpis?.this_month)} sub="últimos 30 días" color="#8b5cf6"   size="md" />
+                <MetricCard label="Hoy"                     value={n(kpis?.today)}      sub="tickets creados" color="#0ea5e9"   size="md" />
+                <MetricCard label="Prom. resolución"        value={kpis?.avg_resolution_hours ? `${Math.round(n(kpis.avg_resolution_hours))}h` : '—'} sub="tickets cerrados" color="#10b981" size="md" />
+                <MetricCard label="Rechazados"              value={n(kpis?.rechazados)} color={n(kpis?.rechazados) > 0 ? '#f59e0b' : '#22c55e'} size="md" />
+                <MetricCard label="Reabiertos"              value={n(kpis?.reopen_count)} color={n(kpis?.reopen_count) > 0 ? '#ef4444' : '#22c55e'} size="md" />
+                <MetricCard label="1ª respuesta (h)"        value={kpis?.avg_first_response_hours ? `${n(kpis.avg_first_response_hours).toFixed(1)}h` : '—'} sub="hasta asignación" color="#8b5cf6" size="md" />
+                <MetricCard label="Tasa escalado"           value={kpis?.escalation_rate != null ? `${kpis.escalation_rate}%` : '—'} sub="del total" color={(kpis?.escalation_rate ?? 0) > 10 ? '#ef4444' : '#22c55e'} size="md" />
+              </MetricRow>
 
               <div className={styles.chartPanel}>
                 <p className={styles.chartTitle}><TrendingUp size={13} style={{ color: C.coral }} /> Tendencia últimos 30 días</p>
@@ -314,7 +524,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Table */}
-              <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, overflowX: 'auto' }}>
                 {byTech.length === 0 ? (
                   <div style={{ padding: '60px 0', textAlign: 'center', color: C.muted }}>
                     <Users size={28} style={{ display: 'block', margin: '0 auto 12px', color: C.border }} />
@@ -322,7 +532,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                     <p style={{ fontSize: 11, margin: 0 }}>Aún no hay tickets asignados en este módulo.</p>
                   </div>
                 ) : (
-                  <>
+                  <div style={{ overflowX: 'auto' }}>
+                    <div style={{ minWidth: 600 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', gap: 12, padding: '10px 18px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
                       {['Técnico', 'Asignados', 'Resueltos', 'Reprocesos', 'Tiempo prom.', 'Calificación'].map((h, i) => (
                         <span key={i} style={{ fontSize: 10, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '.07em' }}>{h}</span>
@@ -337,7 +548,7 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                       const rating      = tech.avg_rating ? n(tech.avg_rating) : null;
                       return (
                         <div key={tech.technician_id}
-                          style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: `1px solid ${C.border}`, background: '#fff' }}>
+                          style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 80px 90px 110px', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: `1px solid ${C.border}`, background: 'var(--app-card)' }}>
                           <div>
                             <p style={{ margin: '0 0 1px', fontSize: 12.5, fontWeight: 700, color: C.navy }}>{tech.technician_name}</p>
                             <div style={{ height: 4, background: C.bg, borderRadius: 2, overflow: 'hidden', marginTop: 3 }}>
@@ -358,7 +569,8 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
                         </div>
                       );
                     })}
-                  </>
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -422,12 +634,12 @@ export function HelpdeskReportsClient({ moduleId }: { moduleId: string }) {
           {/* ══ SLA ══ */}
           {tab === 'sla' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div className={styles.kpiGrid}>
-                <KpiCard label="Total con SLA"   value={n(sla?.summary?.total)}       color={C.navy}    />
-                <KpiCard label="Cumplimiento"    value={`${slaPct}%`}                  color={slaPct >= 90 ? '#22c55e' : slaPct >= 70 ? '#f59e0b' : '#ef4444'} />
-                <KpiCard label="Vencidos"        value={n(sla?.summary?.breached)}    color="#ef4444"  sub="Breach activo" />
-                <KpiCard label="Sin SLA"         value={n(sla?.summary?.without_sla)} color={C.muted}  />
-              </div>
+              <MetricRow gap={10}>
+                <MetricCard label="Total con SLA"   value={n(sla?.summary?.total)}       color={C.navy}  href="/helpdesk/sla" size="md" />
+                <MetricCard label="Cumplimiento"    value={`${slaPct}%`}                  color={slaPct >= 90 ? '#22c55e' : slaPct >= 70 ? '#f59e0b' : '#ef4444'} size="md" />
+                <MetricCard label="Vencidos"        value={n(sla?.summary?.breached)}    color="#ef4444" sub="Breach activo" href="/helpdesk/sla" warn size="md" />
+                <MetricCard label="Sin SLA"         value={n(sla?.summary?.without_sla)} color={C.muted} size="md" />
+              </MetricRow>
 
               <div className={styles.chartsGrid}>
                 <div className={styles.chartPanel}>

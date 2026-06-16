@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -62,7 +62,7 @@ function UserPicker({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
-  const BASE: React.CSSProperties = { width: "100%", padding: "8px 10px", borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", background: "#fff", color: selected ? C.text : C.muted, boxSizing: "border-box" as const, cursor: "pointer", textAlign: "left" as const, ...style };
+  const BASE: React.CSSProperties = { width: "100%", padding: "8px 10px", borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", background: 'var(--app-card)', color: selected ? C.text : C.muted, boxSizing: "border-box" as const, cursor: "pointer", textAlign: "left" as const, ...style };
 
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
@@ -76,14 +76,14 @@ function UserPicker({
         }
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "#fff", border: `1px solid ${C.border}`, borderRadius: 9, boxShadow: "0 8px 32px rgba(14,34,53,.12)", zIndex: 300, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 9, boxShadow: "0 8px 32px rgba(14,34,53,.12)", zIndex: 300, overflow: "hidden" }}>
           <div style={{ padding: "10px 10px 8px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 6 }}>
             <div style={{ position: "relative", flex: 1 }}>
               <Search size={13} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: C.muted, pointerEvents: "none" }} />
               <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nombre, email o cargo…" style={{ width: "100%", padding: "6px 8px 6px 26px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }} />
             </div>
             {departments.length > 0 && (
-              <select value={deptFilter} onChange={(e) => setDept(e.target.value)} style={{ padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 11, fontFamily: "inherit", outline: "none", background: "#fff", color: deptFilter ? C.navy : C.muted, maxWidth: 130 }}>
+              <select value={deptFilter} onChange={(e) => setDept(e.target.value)} style={{ padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 11, fontFamily: "inherit", outline: "none", background: 'var(--app-card)', color: deptFilter ? C.navy : C.muted, maxWidth: 130 }}>
                 <option value="">Depto…</option>
                 {departments.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
@@ -131,7 +131,7 @@ export function AssignModal({
   });
 
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 5px", display: "block" };
-  const SEL: React.CSSProperties = { width: "100%", padding: "8px 10px", borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", background: "#fff", color: C.text, boxSizing: "border-box" as const };
+  const SEL: React.CSSProperties = { width: "100%", padding: "8px 10px", borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: "inherit", outline: "none", background: 'var(--app-card)', color: C.text, boxSizing: "border-box" as const };
 
   function updateRow(id: string, patch: Partial<CustodioRow>) {
     setRows(rs => rs.map(r => r.id === id ? { ...r, ...patch } : r));
@@ -153,7 +153,7 @@ export function AssignModal({
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(14,34,53,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(3px)" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: 14, padding: "28px 32px", maxWidth: 520, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, padding: "28px 32px", maxWidth: 520, width: "100%", boxShadow: "0 24px 60px rgba(14,34,53,.2)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <div>
             <p style={{ fontSize: 10, fontWeight: 800, color: C.coral, textTransform: "uppercase", letterSpacing: ".12em", margin: "0 0 3px" }}>Responsable / Custodia</p>
@@ -212,12 +212,12 @@ export function AssignModal({
           ))}
         </div>
 
-        <button type="button" onClick={() => setRows(rs => [...rs, newRow()])} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "10px", marginTop: 12, borderRadius: 9, border: `1.5px dashed ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.muted, cursor: "pointer", fontFamily: "inherit", justifyContent: "center" }}>
+        <button type="button" onClick={() => setRows(rs => [...rs, newRow()])} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "10px", marginTop: 12, borderRadius: 9, border: `1.5px dashed ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.muted, cursor: "pointer", fontFamily: "inherit", justifyContent: "center" }}>
           <Plus size={13} /> Agregar otro custodio
         </button>
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
-          <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
+          <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub }}>Cancelar</button>
           <button type="button" disabled={!canSubmit} onClick={handleSubmit} style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: canSubmit ? C.navy : C.muted, color: "#fff", fontSize: 12, fontWeight: 700, cursor: canSubmit ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
             {pending ? "Asignando…" : `Asignar ${rows.filter(r => r.userId).length > 1 ? rows.filter(r => r.userId).length + " custodios" : "custodia"}`}
           </button>

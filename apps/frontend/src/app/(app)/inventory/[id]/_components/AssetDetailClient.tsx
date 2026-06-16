@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -48,6 +48,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   const moduleId = inventoryId ?? "";
 
   /* ── UI state ── */
+  const [detailTab,        setDetailTab]        = useState<'detalles' | 'historial' | 'tickets'>('detalles');
   const [showQr,           setShowQr]           = useState(false);
   const [editing,          setEditing]          = useState(false);
   const [actionErr,        setActionErr]        = useState("");
@@ -59,6 +60,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
   const [selectedImg,      setSelectedImg]      = useState(0);
   const [cropPending,      setCropPending]      = useState<{ file: File; source: "file" | "camera" } | null>(null);
   const [showCamera,       setShowCamera]       = useState(false);
+  const [confirmDeleteImgId, setConfirmDeleteImgId] = useState<string | null>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,7 +166,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     mutationFn: (imageId: string) => inventoryService.deleteAssetImage(assetId, imageId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["asset-images", assetId] }); inv();
-      if (images.length <= 1) setLightboxIdx(null);
+      setLightboxIdx(null);
     },
     onError: (e: any) => setActionErr(e?.response?.data?.message ?? "Error al eliminar imagen"),
   });
@@ -208,6 +210,13 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
     return () => clearInterval(id);
   }, [images.length, editing, lightboxIdx]);
 
+  useEffect(() => {
+    if (!confirmDeleteImgId) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setConfirmDeleteImgId(null); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmDeleteImgId]);
+
   /* ── Loading / not found ── */
   if (isLoading) return (
     <ModuleLayout moduleId={inventoryId} title="Inventario" description="" isSuperadmin={isSuperadmin} hideInfo alwaysOpen>
@@ -239,7 +248,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
       )}
 
       {/* ══ HEADER CARD ══ */}
-      <div style={{ background: "#fff", borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden", boxShadow: "0 2px 18px rgba(14,34,53,.08)" }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden", boxShadow: "0 2px 18px rgba(14,34,53,.08)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "40% 60%" }}>
           {/* Gallery */}
           <div style={{ background: "#f0f4f8", display: "flex", flexDirection: "column", borderRight: `1px solid ${C.border}` }}>
@@ -268,15 +277,9 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                 {images.map((img, idx) => (
                   <div key={img.id} style={{ position: "relative", flexShrink: 0 }}>
                     <button type="button" onClick={() => setSelectedImg(idx)}
-                      style={{ width: 56, height: 56, borderRadius: 7, overflow: "hidden", border: `2px solid ${idx === safeIdx ? C.coral : C.border}`, background: "#fff", cursor: "pointer", padding: 2, display: "block", transition: "border-color .15s" }}>
+                      style={{ width: 56, height: 56, borderRadius: 7, overflow: "hidden", border: `2px solid ${idx === safeIdx ? C.coral : C.border}`, background: 'var(--app-card)', cursor: "pointer", padding: 2, display: "block", transition: "border-color .15s" }}>
                       <img src={img.storage_url} alt={img.file_name} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
                     </button>
-                    {editing && canEdit && (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); deleteImgMut.mutate(img.id); }} disabled={deleteImgMut.isPending && deleteImgMut.variables === img.id}
-                        style={{ position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: 5, background: "#ef4444", border: "1.5px solid #fff", cursor: "pointer", display: "grid", placeItems: "center", color: "#fff", zIndex: 1, padding: 0 }}>
-                        <X size={10} />
-                      </button>
-                    )}
                   </div>
                 ))}
               </div>
@@ -285,9 +288,9 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
             {images.length === 1 && editing && canEdit && (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", background: C.bg, borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
                 <p style={{ fontSize: 10, color: C.muted, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "60%" }}>{images[0].file_name}</p>
-                <button type="button" onClick={() => deleteImgMut.mutate(images[0].id)} disabled={deleteImgMut.isPending}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 6, background: "#fef2f2", border: "1px solid #fecaca", cursor: "pointer", color: "#ef4444", fontSize: 10, fontWeight: 700, fontFamily: "inherit", opacity: deleteImgMut.isPending ? 0.5 : 1 }}>
-                  <Trash2 size={11} /> {deleteImgMut.isPending ? "…" : "Eliminar"}
+                <button type="button" onClick={() => setConfirmDeleteImgId(images[0].id)}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 6, background: "#fef2f2", border: "1px solid #fecaca", cursor: "pointer", color: "#ef4444", fontSize: 10, fontWeight: 700, fontFamily: "inherit" }}>
+                  <Trash2 size={11} /> Eliminar
                 </button>
               </div>
             )}
@@ -301,7 +304,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                   <ImagePlus size={13} /> {uploadImgMut.isPending ? "Subiendo…" : "Agregar imagen"}
                 </button>
                 <button type="button" disabled={uploadImgMut.isPending} onClick={() => pickFile("camera")}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${C.border}`, background: "#fff", fontSize: 11, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${C.border}`, background: 'var(--app-card)', fontSize: 11, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
                   <Camera size={13} /> Cámara
                 </button>
               </div>
@@ -387,11 +390,11 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
 
               {/* Quick actions */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0, minWidth: 116 }}>
-                <button type="button" onClick={() => setShowQr(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.coral, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                <button type="button" onClick={() => setShowQr(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.coral, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                   <QrCode size={13} /> Ver QR
                 </button>
                 {canEdit && asset.status !== "dado_de_baja" && !editing && (
-                  <button type="button" onClick={startEditing} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                  <button type="button" onClick={startEditing} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                     <Pencil size={13} /> Editar
                   </button>
                 )}
@@ -400,7 +403,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                     <button type="button" disabled={updateMut.isPending} onClick={() => updateMut.mutate()} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none", background: C.navy, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%", opacity: updateMut.isPending ? 0.6 : 1 }}>
                       <Save size={13} /> {updateMut.isPending ? "Guardando…" : "Guardar"}
                     </button>
-                    <button type="button" onClick={() => { setEditing(false); setActionErr(""); }} style={{ padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub, width: "100%" }}>
+                    <button type="button" onClick={() => { setEditing(false); setActionErr(""); }} style={{ padding: "9px 14px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: C.sub, width: "100%" }}>
                       Cancelar
                     </button>
                   </>
@@ -410,16 +413,16 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
 
             {!editing && (
               <div style={{ display: "flex", gap: 8, marginTop: 22, alignItems: "center", flexWrap: "wrap" }}>
-                <button type="button" onClick={() => setShowReport(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                <button type="button" onClick={() => setShowReport(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
                   Reportar problema
                 </button>
                 {canEdit && asset.status !== "dado_de_baja" && (
-                  <button type="button" onClick={() => setShowAssign(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                  <button type="button" onClick={() => setShowAssign(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
                     <UserPlus size={13} /> Asignar custodia
                   </button>
                 )}
                 {canEdit && (
-                  <button type="button" onClick={() => setShowRelate(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
+                  <button type="button" onClick={() => setShowRelate(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 9, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}>
                     Asociar dispositivo
                   </button>
                 )}
@@ -434,8 +437,32 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
           </div>
         </div>
 
-        {/* Specs */}
-        {fieldSchema.length > 0 && (
+        {/* Tab bar */}
+        {!editing && (
+          <div style={{ display: 'flex', gap: 0, borderTop: `1px solid ${C.border}`, background: '#f8fafc' }}>
+            {(['detalles', 'historial', 'tickets'] as const).map(t => {
+              const labels: Record<string, string> = {
+                detalles:  'Detalles',
+                historial: `Historial${history.length > 0 ? ` (${history.length})` : ''}`,
+                tickets:   `Tickets${asset.tickets_count > 0 ? ` (${asset.tickets_count})` : ''}`,
+              };
+              const active = detailTab === t;
+              return (
+                <button key={t} type="button" onClick={() => setDetailTab(t)} style={{
+                  padding: '11px 22px', border: 'none', background: active ? '#fff' : 'transparent',
+                  borderBottom: active ? '2px solid #ff5e3a' : '2px solid transparent',
+                  fontSize: 12, fontWeight: 700, color: active ? '#ff5e3a' : '#94a3b8',
+                  cursor: 'pointer', fontFamily: 'inherit', transition: 'color .15s, border-color .15s',
+                }}>
+                  {labels[t]}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Specs — Detalles tab */}
+        {detailTab === 'detalles' && fieldSchema.length > 0 && (
           <div style={{ padding: "26px 36px", borderTop: `1px solid ${C.border}` }}>
             <SectionHeader label="Ficha técnica" />
             {editing ? (
@@ -478,8 +505,8 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
           </div>
         )}
 
-        {/* Responsable | Relaciones */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: `1px solid ${C.border}` }}>
+        {/* Responsable | Relaciones — Detalles tab */}
+        {detailTab === 'detalles' && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: `1px solid ${C.border}` }}>
           <div style={{ padding: "26px 36px", borderRight: `1px solid ${C.border}` }}>
             <SectionHeader label="Responsable / Custodia" />
             {assignments.length === 0 ? (
@@ -493,7 +520,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                   const initials = asgn.user_name.split(" ").slice(0, 2).map((w: string) => w[0] ?? "").join("").toUpperCase();
                   const scheduleLabel = asgn.shift ? `Turno ${asgn.shift}` : asgn.hours_start && asgn.hours_end ? `${asgn.hours_start} – ${asgn.hours_end}` : null;
                   return (
-                    <div key={asgn.id} style={{ display: "flex", gap: 13, padding: "14px 16px", background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 13 }}>
+                    <div key={asgn.id} style={{ display: "flex", gap: 13, padding: "14px 16px", background: 'var(--app-card)', border: `1.5px solid ${C.border}`, borderRadius: 13 }}>
                       <button type="button" onClick={() => router.push(`/inventory/users/${asgn.user_id}/profile`)} style={{ position: "relative", flexShrink: 0, background: "none", border: "none", padding: 0, cursor: "pointer" }}>
                         {asgn.avatar_url ? (
                           <img src={asgn.avatar_url} alt={asgn.user_name} style={{ width: 44, height: 44, borderRadius: 11, objectFit: "cover", display: "block" }} />
@@ -535,7 +562,7 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                 <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase" as const, letterSpacing: ".08em", margin: "0 0 9px" }}>↑ Pertenece a</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button type="button" onClick={() => router.push(`/inventory/${asset.parent_asset_id}`)}
-                    style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
+                    style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: 'var(--app-card)', border: `1.5px solid ${C.border}`, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
                     onMouseEnter={e => (e.currentTarget.style.borderColor = C.coral + "80")}
                     onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}>
                     <div style={{ width: 36, height: 36, borderRadius: 9, background: `${C.coral}10`, border: `1.5px solid ${C.coral}28`, display: "grid", placeItems: "center", flexShrink: 0 }}>
@@ -588,24 +615,17 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
               <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>Sin componentes asociados.</p>
             )}
           </div>
-        </div>
+        </div>}
 
-        {/* Tickets | Historial */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: `1px solid ${C.border}` }}>
-          <div style={{ padding: "26px 36px", borderRight: `1px solid ${C.border}` }}>
-            <SectionHeader
-              label={`Tickets asociados${asset.tickets_count > 0 ? ` (${asset.tickets_count})` : ""}`}
-              action={asset.tickets_count > 0 ? (
-                <button type="button" onClick={() => router.push(`/inventory/${assetId}/tickets`)} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, color: C.coral, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
-                  Ver todos <ChevronRight size={13} />
-                </button>
-              ) : null}
-            />
+        {/* Tickets tab — full list */}
+        {detailTab === 'tickets' && (
+          <div style={{ padding: "26px 36px", borderTop: `1px solid ${C.border}` }}>
+            <SectionHeader label={`Tickets asociados${asset.tickets_count > 0 ? ` (${asset.tickets_count})` : ""}`} action={null} />
             {assetTickets.length === 0 ? (
               <EmptyState icon={<CheckCircle2 size={24} />} text="Sin tickets asociados a este activo." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                {assetTickets.slice(0, 3).map((ticket) => {
+                {assetTickets.map((ticket) => {
                   const pColor = PRIORITY_COLORS[ticket.priority] ?? C.muted;
                   return (
                     <div key={ticket.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
@@ -622,32 +642,23 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                     </div>
                   );
                 })}
-                {asset.tickets_count > 3 && (
-                  <button type="button" onClick={() => router.push(`/inventory/${assetId}/tickets`)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.coral}30`, background: `${C.coral}06`, color: C.coral, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                    Ver todos los tickets ({asset.tickets_count}) <ChevronRight size={13} />
-                  </button>
-                )}
               </div>
             )}
           </div>
+        )}
 
-          <div style={{ padding: "26px 36px" }}>
-            <SectionHeader
-              label="Auditoría reciente"
-              action={history.length > 0 ? (
-                <button type="button" onClick={() => router.push(`/inventory/${assetId}/history`)} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, color: C.coral, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
-                  Ver historial <ChevronRight size={13} />
-                </button>
-              ) : null}
-            />
+        {/* Historial tab — full timeline */}
+        {detailTab === 'historial' && (
+          <div style={{ padding: "26px 36px", borderTop: `1px solid ${C.border}` }}>
+            <SectionHeader label={`Auditoría del activo${history.length > 0 ? ` (${history.length})` : ""}`} action={null} />
             {history.length === 0 ? (
               <EmptyState icon={<Clock size={24} />} text="Sin eventos registrados." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {history.slice(0, 3).map((h, i) => {
-                  const color = ASSET_ACTION_COLORS[h.action] ?? C.muted;
-                  const label = ASSET_ACTION_LABELS[h.action] ?? h.action;
-                  const isLast = i === Math.min(history.length - 1, 2);
+                {history.map((h, i) => {
+                  const color  = ASSET_ACTION_COLORS[h.action] ?? C.muted;
+                  const label  = ASSET_ACTION_LABELS[h.action] ?? h.action;
+                  const isLast = i === history.length - 1;
                   return (
                     <div key={h.id} style={{ display: "flex", gap: 14, paddingBottom: isLast ? 0 : 16, position: "relative" }}>
                       {!isLast && <div style={{ position: "absolute", left: 12, top: 24, width: 2, height: "calc(100% - 6px)", background: C.border }} />}
@@ -664,15 +675,11 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
                     </div>
                   );
                 })}
-                {history.length > 3 && (
-                  <button type="button" onClick={() => router.push(`/inventory/${assetId}/history`)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.coral}30`, background: `${C.coral}06`, color: C.coral, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 14 }}>
-                    Ver historial completo <ChevronRight size={13} />
-                  </button>
-                )}
               </div>
             )}
           </div>
-        </div>
+        )}
+
       </div>
 
       {/* ── Modals ── */}
@@ -697,10 +704,37 @@ export function AssetDetailClient({ assetId }: { assetId: string }) {
         <CropModal file={cropPending.file} source={cropPending.source} onConfirm={handleCropConfirm} onCancel={() => setCropPending(null)} />
       )}
       {lightboxIdx !== null && images.length > 0 && (
-        <ImageLightbox images={images} initialIdx={lightboxIdx} onClose={() => setLightboxIdx(null)} canEdit={canEdit} onDelete={(id) => deleteImgMut.mutate(id)} deletePending={deleteImgMut.isPending} />
+        <ImageLightbox images={images} initialIdx={lightboxIdx} onClose={() => setLightboxIdx(null)} canEdit={canEdit && editing} onDelete={(id) => setConfirmDeleteImgId(id)} deletePending={deleteImgMut.isPending} />
       )}
       {showQr && (
         <QrModal assetId={assetId} assetName={asset.name} onClose={() => setShowQr(false)} />
+      )}
+      {confirmDeleteImgId && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => setConfirmDeleteImgId(null)}>
+          <div style={{ background: 'var(--app-card)', borderRadius: 14, padding: "28px 28px 24px", width: 340, boxShadow: "0 8px 40px rgba(0,0,0,.22)" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: "#fef2f2", border: "1.5px solid #fecaca", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <Trash2 size={17} style={{ color: "#ef4444" }} />
+              </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 800, color: "#0e2235", margin: "0 0 2px" }}>¿Eliminar imagen?</p>
+                <p style={{ fontSize: 11, color: "#94a3b8", margin: 0 }}>Esta acción no se puede deshacer.</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button type="button" onClick={() => setConfirmDeleteImgId(null)}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #e2e8f0", background: 'var(--app-card)', fontSize: 12, fontWeight: 700, color: "#0e2235", cursor: "pointer", fontFamily: "inherit" }}>
+                Cancelar
+              </button>
+              <button type="button" disabled={deleteImgMut.isPending} onClick={() => { deleteImgMut.mutate(confirmDeleteImgId); setConfirmDeleteImgId(null); }}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ef4444", fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", opacity: deleteImgMut.isPending ? 0.6 : 1 }}>
+                {deleteImgMut.isPending ? "Eliminando…" : "Sí, eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </ModuleLayout>
   );

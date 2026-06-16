@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -123,13 +123,13 @@ export function BulkImportModal({ moduleId, moduleName, onClose }: Props) {
   const inp: React.CSSProperties = {
     width: '100%', padding: '8px 12px', fontSize: 13,
     border: '1px solid #E2E8F0', borderRadius: 8,
-    background: '#fff', color: '#0F172A', fontFamily: 'inherit',
+    background: 'var(--app-card)', color: '#0F172A', fontFamily: 'inherit',
     outline: 'none', boxSizing: 'border-box',
   };
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 210, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, width: '100%', maxWidth: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
 
         {/* Header */}
         <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

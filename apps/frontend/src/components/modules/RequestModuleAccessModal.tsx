@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
@@ -35,7 +35,7 @@ export function RequestModuleAccessModal({ moduleName, moduleId, onClose }: Prop
     >
       <div
         style={{
-          background: '#fff', borderRadius: 16, width: '100%', maxWidth: 440,
+          background: 'var(--app-card)', borderRadius: 16, width: '100%', maxWidth: 440,
           padding: '28px 28px 24px', position: 'relative',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -106,7 +106,7 @@ export function RequestModuleAccessModal({ moduleName, moduleId, onClose }: Prop
               <button
                 type="button"
                 onClick={onClose}
-                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'var(--app-card)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', color: '#64748b' }}
               >
                 Cancelar
               </button>

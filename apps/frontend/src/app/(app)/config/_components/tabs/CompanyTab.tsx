@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -47,7 +47,7 @@ const fRow:   React.CSSProperties = { marginBottom: 14 };
 const fLabel: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 4 };
 const fInput: React.CSSProperties = {
   width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8,
-  fontSize: 13, fontFamily: 'inherit', color: '#0e2235', boxSizing: 'border-box',
+  fontSize: 13, fontFamily: 'inherit', color: 'var(--app-text-main)', boxSizing: 'border-box',
 };
 const fError: React.CSSProperties = { fontSize: 11, color: '#ef4444', marginTop: 3 };
 
@@ -148,7 +148,7 @@ export function CompanyTab() {
             <div style={{
               width: 56, height: 56, borderRadius: 8, border: '1px solid #e2e8f0',
               overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#f8fafc', flexShrink: 0,
+              background: 'var(--app-page)', flexShrink: 0,
             }}>
               {company.logo_url
                 ? <img src={company.logo_url} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -196,13 +196,13 @@ export function CompanyTab() {
 
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20,
-        padding: '14px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+        padding: '14px 16px', background: 'var(--app-page)', border: '1px solid #e2e8f0', borderRadius: 8 }}>
         <div
           onClick={() => !logoUploading && logoInputRef.current?.click()}
           style={{
             width: 72, height: 72, borderRadius: 8, border: '2px dashed #cbd5e1',
             overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: '#fff', flexShrink: 0, cursor: logoUploading ? 'wait' : 'pointer',
+            background: 'var(--app-card)', flexShrink: 0, cursor: logoUploading ? 'wait' : 'pointer',
           }}>
           {currentLogo
             ? <img src={currentLogo} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -212,8 +212,8 @@ export function CompanyTab() {
           <button type="button" disabled={logoUploading} onClick={() => logoInputRef.current?.click()}
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
-              border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff',
-              fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', color: '#0e2235', fontWeight: 600,
+              border: '1px solid #e2e8f0', borderRadius: 8, background: 'var(--app-card)',
+              fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', color: 'var(--app-text-main)', fontWeight: 600,
             }}>
             <Upload size={13} /> {logoUploading ? 'Subiendo…' : 'Cambiar logo'}
           </button>
@@ -236,7 +236,7 @@ export function CompanyTab() {
           <input type="color" value={currentColor}
             onChange={e => handleColorPickerChange(e.target.value)}
             style={{ width: 40, height: 36, padding: 2, border: '1px solid #e2e8f0',
-              borderRadius: 8, cursor: 'pointer', background: '#fff' }} />
+              borderRadius: 8, cursor: 'pointer', background: 'var(--app-card)' }} />
           <input style={{ ...fInput, width: 120, borderColor: colorValid ? '#e2e8f0' : '#ef4444' }}
             value={hexInput} placeholder="#0e2235"
             onChange={e => handleHexInputChange(e.target.value)} />
@@ -261,11 +261,21 @@ export function CompanyTab() {
       </div>
 
       <div style={fRow}>
-        <label style={fLabel}>Idioma</label>
-        <select style={{ ...fInput }} value={form.language ?? ''}
+        <label style={fLabel}>
+          Idioma{' '}
+          <span style={{ fontSize: 10, fontWeight: 600, background: '#fef3c7', color: '#92400e',
+            border: '1px solid #fde68a', borderRadius: 4, padding: '1px 6px', marginLeft: 4 }}>
+            Próximamente
+          </span>
+        </label>
+        <select style={{ ...fInput, opacity: 0.55, cursor: 'not-allowed' }} value={form.language ?? ''}
+          disabled
           onChange={e => setForm(f => ({ ...f, language: e.target.value }))}>
           {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
         </select>
+        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+          La interfaz actualmente solo está disponible en español. La localización multiidioma se activará en una versión futura.
+        </div>
       </div>
 
       <div style={fRow}>

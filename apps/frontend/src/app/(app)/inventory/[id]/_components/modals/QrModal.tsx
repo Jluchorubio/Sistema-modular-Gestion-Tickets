@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { QrCode, X } from "lucide-react";
@@ -26,7 +26,7 @@ export function QrModal({
       onClick={onClose}
     >
       <div
-        style={{ background: "#fff", borderRadius: 16, padding: "28px 32px", textAlign: "center", maxWidth: 280, width: "100%", position: "relative", boxShadow: "0 32px 72px rgba(14,34,53,.2)" }}
+        style={{ background: 'var(--app-card)', borderRadius: 16, padding: "28px 32px", textAlign: "center", maxWidth: 280, width: "100%", position: "relative", boxShadow: "0 32px 72px rgba(14,34,53,.2)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <button type="button" onClick={onClose} style={{ position: "absolute", top: 12, right: 12, width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg, cursor: "pointer", display: "grid", placeItems: "center", color: C.muted }}>
@@ -51,7 +51,7 @@ export function QrModal({
                 href={data.qr_image}
                 download={`QR-${assetName.replace(/\s+/g, "-")}.png`}
                 onClick={(e) => e.stopPropagation()}
-                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 11, fontWeight: 700, color: C.navy, textDecoration: "none", cursor: "pointer" }}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 11, fontWeight: 700, color: C.navy, textDecoration: "none", cursor: "pointer" }}
               >
                 Descargar
               </a>
@@ -66,7 +66,7 @@ export function QrModal({
                   win.focus();
                   win.print();
                 }}
-                style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", fontSize: 11, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 11, fontWeight: 700, color: C.navy, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Imprimir
               </button>

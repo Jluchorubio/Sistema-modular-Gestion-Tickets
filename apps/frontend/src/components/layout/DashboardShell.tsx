@@ -10,6 +10,7 @@ import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
 import { ForcePwModal } from './ForcePwModal';
 import { ModuleSubNav } from './ModuleSubNav';
+import { Spinner } from '@/components/ui/Spinner';
 import styles from './layout.module.css';
 
 const MODULE_PATHS = ['/helpdesk', '/tickets', '/inventory', '/requests'];
@@ -24,7 +25,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useCurrentUser();
 
   if (isLoading) {
-    return <div style={{ minHeight: '100vh', background: '#F8FAFC' }} />;
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--app-bg, #F8FAFC)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Spinner />
+      </div>
+    );
   }
 
   const isSuperadmin  = user?.is_superadmin ?? false;

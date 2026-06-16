@@ -143,6 +143,12 @@ export class UsersController {
     return this.profileService.getMyPreferences(req.user.sub);
   }
 
+  @Get('me/assets')
+  @ApiOperation({ summary: 'Activos asignados al usuario autenticado (para precargar en form de ticket).' })
+  getMyAssets(@Req() req: any) {
+    return this.profileService.getMyAssets(req.user.sub);
+  }
+
   @Get('me/recent-tickets')
   @ApiOperation({ summary: 'Últimos tickets creados por el usuario. ?limit=N (default 6).' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -213,6 +219,12 @@ export class UsersController {
   @ApiOperation({ summary: 'Estadísticas globales del sistema. Solo superadmin.' })
   getSystemStats() {
     return this.roleService.getSystemStats();
+  }
+
+  @Get('dashboard-ops')
+  @ApiOperation({ summary: 'KPIs operativos del dashboard — tickets urgentes, SLA, solicitudes, actividad reciente.' })
+  getDashboardOps() {
+    return this.roleService.getDashboardOps();
   }
 
   // ─── Roles globales ──────────────────────────────────────────────────────────

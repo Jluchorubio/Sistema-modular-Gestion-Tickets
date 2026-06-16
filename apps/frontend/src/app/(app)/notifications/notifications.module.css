@@ -335,6 +335,31 @@
 
 .dismissBtn:hover { color: #64748b; background: #f1f5f9; }
 
+/* ── Quick action button ──────────────────────────────────────── */
+.quickAction {
+  font-size: 10px;
+  font-weight: 700;
+  color: #0e2235;
+  text-decoration: none;
+  padding: 2px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  display: inline-block;
+  line-height: 1.6;
+}
+
+.quickAction:hover { border-color: #0e2235; background: #f8fafc; }
+
+.quickActionAlert {
+  color: #c2410c;
+  border-color: rgba(255, 94, 58, 0.4);
+  background: rgba(255, 94, 58, 0.04);
+}
+
+.quickActionAlert:hover { border-color: #ff5e3a; background: rgba(255, 94, 58, 0.08); color: #ff5e3a; }
+
 /* ── Empty state ─────────────────────────────────────────────── */
 .empty {
   padding: 64px 24px;

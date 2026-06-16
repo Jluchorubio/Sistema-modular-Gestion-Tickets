@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -155,7 +155,7 @@ function OrgCard({ data, selected }: NodeProps) {
         style={{
           width:    NODE_W,
           height:   NODE_H,
-          background: '#fff',
+          background: 'var(--app-card)',
           borderRadius: 10,
           borderLeft:   `4px solid ${color}`,
           borderTop:    `1px solid ${selected ? color : '#e2e8f0'}`,
@@ -291,7 +291,7 @@ function InnerToolbar({ onCollapseAll, onExpandAll }: { onCollapseAll: () => voi
   };
   return (
     <Panel position="top-right">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 4, boxShadow: '0 2px 8px rgba(0,0,0,.08)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, padding: 4, boxShadow: '0 2px 8px rgba(0,0,0,.08)' }}>
         <button style={b} title="Zoom +" type="button" onClick={() => zoomIn({ duration: 180 })}><ZoomIn size={12} /></button>
         <button style={b} title="Zoom -" type="button" onClick={() => zoomOut({ duration: 180 })}><ZoomOut size={12} /></button>
         <div style={{ height: 1, background: '#f1f5f9', margin: '1px 0' }} />
@@ -347,7 +347,7 @@ function isDescendant(tree: OrgNode[], ancestorId: string, targetId: string): bo
 
 const inp: React.CSSProperties = {
   padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7,
-  fontSize: 12, fontFamily: 'inherit', background: '#fff',
+  fontSize: 12, fontFamily: 'inherit', background: 'var(--app-card)',
   width: '100%', boxSizing: 'border-box', outline: 'none', color: '#0e2235',
 };
 const lbl: React.CSSProperties = {
@@ -384,7 +384,7 @@ function QuickAddPanel({
 
   return (
     <div style={{
-      background: '#fff', border: '2px solid #ff5e3a', borderRadius: 12,
+      background: 'var(--app-card)', border: '2px solid #ff5e3a', borderRadius: 12,
       padding: '16px 18px', marginBottom: 14,
       boxShadow: '0 8px 28px rgba(255,94,58,.1)',
     }}>
@@ -522,7 +522,7 @@ function NodeSidebar({
   const childCount = node.child_count ?? node.children?.length ?? 0;
 
   return (
-    <div style={{ background: '#fff', border: `1.5px solid ${typeColor}40`, borderRadius: 12, overflow: 'hidden', marginTop: 12 }}>
+    <div style={{ background: 'var(--app-card)', border: `1.5px solid ${typeColor}40`, borderRadius: 12, overflow: 'hidden', marginTop: 12 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: `${typeColor}08`, borderBottom: `1px solid ${typeColor}20` }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: typeColor, flexShrink: 0 }} />
@@ -573,7 +573,7 @@ function NodeSidebar({
             <button
               onClick={() => toggleMut.mutate({ id: node.id, is_active: !node.is_active })}
               disabled={toggleMut.isPending}
-              style={{ padding: '6px 12px', background: '#fff', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4, color: node.is_active ? '#ef4444' : '#22c55e', border: `1px solid ${node.is_active ? '#fecaca' : '#bbf7d0'}` }}>
+              style={{ padding: '6px 12px', background: 'var(--app-card)', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4, color: node.is_active ? '#ef4444' : '#22c55e', border: `1px solid ${node.is_active ? '#fecaca' : '#bbf7d0'}` }}>
               {node.is_active ? <><ToggleRight size={12} />Desactivar</> : <><ToggleLeft size={12} />Activar</>}
             </button>
             <button
@@ -604,7 +604,7 @@ function NodeSidebar({
             <div>
               <label style={lbl}>Estado</label>
               <button onClick={() => upd('is_active', !form.is_active)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 7, background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, width: '100%', color: form.is_active ? '#22c55e' : '#94a3b8', fontWeight: 700 }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 7, background: 'var(--app-card)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, width: '100%', color: form.is_active ? '#22c55e' : '#94a3b8', fontWeight: 700 }}>
                 {form.is_active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
                 {form.is_active ? 'Activo' : 'Inactivo'}
               </button>
@@ -806,7 +806,7 @@ function TypesTab({ types }: { types: StructureType[] }) {
 
       {/* Types list */}
       {types.map(t => (
-        <div key={t.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 8, borderLeft: `4px solid ${t.color ?? '#64748b'}`, opacity: t.is_active ? 1 : 0.55 }}>
+        <div key={t.id} style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 8, borderLeft: `4px solid ${t.color ?? '#64748b'}`, opacity: t.is_active ? 1 : 0.55 }}>
           {editingId === t.id ? (
             /* Edit row */
             <div style={{ padding: '12px 14px' }}>
@@ -907,7 +907,7 @@ function TypesTab({ types }: { types: StructureType[] }) {
                 {deleteMut.isPending ? '...' : 'Eliminar'}
               </button>
               <button onClick={() => setConfirmDelId(null)}
-                style={{ padding: '4px 10px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+                style={{ padding: '4px 10px', background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
                 Cancelar
               </button>
             </div>
@@ -1035,7 +1035,7 @@ function OrgCanvas({
       <Background variant={'dots' as any} color="#d1d5db" gap={24} size={1} />
       <MiniMap
         nodeColor={n => (n.data as CardData).color ?? '#64748b'}
-        style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8 }}
+        style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 8 }}
         maskColor="rgba(241,245,249,.85)"
       />
       <InnerToolbar onCollapseAll={onCollapseAll} onExpandAll={onExpandAll} />

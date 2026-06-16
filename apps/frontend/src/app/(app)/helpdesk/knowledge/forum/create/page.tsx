@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -85,7 +85,7 @@ export default function ForumCreatePage() {
       </div>
 
       {/* Form */}
-      <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
 
         {/* Asunto */}
         <div style={ROW}>
@@ -125,7 +125,7 @@ export default function ForumCreatePage() {
                 [Settings2,      'Opciones'],
               ] as [LucideIcon, string][]).map(([Icon, title], i) => (
                 <button key={i} type="button" title={title}
-                  style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', color: C.sub, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: 'var(--app-card)', cursor: 'pointer', color: C.sub, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon size={13} />
                 </button>
               ))}
@@ -139,7 +139,7 @@ export default function ForumCreatePage() {
                 [FileText, 'Archivo'],
               ] as [LucideIcon, string][]).map(([Icon, title], i) => (
                 <button key={i} type="button" title={title}
-                  style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', color: C.sub, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: 'var(--app-card)', cursor: 'pointer', color: C.sub, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon size={13} />
                 </button>
               ))}
@@ -187,7 +187,7 @@ export default function ForumCreatePage() {
             <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 0, alignItems: 'start' }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: '#334155', padding: '8px 20px 0 0' }}>Adjuntos</label>
               <div>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', fontSize: 12, fontWeight: 600, color: C.sub, cursor: 'pointer' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, fontWeight: 600, color: C.sub, cursor: 'pointer' }}>
                   <Paperclip size={13} /> Adjuntar archivos
                   <input type="file" multiple accept={ACCEPT} onChange={handleFile} style={{ display: 'none' }} />
                 </label>

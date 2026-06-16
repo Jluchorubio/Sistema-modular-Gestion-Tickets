@@ -51,6 +51,8 @@ export class ProfileService {
               p.primary_sede,
               p.profile_complete,
               p.display_email,
+              n.name  AS org_node_name,
+              pn.name AS position_node_name,
               c.email,
               c.last_login_at,
               pref.language,
@@ -80,8 +82,10 @@ export class ProfileService {
        LEFT JOIN modules.user_module_roles umr ON umr.user_id  = p.id AND umr.is_active = true
        LEFT JOIN modules.modules           m   ON m.id        = umr.module_id
        LEFT JOIN modules.module_roles      mr  ON mr.id       = umr.role_id
+       LEFT JOIN org.nodes                 n   ON n.id        = p.org_node_id AND n.is_active = TRUE
+       LEFT JOIN org.nodes                 pn  ON pn.id       = p.position_node_id AND pn.is_active = TRUE
        WHERE  p.id = $1 AND p.deleted_at IS NULL
-       GROUP  BY p.id, c.email, c.last_login_at, pref.id, mfa.totp_enabled, c.otp_enabled`,
+       GROUP  BY p.id, c.email, c.last_login_at, pref.id, mfa.totp_enabled, c.otp_enabled, n.name, pn.name`,
       [userId],
     );
 
@@ -339,6 +343,24 @@ export class ProfileService {
       [userId],
     );
     return rows.map((r) => ({ day: r.day, count: parseInt(r.count as unknown as string, 10) }));
+  }
+
+  async getMyAssets(userId: string) {
+    return this.db.query<any[]>(
+      `SELECT a.id, a.name, a.serial_number, a.qr_code, a.status,
+              c.name AS category_name,
+              e.name AS environment_name,
+              l.name AS location_name
+       FROM   inventory.asset_assignments aa
+       JOIN   inventory.assets      a ON a.id  = aa.asset_id AND a.deleted_at IS NULL
+       LEFT JOIN modules.categories c ON c.id  = a.category_id
+       LEFT JOIN modules.environments e ON e.id = a.environment_id
+       LEFT JOIN modules.locations    l ON l.id = e.location_id
+       WHERE  aa.user_id = $1 AND aa.status = 'activo'
+       ORDER  BY a.name
+       LIMIT  6`,
+      [userId],
+    );
   }
 
   async getMyRecentTickets(userId: string, limit = 6) {

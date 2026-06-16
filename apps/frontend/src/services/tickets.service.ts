@@ -484,6 +484,25 @@ export const ticketsService = {
     return data;
   },
 
+  async previewPriority(dto: { damage_type_id?: string; urgency?: string; impact?: string; test_user_id?: string }): Promise<{
+    priority: string;
+    score:    number;
+    signals:  { peso_cargo: number; peso_nodo: number; peso_daño: number; urgency_bonus: number; impact_bonus: number; base_score: number };
+  }> {
+    const { data } = await api.post('/tickets/preview-priority', dto);
+    return data;
+  },
+
+  async getSlaAtRisk(moduleId?: string, windowHours = 2): Promise<{
+    ticket_id: string; title: string; priority: string;
+    module_name: string; assignee_name: string | null; deadline_at: string; minutes_left: number;
+  }[]> {
+    const { data } = await api.get('/tickets/sla-at-risk', {
+      params: { ...(moduleId ? { module_id: moduleId } : {}), window_hours: windowHours },
+    });
+    return data;
+  },
+
   async searchTickets(q: string, excludeId: string): Promise<{
     id: string; title: string; priority: string; state_label: string; is_final: boolean;
   }[]> {

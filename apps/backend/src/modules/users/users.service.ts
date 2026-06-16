@@ -11,6 +11,7 @@ import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { MessagingService } from '../../shared/messaging/messaging.service';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -18,7 +19,10 @@ const BCRYPT_ROUNDS = 12;
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(@InjectDataSource() private readonly db: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly db: DataSource,
+    private readonly messaging: MessagingService,
+  ) {}
 
   // ─── CRUD usuarios ───────────────────────────────────────────────────────────
 
@@ -339,6 +343,63 @@ export class UsersService {
       `DELETE FROM auth.refresh_tokens WHERE user_id = $1`,
       [id],
     );
+
+    // ── Cascade cleanup ────────────────────────────────────────────────────────
+
+    // 1. Deactivate ticket assignments so the user no longer appears as active assignee
+    await this.db.query(
+      `UPDATE tickets.ticket_assignments
+       SET is_active = false
+       WHERE user_id = $1 AND is_active = true`,
+      [id],
+    );
+
+    // 2. Return any inventory assets still checked out to the deleted user
+    await this.db.query(
+      `UPDATE inventory.asset_assignments
+       SET returned_at = now(), return_reason = 'Usuario eliminado del sistema'
+       WHERE user_id = $1 AND returned_at IS NULL`,
+      [id],
+    );
+
+    // 3. Deactivate all module role assignments
+    await this.db.query(
+      `UPDATE modules.user_module_roles
+       SET is_active = false
+       WHERE user_id = $1 AND is_active = true`,
+      [id],
+    );
+
+    // ── Notify jefe_tecnico about orphaned open tickets ────────────────────────
+    // Find tickets where this user was the assigned technician and the ticket is
+    // still in a non-final, non-initial state (i.e. actively being worked on).
+    const orphanedTickets = await this.db.query<{ id: string; title: string; module_id: string }[]>(
+      `SELECT DISTINCT t.id, t.title, t.module_id
+       FROM tickets.tickets t
+       JOIN tickets.ticket_assignments ta
+         ON ta.ticket_id = t.id
+        AND ta.user_id   = $1
+        AND ta.role      = 'tecnico'
+       JOIN tickets.ticket_states ts ON ts.id = t.current_state_id
+       WHERE t.deleted_at   IS NULL
+         AND ts.is_final    = false
+         AND ts.is_initial  = false`,
+      [id],
+    );
+
+    for (const ticket of orphanedTickets) {
+      this.messaging.emit('ticket.unassigned_alert', {
+        ticketId: ticket.id,
+        title:    ticket.title,
+        moduleId: ticket.module_id,
+      });
+    }
+
+    if (orphanedTickets.length > 0) {
+      this.logger.warn(
+        `Usuario ${id} eliminado — ${orphanedTickets.length} ticket(s) huérfano(s) notificados a jefe_tecnico`,
+      );
+    }
 
     this.logger.log(`Usuario ${id} eliminado (soft) por actor ${actorId}`);
     return { ok: true, message: 'Usuario eliminado' };

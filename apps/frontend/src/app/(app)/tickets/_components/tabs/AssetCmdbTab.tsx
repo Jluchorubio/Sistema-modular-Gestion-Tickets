@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -83,7 +83,7 @@ export function AssetCmdbTab({
           <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Asocia un activo del inventario para ver su contexto CMDB.</p>
         </div>
         <PermissionGate perm="helpdesk:tickets:edit">
-          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px' }}>
+          <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#0e2235', margin: '0 0 10px' }}>Vincular activo</p>
             <div style={{ position: 'relative', marginBottom: 8 }}>
               <Search size={11} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
@@ -149,7 +149,7 @@ export function AssetCmdbTab({
         <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Cargando datos CMDB…</p>
       ) : assetDetail && (
         <>
-          <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
+          <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
             {([
               ['N° de serie',     assetDetail.serial_number],
               ['Ubicación',       assetDetail.location_name],
@@ -165,7 +165,7 @@ export function AssetCmdbTab({
           </div>
 
           {assetDetail.field_schema?.length > 0 && assetDetail.specifications && (
-            <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+            <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
               <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>Especificaciones</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                 {assetDetail.field_schema.map(f => {
@@ -184,7 +184,7 @@ export function AssetCmdbTab({
         </>
       )}
 
-      <div style={{ background: '#fff', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 9, border: '1px solid #e2e8f0', padding: '14px 16px' }}>
         <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.07em', margin: '0 0 10px' }}>
           Incidentes en este activo{prevTickets.length > 0 ? ` (${prevTickets.length})` : ''}
         </p>

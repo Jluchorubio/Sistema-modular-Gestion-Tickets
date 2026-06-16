@@ -236,6 +236,9 @@ export class SkillService {
       }
     }
 
+    // NOTE: technician_category_skills / technician_profiles are informational only.
+    // Ticket auto-assignment uses modules.technician_specializations, managed via
+    // GET/POST/DELETE /system-modules/:id/specializations.
     this.logger.log(`Perfil técnico configurado para usuario ${userId} en módulo ${dto.module_id} por ${actorId}`);
     return this.getSkills(userId);
   }

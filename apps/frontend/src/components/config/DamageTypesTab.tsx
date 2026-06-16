@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -35,7 +35,7 @@ const PRIORITIES = ['baja', 'media', 'alta', 'critica'] as const;
 
 const fieldInput: React.CSSProperties = {
   width: '100%', padding: '7px 10px', border: `1px solid ${C.border}`, borderRadius: 4,
-  fontSize: 13, color: C.navy, background: '#fff', boxSizing: 'border-box',
+  fontSize: 13, color: C.navy, background: 'var(--app-card)', boxSizing: 'border-box',
   outline: 'none', fontFamily: 'inherit',
 };
 const lbl: React.CSSProperties = {
@@ -172,7 +172,7 @@ export function DamageTypesTab({ moduleId }: Props) {
         {isGlobalMode && (
           <button
             onClick={() => { setAddingCat(v => !v); setCatLabel(''); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.coral, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.coral, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             <Plus size={12} /> Nueva categoría
           </button>
         )}
@@ -186,7 +186,7 @@ export function DamageTypesTab({ moduleId }: Props) {
 
       {/* Add category form (global mode only) */}
       {isGlobalMode && addingCat && (
-        <div style={{ background: '#fff', border: `1px solid ${C.coral}40`, borderRadius: 8, padding: 14, marginBottom: 16 }}>
+        <div style={{ background: 'var(--app-card)', border: `1px solid ${C.coral}40`, borderRadius: 8, padding: 14, marginBottom: 16 }}>
           <label style={lbl}>Nombre de categoría</label>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
@@ -205,7 +205,7 @@ export function DamageTypesTab({ moduleId }: Props) {
             </button>
             <button
               onClick={() => setAddingCat(false)}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px', borderRadius: 4, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px', borderRadius: 4, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <X size={13} />
             </button>
           </div>
@@ -307,7 +307,7 @@ export function DamageTypesTab({ moduleId }: Props) {
                       </button>
                       <button
                         onClick={() => setAddingTypeIn(null)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 4, border: `1px solid ${C.border}`, background: '#fff', color: C.sub, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 4, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.sub, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                         <X size={13} /> Cancelar
                       </button>
                     </div>
@@ -379,7 +379,7 @@ export function DamageTypesTab({ moduleId }: Props) {
                       </div>
 
                       {isEditing && (
-                        <div style={{ background: '#fff', borderTop: `1px solid ${C.border}`, padding: '14px 14px 14px 48px' }}>
+                        <div style={{ background: 'var(--app-card)', borderTop: `1px solid ${C.border}`, padding: '14px 14px 14px 48px' }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: 12, marginBottom: 12 }}>
                             <div>
                               <label style={lbl}>Etiqueta</label>
@@ -401,7 +401,7 @@ export function DamageTypesTab({ moduleId }: Props) {
                               <Check size={13} /> Guardar
                             </button>
                             <button
-                              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#fff', color: C.sub, border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: 'var(--app-card)', color: C.sub, border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
                               onClick={() => setEditId(null)}>
                               <X size={13} /> Cancelar
                             </button>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Check, X, ChevronDown, ChevronUp, Search } from 'lucide-react';
@@ -41,7 +41,7 @@ const s = {
     padding: '6px 12px', borderRadius: 4, fontSize: 11, fontWeight: 700,
     cursor: 'pointer', fontFamily: 'inherit', border: 'none',
     ...(variant === 'save'   && { background: '#059669', color: '#fff' }),
-    ...(variant === 'cancel' && { background: '#fff', color: '#64748b', border: '1px solid #e2e8f0' }),
+    ...(variant === 'cancel' && { background: 'var(--app-card)', color: '#64748b', border: '1px solid #e2e8f0' }),
     ...(variant === 'edit'   && { background: 'transparent', color: '#0e2235', border: '1px solid #e2e8f0' }),
   } as React.CSSProperties),
 };
@@ -199,7 +199,7 @@ export function SlaRequestsTab() {
                 </button>
 
                 {isOpen && (
-                  <div style={{ padding: '0 14px 14px', background: '#fff' }}>
+                  <div style={{ padding: '0 14px 14px', background: 'var(--app-card)' }}>
                     {/* Global rule */}
                     <div style={{ marginTop: 12 }}>
                       <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8',
@@ -298,7 +298,7 @@ export function SlaRequestsTab() {
                 </div>
                 <select value={simType} onChange={e => setSimType(e.target.value)}
                   style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 4,
-                    fontSize: 12, fontFamily: 'inherit', background: '#fff', minWidth: 160 }}>
+                    fontSize: 12, fontFamily: 'inherit', background: 'var(--app-card)', minWidth: 160 }}>
                   <option value="">— Global —</option>
                   {allRequestTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -307,13 +307,13 @@ export function SlaRequestsTab() {
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Prioridad</div>
                 <select value={simPrio} onChange={e => setSimPrio(e.target.value as Priority)}
                   style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 4,
-                    fontSize: 12, fontFamily: 'inherit', background: '#fff' }}>
+                    fontSize: 12, fontFamily: 'inherit', background: 'var(--app-card)' }}>
                   {PRIORITIES.map(p => <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
                 </select>
               </div>
             </div>
             {effectiveRule ? (
-              <div style={{ marginTop: 12, padding: '10px 14px', background: '#fff',
+              <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--app-card)',
                 border: '1px solid #e2e8f0', borderRadius: 6 }}>
                 <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
                   <span style={{ fontSize: 13, fontWeight: 800, color: '#0e2235' }}>

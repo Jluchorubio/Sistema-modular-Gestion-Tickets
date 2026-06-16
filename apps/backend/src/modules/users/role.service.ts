@@ -201,6 +201,76 @@ export class RoleService {
     };
   }
 
+  // ─── Dashboard operativo ─────────────────────────────────────────────────────
+
+  async getDashboardOps() {
+    const cutoff = `now() - INTERVAL '6 months'`;
+
+    const [urgentRow, slaBreachRow, slaRiskRow, pendingRow, recentTickets, recentRequests] = await Promise.all([
+      this.db.query<any[]>(`
+        SELECT COUNT(*) AS count
+        FROM   tickets.tickets t
+        JOIN   tickets.states s ON s.id = t.current_state_id
+        WHERE  s.is_final = false
+          AND  t.deleted_at IS NULL
+          AND  t.priority IN ('alta', 'critica')
+          AND  t.created_at >= ${cutoff}
+      `),
+      this.db.query<any[]>(`
+        SELECT COUNT(*) AS count
+        FROM   tickets.ticket_sla_tracking sla
+        JOIN   tickets.tickets t ON t.id = sla.ticket_id AND t.created_at >= ${cutoff} AND t.deleted_at IS NULL
+        JOIN   tickets.states s  ON s.id = t.current_state_id
+        WHERE  s.is_final = false AND sla.status = 'breached'
+      `),
+      this.db.query<any[]>(`
+        SELECT COUNT(*) AS count
+        FROM   tickets.ticket_sla_tracking sla
+        JOIN   tickets.tickets t ON t.id = sla.ticket_id AND t.created_at >= ${cutoff} AND t.deleted_at IS NULL
+        JOIN   tickets.states s  ON s.id = t.current_state_id
+        WHERE  s.is_final = false
+          AND  sla.status = 'active'
+          AND  sla.deadline_at < now() + INTERVAL '2 hours'
+      `),
+      this.db.query<any[]>(`
+        SELECT COUNT(*) AS count
+        FROM   requests.admin_requests
+        WHERE  status = 'pending' AND deleted_at IS NULL
+      `),
+      this.db.query<any[]>(`
+        SELECT t.id, t.title, t.priority, t.created_at,
+               s.label AS state_label,
+               s.is_final, s.is_approval_state, s.is_pause_state,
+               p.first_name || ' ' || p.last_name AS created_by_name
+        FROM   tickets.tickets t
+        JOIN   tickets.states  s ON s.id = t.current_state_id
+        JOIN   users.profiles  p ON p.id = t.created_by
+        WHERE  t.created_at >= ${cutoff}
+          AND  t.deleted_at IS NULL
+        ORDER  BY t.created_at DESC
+        LIMIT  6
+      `),
+      this.db.query<any[]>(`
+        SELECT r.id, r.title, r.status, r.priority, r.created_at,
+               p.first_name || ' ' || p.last_name AS requester_name
+        FROM   requests.admin_requests r
+        JOIN   users.profiles          p ON p.id = r.requester_id
+        WHERE  r.deleted_at IS NULL
+        ORDER  BY r.created_at DESC
+        LIMIT  6
+      `),
+    ]);
+
+    return {
+      urgent_tickets:    parseInt(urgentRow[0]?.count    ?? '0', 10),
+      sla_breached:      parseInt(slaBreachRow[0]?.count ?? '0', 10),
+      sla_at_risk:       parseInt(slaRiskRow[0]?.count   ?? '0', 10),
+      pending_approvals: parseInt(pendingRow[0]?.count   ?? '0', 10),
+      recent_tickets:    recentTickets,
+      recent_requests:   recentRequests,
+    };
+  }
+
   // ─── Roles globales ──────────────────────────────────────────────────────────
 
   async listGlobalRoles() {

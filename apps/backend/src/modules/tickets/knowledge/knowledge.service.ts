@@ -26,7 +26,7 @@ export class KnowledgeService {
               a.ticket_id
        FROM   tickets.knowledge_articles a
        JOIN   users.profiles p ON p.id = a.created_by
-       WHERE  a.module_id = $1 ${publishedClause}
+       WHERE  a.module_id = $1 AND a.deleted_at IS NULL ${publishedClause}
          ${searchClause}
        ORDER  BY a.view_count DESC, a.created_at DESC
        LIMIT  100`,
@@ -39,7 +39,7 @@ export class KnowledgeService {
       `SELECT a.*, p.first_name || ' ' || p.last_name AS author_name
        FROM   tickets.knowledge_articles a
        JOIN   users.profiles p ON p.id = a.created_by
-       WHERE  a.id = $1`,
+       WHERE  a.id = $1 AND a.deleted_at IS NULL`,
       [id],
     );
     if (!article) throw new NotFoundException('Article not found');
@@ -88,6 +88,36 @@ export class KnowledgeService {
   }
 
   async deleteArticle(id: string) {
+    await this.db.query(
+      `UPDATE tickets.knowledge_articles
+       SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days'
+       WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+    return { ok: true };
+  }
+
+  async restoreArticle(id: string, userId: string) {
+    const [[art], [actor]] = await Promise.all([
+      this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_articles WHERE id = $1 AND deleted_at IS NOT NULL`, [id]),
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+    ]);
+    if (!art) throw new NotFoundException('Artículo no encontrado en eliminados');
+    if (!actor?.is_superadmin && art.created_by !== userId) throw new ForbiddenException('Sin permisos para restaurar este artículo');
+    await this.db.query(
+      `UPDATE tickets.knowledge_articles SET deleted_at = NULL, scheduled_hard_delete_at = NULL WHERE id = $1`,
+      [id],
+    );
+    return { ok: true };
+  }
+
+  async permanentDeleteArticle(id: string, userId: string) {
+    const [[art], [actor]] = await Promise.all([
+      this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_articles WHERE id = $1 AND deleted_at IS NOT NULL`, [id]),
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+    ]);
+    if (!art) throw new NotFoundException('Artículo no encontrado en eliminados');
+    if (!actor?.is_superadmin && art.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar permanentemente este artículo');
     await this.db.query(`DELETE FROM tickets.knowledge_articles WHERE id = $1`, [id]);
     return { ok: true };
   }
@@ -156,7 +186,7 @@ export class KnowledgeService {
               (SELECT p2.avatar_url FROM tickets.knowledge_replies kr2 JOIN users.profiles p2 ON p2.id = kr2.created_by WHERE kr2.post_id = kp.id ORDER BY kr2.created_at DESC LIMIT 1) AS last_reply_avatar
        FROM   tickets.knowledge_posts kp
        JOIN   users.profiles p ON p.id = kp.created_by
-       WHERE  kp.module_id = $1 ${filterClause} ${searchClause}
+       WHERE  kp.module_id = $1 AND kp.deleted_at IS NULL ${filterClause} ${searchClause}
        ORDER  BY kp.is_resolved ASC, COALESCE(
          (SELECT MAX(kr.created_at) FROM tickets.knowledge_replies kr WHERE kr.post_id = kp.id),
          kp.created_at
@@ -173,7 +203,7 @@ export class KnowledgeService {
               p.avatar_url AS author_avatar
        FROM   tickets.knowledge_posts kp
        JOIN   users.profiles p ON p.id = kp.created_by
-       WHERE  kp.id = $1`,
+       WHERE  kp.id = $1 AND kp.deleted_at IS NULL`,
       [id],
     );
     if (!post) throw new NotFoundException('Post not found');
@@ -188,7 +218,7 @@ export class KnowledgeService {
               (SELECT COUNT(*) FROM tickets.knowledge_votes kv WHERE kv.entity_id = kr.id AND kv.entity_type='reply' AND kv.value=1) AS vote_count
        FROM   tickets.knowledge_replies kr
        JOIN   users.profiles p ON p.id = kr.created_by
-       WHERE  kr.post_id = $1
+       WHERE  kr.post_id = $1 AND kr.deleted_at IS NULL
        ORDER  BY kr.is_accepted DESC, kr.created_at ASC`,
       [id],
     );
@@ -240,6 +270,36 @@ export class KnowledgeService {
     ]);
     if (!post) throw new NotFoundException('Post not found');
     if (!actor?.is_superadmin && post.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar este post.');
+    await this.db.query(
+      `UPDATE tickets.knowledge_posts
+       SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days'
+       WHERE id = $1 AND deleted_at IS NULL`,
+      [postId],
+    );
+    return { ok: true };
+  }
+
+  async restorePost(postId: string, userId: string) {
+    const [[post], [actor]] = await Promise.all([
+      this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_posts WHERE id = $1 AND deleted_at IS NOT NULL`, [postId]),
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+    ]);
+    if (!post) throw new NotFoundException('Post no encontrado en eliminados');
+    if (!actor?.is_superadmin && post.created_by !== userId) throw new ForbiddenException('Sin permisos para restaurar este post');
+    await this.db.query(
+      `UPDATE tickets.knowledge_posts SET deleted_at = NULL, scheduled_hard_delete_at = NULL WHERE id = $1`,
+      [postId],
+    );
+    return { ok: true };
+  }
+
+  async permanentDeletePost(postId: string, userId: string) {
+    const [[post], [actor]] = await Promise.all([
+      this.db.query<any[]>(`SELECT id, created_by FROM tickets.knowledge_posts WHERE id = $1 AND deleted_at IS NOT NULL`, [postId]),
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+    ]);
+    if (!post) throw new NotFoundException('Post no encontrado en eliminados');
+    if (!actor?.is_superadmin && post.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar permanentemente este post');
     await this.db.query(`DELETE FROM tickets.knowledge_posts WHERE id = $1`, [postId]);
     return { ok: true };
   }
@@ -251,7 +311,10 @@ export class KnowledgeService {
     ]);
     if (!reply) throw new NotFoundException('Reply not found');
     if (!actor?.is_superadmin && reply.created_by !== userId) throw new ForbiddenException('Sin permisos para eliminar esta respuesta.');
-    await this.db.query(`DELETE FROM tickets.knowledge_replies WHERE id = $1`, [replyId]);
+    await this.db.query(
+      `UPDATE tickets.knowledge_replies SET deleted_at = now(), scheduled_hard_delete_at = now() + INTERVAL '90 days' WHERE id = $1 AND deleted_at IS NULL`,
+      [replyId],
+    );
     return { ok: true };
   }
 
@@ -291,5 +354,50 @@ export class KnowledgeService {
       [dto.content.trim(), replyId],
     );
     return row;
+  }
+
+  /* ── Eliminados (soft-deleted content) ────────────────────────────────────── */
+
+  async getDeleted(moduleId: string, userId: string) {
+    const [[actor], [adminRole]] = await Promise.all([
+      this.db.query<any[]>(`SELECT is_superadmin FROM users.profiles WHERE id = $1`, [userId]),
+      this.db.query<any[]>(
+        `SELECT 1 FROM modules.user_module_roles umr
+         JOIN modules.module_roles mr ON mr.id = umr.role_id
+         WHERE umr.user_id = $1 AND umr.module_id = $2 AND mr.name = 'admin_modulo' AND umr.is_active = true`,
+        [userId, moduleId],
+      ),
+    ]);
+    const canSeeAll = (actor?.is_superadmin ?? false) || !!adminRole;
+    const params: any[] = canSeeAll ? [moduleId] : [moduleId, userId];
+    const articleOwner = canSeeAll ? '' : 'AND a.created_by = $2';
+    const postOwner    = canSeeAll ? '' : 'AND kp.created_by = $2';
+    const articles = await this.db.query<any[]>(
+      `SELECT 'article'::text AS type,
+              a.id, a.title, a.doc_type, a.file_mime,
+              a.created_by, a.deleted_at, a.scheduled_hard_delete_at,
+              p.first_name || ' ' || p.last_name AS author_name,
+              p.avatar_url AS author_avatar,
+              GREATEST(0, EXTRACT(DAY FROM a.scheduled_hard_delete_at - now()))::int AS days_remaining
+       FROM   tickets.knowledge_articles a
+       JOIN   users.profiles p ON p.id = a.created_by
+       WHERE  a.module_id = $1 AND a.deleted_at IS NOT NULL ${articleOwner}
+       ORDER  BY a.deleted_at DESC`,
+      params,
+    );
+    const posts = await this.db.query<any[]>(
+      `SELECT 'post'::text AS type,
+              kp.id, kp.title, NULL::text AS doc_type, NULL::text AS file_mime,
+              kp.created_by, kp.deleted_at, kp.scheduled_hard_delete_at,
+              p.first_name || ' ' || p.last_name AS author_name,
+              p.avatar_url AS author_avatar,
+              GREATEST(0, EXTRACT(DAY FROM kp.scheduled_hard_delete_at - now()))::int AS days_remaining
+       FROM   tickets.knowledge_posts kp
+       JOIN   users.profiles p ON p.id = kp.created_by
+       WHERE  kp.module_id = $1 AND kp.deleted_at IS NOT NULL ${postOwner}
+       ORDER  BY kp.deleted_at DESC`,
+      params,
+    );
+    return { articles, posts };
   }
 }

@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { PermissionGuard } from './gateway/guards/permission.guard';
+import { PasswordExpiryGuard } from './gateway/guards/password-expiry.guard';
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SystemModulesModule } from './modules/system-modules/system-modules.module';
@@ -19,6 +20,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { HealthModule } from './health/health.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
+import { PriorityEngineModule } from './modules/tickets/priority/priority-engine.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 
 @Module({
@@ -33,6 +35,7 @@ import { CalendarModule } from './modules/calendar/calendar.module';
     SharedModule,
     HealthModule,
     AuthModule,
+    PriorityEngineModule,
     SystemModulesModule,
     TicketsModule,
     InventoryModule,
@@ -49,6 +52,7 @@ import { CalendarModule } from './modules/calendar/calendar.module';
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
+    { provide: APP_GUARD, useClass: PasswordExpiryGuard },
   ],
 })
 export class AppModule {}

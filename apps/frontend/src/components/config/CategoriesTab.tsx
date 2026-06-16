@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,7 +12,7 @@ interface Props { moduleId: string }
 
 const inp: React.CSSProperties = {
   width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 2,
-  fontSize: 13, fontFamily: 'inherit', color: '#0e2235', background: '#fff',
+  fontSize: 13, fontFamily: 'inherit', color: '#0e2235', background: 'var(--app-card)',
   boxSizing: 'border-box', outline: 'none',
 };
 const lbl: React.CSSProperties = {
@@ -110,7 +110,7 @@ function FieldSchemaPanel({
       {fields.map((f, idx) => (
         <div key={f.key} style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '5px 8px', background: '#fff', border: '1px solid #e2e8f0',
+          padding: '5px 8px', background: 'var(--app-card)', border: '1px solid #e2e8f0',
           borderRadius: 2, marginBottom: 4,
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -158,7 +158,7 @@ function FieldSchemaPanel({
       ))}
 
       {adding ? (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 2, padding: 10, marginTop: 6 }}>
+        <div style={{ background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 2, padding: 10, marginTop: 6 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
             <div>
               <label style={lbl}>Etiqueta *</label>
@@ -213,7 +213,7 @@ function FieldSchemaPanel({
             <button
               type="button"
               onClick={() => { setAdding(false); setFieldLabel(''); setFieldType('text'); setRequired(false); setOptions(''); }}
-              style={{ padding: '5px 8px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}>
+              style={{ padding: '5px 8px', background: 'var(--app-card)', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}>
               <X size={11} />
             </button>
           </div>
@@ -224,7 +224,7 @@ function FieldSchemaPanel({
           onClick={() => setAdding(true)}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '5px 10px', background: '#fff', color: '#475569',
+            padding: '5px 10px', background: 'var(--app-card)', color: '#475569',
             border: '1px dashed #cbd5e1', borderRadius: 2,
             fontSize: 11, fontWeight: 600, cursor: 'pointer',
             fontFamily: 'inherit', marginTop: fields.length > 0 ? 4 : 0,
@@ -281,7 +281,7 @@ function CategoryForm({
           <Check size={13} /> Guardar
         </button>
         <button type="button" onClick={onCancel}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'var(--app-card)', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           <X size={13} /> Cancelar
         </button>
       </div>
@@ -385,7 +385,7 @@ export function CategoriesTab({ moduleId }: Props) {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: `9px 12px 9px ${12 + depth * 20}px`,
-          background: '#fff',
+          background: 'var(--app-card)',
           border: '1px solid #f1f5f9',
           borderRadius: (confirmDel || isEditing || isFields) ? '6px 6px 0 0' : 6,
           marginBottom: (confirmDel || isEditing || isFields) ? 0 : 4,
@@ -467,7 +467,7 @@ export function CategoriesTab({ moduleId }: Props) {
               {deleteMut.isPending ? '...' : 'Eliminar'}
             </button>
             <button type="button" onClick={() => setConfirmDel(false)}
-              style={{ padding: '3px 8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
+              style={{ padding: '3px 8px', background: 'var(--app-card)', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 10, cursor: 'pointer', color: '#64748b', fontFamily: 'inherit' }}>
               Cancelar
             </button>
           </div>
@@ -547,7 +547,7 @@ export function CategoriesTab({ moduleId }: Props) {
           </div>
           {!showCreate && (
             <button type="button" onClick={() => setShowCreate(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', color: '#0e2235', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--app-card)', color: '#0e2235', border: '1px solid #e2e8f0', borderRadius: 2, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus size={13} /> Nueva categoría
             </button>
           )}

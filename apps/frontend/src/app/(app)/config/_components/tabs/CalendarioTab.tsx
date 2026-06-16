@@ -25,7 +25,7 @@ function SyncColombiaBtn({ onSync }: { onSync: () => void }) {
       title={`Importar feriados de Colombia ${year} desde Nager.Date`}
       style={{
         display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px',
-        background: mut.isPending ? '#f8fafc' : '#fff', border: '1px solid #e2e8f0',
+        background: mut.isPending ? 'var(--app-page)' : 'var(--app-card)', border: '1px solid var(--app-border)',
         borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
         fontFamily: 'inherit', color: result ? '#22c55e' : '#475569',
       }}>

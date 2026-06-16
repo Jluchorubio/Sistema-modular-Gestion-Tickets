@@ -892,3 +892,28 @@
   .header { flex-direction: column; align-items: flex-start; }
   .treeChildren { margin-left: 28px; }
 }
+
+/* ══ Dark mode ══ */
+:global([data-theme="dark"]) .workspace { background: #0d1b2a; }
+:global([data-theme="dark"]) .rolesPanel { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .contextSelect { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .roleRow { border-color: #1e3448; }
+:global([data-theme="dark"]) .roleRow:hover { background: #1a2d40; }
+:global([data-theme="dark"]) .btnRowAction { background: #1a2d40; border-color: #1e3448; color: #94a3b8; }
+:global([data-theme="dark"]) .btnRowAction:hover { background: #253d56; color: #e2e8f0; }
+:global([data-theme="dark"]) .roleRowEditInput { background: #1a2d40; border-color: #1e3448; color: #e2e8f0; }
+:global([data-theme="dark"]) .btnRowEditCancel { background: #1e3448; border-color: #253d56; color: #94a3b8; }
+:global([data-theme="dark"]) .treePanel { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .treePanelHead { border-color: #1e3448; }
+:global([data-theme="dark"]) .treeGroup { border-color: #1e3448; }
+:global([data-theme="dark"]) .treeParentRow { background: #1a2d40; border-color: #1e3448; }
+:global([data-theme="dark"]) .treeParentLabel { color: #e2e8f0; }
+:global([data-theme="dark"]) .treeKeyBadge { background: #253d56; color: #94a3b8; }
+:global([data-theme="dark"]) .treeChildren { border-color: #1e3448; }
+:global([data-theme="dark"]) .treeChildRow { border-color: #172234; }
+:global([data-theme="dark"]) .treeChildRow:hover { background: #1a2d40; }
+:global([data-theme="dark"]) .treeChildLabel { color: #cbd5e1; }
+:global([data-theme="dark"]) .treeEmptyIcon { background: #1a2d40; }
+:global([data-theme="dark"]) .treeFooter { border-color: #1e3448; }
+:global([data-theme="dark"]) .inspectorPanel { background: #132030; border-color: #1e3448; }
+:global([data-theme="dark"]) .inspectorPanelHead { border-color: #1e3448; }

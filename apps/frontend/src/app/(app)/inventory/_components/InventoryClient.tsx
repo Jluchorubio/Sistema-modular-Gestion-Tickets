@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -68,7 +68,7 @@ const C = {
 const INPUT: React.CSSProperties = {
   width: '100%', padding: '8px 12px', borderRadius: 7, fontSize: 12,
   border: `1px solid ${C.border}`, outline: 'none', boxSizing: 'border-box',
-  fontFamily: 'inherit', background: '#fff', color: C.text,
+  fontFamily: 'inherit', background: 'var(--app-card)', color: C.text,
 };
 const LABEL: React.CSSProperties = {
   fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase',
@@ -106,7 +106,7 @@ function QrModal({ assetId, assetName, onClose }: { assetId: string; assetName: 
   });
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.55)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(2px)' }} onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 14, padding: '28px 32px', textAlign: 'center', maxWidth: 290, width: '100%', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, padding: '28px 32px', textAlign: 'center', maxWidth: 290, width: '100%', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
         <button type="button" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.muted }}>
           <X size={13} />
         </button>
@@ -163,7 +163,7 @@ function BulkQrPrintModal({
           align-content: start; }
       }`}</style>
       <div
-        style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 700,
+        style={{ background: 'var(--app-card)', borderRadius: 14, width: '100%', maxWidth: 700,
                  maxHeight: '88vh', display: 'flex', flexDirection: 'column',
                  boxShadow: '0 28px 70px rgba(14,34,53,.22)', overflow: 'hidden' }}
         onClick={e => e.stopPropagation()}
@@ -195,7 +195,7 @@ function BulkQrPrintModal({
               type="button"
               onClick={onClose}
               style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${C.border}`,
-                       background: '#fff', cursor: 'pointer', display: 'grid',
+                       background: 'var(--app-card)', cursor: 'pointer', display: 'grid',
                        placeItems: 'center', color: C.muted }}
             >
               <X size={14} />
@@ -212,7 +212,7 @@ function BulkQrPrintModal({
             const qData = queries[i]?.data;
             return (
               <div key={a.id} style={{ border: `1px solid ${C.border}`, borderRadius: 9,
-                                       padding: '14px 10px', textAlign: 'center', background: '#fff' }}>
+                                       padding: '14px 10px', textAlign: 'center', background: 'var(--app-card)' }}>
                 {qData?.qr_image ? (
                   <img src={qData.qr_image} alt="QR"
                     style={{ width: 140, height: 140, display: 'block', margin: '0 auto 8px', borderRadius: 6 }} />
@@ -303,7 +303,7 @@ function ScanModal({ onClose, onOpen }: { onClose: () => void; onOpen: (id: stri
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.55)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(2px)' }} onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 400, padding: '24px', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, width: '100%', maxWidth: 400, padding: '24px', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
         <button type="button" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.muted }}><X size={13} /></button>
         <p style={SECTION_HEAD}>QR / Serial</p>
         <h2 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: '0 0 6px' }}>Buscar activo físico</h2>
@@ -373,7 +373,7 @@ function BulkImportModal({ moduleId, onClose }: { moduleId: string; onClose: () 
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.55)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(2px)' }} onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
         <button type="button" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.muted }}><X size={13} /></button>
         <p style={SECTION_HEAD}>Importación masiva</p>
         <h2 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: '0 0 16px' }}>Importar activos vía CSV</h2>
@@ -384,7 +384,7 @@ function BulkImportModal({ moduleId, onClose }: { moduleId: string; onClose: () 
               <code style={{ fontFamily: 'monospace', fontSize: 10, color: C.coral }}>nombre, category_id, environment_id, serial (opcional), descripción (opcional)</code>
               <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: C.muted }}>Categorías:</span>
-                {(categories ?? []).slice(0, 4).map((c: any) => <span key={c.id} style={{ fontSize: 10, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 4, padding: '1px 7px', color: C.sub }}>{c.name}</span>)}
+                {(categories ?? []).slice(0, 4).map((c: any) => <span key={c.id} style={{ fontSize: 10, background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 4, padding: '1px 7px', color: C.sub }}>{c.name}</span>)}
               </div>
             </div>
             <textarea value={rows} onChange={e => setRows(e.target.value)}
@@ -392,7 +392,7 @@ function BulkImportModal({ moduleId, onClose }: { moduleId: string; onClose: () 
               style={{ ...INPUT, minHeight: 130, resize: 'vertical', fontFamily: 'monospace', fontSize: 11 }} />
             {error && <p style={{ fontSize: 11, color: '#EF4444', margin: '8px 0 0' }}>{error}</p>}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
-              <button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: C.sub }}>Cancelar</button>
+              <button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: C.sub }}>Cancelar</button>
               <button type="button" disabled={!rows.trim() || importMut.isPending} onClick={() => importMut.mutate()}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 7, border: 'none', background: C.navy, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (!rows.trim() || importMut.isPending) ? .6 : 1 }}>
                 <Upload size={13} />{importMut.isPending ? 'Importando…' : 'Importar'}
@@ -464,7 +464,7 @@ function CreateModal({ moduleId, onClose }: { moduleId: string; onClose: () => v
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.55)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(2px)' }} onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--app-card)', borderRadius: 14, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative', boxShadow: '0 24px 60px rgba(14,34,53,.18)' }} onClick={e => e.stopPropagation()}>
         <button type="button" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.muted }}><X size={13} /></button>
         <p style={SECTION_HEAD}>Registro rápido</p>
         <h2 style={{ fontSize: 16, fontWeight: 800, color: C.navy, margin: '0 0 20px' }}>Nuevo activo</h2>
@@ -524,7 +524,7 @@ function CreateModal({ moduleId, onClose }: { moduleId: string; onClose: () => v
 
           {error && <p style={{ fontSize: 11, color: '#EF4444', margin: 0 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 4 }}>
-            <button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: C.sub }}>Cancelar</button>
+            <button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: C.sub }}>Cancelar</button>
             <button type="submit" disabled={createMut.isPending} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 7, border: 'none', background: C.navy, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: createMut.isPending ? .7 : 1 }}>
               <Plus size={13} />{createMut.isPending ? 'Registrando…' : 'Registrar activo'}
             </button>
@@ -548,7 +548,7 @@ function ViewModeDropdown({ value, onChange }: { value: ViewMode; onChange: (m: 
       <button type="button" style={{ height: 34, minWidth: 116, padding: '0 12px', borderRadius: 7, border: `1px solid ${C.coral}`, background: C.coral, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
         {label}<ChevronDown size={12} />
       </button>
-      <div className="inv-vm-menu" style={{ position: 'absolute', right: 0, top: 38, width: 136, padding: '4px 0', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 9, boxShadow: '0 10px 30px rgba(14,34,53,.1)', zIndex: 30 }}>
+      <div className="inv-vm-menu" style={{ position: 'absolute', right: 0, top: 38, width: 136, padding: '4px 0', background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 9, boxShadow: '0 10px 30px rgba(14,34,53,.1)', zIndex: 30 }}>
         {opts.map(([mode, lbl, icon]) => (
           <button key={mode} type="button" onClick={() => onChange(mode)} style={{ width: '100%', padding: '8px 12px', border: 0, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: value === mode ? C.navy : C.sub, fontFamily: 'inherit' }}>
             <Check size={12} style={{ color: value === mode ? C.coral : 'transparent' }} />
@@ -573,7 +573,7 @@ function AssetCard({
   return (
     <article
       style={{
-        background: '#fff', borderRadius: 8, position: 'relative',
+        background: 'var(--app-card)', borderRadius: 8, position: 'relative',
         border: `1px solid ${selected ? C.coral : hov ? 'rgba(255,94,58,.36)' : C.border}`,
         boxShadow: hov ? '0 14px 34px rgba(14,34,53,.09)' : '0 1px 4px rgba(14,34,53,.04)',
         transform: hov ? 'translateY(-2px)' : 'none',
@@ -621,7 +621,7 @@ function AssetCard({
               <p style={{ fontSize: 10, color: C.muted, margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.location_name}</p>
             </div>
             <button type="button" onClick={onOpen} title="Vista rápida"
-              style={{ width: 32, height: 32, borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.coral, flexShrink: 0 }}>
+              style={{ width: 32, height: 32, borderRadius: 6, border: `1px solid ${C.border}`, background: 'var(--app-card)', cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.coral, flexShrink: 0 }}>
               <QrCode size={13} />
             </button>
           </div>
@@ -651,7 +651,7 @@ function AssetListRow({
 }) {
   const cfg = getAssetStatusConfig(asset.status);
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `${onSelect ? '28px ' : ''}minmax(0,1fr) 140px 130px 110px auto`, gap: 12, alignItems: 'center', padding: '11px 14px', background: '#fff', border: `1px solid ${selected ? C.coral : C.border}`, borderLeft: `3px solid ${selected ? C.coral : cfg.text}`, borderRadius: 9 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `${onSelect ? '28px ' : ''}minmax(0,1fr) 140px 130px 110px auto`, gap: 12, alignItems: 'center', padding: '11px 14px', background: 'var(--app-card)', border: `1px solid ${selected ? C.coral : C.border}`, borderLeft: `3px solid ${selected ? C.coral : cfg.text}`, borderRadius: 9 }}>
       {onSelect && (
         <button
           type="button"
@@ -676,7 +676,7 @@ function AssetListRow({
       <span style={{ fontSize: 11, color: C.sub, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.location_name}</span>
       <StatusBadge status={asset.status} />
       <div style={{ display: 'flex', gap: 6 }}>
-        <button type="button" onClick={onOpen} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: '#fff', color: C.navy, padding: '6px 10px', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Vista rápida</button>
+        <button type="button" onClick={onOpen} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'var(--app-card)', color: C.navy, padding: '6px 10px', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Vista rápida</button>
         <button type="button" onClick={onFullDetail} style={{ border: 'none', borderRadius: 7, background: C.navy, color: '#fff', padding: '6px 10px', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Ficha →</button>
       </div>
     </div>
@@ -694,7 +694,7 @@ function AssetSummaryItem({
   return (
     <div
       style={{ padding: '14px 16px', borderRadius: 9, border: `1px solid ${selected ? C.coral : C.border}`,
-               borderLeft: `3px solid ${selected ? C.coral : cfg.text}`, background: '#fff',
+               borderLeft: `3px solid ${selected ? C.coral : cfg.text}`, background: 'var(--app-card)',
                display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', position: 'relative',
                boxSizing: 'border-box' }}
     >
@@ -745,7 +745,7 @@ function MetricsRow({ assets }: { assets: AssetListItem[] }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 16 }}>
       {cards.map(([label, value, color, icon]) => (
-        <div key={label} style={{ background: '#fff', borderRadius: 6, border: `1.5px solid ${C.border}`, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, transition: 'border-color .18s, box-shadow .18s' }}>
+        <div key={label} style={{ background: 'var(--app-card)', borderRadius: 6, border: `1.5px solid ${C.border}`, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, transition: 'border-color .18s, box-shadow .18s' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: C.muted, margin: 0 }}>{label}</p>
             <span style={{ color, opacity: .7 }}>{icon}</span>
@@ -803,7 +803,7 @@ function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDet
   return (
     <>
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,34,53,.25)', zIndex: 101, backdropFilter: 'blur(1px)' }} onClick={onClose} />
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 540, background: '#fff', zIndex: 102, display: 'flex', flexDirection: 'column', boxShadow: '-6px 0 40px rgba(14,34,53,.14)', borderLeft: `1px solid ${C.border}` }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 540, background: 'var(--app-card)', zIndex: 102, display: 'flex', flexDirection: 'column', boxShadow: '-6px 0 40px rgba(14,34,53,.14)', borderLeft: `1px solid ${C.border}` }}>
 
         {/* Header */}
         <div style={{ background: C.navy, padding: '20px 20px 0', flexShrink: 0 }}>
@@ -846,7 +846,7 @@ function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDet
                   {/* Status + QR */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                     <StatusBadge status={asset.status} size="md" />
-                    <button type="button" onClick={() => setShowQr(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', color: C.coral, fontSize: 11, fontWeight: 700, fontFamily: 'inherit' }}>
+                    <button type="button" onClick={() => setShowQr(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', cursor: 'pointer', color: C.coral, fontSize: 11, fontWeight: 700, fontFamily: 'inherit' }}>
                       <QrCode size={13} /> Ver QR
                     </button>
                   </div>
@@ -870,7 +870,7 @@ function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDet
                       <p style={{ ...LABEL, marginBottom: 10 }}>Especificaciones</p>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {Object.entries(asset.specifications).map(([k, v]) => (
-                          <span key={k} style={{ fontSize: 11, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 6, padding: '4px 9px', color: C.sub }}>
+                          <span key={k} style={{ fontSize: 11, background: 'var(--app-card)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '4px 9px', color: C.sub }}>
                             <strong style={{ color: C.navy }}>{k}:</strong> {String(v)}
                           </span>
                         ))}
@@ -936,7 +936,7 @@ function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDet
                     <div style={{ display: 'flex', gap: 8 }}>
                       {canEdit && !editing && (
                         <button type="button" onClick={() => { setEditForm({ name: asset.name, description: asset.description ?? '', serial_number: asset.serial_number ?? '' }); setEditing(true); }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer', fontFamily: 'inherit' }}>
                           <Pencil size={12} /> Editar
                         </button>
                       )}
@@ -960,7 +960,7 @@ function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDet
                           style={{ padding: '7px 16px', borderRadius: 7, border: 'none', background: C.navy, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (!editForm.name.trim() || updateMut.isPending) ? .6 : 1 }}>
                           {updateMut.isPending ? 'Guardando…' : 'Guardar'}
                         </button>
-                        <button type="button" onClick={() => setEditing(false)} style={{ padding: '7px 14px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: C.sub }}>Cancelar</button>
+                        <button type="button" onClick={() => setEditing(false)} style={{ padding: '7px 14px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'var(--app-card)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: C.sub }}>Cancelar</button>
                       </div>
                     </div>
                   )}
@@ -1002,7 +1002,7 @@ function AssetDrawer({ assetId, moduleId, canEdit, canDelete, onClose, onFullDet
                   ) : assetTickets.map(ticket => {
                     const pColor = PRIORITY_COLORS[ticket.priority] ?? C.muted;
                     return (
-                      <div key={ticket.id} style={{ border: `1px solid ${C.border}`, borderRadius: 9, padding: '12px 14px', background: '#fff' }}>
+                      <div key={ticket.id} style={{ border: `1px solid ${C.border}`, borderRadius: 9, padding: '12px 14px', background: 'var(--app-card)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 7 }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: C.coral, fontFamily: 'monospace' }}>#{ticket.id.slice(0, 8)}</span>
                           <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', padding: '2px 7px', borderRadius: 4, background: ticket.is_final ? '#F0FDF4' : '#FFF7ED', color: ticket.is_final ? '#16A34A' : '#C2410C' }}>{ticket.state_label}</span>
@@ -1237,7 +1237,7 @@ export function InventoryClient() {
       <div className={s.twoPanel}>
 
         {/* ── SIDEBAR ── */}
-        <aside className={s.invSidebar} style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '16px', boxShadow: '0 2px 8px rgba(14,34,53,.04)' }}>
+        <aside className={s.invSidebar} style={{ background: 'var(--app-card)', borderRadius: 10, border: `1px solid ${C.border}`, padding: '16px', boxShadow: '0 2px 8px rgba(14,34,53,.04)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
               <p style={SECTION_HEAD}>Navegación</p>
@@ -1312,7 +1312,7 @@ export function InventoryClient() {
             <div style={{ flex: '1 1 160px', position: 'relative' }}>
               <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
               <input type="text" value={search} onChange={e => handleSearch(e.target.value)} placeholder="Nombre, serial, QR…"
-                style={{ width: '100%', padding: '7px 10px 7px 28px', borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff', color: C.text } as React.CSSProperties} />
+                style={{ width: '100%', padding: '7px 10px 7px 28px', borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box', background: 'var(--app-card)', color: C.text } as React.CSSProperties} />
             </div>
             <ViewModeDropdown value={viewMode} onChange={changeViewMode} />
             {canCreate && selectedModule && (
@@ -1323,7 +1323,7 @@ export function InventoryClient() {
             )}
             {canEdit && (
               <button type="button" onClick={() => setShowScan(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700, border: `1px solid ${C.border}`, background: '#fff', color: C.navy, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700, border: `1px solid ${C.border}`, background: 'var(--app-card)', color: C.navy, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                 <QrCode size={12} style={{ color: C.coral }} /> Escanear QR
               </button>
             )}
@@ -1340,7 +1340,7 @@ export function InventoryClient() {
           {isLoading && <div style={{ padding: '60px 0', textAlign: 'center', color: C.muted, fontSize: 13 }}>Cargando activos…</div>}
 
           {!isLoading && filtered.length === 0 && (
-            <div style={{ padding: '60px 24px', textAlign: 'center', background: '#fff', borderRadius: 10, border: `2px dashed ${C.border}` }}>
+            <div style={{ padding: '60px 24px', textAlign: 'center', background: 'var(--app-card)', borderRadius: 10, border: `2px dashed ${C.border}` }}>
               <Package size={30} style={{ color: C.border, display: 'block', margin: '0 auto 12px' }} />
               <p style={{ fontSize: 13, color: C.muted, margin: '0 0 4px', fontWeight: 600 }}>
                 {debouncedQ ? `Sin resultados para "${debouncedQ}"` : 'No hay activos en este filtro.'}

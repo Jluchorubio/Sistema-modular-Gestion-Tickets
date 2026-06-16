@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
@@ -14,7 +14,10 @@ export class HealthController {
       await this.db.query('SELECT 1');
       return { status: 'ok', db: 'ok', timestamp: new Date().toISOString() };
     } catch {
-      return { status: 'degraded', db: 'error', timestamp: new Date().toISOString() };
+      throw new HttpException(
+        { status: 'degraded', db: 'error', timestamp: new Date().toISOString() },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
   }
 }

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Pencil, Check, X, ChevronRight, ChevronDown, ToggleLeft, ToggleRight, ShieldAlert } from 'lucide-react';
@@ -44,7 +44,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 const inp: React.CSSProperties = {
   border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 10px',
-  fontSize: 12, fontFamily: 'inherit', background: '#fff', outline: 'none',
+  fontSize: 12, fontFamily: 'inherit', background: 'var(--app-card)', outline: 'none',
 };
 
 /* ── Multi-select chip picker (for IN operator) ── */
@@ -310,7 +310,7 @@ function AddConditionForm({
   const canSubmit = value.trim().length > 0;
 
   return (
-    <div style={{ padding: '12px 14px', background: '#fff', borderRadius: 10,
+    <div style={{ padding: '12px 14px', background: 'var(--app-card)', borderRadius: 10,
       border: `1.5px dashed ${C.border}`, marginTop: 10 }}>
       <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 800, color: C.muted,
         textTransform: 'uppercase', letterSpacing: '.06em' }}>Nueva condición</p>
@@ -376,7 +376,7 @@ function AddConditionForm({
         </button>
         <button onClick={onDone}
           style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.border}`,
-            background: '#fff', color: C.sub, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+            background: 'var(--app-card)', color: C.sub, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
           Cancelar
         </button>
       </div>
@@ -526,7 +526,7 @@ function SlaRuleRow({
                 </button>
                 <button onClick={() => { setHours(rule.hours_to_resolve); setEditingHours(false); }}
                   style={{ padding: '4px 8px', borderRadius: 8, border: `1px solid ${C.border}`,
-                    background: '#fff', color: C.sub, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    background: 'var(--app-card)', color: C.sub, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                   <X size={11} />
                 </button>
               </>
@@ -611,7 +611,7 @@ function AddRuleForm({
   };
 
   return (
-    <div style={{ padding: '14px 16px', background: '#fff', borderRadius: 12,
+    <div style={{ padding: '14px 16px', background: 'var(--app-card)', borderRadius: 12,
       border: `1.5px solid ${C.navy}`, marginBottom: 12 }}>
       <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: C.navy }}>Nueva regla SLA</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
@@ -645,7 +645,7 @@ function AddRuleForm({
           </button>
           <button onClick={onDone}
             style={{ padding: '7px 10px', borderRadius: 9, border: `1px solid ${C.border}`,
-              background: '#fff', color: C.sub, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+              background: 'var(--app-card)', color: C.sub, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
             Cancelar
           </button>
         </div>
@@ -698,9 +698,15 @@ export function SlaTicketsTab({ moduleId }: Props) {
 
   if (!activePolicy) {
     return (
-      <div style={{ padding: '16px 20px', borderRadius: 12, background: '#fff5f5',
-        border: '1px solid #fecaca', color: '#ef4444', fontSize: 13 }}>
-        Sin política SLA activa. Aplica la migración 007 para crear la política por defecto.
+      <div style={{ padding: '16px 20px', borderRadius: 12, background: '#eff6ff',
+        border: '1px solid #bfdbfe', fontSize: 13, color: '#1d4ed8' }}>
+        <strong>Sin política SLA configurada para este módulo.</strong>
+        <p style={{ margin: '6px 0 0', fontSize: 12, color: '#1e40af', lineHeight: 1.5 }}>
+          El módulo hereda las reglas SLA globales del sistema. Para configurar reglas específicas,
+          aplica la migración <code style={{ background: '#e0f2fe', padding: '1px 5px', borderRadius: 3 }}>007_sla_policies</code>.
+          Mientras tanto, los tickets SLA se calculan con la configuración global en{' '}
+          <a href="/config" style={{ color: '#2563eb', fontWeight: 700 }}>Configuración del Sistema</a>.
+        </p>
       </div>
     );
   }
@@ -712,6 +718,13 @@ export function SlaTicketsTab({ moduleId }: Props) {
     <>
       <CriticalChangeModal {...critical} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* Inheritance banner */}
+        <div style={{ padding: '10px 14px', borderRadius: 8, background: '#f0fdf4',
+          border: '1px solid #bbf7d0', fontSize: 11, color: '#166534', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 700 }}>Política SLA propia del módulo.</span>
+          <span>Las reglas definidas aquí sobreescriben la configuración global para tickets de este módulo.</span>
+        </div>
 
         {/* Policy header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
@@ -735,7 +748,7 @@ export function SlaTicketsTab({ moduleId }: Props) {
               onClick={() => breachCheckMut.mutate()}
               disabled={breachCheckMut.isPending}
               style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid #fecaca',
-                background: '#fff', color: '#ef4444', fontSize: 12, fontWeight: 700,
+                background: 'var(--app-card)', color: '#ef4444', fontSize: 12, fontWeight: 700,
                 cursor: breachCheckMut.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 opacity: breachCheckMut.isPending ? 0.6 : 1 }}>

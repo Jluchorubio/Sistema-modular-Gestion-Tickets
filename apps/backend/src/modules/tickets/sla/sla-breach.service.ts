@@ -90,22 +90,39 @@ export class SlaBreachService {
     if (ticket.tech_chief_id)                        targets.add(ticket.tech_chief_id);
     if (!ticket.assignee_id && ticket.creator_id)    targets.add(ticket.creator_id);
 
+    const isCritica    = ticket.priority?.toLowerCase() === 'critica';
+    const isHighOrCrit = ['critica', 'alta'].includes(ticket.priority?.toLowerCase());
+
+    // Load whatsapp preference for each target only when priority is critica
+    let whatsappUsers = new Set<string>();
+    if (isCritica && targets.size > 0) {
+      const targetArr = Array.from(targets);
+      const prefs = await this.db.query<{ user_id: string }[]>(
+        `SELECT user_id FROM users.preferences
+         WHERE user_id = ANY($1::uuid[]) AND notification_whatsapp = true`,
+        [targetArr],
+      );
+      whatsappUsers = new Set(prefs.map(p => p.user_id));
+    }
+
     await Promise.allSettled(
-      Array.from(targets).map(userId =>
-        this.notifications.notifyUser({
+      Array.from(targets).map(userId => {
+        const channels: ('in_app' | 'email' | 'whatsapp')[] = isHighOrCrit ? ['in_app', 'email'] : ['in_app'];
+        if (whatsappUsers.has(userId)) channels.push('whatsapp');
+        return this.notifications.notifyUser({
           userId,
           eventType: 'ticket.sla_breached',
           subject,
           body,
-          channels: ['in_app'],
+          channels,
           meta: {
             ticket_id:   ticket.ticket_id,
             module_id:   ticket.module_id,
             module_name: ticket.module_name,
             priority:    ticket.priority,
           },
-        }),
-      ),
+        });
+      }),
     );
   }
 
